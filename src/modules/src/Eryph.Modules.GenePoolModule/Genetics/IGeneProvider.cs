@@ -13,10 +13,7 @@ public interface IGeneProvider
 {
     EitherAsync<Error, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
         Func<string, int, Task<Unit>> reportProgress,
         CancellationToken cancel);
-
-    EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
-        GeneSetIdentifier genesetIdentifier,
-        CancellationToken cancellationToken);
 }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -18,9 +19,9 @@ internal class ResolveCatletSpecificationSagaData
 
     public CatletConfig? Config { get; set; }
 
-    public CatletConfig? ExpandedConfig { get; set; }
+    public CatletConfig? BuiltConfig { get; set; }
 
-    public CatletConfig? ParentConfig { get; set; }
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 
     // The agent which is hosting the gene pool
     public string? AgentName { get; set; }

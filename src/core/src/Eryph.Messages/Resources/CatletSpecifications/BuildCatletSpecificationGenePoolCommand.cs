@@ -9,7 +9,7 @@ using Eryph.Core.Genetics;
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
 [SendMessageTo(MessageRecipient.GenePoolAgent)]
-public class BuildCatletSpecificationCommand : IGenePoolAgentCommand, ICommandWithName
+public class BuildCatletSpecificationGenePoolCommand : IGenePoolAgentCommand, ICommandWithName
 {
     public CatletConfig CatletConfig { get; set; }
 

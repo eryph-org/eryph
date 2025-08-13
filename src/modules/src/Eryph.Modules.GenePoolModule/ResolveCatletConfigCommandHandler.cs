@@ -55,7 +55,7 @@ internal class ResolveCatletConfigCommandHandler(
     ITaskMessaging messaging,
     IFileSystemService fileSystem,
     IGenePoolPathProvider genePoolPathProvider,
-    IGeneProvider geneProvider,
+    //IGeneProvider geneProvider,
     IGenePoolFactory genePoolFactory,
     IGenePoolInventoryFactory genePoolInventoryFactory)
     : IHandleMessages<OperationTask<ResolveCatletConfigCommand>>
@@ -68,13 +68,14 @@ internal class ResolveCatletConfigCommandHandler(
         ResolveCatletConfigCommand command,
         CancellationToken cancellationToken) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath()
-        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
+        //let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, localGenePool)
-        from result in Handle(command, geneProvider, genepoolReader, genePoolInventory, cancellationToken)
-        select result;
+        //from result in Handle(command, geneProvider, genepoolReader, genePoolInventory, cancellationToken)
+        select new ResolveCatletConfigCommandResponse();
 
     // TODO this was moved to the CatletSpecificationBuilder
+    /*
     public static EitherAsync<Error, ResolveCatletConfigCommandResponse> Handle(
         ResolveCatletConfigCommand command,
         IGeneProvider geneProvider,
@@ -210,4 +211,5 @@ internal class ResolveCatletConfigCommandHandler(
                         + string.Join(" -> ", "catlet".Cons(ancestors.Map(a => a.ToString())))
                         + "."),
             innerError);
+    */
 }

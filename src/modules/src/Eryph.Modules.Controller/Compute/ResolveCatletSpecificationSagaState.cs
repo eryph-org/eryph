@@ -3,7 +3,7 @@
 internal enum ResolveCatletSpecificationSagaState
 {
     Initiated = 0,
-    Resolved = 10,
+    ConfigBuilt = 10,
     GenesResolved = 20,
     Expanded = 30,
 }

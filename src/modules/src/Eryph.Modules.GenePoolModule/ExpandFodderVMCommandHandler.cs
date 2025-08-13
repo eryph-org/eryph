@@ -19,7 +19,8 @@ namespace Eryph.Modules.GenePool;
 internal class ExpandFodderVMCommandHandler(
     IFileSystemService fileSystem,
     ITaskMessaging messaging,
-    IGenePoolPathProvider genePoolPathProvider)
+    IGenePoolPathProvider genePoolPathProvider,
+    IGenePoolReader genePoolReader)
     : IHandleMessages<OperationTask<ExpandFodderVMCommand>>
 {
     public Task Handle(OperationTask<ExpandFodderVMCommand> message) =>
@@ -28,14 +29,14 @@ internal class ExpandFodderVMCommandHandler(
     private EitherAsync<Error, ExpandFodderVMCommandResponse> HandleCommand(
         ExpandFodderVMCommand command) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath()
-        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
+        //let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         let configWithSystemVariables = command.CatletMetadata is not null
             ? CatletFeeding.FeedSystemVariables(command.Config, command.CatletMetadata)
             : CatletFeeding.FeedSystemVariables(command.Config, "#catletId", "#vmId")
         from fedConfig in CatletFeeding.Feed(
             configWithSystemVariables,
             command.ResolvedGenes.ToSeq(),
-            genepoolReader)
+            genePoolReader)
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))

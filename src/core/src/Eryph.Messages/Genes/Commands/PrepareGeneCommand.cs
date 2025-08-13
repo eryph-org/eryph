@@ -1,6 +1,7 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources;
+using Eryph.Modules.GenePool.Genetics;
 
 namespace Eryph.Messages.Genes.Commands;
 
@@ -8,6 +9,8 @@ namespace Eryph.Messages.Genes.Commands;
 public class PrepareGeneCommand : IGenePoolAgentCommand, ICommandWithName
 {
     public UniqueGeneIdentifier Gene { get; set; }
+
+    public GeneHash Hash { get; set; }
 
     [PrivateIdentifier]
     public string AgentName { get; set; }

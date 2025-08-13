@@ -94,7 +94,7 @@ internal class RepositoryGenePool(
 
             //if (downloadEntry == null)
             //{
-                var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet, geneHash.Hash);
+                var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet, geneHash.ToGene());
 
                 // TODO This does not work. The gene pool only populates ContentUri but not Content
 
@@ -106,7 +106,7 @@ internal class RepositoryGenePool(
                     throw Error.New("The gene manifest is missing in the response of the gene pool API.");
 
                 var downloadEntry = new GetGeneDownloadResponse(
-                    geneHash.Hash.Value,
+                    geneHash.Hash,
                     response.Manifest,
                     response.Content?.Content,
                     response.DownloadUris,
@@ -132,7 +132,7 @@ internal class RepositoryGenePool(
         from genePoolClient in CreateClient()
         from geneResponse in RetrieveGene(uniqueGeneId, geneHash, cancellationToken)
         from _2 in guard(geneResponse.Manifest!.OriginalSize! <= int.MaxValue && geneResponse.Manifest!.Size! <= int.MaxValue,
-            Error.New($"The size of the gene is too big."))
+            Error.New("The size of the gene is too big."))
         let originalSize = (int)geneResponse.Manifest!.OriginalSize!
         let size = (int)geneResponse.Manifest!.Size!
         from geneParts in GeneManifestUtils.GetParts(geneResponse.Manifest!)
@@ -177,7 +177,7 @@ internal class RepositoryGenePool(
                     return urlEntry.DownloadUri;
             }
 
-            var gene = genePoolClient.GetGeneClient(geneInfo.Id.Id.GeneSet, geneInfo.Hash.Hash);
+            var gene = genePoolClient.GetGeneClient(geneInfo.Id.Id.GeneSet, geneInfo.Hash.ToGene());
             var response = await gene.GetAsync(cancellationToken: cancel)
                            ?? throw new InvalidDataException("empty response from gene api");
             urlEntry = response.DownloadUris?.FirstOrDefault(x => x.Part == genePartHash);
@@ -269,15 +269,20 @@ internal class RepositoryGenePool(
 
         if (response.StatusCode != HttpStatusCode.OK)
             throw Error.New($"Failed to connect to gene pool {PoolName}. Received a {response.StatusCode} HTTP response.");
-        
-        var hashAlgorithm = CreateHashAlgorithm(genePartHash);
+
+        if (response.Content.Headers.ContentLength is not > 0)
+            throw Error.New($"The gene pool {PoolName} did not provide any content for the gen part {genePartHash.Hash}.");
+
+        var hashAlgorithm = genePartHash.CreateAlgorithm();
         await using var cryptoStream = new CryptoStream(targetStream, hashAlgorithm, CryptoStreamMode.Write);
         await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         await CopyToAsync(responseStream, cryptoStream, cancellationToken);
 
         await cryptoStream.FlushFinalBlockAsync(cancellationToken);
+        var actualGenePartHash = hashAlgorithm.ToGenePartHash();
 
-        VerifyHash(genePartHash, hashAlgorithm);
+        if (genePartHash != actualGenePartHash)
+            throw new HashVerificationException("Failed to verify the hash of the gene part. Maybe it got corrupted during transfer.");
     }
 
     private async Task CopyToAsync(
@@ -304,46 +309,5 @@ internal class RepositoryGenePool(
 
             await destination.WriteAsync(buffer[..bytesRead], cancellationToken);
         }
-    }
-
-    private HashAlgorithm CreateHashAlgorithm(GenePartHash genePartHash)
-    {
-        if (genePartHash.Algorithm is not "sha1")
-            throw new ArgumentException(
-                $"The algorithm {genePartHash.Algorithm} of the gene part hash is not supported.",
-                nameof(genePartHash));
-
-        return SHA1.Create();
-    }
-
-    private void VerifyHash(GenePartHash expected, HashAlgorithm actual)
-    {
-        if (expected.Algorithm is not "sha1" || actual is not SHA1)
-            throw new ArgumentException(
-                $"The algorithm {expected.Algorithm} of the gene part hash is not supported.",
-                nameof(expected));
-
-        if (actual.Hash is null)
-            throw new HashVerificationException(
-                $"The hash of the gene part has not been computed.");
-
-        var actualSpan  = new ReadOnlySpan<byte>(actual.Hash);
-        var expectedSpan = new ReadOnlySpan<byte>(Convert.FromHexString(expected.Hash.Value));
-
-        if (actualSpan.SequenceEqual(expectedSpan))
-            return;
-
-        throw new HashVerificationException($"Failed to verify the hash of the gene part. Maybe it got corrupted during transfer.");
-    }
-
-    private CryptoStream CreateCryptoStream(Stream outputStream, GenePartHash genePartHash)
-    {
-        if (genePartHash.Algorithm is not "sha1")
-            throw new ArgumentException(
-                $"The algorithm {genePartHash.Algorithm} of the gene part hash is not supported.",
-                nameof(genePartHash));
-
-        var hashAlgorithm = SHA1.Create();
-        return new CryptoStream(outputStream, hashAlgorithm, CryptoStreamMode.Write);
     }
 }

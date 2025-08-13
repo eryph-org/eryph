@@ -17,24 +17,22 @@ namespace Eryph.Modules.GenePool;
 [UsedImplicitly]
 internal class BuildCatletSpecificationCommandHandler(
     ITaskMessaging messaging,
-    IGenePoolReader genePoolReader,
-    ILocalGenePoolReader localGenePoolReader)
-    : IHandleMessages<OperationTask<BuildCatletSpecificationCommand>>
+    IGenePoolReader genePoolReader)
+    : IHandleMessages<OperationTask<BuildCatletSpecificationGenePoolCommand>>
 {
-    public Task Handle(OperationTask<BuildCatletSpecificationCommand> message) =>
+    public Task Handle(OperationTask<BuildCatletSpecificationGenePoolCommand> message) =>
         HandleCommand(message.Command).FailOrComplete(messaging, message);
 
-    private EitherAsync<Error, BuildCatletSpecificationCommandResponse> HandleCommand(
-        BuildCatletSpecificationCommand command) =>
+    private EitherAsync<Error, BuildCatletSpecificationGenePoolCommandResponse> HandleCommand(
+        BuildCatletSpecificationGenePoolCommand genePoolCommand) =>
         from result in CatletSpecificationBuilder.Build(
-            command.CatletConfig,
-            command.CatletArchitecture,
+            genePoolCommand.CatletConfig,
+            genePoolCommand.CatletArchitecture,
             genePoolReader,
-            localGenePoolReader,
             CancellationToken.None)
-        select new BuildCatletSpecificationCommandResponse
+        select new BuildCatletSpecificationGenePoolCommandResponse
         {
             BuiltConfig = result.ExpandedConfig,
-            ResolvedGenes = result.ResolvedGenes.ToList(),
+            ResolvedGenes = result.ResolvedGenes.ToDictionary(),
         };
 }

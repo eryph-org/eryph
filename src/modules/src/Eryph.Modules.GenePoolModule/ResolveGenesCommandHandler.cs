@@ -41,9 +41,8 @@ internal class ResolveGenesCommandHandler(
         CancellationToken cancellationToken) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let genePool = genePoolFactory.CreateLocal(genePoolPath)
-        let genePoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
-        from result in Handle(command, genePool, genePoolPath, cancellationToken)
-        select result;
+        //from result in Handle(command, genePool, genePoolPath, cancellationToken)
+        select new ResolveGenesCommandResponse();
 
     // TODO this was moved to the CatletSpecificationBuilder
 

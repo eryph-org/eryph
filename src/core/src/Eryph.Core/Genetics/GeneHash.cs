@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -17,18 +16,22 @@ public class GeneHash : EryphName<GeneHash>
     public GeneHash(string value) : base(value)
     {
         (Algorithm, Hash) = ValidOrThrow(
-            from nonEmptyValue in Validations<GenePartHash>.ValidateNotEmpty(value)
+            from nonEmptyValue in Validations<GeneHash>.ValidateNotEmpty(value)
             let parts = nonEmptyValue.Split(':')
             from _1 in guard(parts.Length == 2, Error.New("The gene hash is invalid."))
-                .ToValidation()
             let algorithm = parts[0]
             let normalizedAlgorithm = algorithm.ToLowerInvariant()
             from _2 in guard(normalizedAlgorithm is "sha256", Error.New($"The algorithm '{algorithm}' is invalid."))
-            from gene in Gene.NewValidation(parts[1])
-            select (normalizedAlgorithm, gene));
+            let hash = parts[1].ToLowerInvariant()
+            // TODO Would be better to share this code with the gene pool client
+            from _3 in guard(
+                    hash.ToSeq().All(c => c is >= 'a' and <= 'f' or >= '0' and <= '9')
+                    && hash.Length == 64,
+                Error.New("The hash must be a 64 character long hexadecimal string."))
+            select (normalizedAlgorithm, hash));
     }
 
     public string Algorithm { get; }
 
-    public Gene Hash { get; }
+    public string Hash { get; }
 }

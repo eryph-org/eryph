@@ -46,11 +46,14 @@ internal class UpdateConfigDriveCommandHandler(
         from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
+        //let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
+        /*
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
             command.ResolvedGenes.ToSeq(),
             genepoolReader)
+        */
+        let fedConfig = command.Config
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
