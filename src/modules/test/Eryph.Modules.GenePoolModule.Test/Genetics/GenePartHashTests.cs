@@ -10,8 +10,8 @@ namespace Eryph.Modules.GenePoolModule.Test.Genetics;
 public class GenePartHashTests
 {
     [Theory]
-    [InlineData("sha1:78bfd33a129aba75b45f3171ffb198a283e66ae5")]
-    [InlineData("SHA1:78BFD33A129ABA75B45F3171FFB198A283E66AE5")]
+    [InlineData("sha1:afa6c8b3a2fae95785dc7d9685a57835d703ac88")]
+    [InlineData("SHA1:AFA6C8B3A2FAE95785DC7D9685A57835D703AC88")]
     public void NewValidation_ValidHash_ReturnsValue(string input)
     {
         var genePartHash = GenePartHash.NewValidation(input)
@@ -19,14 +19,14 @@ public class GenePartHashTests
 
         genePartHash.Value.Should().Be(input.ToLowerInvariant());
         genePartHash.Algorithm.Should().Be("sha1");
-        genePartHash.Hash.Value.Should().Be("78bfd33a129aba75b45f3171ffb198a283e66ae5");
+        genePartHash.Hash.Should().Be("afa6c8b3a2fae95785dc7d9685a57835d703ac88");
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("a:b:c")]
     // A gene hash is also not a valid gene part hash
-    [InlineData("sha256:185590ebc0e0e2d3d86e4896fba24ef5331ed021b79fe29d240d0ab356758426")]
+    [InlineData("sha256:a8a2f6ebe286697c527eb35a58b5539532e9b3ae3b64d4eb0a46fb657b41562c")]
     public void NewValidation_InvalidHash_ReturnsError(string input)
     {
         GenePartHash.NewValidation(input).Should().BeFail();

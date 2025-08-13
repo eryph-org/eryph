@@ -6,14 +6,15 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.GenePool;
+using Eryph.Modules.GenePool.Genetics;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
-public class BuildCatletSpecificationCommandResponse
+public class BuildCatletSpecificationGenePoolCommandResponse
 {
     public CatletConfig BuiltConfig { get; set; }
 
-    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 
     public DateTimeOffset Timestamp { get; set; }
 

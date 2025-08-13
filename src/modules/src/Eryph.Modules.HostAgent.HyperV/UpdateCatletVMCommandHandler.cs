@@ -41,11 +41,14 @@ internal class UpdateCatletVMCommandHandler(
                 command.Config, currentStorageSettings)
             .WriteTrace()
         from _ in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
-        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
+        //let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
+        /*
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
             command.ResolvedGenes.ToSeq(),
             genepoolReader)
+        */
+        let fedConfig = command.Config
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))

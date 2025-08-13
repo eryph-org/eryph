@@ -25,7 +25,8 @@ internal class GeneRequestRegistry(
 
     public async ValueTask NewGeneRequestTask(
         IOperationTaskMessage message,
-        UniqueGeneIdentifier uniqueGeneId)
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash)
     {
         var queueTask = false;
 
@@ -45,11 +46,14 @@ internal class GeneRequestRegistry(
         // only queue a new task if it was not already queued (in that case we have added only a new listener)
         if (queueTask)
         {
-            await queue.QueueBackgroundWorkItemAsync(token => ProvideGene(uniqueGeneId, token));
+            await queue.QueueBackgroundWorkItemAsync(token => ProvideGene(uniqueGeneId, geneHash, token));
         }
     }
 
-    private async ValueTask ProvideGene(UniqueGeneIdentifier uniqueGeneId, CancellationToken cancel)
+    private async ValueTask ProvideGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken cancel)
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
 
@@ -59,6 +63,7 @@ internal class GeneRequestRegistry(
         {
             var result = await geneProvider.ProvideGene(
                 uniqueGeneId,
+                geneHash,
                 (message, progress) => ReportProgress(taskMessaging, uniqueGeneId, message, progress),
                 cancel);
             await EndRequest(taskMessaging, uniqueGeneId, result);

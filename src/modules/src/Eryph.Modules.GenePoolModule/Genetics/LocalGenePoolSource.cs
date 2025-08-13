@@ -40,6 +40,84 @@ internal class LocalGenePoolSource(
     // genes.json contains the hashes with the algorithm identifier, e.g. sha256:...
     private const string GenesFileName = "genes.json";
 
+    public EitherAsync<Error, bool> HasGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken cancellationToken) =>
+        from mergedGenes in GetMergedGenes(uniqueGeneId.Id.GeneSet)
+        let isGeneMerged = mergedGenes.Contains(geneHash)
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
+        from fileExists in Try(() => fileSystem.FileExists(genePath))
+            .ToEitherAsync()
+        select isGeneMerged && fileExists;
+
+    public EitherAsync<Error, bool> HasCompleteGeneDownload(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        Func<string, int, Task<Unit>> reportProgress,
+        CancellationToken cancellationToken) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        from manifest in ReadTempGeneManifest(uniqueGeneId, geneHash, cancellationToken)
+        from geneParts in manifest.Map(GeneManifestUtils.GetParts).Sequence().ToAsync()
+        select false;
+
+    private EitherAsync<Error, bool> HasCompleteGeneDownload(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GeneManifestData manifest) =>
+        from geneParts in GeneManifestUtils.GetParts(manifest).ToAsync()
+        from allPartsPresent in geneParts
+            .Map(gp => IsGenePartPresent(uniqueGeneId, geneHash, gp))
+            .SequenceSerial()
+        from allPartsValid in allPartsPresent
+            ? from 
+        select false;
+
+
+    private EitherAsync<Error, bool> IsGenePartPresent(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartHash genePartHash) =>
+        from path in GetGenePartPath(uniqueGeneId, geneHash, genePartHash)
+        from isPresent in Try(() => fileSystem.FileExists(path)).ToEitherAsync()
+        select isPresent;
+
+    private EitherAsync<Error, bool> EnsureGenePartIsValid(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartHash genePartHash) =>
+        from path in GetGenePartPath(uniqueGeneId, geneHash, genePartHash)
+        from isValid in TryAsync(async () =>
+        {
+            if (!fileSystem.FileExists(path))
+                return false;
+
+            using var hashAlgorithm =
+            using var hashAlg = CreateHashAlgorithm(genePartHash.HashAlg);
+            await using var dataStream = fileSystem.Open
+
+    private EitherAsync<Error, Option<GeneManifestData>> ReadTempGeneManifest(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken cancellationToken) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        from geneTempPath in GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, geneHash)
+        let manifestPath = Path.Combine(geneTempPath, "gene.json")
+        from manifest in TryAsync(async () =>
+        {
+            if (!fileSystem.FileExists(manifestPath))
+                return None;
+
+            var json = await fileSystem.ReadAllTextAsync(manifestPath, cancellationToken);
+            return Some(JsonSerializer.Deserialize<GeneManifestData>(json, GeneModelDefaults.SerializerOptions));
+        }).ToEither()
+        let actualGeneHash = manifest.Map(GeneManifestUtils.ComputeHash)
+        // TODO error or return nothing?
+        from _2 in guard(
+            actualGeneHash.IsSome && actualGeneHash != geneHash,
+            Error.New($"The manifest of the gene {uniqueGeneId} ({geneHash.Hash}) in the local gene pool is corrupted."))
+        select manifest;
+
     public EitherAsync<Error, GeneInfo> RetrieveGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
@@ -63,7 +141,7 @@ internal class LocalGenePoolSource(
 
                     var manifestJsonData = await fileSystem.ReadAllTextAsync(cachedGeneManifestPath, cancel);
                     var hashString = GetHashString(hashAlg.ComputeHash(Encoding.UTF8.GetBytes(manifestJsonData)));
-                    if (hashString == geneHash.Hash.Value)
+                    if (hashString == geneHash.Hash)
                         return manifestJsonData;
                     
                     fileSystem.FileDelete(cachedGeneManifestPath);
@@ -199,14 +277,14 @@ internal class LocalGenePoolSource(
                 GeneType.Catlet,
                 new GeneIdentifier(geneSetInfo.Id, GeneName.New("catlet")),
                 Architecture.New(EryphConstants.AnyArchitecture)),
-                geneHash.Hash))
+                geneHash))
             .ToSeq()
         let fodderReferences = geneSetInfo.Manifest.FodderGenes.ToSeq()
             .Map(gene => from geneHash in GeneHash.NewOption(gene.Hash)
                          from geneName in GeneName.NewOption(gene.Name)
                 from architecture in Architecture.NewOption(gene.Architecture)
                 let geneId = new GeneIdentifier(geneSetInfo.Id, geneName)
-                select new GeneWithHash(new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture), geneHash.Hash))
+                select new GeneWithHash(new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture), geneHash))
             .Somes()
         let references = catletReference.Concat(fodderReferences)
         let contentMap = geneSetInfo.GeneDownloadInfo.ToSeq()
@@ -220,13 +298,13 @@ internal class LocalGenePoolSource(
         //    .SequenceSerial()
         select result;
 
-    private record GeneWithHash(UniqueGeneIdentifier UniqueGeneId, Gene Hash);
+    private record GeneWithHash(UniqueGeneIdentifier UniqueGeneId, GeneHash Hash);
 
     private EitherAsync<Error, Unit> CacheGene(
         GeneWithHash geneWithHash,
         HashMap<Gene, string> contentMap,
         CancellationToken cancellationToken) =>
-        from _ in contentMap.Find(geneWithHash.Hash).Match(
+        from _ in contentMap.Find(geneWithHash.Hash.ToGene()).Match(
             Some: content => CacheGene(geneWithHash, content, cancellationToken),
             None: () => unit)
         select unit;
@@ -247,8 +325,7 @@ internal class LocalGenePoolSource(
             await fileSystem.WriteAllTextAsync(genePath, content, cancellationToken);
             return unit;
         }).ToEither()
-        // TODO Fix the nasty Gene -> GeneHash conversion
-        from _3 in AddMergedGene(geneSetPath, GeneHash.New($"sha256:{geneWithHash.Hash}"))
+        from _3 in AddMergedGene(geneSetPath, geneWithHash.Hash)
         select unit;
 
     public EitherAsync<Error, GeneInfo> CacheGene(
@@ -310,7 +387,7 @@ internal class LocalGenePoolSource(
         GeneHash geneHash,
         GenePartHash genePartHash) =>
         from geneTempPath in GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, geneHash)
-        let genePartPath = Path.Combine(geneTempPath, $"{genePartHash.Hash.Value}.part")
+        let genePartPath = Path.Combine(geneTempPath, $"{genePartHash.Hash}.part")
         select genePartPath;
 
     public EitherAsync<Error, Unit> RemoveCachedGene(
@@ -362,6 +439,22 @@ internal class LocalGenePoolSource(
         }).ToEitherAsync()
         select unit;
 
+    private EitherAsync<Error, Seq<GeneHash>> GetMergedGenes(
+        GeneSetIdentifier geneSetId) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetId)
+        from hashes in TryAsync(async () =>
+        {
+            var genesInfo = await ReadGenesInfo(geneSetPath);
+            return genesInfo.MergedGenes.ToSeq();
+        }).ToEither()
+        from result in hashes
+            .Map(GeneHash.NewEither)
+            .Sequence()
+            .ToAsync()
+            .MapLeft(e => Error.New($"The The merged genes in the gene set '{geneSetId}' are invalid.", e))
+        select result;
+
     public EitherAsync<Error, GeneHash> AddMergedGene(string geneSetPath, GeneHash geneHash) =>
         TryAsync(async () =>
         {
@@ -406,7 +499,7 @@ internal class LocalGenePoolSource(
         from _ in RightAsync<Error, Unit>(unit)
         let tempPath = Path.Combine(
             GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetId),
-            geneHash.Hash.Value)
+            geneHash.Hash)
         select tempPath;
 
     public EitherAsync<Error, Option<string>> GetCachedGeneContent(
@@ -425,6 +518,8 @@ internal class LocalGenePoolSource(
         GeneContentInfo geneContentInfo,
         CancellationToken cancellationToken) =>
         from _ in RightAsync<Error, Unit>(unit)
+        // TODO handle special case packed gene in temp folder -> this happens when copying genes directly in the local gene pool
+        // Extract packed folder even before checking local
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneContentInfo.UniqueId.Id.GeneSet)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneContentInfo.UniqueId)
         from content in TryAsync(async () =>

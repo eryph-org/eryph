@@ -6,5 +6,5 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 public interface IGeneRequestDispatcher
 {
-    ValueTask NewGeneRequestTask(IOperationTaskMessage message, UniqueGeneIdentifier uniqueGeneId);
+    ValueTask NewGeneRequestTask(IOperationTaskMessage message, UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash);
 }

@@ -27,7 +27,7 @@ internal class PrepareGeneCommandHandler(
         from _ in TryAsync(async () =>
                 {
                     await imageRequestDispatcher.NewGeneRequestTask(
-                        message, message.Command.Gene);
+                        message, message.Command.Gene, message.Command.Hash);
                     return unit;
                 })
             .ToEither()

@@ -22,7 +22,7 @@ internal class GenePoolReaderWithCache(
     IGenePoolFactory genePoolFactory,
     IRepositoryGenePoolReader repositoryGenePoolReader,
     ILogger logger)
-    : IGenePoolReader, ILocalGenePoolReader
+    : IGenePoolReader
 {
     public EitherAsync<Error, string> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
@@ -82,7 +82,7 @@ internal class GenePoolReaderWithCache(
             .Sequence()
         select pulledGeneSet;
 
-    public EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
+    public EitherAsync<Error, Option<GeneSetIdentifier>> GetReferencedGeneSet(
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken) =>
         from manifest in GetGeneSetTagManifest(geneSetId, cancellationToken)
@@ -92,26 +92,14 @@ internal class GenePoolReaderWithCache(
             .Sequence()
             .MapLeft(e => Error.New($"The reference in the gene set '{geneSetId}' is invalid.", e))
             .ToAsync()
-        select result.IfNone(geneSetId);
-
-    // TODO remove these (we added these just for refactoring)
-
-    public EitherAsync<Error, Option<GeneSetIdentifier>> GetGenesetReference(
-        GeneSetIdentifier geneSetId) =>
-        from resolvedGeneSetId in ResolveGeneSet(geneSetId, CancellationToken.None)
-        let result = Some(resolvedGeneSetId).Filter(id => id != geneSetId)
         select result;
 
-    public EitherAsync<Error, string> ReadGeneContent(
-        UniqueGeneIdentifier uniqueGeneId) =>
-        GetGeneContent(uniqueGeneId, CancellationToken.None);
-
-    public EitherAsync<Error, HashMap<UniqueGeneIdentifier, string>> GetGenes(
+    public EitherAsync<Error, HashMap<UniqueGeneIdentifier, GeneHash>> GetGenes(
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken) =>
         from manifest in GetGeneSetTagManifest(geneSetId, cancellationToken)
         from genes in GeneSetTagManifestUtils.GetGenes(manifest)
             .MapLeft(e => Error.New($"The manifest of the gene set '{geneSetId}' is invalid.", e))
             .ToAsync()
-        select genes.ToSeq().Map(kv => (kv.Key, kv.Value.Value)).ToHashMap();
+        select genes;
 }

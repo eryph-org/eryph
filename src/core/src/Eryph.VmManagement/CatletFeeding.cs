@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
@@ -56,7 +57,7 @@ public static class CatletFeeding
     public static EitherAsync<Error, CatletConfig> Feed(
         CatletConfig catletConfig,
         Seq<UniqueGeneIdentifier> resolvedGenes,
-        ILocalGenePoolReader genepoolReader) =>
+        IGenePoolReader genepoolReader) =>
         from allRemovedFodderKeys in catletConfig.Fodder.ToSeq()
             .Filter(f => f.Remove.GetValueOrDefault())
             .Map(f => FodderKey.Create(f.Name, f.Source))
@@ -99,7 +100,7 @@ public static class CatletFeeding
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfig(
         FodderConfig fodderConfig,
         Seq<UniqueGeneIdentifier> resolvedGenes,
-        ILocalGenePoolReader genepoolReader) =>
+        IGenePoolReader genepoolReader) =>
         from geneId in Optional(fodderConfig.Source)
             .Filter(notEmpty)
             .Filter(s => s.StartsWith("gene:"))
@@ -116,7 +117,7 @@ public static class CatletFeeding
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
         FodderConfig fodderConfig,
         Seq<UniqueGeneIdentifier> resolvedGenes,
-        ILocalGenePoolReader genepoolReader) =>
+        IGenePoolReader genepoolReader) =>
         from geneId in GeneIdentifier.NewEither(fodderConfig.Source).ToAsync()
         from _ in ValidateIsResolved(geneId, genepoolReader)
         from name in Optional(fodderConfig.Name)
@@ -127,7 +128,7 @@ public static class CatletFeeding
         from uniqueGeneId in resolvedGenes.Find(g => g.GeneType == GeneType.Fodder && g.Id == geneId)
             .ToEither(Error.New($"The gene '{geneId}' has not been correctly resolved. This should not happen."))
             .ToAsync()
-        from geneContent in genepoolReader.ReadGeneContent(uniqueGeneId)
+        from geneContent in genepoolReader.GetGeneContent(uniqueGeneId, CancellationToken.None)
         from geneFodderConfig in Try(() => FodderGeneConfigJsonSerializer.Deserialize(geneContent))
             .ToEither(Error.New).ToAsync()
         from geneFodderWithName in geneFodderConfig.Fodder.ToSeq()
@@ -190,8 +191,8 @@ public static class CatletFeeding
 
     private static EitherAsync<Error, Unit> ValidateIsResolved(
         GeneIdentifier geneId,
-        ILocalGenePoolReader genepoolReader) =>
-        from resolvedId in genepoolReader.GetGenesetReference(geneId.GeneSet)
+        IGenePoolReader genepoolReader) =>
+        from resolvedId in genepoolReader.GetReferencedGeneSet(geneId.GeneSet, CancellationToken.None)
             .MapLeft(e => Error.New($"Could not access gene '{geneId}' in the local genepool.", e))
         from __ in guard(resolvedId.IsNone,
             Error.New($"The gene '{geneId}' is an unresolved reference. This should not happen."))
