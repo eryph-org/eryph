@@ -19,8 +19,7 @@ public record GeneInfo(
     GeneManifestData? Manifest,
     GenePartDownloadUri[]? DownloadUris,
     DateTimeOffset DownloadExpires,
-    bool MergedWithImage,
-    string? Content)
+    bool MergedWithImage)
 {
     public override string ToString() => Id.ToString();
 }

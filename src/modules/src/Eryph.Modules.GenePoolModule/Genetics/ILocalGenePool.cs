@@ -12,7 +12,7 @@ internal interface ILocalGenePool : IGenePool
 {
     EitherAsync<Error, Unit> MergeGeneParts(
         GeneInfo geneInfo,
-        Func<string, int, Task<Unit>> reportProgress,
+        Func<long, long, Task<Unit>> reportProgress,
         CancellationToken cancellationToken);
 
     EitherAsync<Error, GeneSetInfo> CacheGeneSet(
@@ -41,5 +41,19 @@ internal interface ILocalGenePool : IGenePool
 
     EitherAsync<Error, Unit> RemoveCachedGene(
         UniqueGeneIdentifier uniqueGeneId);
-    EitherAsync<Error, string> CacheGeneContent(GeneContentInfo geneContentInfo, CancellationToken cancellationToken);
+
+    EitherAsync<Error, string> CacheGeneContent(
+        GeneContentInfo geneContentInfo,
+        CancellationToken cancellationToken);
+    
+    EitherAsync<Error, Option<GenePartsInfo>> GetDownloadedGeneParts(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        Func<long, long, Task<Unit>> reportProgress,
+        CancellationToken cancellationToken);
+
+    EitherAsync<Error, bool> HasGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken cancellationToken);
 }
