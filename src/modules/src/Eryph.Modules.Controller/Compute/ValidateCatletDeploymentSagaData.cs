@@ -19,7 +19,7 @@ public class ValidateCatletDeploymentSagaData
 
     public CatletConfig Config { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = [];
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> PendingGenes { get; set; } = [];
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> PendingGenes { get; set; }
 }

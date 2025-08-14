@@ -18,9 +18,8 @@ public interface IRepositoryGenePoolReader
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken);
 
-    EitherAsync<Error, Option<GeneInfo>> ProvideGene(
+    EitherAsync<Error, Option<GeneContentInfo>> ProvideGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         CancellationToken cancellationToken);
-    EitherAsync<Error, Option<GeneContentInfo>> ProvideGeneContent(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, CancellationToken cancellationToken);
 }

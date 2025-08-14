@@ -1,22 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.GenePool;
 using Eryph.GenePool.Client;
 using Eryph.Messages.Genes.Commands;
+using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Genetics;
@@ -41,7 +40,10 @@ internal class LocalFirstGeneProvider(
         CancellationToken cancel) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from _2 in EnsureGene(genePoolPath, uniqueGeneId, geneHash, reportProgress, cancel)
+        from isMerged in localGenePool.HasGene(uniqueGeneId, geneHash, cancel)
+        from _ in isMerged
+            ? RightAsync<Error, Unit>(unit)
+            : EnsureGene(genePoolPath, uniqueGeneId, geneHash, reportProgress, cancel)
         let timestamp = DateTimeOffset.UtcNow
         from geneSize in localGenePool.GetCachedGeneSize(uniqueGeneId)
         from validGeneSize in geneSize.ToEitherAsync(
@@ -57,6 +59,39 @@ internal class LocalFirstGeneProvider(
             },
             Timestamp = timestamp,
         };
+
+    public EitherAsync<Error, PrepareGeneResponse> EnsureGene2(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        Func<string, int, Task<Unit>> reportProgress,
+        CancellationToken cancellationToken) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
+        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
+        from alreadyDownloadedParts in localGenePool.GetDownloadedGeneParts(
+            uniqueGeneId,
+            geneHash,
+            async (processedBytes, totalBytes) =>
+            {
+                var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
+                var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
+                var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
+
+                var overallPercent = Convert.ToInt32(processedPercent * 75d);
+
+                var progressMessage = $"Verifying downloaded parts of  {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
+                log.LogTrace("Verifying downloaded parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
+                    uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                await reportProgress(progressMessage, overallPercent);
+                return unit;
+            },
+            cancellationToken)
+        from downloadedParts in alreadyDownloadedParts
+            .Filter(gpi => toHashSet(gpi.ExistingParts.Keys) == toHashSet(gpi.Parts))
+            .Match(
+                Right: gpi => RightAsync<Error, GeneInfo>(gpi),
+                Left: _ => ProvideGeneFromRemote(uniqueGeneId, geneHash, cancellationToken))
+        select new PrepareGeneResponse();
 
     private EitherAsync<Error, Unit> EnsureGene(
         string genePoolPath,
@@ -93,7 +128,23 @@ internal class LocalFirstGeneProvider(
                 log.LogInformation(e, "Failed to ensure parts of gene {GeneId}", geneId);
                 return e;
             })
-        from mergedGeneInfo in localGenePool.MergeGeneParts(ensuredGeneInfo, reportProgress, cancel)
+        from mergedGeneInfo in localGenePool.MergeGeneParts(
+                ensuredGeneInfo,
+                async (processedBytes, totalBytes) =>
+                {
+                    var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
+                    var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
+                    var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
+
+                    var overallPercent = Convert.ToInt32(processedPercent * 25d) + 75;
+
+                    var progressMessage = $"Extracting {geneInfo.Id} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
+                    log.LogTrace("Extracting {Gene} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
+                        geneInfo.Id, totalReadMb, totalMb, processedPercent);
+                    await reportProgress(progressMessage, overallPercent);
+                    return unit;
+                },
+                cancel)
             .MapLeft(e =>
             {
                 log.LogInformation(e, "Failed to merge parts of gene {GeneId}", geneId);
@@ -173,6 +224,20 @@ internal class LocalFirstGeneProvider(
                 : unit;
         }).ToEither()
         select geneInfo;
+
+    private EitherAsync<Error, GeneInfo> DownloadGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartsInfo partInfo,
+        Func<string, int, Task<Unit>> reportProgress,
+        CancellationToken cancel) =>
+        ProvideGeneFromRemote(uniqueGeneId, geneHash, cancel)
+            .ToEitherAsync()
+            .MapLeft(error =>
+            {
+                log.LogInformation(error, "Failed to retrieve gene {GeneId} from remote pools", uniqueGeneId);
+                return error;
+            });
 
     private EitherAsync<Error, GeneInfo> ProvideGeneFromRemote(
         UniqueGeneIdentifier uniqueGeneId,

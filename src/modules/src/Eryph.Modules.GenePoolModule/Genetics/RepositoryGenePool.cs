@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reactive.Disposables;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ using Eryph.GenePool.Model.Responses;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
+using LanguageExt.Pipes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using static LanguageExt.Prelude;
@@ -32,6 +34,7 @@ internal class RepositoryGenePool(
     IGenePoolApiKeyStore keyStore,
     IApplicationInfoProvider applicationInfo,
     IHardwareIdProvider hardwareIdProvider,
+    IGeneTempPathProvider geneTempPathProvider,
     GenePoolSettings genepoolSettings)
     : GenePoolBase, IGenePool
 {
@@ -90,31 +93,26 @@ internal class RepositoryGenePool(
         from genePoolClient in CreateClient()
         from geneInfo in TryAsync(async () =>
         {
-            //var downloadEntry = geneSetInfo.GeneDownloadInfo.FirstOrDefault(x => x.Gene == parsedGeneId.Hash);
+            var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet, geneHash.ToGene());
 
-            //if (downloadEntry == null)
-            //{
-                var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet, geneHash.ToGene());
+            // TODO This does not work. The gene pool only populates ContentUri but not Content
 
-                // TODO This does not work. The gene pool only populates ContentUri but not Content
+            var response = await geneClient.GetAsync(cancellationToken: cancel);
+            if (response is null)
+                throw Error.New("The response from the gene pool API is empty.");
+            
+            if (response.Manifest is null)
+                throw Error.New("The gene manifest is missing in the response of the gene pool API.");
 
-                var response = await geneClient.GetAsync(cancellationToken: cancel);
-                if (response is null)
-                    throw Error.New("The response from the gene pool API is empty.");
-                
-                if (response.Manifest is null)
-                    throw Error.New("The gene manifest is missing in the response of the gene pool API.");
+            var downloadEntry = new GetGeneDownloadResponse(
+                geneHash.Hash,
+                response.Manifest,
+                response.Content?.Content,
+                response.DownloadUris,
+                response.DownloadExpires.GetValueOrDefault());
 
-                var downloadEntry = new GetGeneDownloadResponse(
-                    geneHash.Hash,
-                    response.Manifest,
-                    response.Content?.Content,
-                    response.DownloadUris,
-                    response.DownloadExpires.GetValueOrDefault());
-            //}
-
-            return new GeneInfo(uniqueGeneId, geneHash, downloadEntry.Manifest,
-                downloadEntry.DownloadUris, downloadEntry.DownloadExpires, false, downloadEntry.Content);
+        return new GeneInfo(uniqueGeneId, geneHash, downloadEntry.Manifest,
+                downloadEntry.DownloadUris, downloadEntry.DownloadExpires, false);
 
         }).ToEither(ex =>
         {
@@ -130,7 +128,7 @@ internal class RepositoryGenePool(
         from _1 in guard(uniqueGeneId.GeneType is GeneType.Catlet or GeneType.Fodder,
             Error.New($"The content of the gene {uniqueGeneId} cannot be downloaded directly."))
         from genePoolClient in CreateClient()
-        from geneResponse in RetrieveGene(uniqueGeneId, geneHash, cancellationToken)
+        from geneResponse in FetchGene(uniqueGeneId, geneHash, cancellationToken)
         from _2 in guard(geneResponse.Manifest!.OriginalSize! <= int.MaxValue && geneResponse.Manifest!.Size! <= int.MaxValue,
             Error.New("The size of the gene is too big."))
         let originalSize = (int)geneResponse.Manifest!.OriginalSize!
@@ -142,9 +140,7 @@ internal class RepositoryGenePool(
             Empty: () => Error.New($"No gene part information is available for gene {uniqueGeneId}"),
             Head: gp => gp,
             Tail: _ => Error.New($"The gene {uniqueGeneId} has multiple parts. Only genes with a single part can be downloaded directly."))
-        from genePartUri in geneResponse.DownloadUris.ToSeq()
-            .Find(u => GenePartHash.NewOption(u.Part) == Some(genePartHash))
-            .Map(u => u.DownloadUri)
+        from genePartUri in geneResponse.DownloadUris.Find(genePartHash)
             .ToEitherAsync(Error.New($"The download information for the gene {uniqueGeneId} is incomplete."))
         from content in TryAsync(async () =>
         {
@@ -154,6 +150,70 @@ internal class RepositoryGenePool(
             return memoryStream.ToArray();
         }).ToEither()
         select new GeneContentInfo(uniqueGeneId, geneHash, content, originalSize, geneResponse.Manifest!.Format!);
+
+    public EitherAsync<Error, GenePartsInfo> DownloadGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartsInfo partsInfo,
+        CancellationToken cancel) =>
+        from repositoryGeneInfo in FetchGene(uniqueGeneId, geneHash, cancel)
+        let missingParts = partsInfo.Parts.Except(partsInfo.ExistingParts.Keys)
+        from downloadedParts in missingParts
+            .Map(p => DownloadGenePartSafe(uniqueGeneId, geneHash, p, repositoryGeneInfo, cancel))
+            .SequenceSerial()
+        from a in inch D 
+        select new GenePartsInfo(
+            uniqueGeneId,
+            geneHash,
+            partsInfo.Parts,
+            partsInfo.ExistingParts + downloadedParts.Somes().ToHashMap());
+
+    private Aff<GenePartsInfo> DownloadGene2(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartsInfo partsInfo,
+        CancellationToken cancel) => SuccessAff(new GenePartsInfo(uniqueGeneId, geneHash, partsInfo.Parts, LanguageExt.HashMap<GenePartHash, long>.Empty));
+
+        private EitherAsync<Error, Option<(GenePartHash Part, long Size)>> DownloadGenePartSafe(
+            UniqueGeneIdentifier geneId,
+            GeneHash geneHash,
+            GenePartHash genePartHash,
+            RepositoryGeneInfo repositoryGeneInfo,
+            CancellationToken cancellationToken) =>
+            from result in DownloadGenePart(geneId, geneHash, genePartHash, repositoryGeneInfo, cancellationToken)
+                .Match < EitherAsync<Error, Option<(GenePartHash Part, long Size)>>(
+                Right: r => RightAsync(Some(r)),
+                Left: () => None)
+            select result;
+
+    private EitherAsync<Error, (GenePartHash Part, long Size)> DownloadGenePart(
+        UniqueGeneIdentifier geneId,
+        GeneHash geneHash,
+        GenePartHash genePartHash,
+        RepositoryGeneInfo repositoryGeneInfo,
+        CancellationToken cancellationToken) =>
+        from path in geneTempPathProvider.GetGenePartPath(geneId, geneHash, genePartHash)
+        from url in repositoryGeneInfo.DownloadUris
+            .Find(genePartHash)
+            .ToEitherAsync(Error.New($"The gene part {genePartHash.Hash} is not available in the gene pool."))
+        from _ in guard(repositoryGeneInfo.DownloadExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5),
+            Error.New($"The download link for the gene part {genePartHash.Hash} will soon expire."))
+        from size in TryAsync(async () =>
+        {
+            try
+            {
+                log.LogTrace("Downloading gene part {GenePart} from {Url}", genePartHash, url);
+                await using var fileStream = fileSystem.OpenWrite(path);
+                await FetchGenePart(fileStream, url, genePartHash, cancellationToken);
+                return fileStream.Length;
+            }
+            finally
+            {
+                fileSystem.FileDelete(path);
+            }
+
+        }).ToEither(ex => Error.New($"Failed to download gene part {genePartHash.Hash} from {PoolName}.", ex))
+        select (genePartHash, size);
 
     public EitherAsync<Error, long> RetrieveGenePart(
         GeneInfo geneInfo,
@@ -239,6 +299,7 @@ internal class RepositoryGenePool(
                     });
                 await using var cryptoStream = new CryptoStream(progressStream, hashAlg, CryptoStreamMode.Write);
                 await CopyToAsync(responseStream, cryptoStream, cancel);
+                await cryptoStream.FlushFinalBlockAsync(cancel);
             }
 
             var hashString = GetHashString(hashAlg.Hash);
@@ -310,4 +371,47 @@ internal class RepositoryGenePool(
             await destination.WriteAsync(buffer[..bytesRead], cancellationToken);
         }
     }
+
+    private EitherAsync<Error, RepositoryGeneInfo> FetchGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken cancellationToken) =>
+        from genePoolClient in CreateClient()
+        from response in TryAsync(async () =>
+        {
+            var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet, geneHash.ToGene());
+            var response = await geneClient.GetAsync(cancellationToken: cancellationToken);
+            return Optional(response);
+        }).ToEither()
+        from validResponse in response.ToEitherAsync(
+            Error.New("The response from the gene pool API is empty."))
+        from manifest in Optional(validResponse.Manifest).ToEitherAsync(
+            Error.New("The gene manifest is missing in the response of the gene pool API."))
+        let manifestHash = GeneManifestUtils.ComputeHash(manifest)
+        from _ in guard(manifestHash == geneHash,
+            Error.New($"The gene manifest hash {manifestHash} does not match the requested gene hash {geneHash}."))
+        from downloadExpiresAt in Optional(validResponse.DownloadExpires)
+            .ToEitherAsync(Error.New("The download expiration time is missing in the response of the gene pool API."))
+        from downloadUris in validResponse.DownloadUris.ToSeq()
+            .Map(u => from partHash in GenePartHash.NewEither(u.Part)
+                      select (partHash, u.DownloadUri))
+            .Sequence()
+            .ToAsync()
+            .MapLeft(e => Error.New($"Some of the download URIs returned by the gene pool API are invalid.", e))
+        select new RepositoryGeneInfo(manifest, downloadUris.ToHashMap(), downloadExpiresAt);
+
+    private record RepositoryGeneInfo(
+        GeneManifestData Manifest,
+        HashMap<GenePartHash, Uri> DownloadUris,
+        DateTimeOffset DownloadExpiresAt);
+
+    private static bool IsUnexpectedHttpClientError(Error error) =>
+        error.Exception
+            .Map(ex => ex is GenepoolClientException
+            {
+                StatusCode: >= HttpStatusCode.BadRequest
+                and < HttpStatusCode.InternalServerError
+                and not HttpStatusCode.NotFound
+            })
+            .IfNone(false);
 }
