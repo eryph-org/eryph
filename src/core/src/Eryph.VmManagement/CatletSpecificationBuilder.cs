@@ -41,7 +41,7 @@ public static class CatletSpecificationBuilder
         from resolvedGenes in ResolveGenes(genes, architecture, genePoolReader, cancellation)
         from expandedConfig in CatletFeeding.Feed(
             bredConfigWithDefaults,
-            resolvedGenes.Keys.ToSeq(),
+            resolvedGenes,
             genePoolReader)
             .MapLeft(e => Error.New("Could not feed the catlet.", e))
         select (expandedConfig, resolvedGenes);
@@ -89,8 +89,17 @@ public static class CatletSpecificationBuilder
         from _ in CatletPedigree.ValidateAncestorChain(updatedVisitedAncestors)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
             .ToAsync()
-        from config in ReadCatletConfig(resolvedId, geneProvider, cancellationToken)
+        from genes in geneProvider.GetGenes(id, cancellationToken)
+        let catletGeneId = new UniqueGeneIdentifier(
+            GeneType.Catlet,
+            new GeneIdentifier(resolvedId, GeneName.New("catlet")),
+            // Catlets are never architecture-specific. Hence, we hardcode any here.
+            Architecture.New(EryphConstants.AnyArchitecture))
+        from catletGeneHash in genes.Find(catletGeneId)
+            .ToEitherAsync(Error.New($"The gene set {id} is the parent of a catlet but does not contain a catlet gene."))
+        from config in ReadCatletConfig(catletGeneId, catletGeneHash, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
+        // TODO add step to normalize fodder and volumes sources here instead of in the CatletPedigree
         from resolveResult in ResolveGeneSets(config, resolvedGeneSets, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from parentsResult in ResolveParent(config.Parent, resolveResult, resolvedCatlets,
@@ -150,18 +159,13 @@ public static class CatletSpecificationBuilder
         select result;
 
     public static EitherAsync<Error, CatletConfig> ReadCatletConfig(
-        GeneSetIdentifier geneSetId,
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
         IGenePoolReader genepoolReader,
         CancellationToken cancellationToken) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        let uniqueId = new UniqueGeneIdentifier(
-            GeneType.Catlet,
-            new GeneIdentifier(geneSetId, GeneName.New("catlet")),
-            // Catlets are never architecture-specific. Hence, we hardcode any here.
-            Architecture.New(EryphConstants.AnyArchitecture))
-        from json in genepoolReader.GetGeneContent(uniqueId, cancellationToken)
+        from json in genepoolReader.GetGeneContent(uniqueGeneId, geneHash, cancellationToken)
         from config in Try(() => CatletConfigJsonSerializer.Deserialize(json))
-            .ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex)))
+            .ToEither(ex => Error.New($"Could not deserialize catlet config in gene {uniqueGeneId} ({geneHash}).", Error.New(ex)))
             .ToAsync()
         select config;
 
@@ -247,6 +251,7 @@ public static class CatletSpecificationBuilder
             geneIdWithType.GeneIdentifier.GeneName,
             catletArchitecture,
             cachedGenes)
+        // TODO add additional check if any version of the gene exists and otherwise return a different error
         //from manifest in genePoolReader.GetGeneSetTagManifest(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
         //from manifest in optionalManifest.ToEitherAsync(
         //    Error.New($"The gene set '{geneIdWithType.GeneIdentifier.GeneSet}' is not available in the gene pool."))

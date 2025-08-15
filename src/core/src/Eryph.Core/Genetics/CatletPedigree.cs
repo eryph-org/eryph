@@ -112,6 +112,7 @@ public static class CatletPedigree
     private static Either<Error, CatletDriveConfig> NormalizeGenePoolSources(
         GeneSetIdentifier id,
         CatletDriveConfig config) =>
+        // TODO  Only normalize drive source if the gene exists https://github.com/eryph-org/eryph/issues/352
         (config.Type ?? CatletDriveType.VHD) == CatletDriveType.VHD && !notEmpty(config.Source)
             ? from geneName in GeneName.NewEither(config.Name)
                   .MapLeft(e => Error.New(

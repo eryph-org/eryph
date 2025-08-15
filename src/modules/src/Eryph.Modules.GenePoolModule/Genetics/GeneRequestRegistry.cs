@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using LanguageExt;
@@ -56,16 +57,17 @@ internal class GeneRequestRegistry(
         CancellationToken cancel)
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
-
+        
         var taskMessaging = scope.GetInstance<ITaskMessaging>();
         var geneProvider = scope.GetInstance<IGeneProvider>();
         try
         {
+            
             var result = await geneProvider.ProvideGene(
                 uniqueGeneId,
                 geneHash,
-                (message, progress) => ReportProgress(taskMessaging, uniqueGeneId, message, progress),
-                cancel);
+                (message, progress) => ReportProgress(taskMessaging, uniqueGeneId, message, progress))
+                .RunWithCancel(cancel);
             await EndRequest(taskMessaging, uniqueGeneId, result);
         }
         catch (Exception ex)
@@ -90,7 +92,7 @@ internal class GeneRequestRegistry(
     private async Task EndRequest(
         ITaskMessaging taskMessaging,
         UniqueGeneIdentifier uniqueGeneId,
-        Either<Error, PrepareGeneResponse> result)
+        Fin<PrepareGeneResponse> result)
     {
         var pending = _pendingRequests.Find(uniqueGeneId);
         _pendingRequests.Remove(uniqueGeneId);
@@ -99,7 +101,7 @@ internal class GeneRequestRegistry(
             _pendingRequests.Swap(requests => requests.Remove(uniqueGeneId));
             foreach (var task in listening)
             {
-                await result.ToAsync().FailOrComplete(taskMessaging, task.Context);
+                await result.FailOrComplete(taskMessaging, task.Context);
             }
         });
     }

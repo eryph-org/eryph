@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Core.Sys;
 using Eryph.GenePool.Compression;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
@@ -18,6 +19,7 @@ using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using LanguageExt.Pipes;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 
@@ -580,7 +582,78 @@ internal class LocalGenePoolSource(
         from _2 in AddMergedGene(geneSetPath, geneContentInfo.Hash)
         select content;
 
-    public EitherAsync<Error, GeneContentInfo> RetrieveGeneContent(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, CancellationToken cancellationToken)
+    public EitherAsync<Error, GeneContentInfo> RetrieveGeneContent(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Aff<CancelRt, Option<GeneSetInfo>> GetCachedGeneSet(
+        GeneSetIdentifier geneSetId) =>
+        from _ in SuccessAff(unit)
+        let manifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneSetId)
+        from manifest in Aff<CancelRt, Option<GenesetTagManifestData>>(async rt =>
+        {
+            if (!fileSystem.FileExists(manifestPath))
+                return None;
+
+            await using var manifestStream = fileSystem.OpenRead(manifestPath);
+            // TODO Dedicated serializer settings?
+            var manifest = await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(
+                manifestStream,
+                GeneModelDefaults.SerializerOptions,
+                cancellationToken: rt.CancellationToken);
+
+            if (manifest is null)
+                throw Error.New($"Could not deserialize the manifest of the gene set {geneSetId}.");
+
+            return Some(manifest);
+        })
+        select manifest.Map(m => new GeneSetInfo(geneSetId, m, []));
+
+    public Aff<CancelRt, Option<string>> GetCachedGeneContent(
+        UniqueGeneIdentifier uniqueGeneId) =>
+        from _ in SuccessAff(unit)
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
+        from content in Aff<CancelRt, Option<string>>(async rt =>
+        {
+            if (!fileSystem.FileExists(genePath))
+                return Option<string>.None;
+            var content = await fileSystem.ReadAllTextAsync(genePath, rt.CancellationToken);
+
+            return Some(content);
+        })
+        select content;
+
+    public Aff<CancelRt, Option<GeneSetInfo>> GetGeneSet(
+        GeneSetIdentifier geneSetId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Aff<CancelRt, Option<GeneContentInfo>> GetGeneContent(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Aff<CancelRt, Option<GenePartsInfo>> DownloadGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartsInfo geneParts)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Aff<CancelRt, string> CacheGeneContent(GeneContentInfo geneContentInfo)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Aff<CancelRt, Option<GenePartsInfo>> GetDownloadedGeneParts(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, Func<long, long, Task<Unit>> reportProgress)
     {
         throw new NotImplementedException();
     }

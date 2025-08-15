@@ -6,7 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -35,7 +37,7 @@ internal class ExpandFodderVMCommandHandler(
             : CatletFeeding.FeedSystemVariables(command.Config, "#catletId", "#vmId")
         from fedConfig in CatletFeeding.Feed(
             configWithSystemVariables,
-            command.ResolvedGenes.ToSeq(),
+            HashMap<UniqueGeneIdentifier, GeneHash>.Empty, //command.ResolvedGenes.ToHashMap(),
             genePoolReader)
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()

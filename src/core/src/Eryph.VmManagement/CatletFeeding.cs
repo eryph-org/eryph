@@ -8,6 +8,7 @@ using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.Resources.Machines;
 using LanguageExt;
 using LanguageExt.Common;
@@ -56,7 +57,7 @@ public static class CatletFeeding
 
     public static EitherAsync<Error, CatletConfig> Feed(
         CatletConfig catletConfig,
-        Seq<UniqueGeneIdentifier> resolvedGenes,
+        HashMap<UniqueGeneIdentifier, GeneHash> resolvedGenes,
         IGenePoolReader genepoolReader) =>
         from allRemovedFodderKeys in catletConfig.Fodder.ToSeq()
             .Filter(f => f.Remove.GetValueOrDefault())
@@ -99,7 +100,7 @@ public static class CatletFeeding
 
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfig(
         FodderConfig fodderConfig,
-        Seq<UniqueGeneIdentifier> resolvedGenes,
+        HashMap<UniqueGeneIdentifier, GeneHash> resolvedGenes,
         IGenePoolReader genepoolReader) =>
         from geneId in Optional(fodderConfig.Source)
             .Filter(notEmpty)
@@ -116,7 +117,7 @@ public static class CatletFeeding
 
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
         FodderConfig fodderConfig,
-        Seq<UniqueGeneIdentifier> resolvedGenes,
+        HashMap<UniqueGeneIdentifier, GeneHash> resolvedGenes,
         IGenePoolReader genepoolReader) =>
         from geneId in GeneIdentifier.NewEither(fodderConfig.Source).ToAsync()
         from _ in ValidateIsResolved(geneId, genepoolReader)
@@ -125,10 +126,13 @@ public static class CatletFeeding
             .Map(FodderName.NewEither)
             .Sequence()
             .ToAsync()
-        from uniqueGeneId in resolvedGenes.Find(g => g.GeneType == GeneType.Fodder && g.Id == geneId)
+        from resolvedGene in resolvedGenes
+            .Find(g => g.Key.GeneType == GeneType.Fodder && g.Key.Id == geneId)
             .ToEither(Error.New($"The gene '{geneId}' has not been correctly resolved. This should not happen."))
             .ToAsync()
-        from geneContent in genepoolReader.GetGeneContent(uniqueGeneId, CancellationToken.None)
+        let uniqueGeneId = resolvedGene.Key
+        let geneHash = resolvedGene.Value
+        from geneContent in genepoolReader.GetGeneContent(uniqueGeneId, geneHash, CancellationToken.None)
         from geneFodderConfig in Try(() => FodderGeneConfigJsonSerializer.Deserialize(geneContent))
             .ToEither(Error.New).ToAsync()
         from geneFodderWithName in geneFodderConfig.Fodder.ToSeq()

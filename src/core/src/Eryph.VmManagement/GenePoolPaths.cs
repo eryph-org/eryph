@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -38,6 +39,17 @@ public static class GenePoolPaths
         string genePoolPath,
         UniqueGeneIdentifier uniqueGeneId) =>
         GetGenePath(genePoolPath, uniqueGeneId.GeneType, uniqueGeneId.Architecture, uniqueGeneId.Id);
+
+    public static string GetTempGeneManifestPath(
+        string geneDownloadPath,
+        GeneHash geneHash) =>
+        Path.Combine(geneDownloadPath, geneHash.Value, "gene.json");
+
+    public static string GetTempGenePartPath(
+        string geneDownloadPath,
+        GeneHash geneHash,
+        GenePartHash genePartHash) =>
+        Path.Combine(geneDownloadPath, geneHash.Value, $"{genePartHash}.part");
 
     public static string GetGenePath(
         string genePoolPath,
