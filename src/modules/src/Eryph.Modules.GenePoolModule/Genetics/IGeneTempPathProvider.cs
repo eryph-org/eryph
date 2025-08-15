@@ -12,6 +12,8 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 public interface IGeneTempPathProvider
 {
+    
+
     EitherAsync<Error, string> GetGenePartPath(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,

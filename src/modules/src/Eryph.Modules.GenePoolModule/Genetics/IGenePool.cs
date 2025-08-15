@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Core.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -14,6 +15,14 @@ internal interface IGenePool
     EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
         GeneSetIdentifier geneSetId,
         CancellationToken cancel);
+
+    /// <summary>
+    /// Fetches the gene set 
+    /// </summary>
+    /// <param name="geneSetId"></param>
+    /// <returns></returns>
+    Aff<CancelRt, Option<GeneSetInfo>> GetGeneSet(
+        GeneSetIdentifier geneSetId);
 
     EitherAsync<Error, GeneInfo> RetrieveGene(
         UniqueGeneIdentifier uniqueGeneId,
@@ -29,7 +38,20 @@ internal interface IGenePool
         Func<string, int, Task<Unit>> reportProgress,
         Stopwatch stopwatch,
         CancellationToken cancel);
-    EitherAsync<Error, GeneContentInfo> RetrieveGeneContent(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, CancellationToken cancellationToken);
+
+    EitherAsync<Error, GeneContentInfo> RetrieveGeneContent(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken cancellationToken);
+
+    Aff<CancelRt, Option<GeneContentInfo>> GetGeneContent(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash);
+
+    Aff<CancelRt, Option<GenePartsInfo>> DownloadGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartsInfo geneParts);
 
     public string PoolName { get; }
 }

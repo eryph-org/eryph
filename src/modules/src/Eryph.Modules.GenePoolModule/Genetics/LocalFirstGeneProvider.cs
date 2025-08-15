@@ -16,6 +16,8 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core.Sys;
+using Microsoft.Identity.Client;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Genetics;
@@ -26,27 +28,83 @@ internal class LocalFirstGeneProvider(
     ILogger log)
     : IGeneProvider
 {
-    // Flow for providing a gene:
-    // 1. Check genes.json in local gene pool -> gene is fully merged and available -> done
-    // 2. Check local gene pool for already downloaded gene parts and manifest
-    //    - produces first part of download progress
-    //    - packed
-    // 2. Download gene parts
+    public Aff<CancelRt, GeneSetInfo> GetGeneSetManifest(
+        GeneSetIdentifier geneSetId) =>
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
+        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
+        from cachedGeneSet in localGenePool.GetCachedGeneSet(geneSetId)
+        from pulledGeneSet in cachedGeneSet
+            // gene set references should always be checked online
+            .Filter(gsi => string.IsNullOrWhiteSpace(gsi.Manifest.Reference))
+            .Match(
+                Some: g => SuccessAff<CancelRt, Option<GeneSetInfo>>(Some(g)),
+                None: () => PullAndCacheGeneSet(geneSetId))
+        from result in (pulledGeneSet | cachedGeneSet).ToAff(
+            Error.New($"The gene set {geneSetId} is not available in local or remote gene pools."))
+        select result;
 
-    public EitherAsync<Error, PrepareGeneResponse> ProvideGene(
+
+    private Aff<CancelRt, Option<GeneSetInfo>> PullAndCacheGeneSet(
+        GeneSetIdentifier geneSetId) =>
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
+        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
+        from pulledGeneSet in IterateGenePools<GeneSetInfo>(
+            genepoolFactory,
+            pool => pool.GetGeneSet(geneSetId))
+        from _ in pulledGeneSet
+            .Map(gsi => localGenePool.CacheGeneSet(gsi, CancellationToken.None).ToAff())
+            .Sequence()
+        select pulledGeneSet;
+
+    public Aff<CancelRt, string> GetGeneContent(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash) =>
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
+        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
+        from cachedGeneContent in localGenePool.GetCachedGeneContent(uniqueGeneId)
+        from pulledGeneContent in cachedGeneContent.Match(
+            Some: c => SuccessAff<Option<string>>(c),
+            None: () => PullAndCacheGene(uniqueGeneId, geneHash))
+        from result in pulledGeneContent.ToAff(
+            Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available in local or remote gene pools."))
+        select result;
+
+    private Aff<CancelRt, Option<string>> PullAndCacheGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash) =>
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
+        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
+        from pulledGene in IterateGenePools(
+            genepoolFactory,
+            genePool => genePool.GetGeneContent(uniqueGeneId, geneHash))
+        from content in pulledGene
+            .Map(g => localGenePool.CacheGeneContent(g, CancellationToken.None).ToAff())
+            .Sequence()
+        select content;
+
+    private Aff<CancelRt, Option<R>> IterateGenePools<R>(
+        IGenePoolFactory genePoolFactory,
+        Func<IGenePool, Aff<CancelRt, Option<R>>> action)
+        where R : class =>
+        genePoolFactory.RemotePools.ToSeq().Fold(
+            SuccessAff<CancelRt, Option<R>>(None),
+            (s, poolName) => from validState in s
+                             let genePool = genePoolFactory.CreateNew(poolName)
+                             from result in validState.Match(
+                                 Some: r => SuccessAff<CancelRt, Option<R>>(r),
+                                 None: () => action(genePool))
+                             select result);
+
+    public Aff<CancelRt, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancel) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
+        Func<string, int, Task<Unit>> reportProgress) =>
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from isMerged in localGenePool.HasGene(uniqueGeneId, geneHash, cancel)
-        from _ in isMerged
-            ? RightAsync<Error, Unit>(unit)
-            : EnsureGene(genePoolPath, uniqueGeneId, geneHash, reportProgress, cancel)
+        from _ in EnsureGene(uniqueGeneId, geneHash, reportProgress)
         let timestamp = DateTimeOffset.UtcNow
-        from geneSize in localGenePool.GetCachedGeneSize(uniqueGeneId)
-        from validGeneSize in geneSize.ToEitherAsync(
+        from geneSize in localGenePool.GetCachedGeneSize(uniqueGeneId).ToAff()
+        from validGeneSize in geneSize.ToAff(
             Error.New($"The gene {uniqueGeneId} was not properly extracted."))
         select new PrepareGeneResponse
         {
@@ -60,13 +118,12 @@ internal class LocalFirstGeneProvider(
             Timestamp = timestamp,
         };
 
-    public EitherAsync<Error, PrepareGeneResponse> EnsureGene2(
+    public Aff<CancelRt, Option<GenePartsInfo>> EnsureGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancellationToken) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
+        Func<string, int, Task<Unit>> reportProgress) =>
+        from _ in SuccessAff(unit)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from alreadyDownloadedParts in localGenePool.GetDownloadedGeneParts(
             uniqueGeneId,
@@ -84,15 +141,17 @@ internal class LocalFirstGeneProvider(
                     uniqueGeneId, totalReadMb, totalMb, processedPercent);
                 await reportProgress(progressMessage, overallPercent);
                 return unit;
-            },
-            cancellationToken)
-        from downloadedParts in alreadyDownloadedParts
-            .Filter(gpi => toHashSet(gpi.ExistingParts.Keys) == toHashSet(gpi.Parts))
-            .Match(
-                Right: gpi => RightAsync<Error, GeneInfo>(gpi),
-                Left: _ => ProvideGeneFromRemote(uniqueGeneId, geneHash, cancellationToken))
-        select new PrepareGeneResponse();
+            })
+        select alreadyDownloadedParts;
 
+    // Flow for providing a gene:
+    // 1. Check genes.json in local gene pool -> gene is fully merged and available -> done
+    // 2. Check local gene pool for already downloaded gene parts and manifest
+    //    - produces first part of download progress
+    //    - packed
+    // 2. Download gene parts
+
+    /*
     private EitherAsync<Error, Unit> EnsureGene(
         string genePoolPath,
         UniqueGeneIdentifier geneId,
@@ -151,7 +210,9 @@ internal class LocalFirstGeneProvider(
                 return e;
             })
         select unit;
+    */
 
+    /*
     private EitherAsync<Error, GeneInfo> EnsureGeneParts(
         string genePoolPath,
         GeneInfo geneInfo,
@@ -224,20 +285,7 @@ internal class LocalFirstGeneProvider(
                 : unit;
         }).ToEither()
         select geneInfo;
-
-    private EitherAsync<Error, GeneInfo> DownloadGene(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash,
-        GenePartsInfo partInfo,
-        Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancel) =>
-        ProvideGeneFromRemote(uniqueGeneId, geneHash, cancel)
-            .ToEitherAsync()
-            .MapLeft(error =>
-            {
-                log.LogInformation(error, "Failed to retrieve gene {GeneId} from remote pools", uniqueGeneId);
-                return error;
-            });
+    */
 
     private EitherAsync<Error, GeneInfo> ProvideGeneFromRemote(
         UniqueGeneIdentifier uniqueGeneId,
@@ -270,7 +318,6 @@ internal class LocalFirstGeneProvider(
             return Error.New($"Could not find gene {uniqueGeneId} on any remote pool.");
         }
     }
-
 
     private EitherAsync<Error, long> ProvideGenePartFromRemote(
         GeneInfo geneInfo,

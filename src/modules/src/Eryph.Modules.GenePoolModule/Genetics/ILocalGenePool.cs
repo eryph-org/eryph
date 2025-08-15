@@ -3,12 +3,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Core.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
-internal interface ILocalGenePool : IGenePool
+internal interface ILocalGenePool
 {
     EitherAsync<Error, Unit> MergeGeneParts(
         GeneInfo geneInfo,
@@ -27,9 +28,11 @@ internal interface ILocalGenePool : IGenePool
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken);
 
-    EitherAsync<Error, Option<string>> GetCachedGeneContent(
-        UniqueGeneIdentifier uniqueGeneId,
-        CancellationToken cancellationToken);
+    Aff<CancelRt, Option<GeneSetInfo>> GetCachedGeneSet(
+        GeneSetIdentifier geneSetId);
+
+    Aff<CancelRt, Option<string>> GetCachedGeneContent(
+        UniqueGeneIdentifier uniqueGeneId);
 
     EitherAsync<Error, Option<long>> GetCachedGeneSize(
         UniqueGeneIdentifier uniqueGeneId);
@@ -45,12 +48,22 @@ internal interface ILocalGenePool : IGenePool
     EitherAsync<Error, string> CacheGeneContent(
         GeneContentInfo geneContentInfo,
         CancellationToken cancellationToken);
-    
+
+    Aff<CancelRt, string> CacheGeneContent(
+        GeneContentInfo geneContentInfo);
+
     EitherAsync<Error, Option<GenePartsInfo>> GetDownloadedGeneParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<long, long, Task<Unit>> reportProgress,
         CancellationToken cancellationToken);
+
+
+    Aff<CancelRt, Option<GenePartsInfo>> GetDownloadedGeneParts(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        Func<long, long, Task<Unit>> reportProgress);
+
 
     EitherAsync<Error, bool> HasGene(
         UniqueGeneIdentifier uniqueGeneId,

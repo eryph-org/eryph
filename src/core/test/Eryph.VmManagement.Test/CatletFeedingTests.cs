@@ -9,6 +9,7 @@ using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.TestBase;
 using FluentAssertions;
@@ -288,11 +289,11 @@ public class CatletFeedingTests
             });
     }
 
-    private Seq<UniqueGeneIdentifier> ArrangeFood(string architecture)
+    private HashMap<UniqueGeneIdentifier, GeneHash> ArrangeFood(string architecture)
     {
         _genepoolReaderMock.SetupGeneSets();
 
-        _genepoolReaderMock.SetupFodderGene(
+        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             architecture,
             new FodderGeneConfig()
@@ -320,11 +321,7 @@ public class CatletFeedingTests
                 ]
             });
 
-        return Seq1(
-            new UniqueGeneIdentifier(
-                GeneType.Fodder,
-                GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
-                Architecture.New(architecture)));
+        return HashMap(fodderInfo);
     }
 
     [Theory, CombinatorialData]
@@ -356,7 +353,7 @@ public class CatletFeedingTests
         };
 
         _genepoolReaderMock.SetupGeneSets();
-        _genepoolReaderMock.SetupFodderGene(
+        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             architecture,
             new FodderGeneConfig
@@ -383,11 +380,7 @@ public class CatletFeedingTests
                 ],
             });
 
-        var resolvedGenes = Seq1(
-            new UniqueGeneIdentifier(
-                GeneType.Fodder,
-                GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
-                Architecture.New(architecture)));
+        var resolvedGenes = HashMap(fodderInfo);
 
         var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
 
@@ -433,7 +426,7 @@ public class CatletFeedingTests
         };
 
         _genepoolReaderMock.SetupGeneSets();
-        _genepoolReaderMock.SetupFodderGene(
+        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             "any",
             new FodderGeneConfig
@@ -459,11 +452,7 @@ public class CatletFeedingTests
                 ],
             });
 
-        var resolvedGenes = Seq1(
-            new UniqueGeneIdentifier(
-                GeneType.Fodder,
-                GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
-                Architecture.New("any")));
+        var resolvedGenes = HashMap(fodderInfo);
 
         var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
 
@@ -502,10 +491,15 @@ public class CatletFeedingTests
             });
 
         _genepoolReaderMock.Verify(
-            x => x.GetReferencedGeneSet(It.IsAny<GeneSetIdentifier>(), It.IsAny<CancellationToken>()),
+            x => x.GetReferencedGeneSet(
+                It.IsAny<GeneSetIdentifier>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
         _genepoolReaderMock.Verify(
-            x => x.GetGeneContent(It.IsAny<UniqueGeneIdentifier>(), It.IsAny<CancellationToken>()),
+            x => x.GetGeneContent(
+                It.IsAny<UniqueGeneIdentifier>(),
+                It.IsAny<GeneHash>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -540,10 +534,15 @@ public class CatletFeedingTests
         // The informational fodder source for fodder taken from the parent
         // must not be resolved (as no fodder gene actually exists).
         _genepoolReaderMock.Verify(
-            x => x.GetReferencedGeneSet(It.IsAny<GeneSetIdentifier>(), It.IsAny<CancellationToken>()),
+            x => x.GetReferencedGeneSet(
+                It.IsAny<GeneSetIdentifier>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
         _genepoolReaderMock.Verify(
-            x => x.GetGeneContent(It.IsAny<UniqueGeneIdentifier>(), It.IsAny<CancellationToken>()),
+            x => x.GetGeneContent(
+                It.IsAny<UniqueGeneIdentifier>(),
+                It.IsAny<GeneHash>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -617,18 +616,17 @@ public class CatletFeedingTests
         };
 
         _genepoolReaderMock.SetupGeneSets();
-        _genepoolReaderMock.Setup(m => m.GetGeneContent(
-                new UniqueGeneIdentifier(
-                    GeneType.Fodder,
-                    GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
-                    Architecture.New(architecture)),
-                It.IsAny<CancellationToken>()))
-            .Returns(Error.New("Gene 'gene:acme/acme-tools/1.0:test-fodder' does not exist in local genepool."));
 
-        var resolvedGenes = Seq1(new UniqueGeneIdentifier(
+        var uniqueGeneId = new UniqueGeneIdentifier(
             GeneType.Fodder,
             GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
-            Architecture.New(architecture)));
+            Architecture.New(architecture));
+        var geneHash = GeneHash.New("sha256:4242424242424242424242424242424242424242424242424242424242424242");
+
+        _genepoolReaderMock.Setup(m => m.GetGeneContent(uniqueGeneId, geneHash, It.IsAny<CancellationToken>()))
+            .Returns(Error.New("Gene 'gene:acme/acme-tools/1.0:test-fodder' does not exist in local genepool."));
+
+        var resolvedGenes = HashMap((uniqueGeneId, geneHash));
 
         var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
         
@@ -677,7 +675,7 @@ public class CatletFeedingTests
                 ]
             });
 
-        _genepoolReaderMock.SetupFodderGene(
+        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             otherArchitecture,
             new FodderGeneConfig()
@@ -698,11 +696,7 @@ public class CatletFeedingTests
                 ]
             });
 
-        var resolvedGenes = Seq1(
-            new UniqueGeneIdentifier(
-                GeneType.Fodder,
-                GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
-                Architecture.New(architecture)));
+        var resolvedGenes = HashMap(fodderInfo);
 
         var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
 

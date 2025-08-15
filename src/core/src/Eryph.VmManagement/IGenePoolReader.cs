@@ -37,5 +37,6 @@ public interface IGenePoolReader
     /// </summary>
     public EitherAsync<Error, string> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
         CancellationToken cancellationToken);
 }
