@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -42,6 +43,8 @@ internal class InventorizeGenePoolCommandHandler(
         let genePool = genepoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, genePool)
         from inventoryData in genePoolInventory.InventorizeGenePool()
+            .RunWithCancel(CancellationToken.None)
+            .ToEitherAsync()
         select new UpdateGenePoolInventoryCommand
         {
             AgentName = Environment.MachineName,

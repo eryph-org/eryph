@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -38,5 +39,7 @@ internal class RemoveGenesVmHostCommandHandler(
         from _ in command.Genes.ToSeq()
             .Map(genePool.RemoveCachedGene)
             .SequenceSerial()
+            .RunWithCancel(CancellationToken.None)
+            .ToEitherAsync()
         select unit;
 }

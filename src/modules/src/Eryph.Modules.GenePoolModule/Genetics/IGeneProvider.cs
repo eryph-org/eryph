@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Core.Sys;
+using Eryph.GenePool.Model;
 using Eryph.Messages.Genes.Commands;
 using LanguageExt;
 
@@ -14,7 +15,8 @@ public interface IGeneProvider
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash);
     
-    Aff<CancelRt, GeneSetInfo> GetGeneSetManifest(GeneSetIdentifier geneSetId);
+    Aff<CancelRt, GenesetTagManifestData> GetGeneSetManifest(
+        GeneSetIdentifier geneSetId);
 
     Aff<CancelRt, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,

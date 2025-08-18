@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Core.Sys;
+using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -11,44 +12,25 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 internal interface ILocalGenePool
 {
-    EitherAsync<Error, GeneSetInfo> CacheGeneSet(
-        GeneSetInfo geneSetInfo,
-        CancellationToken cancellationToken);
+    Aff<CancelRt, Unit> CacheGeneSet(
+        GeneSetInfo geneSetInfo);
 
-    EitherAsync<Error, GeneInfo> CacheGene(
-        GeneInfo geneInfo,
-        CancellationToken cancellationToken);
-
-    EitherAsync<Error, Option<GeneSetInfo>> GetCachedGeneSet(
-        GeneSetIdentifier geneSetId,
-        CancellationToken cancellationToken);
-
-    Aff<CancelRt, Option<GeneSetInfo>> GetCachedGeneSet(
+    Aff<CancelRt, Option<GenesetTagManifestData>> GetCachedGeneSet(
         GeneSetIdentifier geneSetId);
 
     Aff<CancelRt, Option<string>> GetCachedGeneContent(
         UniqueGeneIdentifier uniqueGeneId);
 
-    EitherAsync<Error, Option<long>> GetCachedGeneSize(
+    Aff<CancelRt, Option<long>> GetCachedGeneSize2(
         UniqueGeneIdentifier uniqueGeneId);
 
-    EitherAsync<Error, string> GetGenePartPath(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash,
-        GenePartHash genePartHash);
-
-    EitherAsync<Error, Unit> RemoveCachedGene(
+    Aff<CancelRt, Unit> RemoveCachedGene(
         UniqueGeneIdentifier uniqueGeneId);
-
-    EitherAsync<Error, string> CacheGeneContent(
-        GeneContentInfo geneContentInfo,
-        CancellationToken cancellationToken);
 
     Aff<CancelRt, string> CacheGeneContent(
         GeneContentInfo geneContentInfo);
 
-
-    Aff<CancelRt, (bool IsComplete, HashMap<GenePartHash, long> Parts)> GetDownloadedGeneParts(
+    Aff<CancelRt, HashMap<GenePartHash, Option<long>>> GetDownloadedGeneParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<long, long, Task<Unit>> reportProgress);
