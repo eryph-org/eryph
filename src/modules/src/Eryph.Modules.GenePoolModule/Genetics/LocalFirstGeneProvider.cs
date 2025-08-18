@@ -169,7 +169,7 @@ internal class LocalFirstGeneProvider(
                         .SequenceSerial()
                     from result in retry(
                         // TODO fix schedule
-                        Schedule.repeat(5),
+                        Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(5),
                         IterateGenePools(
                         genepoolFactory,
                         genePool => genePool.DownloadGene2(

@@ -22,7 +22,7 @@ public class GenePoolReader(IGeneProvider geneProvider) : IGenePoolReader
         GeneHash geneHash,
         CancellationToken cancellationToken) =>
         from content in geneProvider
-            .GetGeneContent(uniqueGeneId, GeneHash.New("abc"))
+            .GetGeneContent(uniqueGeneId, geneHash)
             .RunWithCancel(cancellationToken)
             .ToEitherAsync()
         select content;
