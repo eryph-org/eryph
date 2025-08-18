@@ -69,9 +69,12 @@ internal class RepositoryGenePool(
         GenePartsState partsState,
         string downloadPath,
         Func<long, long, Task<Unit>> reportProgress) =>
-        retryUntil(
-            // TODO fix schedule
-            Schedule.repeat(5),
+        retryWhile(
+            // This retry is triggered when the download URL is about to expire.
+            // We just fetch new download URLs and retry immediately. We only limit
+            // the number of retries in case the gene pool behaves incorrectly and
+            // e.g. returns already expired URLs.s
+            Schedule.Forever & Schedule.recurs(5),
             from repositoryGeneInfo in FetchGene(uniqueGeneId, geneHash)
             from result in repositoryGeneInfo
                 .Map(i => DownloadGene2(uniqueGeneId, geneHash, partsState, downloadPath, reportProgress, i))
@@ -90,6 +93,7 @@ internal class RepositoryGenePool(
         let manifestPath = GenePoolPaths.GetTempGeneManifestPath(downloadPath)
         from _ in Aff<CancelRt, Unit>(async rt =>
         {
+            fileSystem.EnsureDirectoryExists(Path.GetDirectoryName(manifestPath)!);
             var json = JsonSerializer.Serialize(geneRepositoryInfo.Manifest, GeneModelDefaults.SerializerOptions);
             await fileSystem.WriteAllTextAsync(manifestPath, json, rt.CancellationToken);
             return unit;
@@ -114,10 +118,16 @@ internal class RepositoryGenePool(
         from url in repositoryGeneInfo.DownloadUris
             .Find(genePartHash)
             .ToAff(Error.New($"The gene part {genePartHash.Hash} is not available in the gene pool."))
+        // URLs which expire in less than 5 minutes are considered unusable to avoid failures in
+        // case of clock differences.
         from _  in guard(
             repositoryGeneInfo.DownloadExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5),
             UrlExpiredError)
         let path = GenePoolPaths.GetTempGenePartPath(downloadPath, genePartHash)
+        from totalBytes in Optional(repositoryGeneInfo.Manifest.Size)
+            .ToAff(Error.New($"The manifest of the gene {geneId} ({geneHash}) does not contain the size."))
+        from downloadedParts in partsState.GetExistingParts()
+        let downloadedBytes = downloadedParts.Values.ToSeq().Sum()
         from size in Aff<CancelRt, long>(async rt =>
             {
                 try
@@ -129,13 +139,10 @@ internal class RepositoryGenePool(
                         TimeSpan.FromSeconds(10),
                         async (progress, _) =>
                         {
-                            // TODO Fix me
-                            var totalSize = repositoryGeneInfo.Manifest.Size!.GetValueOrDefault();
-                            var percent = Math.Round(progress / (double)totalSize, 3);
-                            await reportProgress(progress, totalSize);
+                            await reportProgress(downloadedBytes + progress, totalBytes);
                         });
                     await FetchGenePart(fileStream, url, genePartHash, rt.CancellationToken);
-                    return fileStream.Length;
+                    return fileSystem.GetFileSize(path);
                 }
                 catch (Exception ex)
                 {
