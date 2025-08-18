@@ -17,6 +17,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
+using Eryph.GenePool.Model;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.Identity.Client;
 using static LanguageExt.Prelude;
@@ -29,32 +30,32 @@ internal class LocalFirstGeneProvider(
     ILogger log)
     : IGeneProvider
 {
-    public Aff<CancelRt, GeneSetInfo> GetGeneSetManifest(
+    public Aff<CancelRt, GenesetTagManifestData> GetGeneSetManifest(
         GeneSetIdentifier geneSetId) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from cachedGeneSet in localGenePool.GetCachedGeneSet(geneSetId)
-        from pulledGeneSet in cachedGeneSet
+        from cachedManifest in localGenePool.GetCachedGeneSet(geneSetId)
+        from pulledGeneSet in cachedManifest
             // gene set references should always be checked online
-            .Filter(gsi => string.IsNullOrWhiteSpace(gsi.Manifest.Reference))
+            .Filter(cm => string.IsNullOrWhiteSpace(cm.Reference))
             .Match(
-                Some: g => SuccessAff<CancelRt, Option<GeneSetInfo>>(Some(g)),
+                Some: g => SuccessAff<CancelRt, Option<GenesetTagManifestData>>(Some(g)),
                 None: () => PullAndCacheGeneSet(geneSetId))
-        from result in (pulledGeneSet | cachedGeneSet).ToAff(
+        from result in (pulledGeneSet | cachedManifest).ToAff(
             Error.New($"The gene set {geneSetId} is not available in local or remote gene pools."))
         select result;
 
-    private Aff<CancelRt, Option<GeneSetInfo>> PullAndCacheGeneSet(
+    private Aff<CancelRt, Option<GenesetTagManifestData>> PullAndCacheGeneSet(
         GeneSetIdentifier geneSetId) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from pulledGeneSet in IterateGenePools<GeneSetInfo>(
+        from pulledGeneSet in IterateGenePools(
             genepoolFactory,
             pool => pool.GetGeneSet(geneSetId))
         from _ in pulledGeneSet
-            .Map(gsi => localGenePool.CacheGeneSet(gsi, CancellationToken.None).ToAff())
+            .Map(localGenePool.CacheGeneSet)
             .Sequence()
-        select pulledGeneSet;
+        select pulledGeneSet.Map(gi => gi.Manifest);
 
     public Aff<CancelRt, string> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
@@ -78,7 +79,7 @@ internal class LocalFirstGeneProvider(
             genepoolFactory,
             genePool => genePool.GetGeneContent(uniqueGeneId, geneHash))
         from content in pulledGene
-            .Map(g => localGenePool.CacheGeneContent(g, CancellationToken.None).ToAff())
+            .Map(localGenePool.CacheGeneContent)
             .Sequence()
         select content;
 
@@ -112,7 +113,7 @@ internal class LocalFirstGeneProvider(
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from _ in EnsureGene(uniqueGeneId, geneHash, reportProgress)
         let timestamp = DateTimeOffset.UtcNow
-        from geneSize in localGenePool.GetCachedGeneSize(uniqueGeneId).ToAff()
+        from geneSize in localGenePool.GetCachedGeneSize2(uniqueGeneId)
         from validGeneSize in geneSize.ToAff(
             Error.New($"The gene {uniqueGeneId} was not properly extracted."))
         select new PrepareGeneResponse
@@ -121,7 +122,7 @@ internal class LocalFirstGeneProvider(
             Inventory = new GeneData()
             {
                 Id = uniqueGeneId,
-                Hash = geneHash.Value,
+                Hash = geneHash,
                 Size = validGeneSize,
             },
             Timestamp = timestamp,
@@ -134,7 +135,7 @@ internal class LocalFirstGeneProvider(
         from _1 in SuccessAff(unit)
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from alreadyDownloadedParts in localGenePool.GetDownloadedGeneParts(
+        from localGeneParts in localGenePool.GetDownloadedGeneParts(
             uniqueGeneId,
             geneHash,
             async (processedBytes, totalBytes) =>
@@ -152,14 +153,19 @@ internal class LocalFirstGeneProvider(
                 return unit;
             })
         from hasMergedGene in localGenePool.HasGene(uniqueGeneId, geneHash)
-        let isDownloadComplete = alreadyDownloadedParts.IsComplete
+        let isDownloadComplete = !localGeneParts.IsEmpty && localGeneParts.Values.ToSeq().All(s => s.IsSome)
+        let existingGeneParts = localGeneParts.ToSeq()
+            .Map(kvp => kvp.Value.Map(s => (kvp.Key, s)))
+            .Somes()
         from _2 in hasMergedGene || isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
             : use(
                 SuccessAff<CancelRt, GenePartsState>(new GenePartsState()),
                 partsState =>
-                    from _ in alreadyDownloadedParts.Parts.ToSeq()
-                        .Map(kvp => partsState.AddPart(kvp.Key, kvp.Value))
+                    from _ in localGeneParts.ToSeq()
+                        .Map(kvp => kvp.Value.Map(s => (Part: kvp.Key, Size: s)))
+                        .Somes()
+                        .Map(pi => partsState.AddPart(pi.Part, pi.Size))
                         .SequenceSerial()
                     from result in retry(
                         // TODO fix schedule

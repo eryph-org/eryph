@@ -30,11 +30,11 @@ public class GenePoolReader(IGeneProvider geneProvider) : IGenePoolReader
     public EitherAsync<Error, HashMap<UniqueGeneIdentifier, GeneHash>> GetGenes(
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken) =>
-        from geneSetInfo in geneProvider
+        from manifest in geneProvider
             .GetGeneSetManifest(geneSetId)
             .RunWithCancel(cancellationToken)
             .ToEitherAsync()
-        from genes in GeneSetTagManifestUtils.GetGenes(geneSetInfo.Manifest)
+        from genes in GeneSetTagManifestUtils.GetGenes(manifest)
             .MapLeft(e => Error.New($"The manifest of the gene set '{geneSetId}' is invalid.", e))
             .ToAsync()
         select genes;
@@ -42,11 +42,11 @@ public class GenePoolReader(IGeneProvider geneProvider) : IGenePoolReader
     public EitherAsync<Error, Option<GeneSetIdentifier>> GetReferencedGeneSet(
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken) =>
-        from geneSetInfo in geneProvider
+        from manifest in geneProvider
             .GetGeneSetManifest(geneSetId)
             .RunWithCancel(cancellationToken)
             .ToEitherAsync()
-        from result in Optional(geneSetInfo.Manifest.Reference)
+        from result in Optional(manifest.Reference)
             .Filter(notEmpty)
             .Map(GeneSetIdentifier.NewEither)
             .Sequence()
