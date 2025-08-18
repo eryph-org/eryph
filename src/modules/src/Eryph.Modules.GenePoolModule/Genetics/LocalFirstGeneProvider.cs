@@ -17,6 +17,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Identity.Client;
 using static LanguageExt.Prelude;
 
@@ -42,7 +43,6 @@ internal class LocalFirstGeneProvider(
         from result in (pulledGeneSet | cachedGeneSet).ToAff(
             Error.New($"The gene set {geneSetId} is not available in local or remote gene pools."))
         select result;
-
 
     private Aff<CancelRt, Option<GeneSetInfo>> PullAndCacheGeneSet(
         GeneSetIdentifier geneSetId) =>
@@ -84,16 +84,25 @@ internal class LocalFirstGeneProvider(
 
     private Aff<CancelRt, Option<R>> IterateGenePools<R>(
         IGenePoolFactory genePoolFactory,
-        Func<IGenePool, Aff<CancelRt, Option<R>>> action)
-        where R : class =>
+        Func<IGenePool, Aff<CancelRt, Option<R>>> action) =>
         genePoolFactory.RemotePools.ToSeq().Fold(
             SuccessAff<CancelRt, Option<R>>(None),
-            (s, poolName) => from validState in s
-                             let genePool = genePoolFactory.CreateNew(poolName)
-                             from result in validState.Match(
-                                 Some: r => SuccessAff<CancelRt, Option<R>>(r),
-                                 None: () => action(genePool))
-                             select result);
+            (state, poolName) => state.BiBind(
+                Succ: o => o.Match(
+                    // We have a valid result, nothing more to do
+                    Some: r => SuccessAff<CancelRt, Option<R>>(r),
+                    // No result, try next pool
+                    None: () => action(genePoolFactory.CreateNew(poolName))),
+                Fail: e => IsUnexpectedHttpClientError(e)
+                    // If the error is an HTTP client, we immediately fail. This way,
+                    // authentication errors are always propagated to the caller.
+                    ? FailAff<CancelRt, Option<R>>(e)
+                    : from o in action(genePoolFactory.CreateNew(poolName))
+                      // When an error occurred, we still try the next pool. When the next pool
+                      // does not contain the gene, we return the last error. This way, one error
+                      // is propagated to the caller.
+                      from r in o.ToAff(e)
+                      select Some(r)));
 
     public Aff<CancelRt, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
@@ -118,11 +127,11 @@ internal class LocalFirstGeneProvider(
             Timestamp = timestamp,
         };
 
-    public Aff<CancelRt, Option<GenePartsInfo>> EnsureGene(
+    public Aff<CancelRt, Unit> EnsureGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<string, int, Task<Unit>> reportProgress) =>
-        from _ in SuccessAff(unit)
+        from _1 in SuccessAff(unit)
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from alreadyDownloadedParts in localGenePool.GetDownloadedGeneParts(
@@ -136,13 +145,73 @@ internal class LocalFirstGeneProvider(
 
                 var overallPercent = Convert.ToInt32(processedPercent * 75d);
 
-                var progressMessage = $"Verifying downloaded parts of  {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
+                var progressMessage = $"Verifying downloaded parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
                 log.LogTrace("Verifying downloaded parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
                     uniqueGeneId, totalReadMb, totalMb, processedPercent);
                 await reportProgress(progressMessage, overallPercent);
                 return unit;
             })
-        select alreadyDownloadedParts;
+        from hasMergedGene in localGenePool.HasGene(uniqueGeneId, geneHash)
+        let isDownloadComplete = alreadyDownloadedParts.IsComplete
+        from _2 in hasMergedGene || isDownloadComplete
+            ? SuccessAff<CancelRt, Unit>(unit)
+            : use(
+                SuccessAff<CancelRt, GenePartsState>(new GenePartsState()),
+                partsState =>
+                    from _ in alreadyDownloadedParts.Parts.ToSeq()
+                        .Map(kvp => partsState.AddPart(kvp.Key, kvp.Value))
+                        .SequenceSerial()
+                    from result in retry(
+                        // TODO fix schedule
+                        Schedule.repeat(5),
+                        IterateGenePools(
+                        genepoolFactory,
+                        genePool => genePool.DownloadGene2(
+                            uniqueGeneId,
+                            geneHash,
+                            partsState,
+                            GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash),
+                            async (long processedBytes, long totalBytes) =>
+                            {
+                                var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
+                                var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
+                                var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
+
+                                var overallPercent = Convert.ToInt32(processedPercent * 75d);
+
+                                var progressMessage = $"Downloading parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
+                                log.LogTrace("Downloading parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
+                                    uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                                await reportProgress(progressMessage, overallPercent);
+                                return unit;
+                            })))
+                    from _2 in result.ToAff(Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available on any remote gene pool."))
+                    select unit)
+
+            // TODO skip download if local parts are complete
+            // TODO check if gene is already merged
+        from _4 in hasMergedGene && !isDownloadComplete
+            ? SuccessAff<CancelRt, Unit>(unit)
+            : localGenePool.MergeGene2(
+                uniqueGeneId,
+                geneHash,
+                async (processedBytes, totalBytes) =>
+                {
+                    var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
+                    var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
+                    var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
+                    
+                    var overallPercent = Convert.ToInt32(processedPercent * 25d) + 75;
+                    
+                    var progressMessage = $"Extracting {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
+                    log.LogTrace("Extracting {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
+                        uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                    await reportProgress(progressMessage, overallPercent);
+                    return unit;
+                })
+        select unit;
+
+
 
     // Flow for providing a gene:
     // 1. Check genes.json in local gene pool -> gene is fully merged and available -> done
@@ -150,213 +219,6 @@ internal class LocalFirstGeneProvider(
     //    - produces first part of download progress
     //    - packed
     // 2. Download gene parts
-
-    /*
-    private EitherAsync<Error, Unit> EnsureGene(
-        string genePoolPath,
-        UniqueGeneIdentifier geneId,
-        GeneHash geneHash,
-        Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancel) =>
-        from _  in RightAsync<Error, Unit>(unit)
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from geneInfo in localGenePool.RetrieveGene( geneId, geneHash, cancel)
-            .MapLeft(error =>
-            {
-                log.LogDebug(error, "Failed to find gene {GeneId} on local gene pool", geneId);
-                return error;
-            })
-            .BindLeft(_ => ProvideGeneFromRemote(geneId, geneHash, cancel))
-            .MapLeft(error =>
-            {
-                log.LogDebug(error, "Failed to find gene {GeneId} on remote gene pools", geneId);
-                return IsUnexpectedHttpClientError(error)
-                    ? Error.New("Failed to query remote gene pools. Check that any configured API keys are valid.",
-                        error)
-                    : error;
-            })
-        from cachedGeneInfo in localGenePool.CacheGene(geneInfo, cancel)
-            .MapLeft(e =>
-            {
-                log.LogInformation(e, "Failed to cache gene {GeneId}", geneId);
-                return e;
-            })
-        from ensuredGeneInfo in EnsureGeneParts(genePoolPath, cachedGeneInfo, reportProgress, cancel)
-            .MapLeft(e =>
-            {
-                log.LogInformation(e, "Failed to ensure parts of gene {GeneId}", geneId);
-                return e;
-            })
-        from mergedGeneInfo in localGenePool.MergeGeneParts(
-                ensuredGeneInfo,
-                async (processedBytes, totalBytes) =>
-                {
-                    var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
-                    var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
-                    var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
-
-                    var overallPercent = Convert.ToInt32(processedPercent * 25d) + 75;
-
-                    var progressMessage = $"Extracting {geneInfo.Id} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
-                    log.LogTrace("Extracting {Gene} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
-                        geneInfo.Id, totalReadMb, totalMb, processedPercent);
-                    await reportProgress(progressMessage, overallPercent);
-                    return unit;
-                },
-                cancel)
-            .MapLeft(e =>
-            {
-                log.LogInformation(e, "Failed to merge parts of gene {GeneId}", geneId);
-                return e;
-            })
-        select unit;
-    */
-
-    /*
-    private EitherAsync<Error, GeneInfo> EnsureGeneParts(
-        string genePoolPath,
-        GeneInfo geneInfo,
-        Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancel) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        let totalBytes = geneInfo.Manifest?.Size ?? 0
-        // When the gene has already been fetched and extracted, geneInfo.Metadata
-        // will just be null. In this case, the following code is mostly skipped
-        // as there are no gene parts to ensure.
-        from genePartsWithPaths in (geneInfo.Manifest?.Parts).ToSeq()
-            .Map(part => from partHash in GenePartHash.NewEither(part).ToAsync()
-                         from path in localGenePool.GetGenePartPath(geneInfo.Id, geneInfo.Hash, partHash)
-                         select (Part: part, Path: path))
-            .SequenceSerial()
-        let stopwatch = Stopwatch.StartNew()
-        from localResult in TryAsync(async () =>
-        {
-            var availableBytes = 0L;
-            var missingParts = new Arr<(string Part, string Path)>();
-            foreach (var partWithPath in genePartsWithPaths)
-            {
-                cancel.ThrowIfCancellationRequested();
-
-                var res = await localGenePool.RetrieveGenePart(geneInfo, partWithPath.Part,
-                    partWithPath.Path,
-                    availableBytes,
-                    totalBytes, reportProgress, stopwatch, cancel);
-
-                res.IfRight(r => { availableBytes += r; });
-
-                res.IfLeft(_ => { missingParts = missingParts.Add(partWithPath); });
-            }
-
-            return (AvailableBytes: availableBytes, MissingParts: missingParts);
-        }).ToEither()
-        from __ in TryAsync(async () =>
-        {
-            var retries = 0;
-            var (availableBytes, missingParts) = localResult;
-
-            while (missingParts.Count > 0 && retries < 5)
-            {
-                cancel.ThrowIfCancellationRequested();
-
-                foreach (var genePart in missingParts)
-                {
-                    cancel.ThrowIfCancellationRequested();
-
-                    var res = await ProvideGenePartFromRemote(geneInfo, genePart.Part, genePart.Path,
-                        availableBytes, totalBytes, reportProgress, stopwatch, cancel);
-
-                    res.IfRight(r =>
-                    {
-                        missingParts = missingParts.Remove(genePart);
-                        availableBytes += r;
-                    });
-                }
-
-                if (missingParts.Count == 0)
-                    return unit;
-
-                await Task.Delay(2000, cancel);
-                retries++;
-            }
-
-            return missingParts.Count > 0
-                ? Error.New($"Failed to provide all part of {geneInfo}.").Throw()
-                : unit;
-        }).ToEither()
-        select geneInfo;
-    */
-
-    private EitherAsync<Error, GeneInfo> ProvideGeneFromRemote(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash,
-        CancellationToken cancel)
-    {
-        return ProvideGeneFromRemoteAsync().ToAsync();
-
-        async Task<Either<Error, GeneInfo>> ProvideGeneFromRemoteAsync()
-        {
-
-            foreach (var poolName in genepoolFactory.RemotePools)
-            {
-                var genePool = genepoolFactory.CreateNew(poolName);
-                var result = await genePool.RetrieveGene(uniqueGeneId, geneHash, cancel);
-
-                var shouldContinue = result.Match(
-                    Right: _ => false,
-                    Left: e =>
-                    {
-                        log.LogInformation(e, "Failed to retrieve gene {Gene} on pool {Pool}.",
-                            uniqueGeneId, poolName);
-                        return !IsUnexpectedHttpClientError(e);
-                    });
-
-                if (!shouldContinue)
-                    return result;
-            }
-
-            return Error.New($"Could not find gene {uniqueGeneId} on any remote pool.");
-        }
-    }
-
-    private EitherAsync<Error, long> ProvideGenePartFromRemote(
-        GeneInfo geneInfo,
-        string genePart,
-        string genePartPath,
-        long availableSize,
-        long totalSize,
-        Func<string, int, Task<Unit>> reportProgress,
-        Stopwatch stopwatch,
-        CancellationToken cancel)
-    {
-        return ProvideGenePartFromRemoteAsync().ToAsync();
-
-        async Task<Either<Error, long>> ProvideGenePartFromRemoteAsync()
-        {
-            foreach (var poolName in genepoolFactory.RemotePools)
-            {
-                var imageSource = genepoolFactory.CreateNew(poolName);
-                var result = await imageSource.RetrieveGenePart(geneInfo, genePart, genePartPath, availableSize, totalSize,
-                    reportProgress, stopwatch, cancel);
-
-                var shouldContinue = result.Match(
-                    Right: _ => false,
-                    Left: error =>
-                    {
-                        log.LogInformation(
-                            error,
-                            "Failed to retrieve gene part {GenePart} of gene {Gene} on source {Source}.",
-                            genePart, geneInfo, poolName);
-                        return !IsUnexpectedHttpClientError(error);
-                    });
-
-                if (!shouldContinue)
-                    return result;
-            }
-
-            return Error.New($"Could not find gene part {genePart} of gene {geneInfo} on any remote source.");
-        }
-    }
 
     private static bool IsUnexpectedHttpClientError(Error error) =>
         error.Exception

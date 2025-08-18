@@ -40,16 +40,20 @@ public static class GenePoolPaths
         UniqueGeneIdentifier uniqueGeneId) =>
         GetGenePath(genePoolPath, uniqueGeneId.GeneType, uniqueGeneId.Architecture, uniqueGeneId.Id);
 
-    public static string GetTempGeneManifestPath(
-        string geneDownloadPath,
+    public static string GetTempGenePath(
+        string genePoolPath,
+        UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        Path.Combine(geneDownloadPath, geneHash.Value, "gene.json");
+        Path.Combine(GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet), geneHash.Value);
+
+    public static string GetTempGeneManifestPath(
+        string geneDownloadPath) =>
+        Path.Combine(geneDownloadPath, "gene.json");
 
     public static string GetTempGenePartPath(
         string geneDownloadPath,
-        GeneHash geneHash,
         GenePartHash genePartHash) =>
-        Path.Combine(geneDownloadPath, geneHash.Value, $"{genePartHash}.part");
+        Path.Combine(geneDownloadPath, $"{genePartHash}.part");
 
     public static string GetGenePath(
         string genePoolPath,

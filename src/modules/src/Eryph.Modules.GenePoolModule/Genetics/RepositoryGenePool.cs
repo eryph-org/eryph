@@ -32,6 +32,7 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 
 using GenePartInfo = (GenePartHash Part, long Size);
+using GeneResult = (Option<Error>, HashMap<GenePartHash, long>);
 
 internal class RepositoryGenePool(
     IHttpClientFactory httpClientFactory,
@@ -44,7 +45,7 @@ internal class RepositoryGenePool(
     GenePoolSettings genepoolSettings)
     : GenePoolBase, IGenePool
 {
-    private static Error UrlExpiredError(DateTimeOffset expiresAt) => (unchecked((int)0x8000_0000), "");
+    private static readonly Error UrlExpiredError = (unchecked((int)0x8000_0000), "The gene pool download Url expires soon.");
 
     private const int BufferSize = 65536;
 
@@ -129,48 +130,77 @@ internal class RepositoryGenePool(
         })
         select geneInfo;
 
-    private Aff<CancelRt, GenePartsInfo> DownloadGene2(
+    public Aff<CancelRt, Option<Unit>> DownloadGene2(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        GenePartsInfo partsInfo,
-        string downloadPath) =>
-        from repositoryGeneInfo in FetchGene(uniqueGeneId, geneHash)
-        from validGeneInfo in repositoryGeneInfo
-            .ToAff()
-        let manifestPath = GenePoolPaths.GetTempGeneManifestPath(downloadPath, geneHash)
-        from _  in Aff<CancelRt, Unit>(async rt =>
+        GenePartsState partsState,
+        string downloadPath,
+        Func<long, long, Task<Unit>> reportProgress) =>
+        retryUntil(
+            // TODO fix schedule
+            Schedule.repeat(5),
+            from repositoryGeneInfo in FetchGene(uniqueGeneId, geneHash)
+            from result in repositoryGeneInfo
+                .Map(i => DownloadGene2(uniqueGeneId, geneHash, partsState, downloadPath, reportProgress, i))
+                .Sequence()
+            select result,
+            e => e.Is(UrlExpiredError));
+
+    private Aff<CancelRt, Unit> DownloadGene2(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartsState partsState,
+        string downloadPath,
+        Func<long, long, Task<Unit>> reportProgress,
+        RepositoryGeneInfo geneRepositoryInfo) =>
+        from _1 in SuccessAff(unit)
+        let manifestPath = GenePoolPaths.GetTempGeneManifestPath(downloadPath)
+        from _ in Aff<CancelRt, Unit>(async rt =>
         {
-            var json = JsonSerializer.Serialize(validGeneInfo.Manifest, GeneModelDefaults.SerializerOptions);
+            var json = JsonSerializer.Serialize(geneRepositoryInfo.Manifest, GeneModelDefaults.SerializerOptions);
             await fileSystem.WriteAllTextAsync(manifestPath, json, rt.CancellationToken);
             return unit;
         })
-        
-        let missingParts = partsInfo.Parts.Except(partsInfo.ExistingParts.Keys)
-        from result in missingParts.Fold(
-            SuccessAff<CancelRt, HashMap<GenePartHash, long>>(partsInfo.ExistingParts),
-            (s, missingPart) => from validState in s
-                                from r in DownloadGenePart2(uniqueGeneId, geneHash, missingPart, validGeneInfo, downloadPath)
-                                select r.Match(
-                                        Some: r2 => validState.Add(r2.Part, r2.Size),
-                                        None: validState))
-        select new GenePartsInfo(uniqueGeneId, geneHash, partsInfo.Parts, result);
+        from allParts in GeneManifestUtils.GetParts(geneRepositoryInfo.Manifest)
+            .ToAff(e => Error.New($"The manifest of the gene {uniqueGeneId} ({geneHash}) contains invalid parts.", e))
+        from existingParts in partsState.GetExistingParts()
+        let missingParts = allParts.Except(existingParts.Keys)
+        from result in missingParts.ToSeq()
+            .Map(part => DownloadGenePart2(uniqueGeneId, geneHash, part, geneRepositoryInfo, partsState, downloadPath, reportProgress))
+            .SequenceSerial()
+        select unit;
 
-    private Aff<CancelRt, Option<(GenePartHash Part, long Size)>> DownloadGenePart2(
+    private Aff<CancelRt, Unit> DownloadGenePart2(
         UniqueGeneIdentifier geneId,
         GeneHash geneHash,
         GenePartHash genePartHash,
         RepositoryGeneInfo repositoryGeneInfo,
-        string downloadPath) =>
+        GenePartsState partsState,
+        string downloadPath,
+        Func<long, long, Task<Unit>> reportProgress) =>
         from url in repositoryGeneInfo.DownloadUris
             .Find(genePartHash)
             .ToAff(Error.New($"The gene part {genePartHash.Hash} is not available in the gene pool."))
-        let path = GenePoolPaths.GetTempGenePartPath(downloadPath, geneHash, genePartHash)
+        from _  in guard(
+            repositoryGeneInfo.DownloadExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5),
+            UrlExpiredError)
+        let path = GenePoolPaths.GetTempGenePartPath(downloadPath, genePartHash)
         from size in Aff<CancelRt, long>(async rt =>
             {
                 try
                 {
                     log.LogTrace("Downloading gene part {GenePart} from {Url}", genePartHash, url);
                     await using var fileStream = fileSystem.OpenWrite(path);
+                    await using var progressStream = new ProgressStream(
+                        fileStream,
+                        TimeSpan.FromSeconds(10),
+                        async (progress, _) =>
+                        {
+                            // TODO Fix me
+                            var totalSize = repositoryGeneInfo.Manifest.Size!.GetValueOrDefault();
+                            var percent = Math.Round(progress / (double)totalSize, 3);
+                            await reportProgress(progress, totalSize);
+                        });
                     await FetchGenePart(fileStream, url, genePartHash, rt.CancellationToken);
                     return fileStream.Length;
                 }
@@ -181,9 +211,8 @@ internal class RepositoryGenePool(
                     throw;
                 }
             })
-            .Map(Some).IfFail(Option<long>.None)
-        select Option<(GenePartHash Part, long Size)>.None;
-        //select size.Map(s => (Part: genePartHash, Size: size));
+        from _2 in partsState.AddPart(genePartHash, size)
+        select unit;
 
     public EitherAsync<Error, long> RetrieveGenePart(
         GeneInfo geneInfo,
@@ -395,7 +424,7 @@ internal class RepositoryGenePool(
                 }
             })
             .Map(Some)
-            .Catch(e => IsUnexpectedHttpClientError(e), SuccessAff<Option<GetGeneResponse>>(None))
+            .Catch(e => IsNotFoundError(e), SuccessAff<Option<GetGeneResponse>>(None))
         from result in response
             .Map(r => CreateRepositoryGeneInfo(uniqueGeneId, geneHash, r))
             .Sequence()
@@ -424,16 +453,6 @@ internal class RepositoryGenePool(
         HashMap<GenePartHash, Uri> DownloadUris,
         DateTimeOffset DownloadExpiresAt);
 
-    private static bool IsUnexpectedHttpClientError(Error error) =>
-        error.Exception
-            .Map(ex => ex is GenepoolClientException
-            {
-                StatusCode: >= HttpStatusCode.BadRequest
-                and < HttpStatusCode.InternalServerError
-                and not HttpStatusCode.NotFound
-            })
-            .IfNone(false);
-
     public Aff<CancelRt, Option<GeneSetInfo>> GetGeneSet(
         GeneSetIdentifier geneSetId) =>
         from genePoolClient in CreateClient().ToAff()
@@ -458,7 +477,7 @@ internal class RepositoryGenePool(
                 }
             })
             .Map(Some)
-            .Catch(e => IsUnexpectedHttpClientError(e), SuccessAff<Option<GenesetTagDownloadResponse>>(None))
+            .Catch(e => IsNotFoundError(e), SuccessAff<Option<GenesetTagDownloadResponse>>(None))
         from result in response.Map(r => CreateGeneSetInfo(geneSetId, r))
             .Sequence()
         select result;
@@ -558,4 +577,7 @@ internal class RepositoryGenePool(
     {
         throw new NotImplementedException();
     }
+
+    private static bool IsNotFoundError(Error error) =>
+        error.Exception.Case is GenepoolClientException { StatusCode: HttpStatusCode.NotFound };
 }

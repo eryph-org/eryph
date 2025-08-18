@@ -11,11 +11,6 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 internal interface ILocalGenePool
 {
-    EitherAsync<Error, Unit> MergeGeneParts(
-        GeneInfo geneInfo,
-        Func<long, long, Task<Unit>> reportProgress,
-        CancellationToken cancellationToken);
-
     EitherAsync<Error, GeneSetInfo> CacheGeneSet(
         GeneSetInfo geneSetInfo,
         CancellationToken cancellationToken);
@@ -52,21 +47,13 @@ internal interface ILocalGenePool
     Aff<CancelRt, string> CacheGeneContent(
         GeneContentInfo geneContentInfo);
 
-    EitherAsync<Error, Option<GenePartsInfo>> GetDownloadedGeneParts(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash,
-        Func<long, long, Task<Unit>> reportProgress,
-        CancellationToken cancellationToken);
 
-
-    Aff<CancelRt, Option<GenePartsInfo>> GetDownloadedGeneParts(
+    Aff<CancelRt, (bool IsComplete, HashMap<GenePartHash, long> Parts)> GetDownloadedGeneParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<long, long, Task<Unit>> reportProgress);
 
+    Aff<CancelRt, Unit> MergeGene2(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, Func<long, long, Task<Unit>> reportProgress);
 
-    EitherAsync<Error, bool> HasGene(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash,
-        CancellationToken cancellationToken);
+    Aff<CancelRt, bool> HasGene(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash);
 }
