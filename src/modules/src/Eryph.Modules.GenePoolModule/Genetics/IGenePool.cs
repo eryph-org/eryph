@@ -52,6 +52,13 @@ internal interface IGenePool
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         GenePartsInfo geneParts);
+    
+    Aff<CancelRt, Option<Unit>> DownloadGene2(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        GenePartsState partsState,
+        string downloadPath,
+        Func<long, long, Task<Unit>> reportProgress);
 
     public string PoolName { get; }
 }

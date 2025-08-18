@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -42,6 +43,15 @@ internal class LocalGenePoolSource(
     // genes.json contains the hashes with the algorithm identifier, e.g. sha256:...
     private const string GenesFileName = "genes.json";
 
+    public Aff<CancelRt, bool> HasGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash) =>
+        from mergedGenes in GetMergedGenes2(uniqueGeneId.Id.GeneSet)
+        let isGeneMerged = mergedGenes.Contains(geneHash)
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
+        from fileExists in Eff(() => fileSystem.FileExists(genePath))
+        select isGeneMerged && fileExists;
+
     public EitherAsync<Error, bool> HasGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
@@ -53,90 +63,88 @@ internal class LocalGenePoolSource(
             .ToEitherAsync()
         select isGeneMerged && fileExists;
 
-    public EitherAsync<Error, Option<GenePartsInfo>> GetDownloadedGeneParts(
+    public Aff<CancelRt, Option<GenePartsInfo>> GetDownloadedGeneParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Func<long, long, Task<Unit>> reportProgress,
-        CancellationToken cancellationToken) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        from manifest in ReadTempGeneManifest(uniqueGeneId, geneHash, cancellationToken)
+        Func<long, long, Task<Unit>> reportProgress) =>
+        from manifest in ReadTempGeneManifest(uniqueGeneId, geneHash)
         from geneParts in manifest
-            .Map(m => GetDownloadedGeneParts(uniqueGeneId, geneHash, m, reportProgress, cancellationToken))
+            .Map(m => GetDownloadedGeneParts(uniqueGeneId, geneHash, m, reportProgress))
             .Sequence()
         select geneParts;
 
-    private EitherAsync<Error, GenePartsInfo> GetDownloadedGeneParts(
+    private Aff<CancelRt, GenePartsInfo> GetDownloadedGeneParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         GeneManifestData manifest,
-        Func<long, long, Task<Unit>> reportProgress,
-        CancellationToken cancellationToken) =>
-        from geneParts in GeneManifestUtils.GetParts(manifest).ToAsync()
-        from totalBytes in Optional(manifest.Size).ToEitherAsync(
+        Func<long, long, Task<Unit>> reportProgress) =>
+        from geneParts in GeneManifestUtils.GetParts(manifest).ToAff()
+        from totalBytes in Optional(manifest.Size).ToAff(
             Error.New($"The gene manifest of {uniqueGeneId} ({geneHash.Hash}) does not contain a size."))
         from allPartsPresent in geneParts
             .Map(gp => IsGenePartPresent(uniqueGeneId, geneHash, gp))
             .SequenceSerial()
-        from existingParts in geneParts.Fold<EitherAsync<Error, Seq<(GenePartHash Part, long Size)>>> (
-            Seq<(GenePartHash Part, long Size)>(),
+        from existingParts in geneParts.Fold<Aff<CancelRt, Seq<(GenePartHash Part, long Size)>>> (
+            SuccessAff(Seq<(GenePartHash Part, long Size)>()),
             (state, part) => from partInfos in state
-                             from partInfo in GetDownloadedGenePart(uniqueGeneId, geneHash, part, CancellationToken.None)
+                             from partInfo in GetDownloadedGenePart(uniqueGeneId, geneHash, part)
                              let result = partInfos.Concat(partInfo.ToSeq())
                              let availableBytes = result.Sum(p => p.Size)
-                             from _ in TryAsync(() => reportProgress(availableBytes, totalBytes)).ToEither()
+                             from _ in Aff<CancelRt, Unit>(async _ => await reportProgress(availableBytes, totalBytes))
                              select result)
         select new GenePartsInfo(uniqueGeneId, geneHash, geneParts, existingParts.ToHashMap());
 
 
-    private EitherAsync<Error, Option<(GenePartHash Part, long Size)>> GetDownloadedGenePart(
+    private Aff<CancelRt, Option<(GenePartHash Part, long Size)>> GetDownloadedGenePart(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        GenePartHash genePartHash,
-        CancellationToken cancellationToken) =>
-        from path in GetGenePartPath(uniqueGeneId, geneHash, genePartHash)
-        from size in TryAsync(async () =>
+        GenePartHash genePartHash) =>
+        from _ in SuccessAff<CancelRt, Unit>(unit)
+        let genePath = GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash)
+        let genePartPath = GenePoolPaths.GetTempGenePartPath(genePath, genePartHash)
+        from size in Aff<CancelRt, Option<long>>(async rt =>
         {
-            if (!fileSystem.FileExists(path))
+            if (!fileSystem.FileExists(genePartPath))
                 return None;
 
             using var hashAlgorithm = genePartHash.CreateAlgorithm();
-            await using var dataStream = fileSystem.OpenRead(path);
-            await hashAlgorithm.ComputeHashAsync(dataStream, cancellationToken);
+            await using var dataStream = fileSystem.OpenRead(genePartPath);
+            await hashAlgorithm.ComputeHashAsync(dataStream, rt.CancellationToken);
 
             var actualGenePartHash = hashAlgorithm.ToGenePartHash();
 
             if (actualGenePartHash.Hash == genePartHash.Hash)
                 return Some(dataStream.Length);
 
-            fileSystem.FileDelete(path);
+            fileSystem.FileDelete(genePartPath);
             return None;
-        }).ToEither()
+        })
         select size.Map(s => (genePartHash, s));
 
-
-    private EitherAsync<Error, bool> IsGenePartPresent(
+    private Aff<CancelRt, bool> IsGenePartPresent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         GenePartHash genePartHash) =>
-        from path in GetGenePartPath(uniqueGeneId, geneHash, genePartHash)
-        from isPresent in Try(() => fileSystem.FileExists(path)).ToEitherAsync()
+        from _ in SuccessAff(unit)
+        let genePath = GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash)
+        let genePartPath = GenePoolPaths.GetTempGenePartPath(genePath, genePartHash)
+        from isPresent in Eff<CancelRt, bool>(_ => fileSystem.FileExists(genePartPath))
         select isPresent;
 
-    private EitherAsync<Error, Option<GeneManifestData>> ReadTempGeneManifest(
+    private Aff<CancelRt, Option<GeneManifestData>> ReadTempGeneManifest(
         UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash,
-        CancellationToken cancellationToken) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        from geneTempPath in GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, geneHash)
-        let manifestPath = Path.Combine(geneTempPath, "gene.json")
-        from manifest in TryAsync(async () =>
+        GeneHash geneHash) =>
+        from _ in SuccessAff(unit)
+        let genePath = GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash)
+        let manifestPath = GenePoolPaths.GetTempGeneManifestPath(genePath)
+        from manifest in Aff<CancelRt, Option<GeneManifestData>>(async rt =>
         {
             if (!fileSystem.FileExists(manifestPath))
                 return None;
 
-            var json = await fileSystem.ReadAllTextAsync(manifestPath, cancellationToken);
+            var json = await fileSystem.ReadAllTextAsync(manifestPath, rt.CancellationToken);
             return Some(JsonSerializer.Deserialize<GeneManifestData>(json, GeneModelDefaults.SerializerOptions));
-        }).ToEither()
+        })
         let actualGeneHash = manifest.Map(GeneManifestUtils.ComputeHash)
         // TODO error or return nothing?
         from _2 in guard(
@@ -209,6 +217,68 @@ internal class LocalGenePoolSource(
         select partSize;
 
     public string PoolName => poolName;
+
+    public Aff<CancelRt, Unit> MergeGene2(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        Func<long, long, Task<Unit>> reportProgress) =>
+        from _1 in SuccessAff(unit)
+        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
+        // We are going to re(write) the gene on the disk. Remove it from the merged genes
+        // until merge has been completed successfully.
+        from _2 in RemoveMergedGene2(geneSetPath, geneHash)
+        from _3 in AddMergedGene(geneSetPath, geneHash).ToAff()
+        from optionalManifest in ReadTempGeneManifest(uniqueGeneId, geneHash)
+        from manifest in optionalManifest.ToAff(
+            Error.New($"The gene manifest of {uniqueGeneId} ({geneHash.Hash}) is missing."))
+        from geneParts in GeneManifestUtils.GetParts(manifest).ToAff()
+        from originalSize in Optional(manifest.OriginalSize).ToAff(
+            Error.New($"The gene manifest of {uniqueGeneId} ({geneHash.Hash}) does not contain the original size."))
+        from format in Optional(manifest.Format).ToAff(
+            Error.New($"The gene manifest of {uniqueGeneId} ({geneHash.Hash}) does not contain the format."))
+        let geneTempPath = GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash)
+        let tempPartPaths = geneParts.Map(p => GenePoolPaths.GetTempGenePartPath(geneTempPath, p))
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
+        from _4 in Aff<CancelRt, Unit>(async rt =>
+        {
+            var streams = new List<Stream>();
+            try
+            {
+                foreach (var partPath in tempPartPaths)
+                {
+                    streams.Add(fileSystem.OpenRead(partPath));
+                }
+
+                await using var multiStream = new MultiStream(streams);
+                await using var decompressionStream = CompressionStreamFactory.CreateDecompressionStream(multiStream, format);
+
+                await using var fileStream = fileSystem.OpenWrite(genePath);
+                await using var progressStream = new ProgressStream(
+                    fileStream,
+                    TimeSpan.FromSeconds(10),
+                    // TODO Fix cancellation token
+                    async (writtenBytes, _) => await reportProgress(writtenBytes, originalSize));
+
+                await decompressionStream.CopyToAsync(progressStream, rt.CancellationToken);
+                return unit;
+            }
+            finally
+            {
+                foreach (var stream in streams)
+                {
+                    await stream.DisposeAsync();
+                }
+            }
+        })
+        from _5 in AddMergedGene(uniqueGeneId, geneHash)
+        from _6 in Eff(() =>
+        {
+            fileSystem.DeleteDirectory(geneTempPath);
+            return unit;
+        })
+        select unit;
+
+
 
     public EitherAsync<Error, Unit> MergeGeneParts(
         GeneInfo geneInfo,
@@ -493,6 +563,21 @@ internal class LocalGenePoolSource(
             .MapLeft(e => Error.New($"The The merged genes in the gene set '{geneSetId}' are invalid.", e))
         select result;
 
+    private Aff<Seq<GeneHash>> GetMergedGenes2(
+        GeneSetIdentifier geneSetId) =>
+        from _1 in SuccessAff(unit)
+        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetId)
+        from hashes in Aff(async () =>
+        {
+            var genesInfo = await ReadGenesInfo(geneSetPath);
+            return genesInfo.MergedGenes.ToSeq();
+        })
+        from result in hashes
+            .Map(GeneHash.NewValidation)
+            .Sequence()
+            .ToAff(errors => Error.New($"The merged genes of the gene set '{geneSetId}' are invalid.", Error.Many(errors)))
+        select result;
+
     public EitherAsync<Error, GeneHash> AddMergedGene(string geneSetPath, GeneHash geneHash) =>
         TryAsync(async () =>
         {
@@ -502,6 +587,20 @@ internal class LocalGenePoolSource(
             return geneHash;
         }).ToEither();
 
+    private Aff<Unit> AddMergedGene(
+        UniqueGeneIdentifier uniqueGeneIdentifier,
+        GeneHash geneHash) =>
+        from _ in SuccessAff(unit)
+        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneIdentifier.Id.GeneSet)
+        from _2 in Aff(async () =>
+        {
+            var genesInfo = await ReadGenesInfo(geneSetPath);
+            genesInfo.MergedGenes = [.. genesInfo.MergedGenes ?? [], geneHash.Value];
+            await WriteGenesInfo(geneSetPath, genesInfo);
+            return genesInfo;
+        })
+        select unit;
+
     private async Task<GenesInfo> RemoveMergedGene(string geneSetPath, string geneHash)
     {
         var genesInfo = await ReadGenesInfo(geneSetPath);
@@ -509,6 +608,15 @@ internal class LocalGenePoolSource(
         await WriteGenesInfo(geneSetPath, genesInfo);
         return genesInfo;
     }
+
+    private Aff<GenesInfo> RemoveMergedGene2(string geneSetPath, GeneHash geneHash) =>
+        Aff<GenesInfo>(async () =>
+        {
+            var genesInfo = await ReadGenesInfo(geneSetPath);
+            genesInfo.MergedGenes = genesInfo.MergedGenes?.Where(h => h != geneHash).ToArray();
+            await WriteGenesInfo(geneSetPath, genesInfo);
+            return genesInfo;
+        });
 
     private async Task<GenesInfo> ReadGenesInfo(string geneSetPath)
     {
@@ -649,11 +757,6 @@ internal class LocalGenePoolSource(
     }
 
     public Aff<CancelRt, string> CacheGeneContent(GeneContentInfo geneContentInfo)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Aff<CancelRt, Option<GenePartsInfo>> GetDownloadedGeneParts(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, Func<long, long, Task<Unit>> reportProgress)
     {
         throw new NotImplementedException();
     }
