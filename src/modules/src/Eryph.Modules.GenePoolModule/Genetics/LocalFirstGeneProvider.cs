@@ -70,15 +70,41 @@ internal class LocalFirstGeneProvider(
         GeneHash geneHash) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from cachedGeneContent in localGenePool.GetCachedGeneContent(uniqueGeneId)
+        // We check if complete packed gene (all gene parts present) exists
+        // in the local gene pool. In this case, we extract the packed gene
+        // and replace the local one. Normally, the gene content is downloaded
+        // directly and the packed gene should never be written to the local gene pool.
+        // This logic is only triggered when the user copied a packed gene into
+        // the local gene pool by hand. This is useful for local development.
+        from downloadedParts in localGenePool.GetDownloadedGeneParts(
+            uniqueGeneId, geneHash, (_, _) => Task.FromResult(unit))
+        from _ in Some(downloadedParts)
+            .Filter(dp => !dp.IsEmpty)
+            .Map(dp => MergeGeneContentParts(uniqueGeneId, geneHash, dp, localGenePool))
+            .Sequence()
+        from cachedGeneContent in localGenePool.GetCachedGeneContent(uniqueGeneId, geneHash)
         from pulledGeneContent in cachedGeneContent.Match(
             Some: c => SuccessAff<Option<string>>(c),
-            None: () => PullAndCacheGene(uniqueGeneId, geneHash))
+            None: () => PullAndCacheGeneContent(uniqueGeneId, geneHash))
         from result in pulledGeneContent.ToAff(
             Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available in local or remote gene pools."))
         select result;
 
-    private Aff<CancelRt, Option<string>> PullAndCacheGene(
+    private Aff<CancelRt, Unit> MergeGeneContentParts(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        HashMap<GenePartHash, Option<long>> downloadedParts,
+        ILocalGenePool localGenePool) =>
+        from validParts in downloadedParts.Values.ToSeq()
+            .Sequence()
+            .ToAff(Error.New($"The local gene pool contains an incomplete packed version of the gene {uniqueGeneId} ({geneHash})."))
+        from _1 in guard(
+            validParts.Count < 1 && validParts.Sum() <= EryphConstants.Limits.MaxGeneSizeDirectDownload,
+            Error.New($"The packed version of the gene {uniqueGeneId} ({geneHash}) in the local gene pool it too big."))
+        from _2 in localGenePool.MergeGene(uniqueGeneId, geneHash, (_,_) => Task.FromResult(unit))
+        select unit;
+
+    private Aff<CancelRt, Option<string>> PullAndCacheGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
@@ -99,7 +125,7 @@ internal class LocalFirstGeneProvider(
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from _ in EnsureGene(uniqueGeneId, geneHash, reportProgress)
         let timestamp = DateTimeOffset.UtcNow
-        from geneSize in localGenePool.GetCachedGeneSize2(uniqueGeneId)
+        from geneSize in localGenePool.GetGeneSize(uniqueGeneId, geneHash)
         from validGeneSize in geneSize.ToAff(
             Error.New($"The gene {uniqueGeneId} was not properly extracted."))
         select new PrepareGeneResponse
@@ -114,7 +140,7 @@ internal class LocalFirstGeneProvider(
             Timestamp = timestamp,
         };
 
-    public Aff<CancelRt, Unit> EnsureGene(
+    private Aff<CancelRt, Unit> EnsureGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<string, int, Task<Unit>> reportProgress) =>
@@ -138,7 +164,7 @@ internal class LocalFirstGeneProvider(
                 await reportProgress(progressMessage, overallPercent);
                 return unit;
             })
-        from hasMergedGene in localGenePool.HasGene(uniqueGeneId, geneHash)
+        from hasMergedGene in localGenePool.GetGeneSize(uniqueGeneId, geneHash).Map(o => o.IsSome)
         let isDownloadComplete = !localGeneParts.IsEmpty && localGeneParts.Values.ToSeq().All(s => s.IsSome)
         let existingGeneParts = localGeneParts.ToSeq()
             .Map(kvp => kvp.Value.Map(s => (kvp.Key, s)))
@@ -157,7 +183,7 @@ internal class LocalFirstGeneProvider(
                         Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(5),
                         IterateGenePools(
                             genepoolFactory,
-                            genePool => genePool.DownloadGene2(
+                            genePool => genePool.DownloadGene(
                                 uniqueGeneId,
                                 geneHash,
                                 partsState,
@@ -180,7 +206,7 @@ internal class LocalFirstGeneProvider(
                     select unit)
         from _4 in hasMergedGene && !isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
-            : localGenePool.MergeGene2(
+            : localGenePool.MergeGene(
                 uniqueGeneId,
                 geneHash,
                 async (processedBytes, totalBytes) =>
