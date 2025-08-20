@@ -70,7 +70,7 @@ internal class LocalFirstGeneProvider(
         GeneHash geneHash) =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        // We check if complete packed gene (all gene parts present) exists
+        // We check if a complete packed gene (all gene parts present) exists
         // in the local gene pool. In this case, we extract the packed gene
         // and replace the local one. Normally, the gene content is downloaded
         // directly and the packed gene should never be written to the local gene pool.

@@ -24,7 +24,11 @@ public static class CatletSpecificationBuilder
         Architecture architecture,
         IGenePoolReader genePoolReader,
         CancellationToken cancellation) =>
-        from resolveResult in ResolveConfig(catletConfig, genePoolReader, cancellation)
+        from _1 in RightAsync<Error, Unit>(unit)
+        let configWithEarlyDefaults = CatletConfigDefaults.ApplyEarlyDefaults(catletConfig)
+        // TODO apply additional normalization of eryph names?
+        // TODO normalization of MAC addresses?
+        from resolveResult in ResolveConfig(configWithEarlyDefaults, genePoolReader, cancellation)
         let resolvedGeneSets = resolveResult.ResolvedGeneSets
         let parentConfigs = resolveResult.ResolvedCatlets
         from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(catletConfig, resolvedGeneSets)

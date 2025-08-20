@@ -13,6 +13,8 @@ internal class ExpandCatletConfigSagaData
 {
     public ExpandCatletConfigSagaState State { get; set; }
 
+    public Architecture Architecture { get; set; }
+
     public CatletConfig? Config { get; set; }
 
     public bool ShowSecrets { get; set; }

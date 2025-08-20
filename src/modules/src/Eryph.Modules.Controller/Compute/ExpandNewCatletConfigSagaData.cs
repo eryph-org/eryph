@@ -10,6 +10,8 @@ namespace Eryph.Modules.Controller.Compute;
 
 internal class ExpandNewCatletConfigSagaData
 {
+    public Architecture Architecture { get; set; }
+    
     public CatletConfig? Config { get; set; }
 
     public bool ShowSecrets { get; set; }
@@ -20,7 +22,5 @@ internal class ExpandNewCatletConfigSagaData
 
     public ExpandNewCatletConfigSagaState State { get; set; }
 
-    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];
-
-    public IReadOnlyList<UniqueGeneIdentifier> PendingGenes { get; set; } = [];
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 }
