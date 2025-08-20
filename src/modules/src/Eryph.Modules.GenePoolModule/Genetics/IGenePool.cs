@@ -25,7 +25,7 @@ internal interface IGenePool
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash);
     
-    Aff<CancelRt, Option<Unit>> DownloadGene2(
+    Aff<CancelRt, Option<Unit>> DownloadGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         GenePartsState partsState,

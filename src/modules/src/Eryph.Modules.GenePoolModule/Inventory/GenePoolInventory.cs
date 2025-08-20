@@ -74,7 +74,7 @@ internal class GenePoolInventory(
     private Aff<CancelRt, Option<GeneData>> InventorizeGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from size in genePool.GetCachedGeneSize2(uniqueGeneId)
+        from size in genePool.GetGeneSize(uniqueGeneId, geneHash)
         select size.Map(s => new GeneData
         {
             Id = uniqueGeneId,

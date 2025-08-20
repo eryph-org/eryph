@@ -19,10 +19,12 @@ internal interface ILocalGenePool
         GeneSetIdentifier geneSetId);
 
     Aff<CancelRt, Option<string>> GetCachedGeneContent(
-        UniqueGeneIdentifier uniqueGeneId);
+        UniqueGeneIdentifier uniqueGeneId,
+         GeneHash geneHash);
 
-    Aff<CancelRt, Option<long>> GetCachedGeneSize2(
-        UniqueGeneIdentifier uniqueGeneId);
+    Aff<CancelRt, Option<long>> GetGeneSize(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash);
 
     Aff<CancelRt, Unit> RemoveCachedGene(
         UniqueGeneIdentifier uniqueGeneId);
@@ -35,7 +37,7 @@ internal interface ILocalGenePool
         GeneHash geneHash,
         Func<long, long, Task<Unit>> reportProgress);
 
-    Aff<CancelRt, Unit> MergeGene2(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, Func<long, long, Task<Unit>> reportProgress);
-
-    Aff<CancelRt, bool> HasGene(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash);
+    Aff<CancelRt, Unit> MergeGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash, Func<long, long, Task<Unit>> reportProgress);
 }
