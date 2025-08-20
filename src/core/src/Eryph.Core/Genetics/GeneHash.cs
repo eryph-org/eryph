@@ -9,7 +9,7 @@ using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.GenePool.Genetics;
+namespace Eryph.Core.Genetics;
 
 public class GeneHash : EryphName<GeneHash>
 {

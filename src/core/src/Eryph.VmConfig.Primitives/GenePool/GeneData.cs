@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
-using Eryph.Modules.GenePool.Genetics;
 
 namespace Eryph.GenePool;
 

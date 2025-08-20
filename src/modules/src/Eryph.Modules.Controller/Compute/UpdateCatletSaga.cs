@@ -229,7 +229,6 @@ internal class UpdateCatletSaga(
                 VMId = response.Inventory.VMId,
                 CatletId = Data.Data.CatletId,
                 MachineMetadata = metadata.ValueUnsafe().Metadata,
-                ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });
     }

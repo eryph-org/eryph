@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.GenePool;
-using Eryph.Modules.GenePool.Genetics;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 

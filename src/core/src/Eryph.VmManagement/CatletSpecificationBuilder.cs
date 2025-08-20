@@ -8,7 +8,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using System.Linq;
 using System.Threading;
-using Eryph.Modules.GenePool.Genetics;
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
@@ -89,7 +88,7 @@ public static class CatletSpecificationBuilder
         from _ in CatletPedigree.ValidateAncestorChain(updatedVisitedAncestors)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
             .ToAsync()
-        from genes in geneProvider.GetGenes(id, cancellationToken)
+        from genes in geneProvider.GetGenes(resolvedId, cancellationToken)
         let catletGeneId = new UniqueGeneIdentifier(
             GeneType.Catlet,
             new GeneIdentifier(resolvedId, GeneName.New("catlet")),

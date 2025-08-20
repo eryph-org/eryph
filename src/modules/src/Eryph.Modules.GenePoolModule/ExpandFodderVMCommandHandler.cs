@@ -8,7 +8,6 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.GenePool.Genetics;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;

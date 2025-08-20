@@ -9,7 +9,6 @@ using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core;
 using Eryph.Core.Genetics;
-using Eryph.Modules.GenePool.Genetics;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.TestBase;
 using FluentAssertions;

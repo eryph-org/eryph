@@ -98,7 +98,6 @@ public class ValidateCatletDeploymentSaga(
         });
     }
 
-
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<ValidateCatletDeploymentSagaData>> config)
     {
         base.CorrelateMessages(config);
@@ -108,7 +107,6 @@ public class ValidateCatletDeploymentSaga(
         config.Correlate<OperationTaskStatusEvent<ValidateCatletNetworksCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
-
 
     private async Task StartValidateNetwork()
     {

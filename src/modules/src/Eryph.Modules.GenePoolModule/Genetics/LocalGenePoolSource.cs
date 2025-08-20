@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.Sys;
@@ -17,7 +9,16 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-
+using System;
+using System.Buffers;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using static LanguageExt.Prelude;
 using GeneType = Eryph.Core.Genetics.GeneType;
 
@@ -31,11 +32,14 @@ internal class LocalGenePoolSource(
     string genePoolPath)
     : ILocalGenePool
 {
+    // TODO make this class transient and cache the resolution of IGEnePoolPathProvider
 
     // TODO add file system locking with DistributedLock
 
     // genes.json contains the hashes with the algorithm identifier, e.g. sha256:...
     private const string GenesFileName = "genes.json";
+
+    private const int BufferSize = 1 * 1024 * 1024;
 
     public Aff<CancelRt, bool> HasGene(
         UniqueGeneIdentifier uniqueGeneId,
@@ -89,12 +93,16 @@ internal class LocalGenePoolSource(
 
             using var hashAlgorithm = genePartHash.CreateAlgorithm();
             await using var dataStream = fileSystem.OpenRead(genePartPath);
-            await hashAlgorithm.ComputeHashAsync(dataStream, rt.CancellationToken);
+            // Use a buffered stream as HashAlgorithm.ComputeHashAsync()
+            // uses an extremely small buffer (4096 bytes) which slows
+            // down the hashing operation significantly.
+            await using var bufferedStream = new BufferedStream(dataStream, BufferSize);
+            await hashAlgorithm.ComputeHashAsync(bufferedStream, rt.CancellationToken);
 
             var actualGenePartHash = hashAlgorithm.ToGenePartHash();
 
             if (actualGenePartHash.Hash == genePartHash.Hash)
-                return Some(dataStream.Length);
+                return Some(fileSystem.GetFileSize(genePartPath));
 
             fileSystem.FileDelete(genePartPath);
             return None;
@@ -158,8 +166,8 @@ internal class LocalGenePoolSource(
                 }
 
                 await using var multiStream = new MultiStream(streams);
-                await using var decompressionStream =
-                    CompressionStreamFactory.CreateDecompressionStream(multiStream, format);
+                await using var decompressionStream = CompressionStreamFactory.CreateDecompressionStream(
+                    multiStream, format);
 
                 await using var fileStream = fileSystem.OpenWrite(genePath);
                 await using var progressStream = new ProgressStream(
@@ -168,7 +176,7 @@ internal class LocalGenePoolSource(
                     // TODO Fix cancellation token
                     async (writtenBytes, _) => await reportProgress(writtenBytes, originalSize));
 
-                await decompressionStream.CopyToAsync(progressStream, rt.CancellationToken);
+                await decompressionStream.CopyToAsync(progressStream, BufferSize, rt.CancellationToken);
                 return unit;
             }
             finally

@@ -1,7 +1,6 @@
 ﻿using System.Threading;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
-using Eryph.Modules.GenePool.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 

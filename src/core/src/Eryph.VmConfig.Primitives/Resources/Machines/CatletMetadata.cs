@@ -14,6 +14,7 @@ namespace Eryph.Resources.Machines
 
         [PrivateIdentifier]
         public Guid VMId { get; set; }
+
         public Guid MachineId { get; set; }
 
         public string Architecture { get; set; }

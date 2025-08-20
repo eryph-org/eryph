@@ -13,7 +13,7 @@ public class ProgressStream(
     Func<long, CancellationToken, Task> reportProgress) : Stream
 {
     private long _bytesWritten;
-    private Stopwatch _stopwatch = new();
+    private readonly Stopwatch _stopwatch = new();
 
     public override bool CanRead => false;
 
@@ -58,12 +58,14 @@ public class ProgressStream(
 
     public override void Write(byte[] buffer, int offset, int count)
     {
+        _stopwatch.Start();
         innerStream.Write(buffer, offset, count);
         ProcessProgress(count, CancellationToken.None).GetAwaiter().GetResult();
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
+        _stopwatch.Start();
         await innerStream.WriteAsync(buffer, offset, count, cancellationToken);
         await ProcessProgress(count, cancellationToken);
     }
