@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations.Events;
+﻿using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel.Yaml;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
@@ -15,7 +11,11 @@ using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
-
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -26,8 +26,7 @@ internal class ExpandCatletConfigSaga(
     IVirtualMachineDataService vmDataService,
     IVirtualMachineMetadataService metadataService)
     : OperationTaskWorkflowSaga<ExpandCatletConfigCommand, EryphSagaData<ExpandCatletConfigSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<PrepareCatletConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ExpandFodderVMCommand>>
+        IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>
 {
     protected override async Task Initiated(ExpandCatletConfigCommand message)
     {
@@ -60,49 +59,25 @@ internal class ExpandCatletConfigSaga(
             return;
         }
 
-        await StartNewTask(new PrepareCatletConfigCommand
+        Data.Data.Architecture = Architecture.New(metadata.Architecture);
+
+        await StartNewTask(new ResolveCatletSpecificationCommand
         {
-            CatletId = message.CatletId,
-            Config = message.Config,
+            AgentName = Data.Data.AgentName,
+            Architecture = Data.Data.Architecture,
+            ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<PrepareCatletConfigCommand> message)
+    public Task Handle(OperationTaskStatusEvent<ResolveCatletSpecificationCommand> message)
     {
-        if (Data.Data.State >= ExpandCatletConfigSagaState.ConfigPrepared)
-            return Task.CompletedTask;
-
-        return FailOrRun(message, async (PrepareCatletConfigCommandResponse response) =>
+        return FailOrRun(message, async (ResolveCatletSpecificationCommandResponse response) =>
         {
-            Data.Data.State = ExpandCatletConfigSagaState.ConfigPrepared;
-            Data.Data.Config = response.ResolvedConfig;
-            Data.Data.BredConfig = response.BredConfig;
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
+            // TODO merge with existing config
 
-            var metadata = await GetCatletMetadata(Data.Data.CatletId);
-            if (metadata.IsNone)
-            {
-                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
-                return;
-            }
-
-            await StartNewTask(new ExpandFodderVMCommand
-            {
-                AgentName = Data.Data.AgentName,
-                CatletMetadata = metadata.ValueUnsafe().Metadata,
-                Config = Data.Data.BredConfig,
-                ResolvedGenes = Data.Data.ResolvedGenes,
-            });
-        });
-    }
-
-    public Task Handle(OperationTaskStatusEvent<ExpandFodderVMCommand> message)
-    {
-        return FailOrRun(message, async (ExpandFodderVMCommandResponse response) =>
-        {
             var redactedConfig = Data.Data.ShowSecrets
-                ? response.Config
-                : CatletConfigRedactor.RedactSecrets(response.Config);
+                ? response.BuiltConfig
+                : CatletConfigRedactor.RedactSecrets(response.BuiltConfig);
 
             await Complete(new ExpandCatletConfigCommandResponse
             {
@@ -115,9 +90,7 @@ internal class ExpandCatletConfigSaga(
     {
         base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<PrepareCatletConfigCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<ExpandFodderVMCommand>>(
+        config.Correlate<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 

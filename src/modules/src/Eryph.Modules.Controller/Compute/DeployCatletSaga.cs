@@ -267,6 +267,7 @@ internal class DeployCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<SyncVmNetworkPortsCommand> message)
     {
+        // TODO update catlet metadata with config of successful deployment
         return FailOrRun(message, Complete);
     }
 
@@ -275,12 +276,6 @@ internal class DeployCatletSaga(
         base.CorrelateMessages(config);
 
         config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<PrepareCatletConfigCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<ExpandFodderVMCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
@@ -293,7 +288,6 @@ internal class DeployCatletSaga(
         config.Correlate<OperationTaskStatusEvent<SyncVmNetworkPortsCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
-
 
     private Task<Option<(Catlet Catlet, CatletMetadata Metadata)>> GetCatletMetadata(Guid catletId) =>
         from catlet in vmDataService.GetVM(catletId)

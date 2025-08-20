@@ -15,21 +15,41 @@ namespace Eryph.Core.Genetics;
 public static class CatletConfigDefaults
 {
     /// <summary>
-    /// Applies the default network in case the <paramref name="config"/>
-    /// contains no networks at all.
+    /// Applies the defaults to the <paramref name="config"/> which must be
+    /// present during the breeding process.
+    /// </summary>
+    public static CatletConfig ApplyEarlyDefaults(CatletConfig config) =>
+        config.CloneWith(c =>
+        {
+            c.Name = Optional(c.Name)
+                .Filter(notEmpty)
+                .IfNone(EryphConstants.DefaultCatletName);
+            c.Hostname = Optional(c.Hostname)
+                .Filter(notEmpty)
+                .IfNone(c.Name);
+            c.Networks = ApplyDefaultNetwork(c.Networks.ToSeq()).ToArray();
+        });
+
+    public static CatletConfig ApplyDefaultNetwork(CatletConfig config) =>
+        config.CloneWith(c =>
+        {
+            c.Networks = ApplyDefaultNetwork(c.Networks.ToSeq()).ToArray();
+        });
+
+    /// <summary>
+    /// Applies the default network in case the <paramref name="networks"/>
+    /// contain no networks at all.
     /// </summary>
     /// <remarks>
     /// The default network must be added before the breeding. This way,
     /// the default network can still be explicitly removed by using the
     /// <see cref="MutationType.Remove"/> mutation.
     /// </remarks>
-    public static CatletConfig ApplyDefaultNetwork(CatletConfig config) =>
-        config.CloneWith(c =>
-        {
-            c.Networks = c.Networks.ToSeq()
-                .DefaultIfEmpty(new CatletNetworkConfig { Name = EryphConstants.DefaultNetworkName })
-                .ToArray();
-        });
+    private static Seq<CatletNetworkConfig> ApplyDefaultNetwork(
+        Seq<CatletNetworkConfig> networks) =>
+        networks.Match(
+            Empty: () => Seq1(new CatletNetworkConfig { Name = EryphConstants.DefaultNetworkName }),
+            Seq: identity);
 
     /// <summary>
     /// Applies hardcoded default values to the <paramref name="config"/>.

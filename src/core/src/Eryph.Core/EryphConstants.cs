@@ -69,6 +69,13 @@ namespace Eryph.Core
             public static readonly int MaxCatletAncestors = 5;
             public static readonly int MaxGeneSetReferenceDepth = 5;
             public static readonly int MaxNetworkProviders = 100;
+
+            /// <summary>
+            /// The maximum size of a gene that can be downloaded directly (into memory).
+            /// The gene pool limits the size of YAML sources to 2 MiB. Hence, 5 MiB
+            /// should provide us with enough headroom to download any catlet or fodder gene.
+            /// </summary>
+            public static readonly int MaxGeneSizeDirectDownload = 5 * 1024 * 1024;
         }
 
         public static class Authorization
