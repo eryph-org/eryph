@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.CatletSpecifications;
+using Rebus.Sagas;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -42,7 +43,7 @@ internal class ResolveCatletSpecificationSaga(
         Data.Data.ConfigYaml = message.ConfigYaml;
         Data.Data.Architecture = message.Architecture;
         // TODO different placement?
-        Data.Data.AgentName = Environment.MachineName;
+        Data.Data.AgentName = message.AgentName;
         // Data.Data.AgentName = agentLocator.FindAgentForGenePool();
 
         var parsedConfig = ParseCatletConfigYaml(message.ConfigYaml);
@@ -89,8 +90,18 @@ internal class ResolveCatletSpecificationSaga(
         });
     }
 
+    protected override void CorrelateMessages(
+        ICorrelationConfig<EryphSagaData<ResolveCatletSpecificationSagaData>> config)
+    {
+        base.CorrelateMessages(config);
+
+        config.Correlate<OperationTaskStatusEvent<BuildCatletSpecificationGenePoolCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
+
     private static Either<Error, CatletConfig> ParseCatletConfigYaml(string yaml) =>
         // TODO improve error mapping / consider JSON path
+        // TODO normalize config?
         from parsedConfig in Try(() => CatletConfigYamlSerializer.Deserialize(yaml))
             .ToEither(ex => Error.New("The catlet configuration is invalid.", Error.New(ex)))
         from _ in CatletConfigValidations.ValidateCatletConfig(parsedConfig)

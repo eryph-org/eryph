@@ -7,9 +7,12 @@ using System.Threading.Tasks;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
+[SendMessageTo(MessageRecipient.Controllers)]
 public class ResolveCatletSpecificationCommand
 {
     public string ConfigYaml { get; set; }
 
     public Architecture Architecture { get; set; }
+
+    public string AgentName { get; set; }
 }

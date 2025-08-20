@@ -37,6 +37,7 @@ internal class LocalFirstGeneProvider(
         from cachedManifest in localGenePool.GetCachedGeneSet(geneSetId)
         from pulledGeneSet in cachedManifest
             // gene set references should always be checked online
+            // TODO add special error handling which ignores all error when we force online lookup
             .Filter(cm => string.IsNullOrWhiteSpace(cm.Reference))
             .Match(
                 Some: g => SuccessAff<CancelRt, Option<GenesetTagManifestData>>(Some(g)),
@@ -50,8 +51,15 @@ internal class LocalFirstGeneProvider(
         from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from pulledGeneSet in IterateGenePools(
-            genepoolFactory,
-            pool => pool.GetGeneSet(geneSetId))
+                genepoolFactory,
+                pool => pool.GetGeneSet(geneSetId))
+            .Catch(
+                e => !IsUnexpectedHttpClientError(e),
+                e =>
+                {
+                    log.LogInformation(e, "Failed to lookup gene set {GeneSetId} on all gene pools.", geneSetId);
+                    return SuccessAff<CancelRt, Option<GeneSetInfo>>(None);
+                })
         from _ in pulledGeneSet
             .Map(localGenePool.CacheGeneSet)
             .Sequence()
@@ -82,28 +90,6 @@ internal class LocalFirstGeneProvider(
             .Map(localGenePool.CacheGeneContent)
             .Sequence()
         select content;
-
-    private Aff<CancelRt, Option<R>> IterateGenePools<R>(
-        IGenePoolFactory genePoolFactory,
-        Func<IGenePool, Aff<CancelRt, Option<R>>> action) =>
-        genePoolFactory.RemotePools.ToSeq().Fold(
-            SuccessAff<CancelRt, Option<R>>(None),
-            (state, poolName) => state.BiBind(
-                Succ: o => o.Match(
-                    // We have a valid result, nothing more to do
-                    Some: r => SuccessAff<CancelRt, Option<R>>(r),
-                    // No result, try next pool
-                    None: () => action(genePoolFactory.CreateNew(poolName))),
-                Fail: e => IsUnexpectedHttpClientError(e)
-                    // If the error is an HTTP client, we immediately fail. This way,
-                    // authentication errors are always propagated to the caller.
-                    ? FailAff<CancelRt, Option<R>>(e)
-                    : from o in action(genePoolFactory.CreateNew(poolName))
-                      // When an error occurred, we still try the next pool. When the next pool
-                      // does not contain the gene, we return the last error. This way, one error
-                      // is propagated to the caller.
-                      from r in o.ToAff(e)
-                      select Some(r)));
 
     public Aff<CancelRt, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
@@ -144,7 +130,7 @@ internal class LocalFirstGeneProvider(
                 var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
                 var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
 
-                var overallPercent = Convert.ToInt32(processedPercent * 75d);
+                var overallPercent = Convert.ToInt32(processedPercent * 50d);
 
                 var progressMessage = $"Verifying downloaded parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
                 log.LogTrace("Verifying downloaded parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
@@ -168,34 +154,30 @@ internal class LocalFirstGeneProvider(
                         .Map(pi => partsState.AddPart(pi.Part, pi.Size))
                         .SequenceSerial()
                     from result in retry(
-                        // TODO fix schedule
                         Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(5),
                         IterateGenePools(
-                        genepoolFactory,
-                        genePool => genePool.DownloadGene2(
-                            uniqueGeneId,
-                            geneHash,
-                            partsState,
-                            GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash),
-                            async (long processedBytes, long totalBytes) =>
-                            {
-                                var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
-                                var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
-                                var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
+                            genepoolFactory,
+                            genePool => genePool.DownloadGene2(
+                                uniqueGeneId,
+                                geneHash,
+                                partsState,
+                                GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash),
+                                async (long processedBytes, long totalBytes) =>
+                                {
+                                    var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
+                                    var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
+                                    var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
 
-                                var overallPercent = Convert.ToInt32(processedPercent * 75d);
+                                    var overallPercent = Convert.ToInt32(processedPercent * 50d);
 
-                                var progressMessage = $"Downloading parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
-                                log.LogTrace("Downloading parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
-                                    uniqueGeneId, totalReadMb, totalMb, processedPercent);
-                                await reportProgress(progressMessage, overallPercent);
-                                return unit;
-                            })))
+                                    var progressMessage = $"Downloading parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
+                                    log.LogTrace("Downloading parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
+                                        uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                                    await reportProgress(progressMessage, overallPercent);
+                                    return unit;
+                                })))
                     from _2 in result.ToAff(Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available on any remote gene pool."))
                     select unit)
-
-            // TODO skip download if local parts are complete
-            // TODO check if gene is already merged
         from _4 in hasMergedGene && !isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
             : localGenePool.MergeGene2(
@@ -207,7 +189,7 @@ internal class LocalFirstGeneProvider(
                     var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
                     var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
                     
-                    var overallPercent = Convert.ToInt32(processedPercent * 25d) + 75;
+                    var overallPercent = Convert.ToInt32(processedPercent * 50d + 50d);
                     
                     var progressMessage = $"Extracting {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
                     log.LogTrace("Extracting {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
@@ -217,14 +199,27 @@ internal class LocalFirstGeneProvider(
                 })
         select unit;
 
-
-
-    // Flow for providing a gene:
-    // 1. Check genes.json in local gene pool -> gene is fully merged and available -> done
-    // 2. Check local gene pool for already downloaded gene parts and manifest
-    //    - produces first part of download progress
-    //    - packed
-    // 2. Download gene parts
+    private Aff<CancelRt, Option<R>> IterateGenePools<R>(
+        IGenePoolFactory genePoolFactory,
+        Func<IGenePool, Aff<CancelRt, Option<R>>> action) =>
+        genePoolFactory.RemotePools.ToSeq().Fold(
+            SuccessAff<CancelRt, Option<R>>(None),
+            (state, poolName) => state.BiBind(
+                Succ: o => o.Match(
+                    // We have a valid result, nothing more to do
+                    Some: r => SuccessAff<CancelRt, Option<R>>(r),
+                    // No result, try next pool
+                    None: () => action(genePoolFactory.CreateNew(poolName))),
+                Fail: e => IsUnexpectedHttpClientError(e)
+                    // If the error is an HTTP client, we immediately fail. This way,
+                    // authentication errors are always propagated to the caller.
+                    ? FailAff<CancelRt, Option<R>>(e)
+                    : from o in action(genePoolFactory.CreateNew(poolName))
+                    // When an error occurred, we still try the next pool. When the next pool
+                    // does not contain the gene, we return the last error. This way, one error
+                    // is propagated to the caller.
+                    from r in o.ToAff(e)
+                    select Some(r)));
 
     private static bool IsUnexpectedHttpClientError(Error error) =>
         error.Exception

@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;

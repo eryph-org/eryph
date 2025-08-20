@@ -6,7 +6,6 @@ using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
-using Eryph.Modules.GenePool.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 using Moq;

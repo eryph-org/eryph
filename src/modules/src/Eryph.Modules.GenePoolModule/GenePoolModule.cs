@@ -42,7 +42,6 @@ public class GenePoolModule
         services.AddHttpClient(GenePoolConstants.PartClientName)
             .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
             .AddPolicyHandler(GetRetryPolicy());
-
     }
 
     [UsedImplicitly]
@@ -66,7 +65,7 @@ public class GenePoolModule
        // container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
        // container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
        // container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
-
+       
        if (OperatingSystem.IsWindows())
        {
            container.RegisterSingleton<IHardwareIdProvider, WindowsHardwareIdProvider>();
@@ -80,6 +79,7 @@ public class GenePoolModule
         container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();
         container.RegisterSingleton<IGeneRequestBackgroundQueue, GeneBackgroundTaskQueue>();
         container.RegisterSingleton<IGenePoolInventoryFactory, GenePoolInventoryFactory>();
+        container.Register<IGenePoolReader, GenePoolReader>(Lifestyle.Scoped);
 
 
         container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());

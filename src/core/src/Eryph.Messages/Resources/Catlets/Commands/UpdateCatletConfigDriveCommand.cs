@@ -18,7 +18,5 @@ public class UpdateCatletConfigDriveCommand : IVMCommand, IHasResource
 
     public CatletMetadata MachineMetadata { get; set; }
 
-    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
-
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

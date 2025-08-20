@@ -8,7 +8,6 @@ using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core;
 using Eryph.Core.Genetics;
-using Eryph.Modules.GenePool.Genetics;
 using Eryph.Resources.Machines;
 using LanguageExt;
 using LanguageExt.Common;

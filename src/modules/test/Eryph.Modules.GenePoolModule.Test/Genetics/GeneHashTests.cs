@@ -1,4 +1,4 @@
-﻿using Eryph.Modules.GenePool.Genetics;
+﻿using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.GenePoolModule.Test.Genetics;
 

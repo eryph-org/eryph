@@ -35,6 +35,7 @@ internal class RepositoryGenePool(
     GenePoolSettings genepoolSettings)
     : IGenePool
 {
+    // TODO Define proper error code
     private static readonly Error UrlExpiredError = (unchecked((int)0x8000_0000), "The gene pool download Url expires soon.");
 
     private const int DirectDownloadMaxSize = 5 * 1024 * 1024;
@@ -73,7 +74,7 @@ internal class RepositoryGenePool(
             // This retry is triggered when the download URL is about to expire.
             // We just fetch new download URLs and retry immediately. We only limit
             // the number of retries in case the gene pool behaves incorrectly and
-            // e.g. returns already expired URLs.s
+            // e.g. returns already expired URLs.
             Schedule.Forever & Schedule.recurs(5),
             from repositoryGeneInfo in FetchGene(uniqueGeneId, geneHash)
             from result in repositoryGeneInfo
@@ -134,14 +135,18 @@ internal class RepositoryGenePool(
                 {
                     log.LogTrace("Downloading gene part {GenePart} from {Url}", genePartHash, url);
                     await using var fileStream = fileSystem.OpenWrite(path);
+                    // Even with a large buffer (1 MiB), read operations from the HTTP response stream
+                    // only return small chunks (16 KiB). We use a BufferedStream to make sure
+                    // that we write to the file system in larger chunks.
+                    await using var bufferStream = new BufferedStream(fileStream, BufferSize);
                     await using var progressStream = new ProgressStream(
-                        fileStream,
+                        bufferStream,
                         TimeSpan.FromSeconds(10),
                         async (progress, _) =>
                         {
                             await reportProgress(downloadedBytes + progress, totalBytes);
                         });
-                    await FetchGenePart(fileStream, url, genePartHash, rt.CancellationToken);
+                    await FetchGenePart(progressStream, url, genePartHash, rt.CancellationToken);
                     return fileSystem.GetFileSize(path);
                 }
                 catch (Exception ex)
