@@ -7,12 +7,12 @@ namespace Eryph.Messages.Genes.Commands;
 [SendMessageTo(MessageRecipient.GenePoolAgent)]
 public class PrepareGeneCommand : IGenePoolAgentCommand, ICommandWithName
 {
-    public UniqueGeneIdentifier Gene { get; set; }
+    public UniqueGeneIdentifier Id { get; set; }
 
     public GeneHash Hash { get; set; }
 
     [PrivateIdentifier]
     public string AgentName { get; set; }
 
-    public string GetCommandName() => $"Preparing gene {Gene}";
+    public string GetCommandName() => $"Preparing gene {Id}";
 }
