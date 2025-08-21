@@ -713,8 +713,8 @@ public class CatletFeedingTests
 
         var metadata = new CatletMetadata()
         {
-            MachineId = catletId,
-            VMId = vmId,
+            CatletId = catletId,
+            VmId = vmId,
         };
 
         var config = new CatletConfig();

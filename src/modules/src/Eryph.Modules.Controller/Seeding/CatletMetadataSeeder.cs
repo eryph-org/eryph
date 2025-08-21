@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Modules.Controller.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -43,9 +44,27 @@ internal class CatletMetadataSeeder : SeederBase
         if (exists)
             return;
 
-        var metadata = JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(json);
-        if (metadata is null)
-            throw new SeederException($"The catlet metadata {entityId} is invalid");
+        Resources.Machines.CatletMetadata metadata;
+        try
+        {
+            metadata = CatletMetadataJsonSerializer.Deserialize(json);
+        }
+        catch
+        {
+            // If the metadata cannot be deserialized, we assume it is an old version.
+            // In this case, we extract some IDs from the JSON and create
+            // a minimal metadata entry.
+            var metadataInfo = CatletMetadataJsonSerializer.DeserializeInfo(json);
+            // TODO mark as deprecated metadata to block updates
+            var dbMetadata = new CatletMetadata
+            {
+                Id = metadataInfo.Id,
+            };
+            await _metadataRepository.AddAsync(dbMetadata, cancellationToken);
+            await _metadataRepository.SaveChangesAsync(cancellationToken);
+
+            return;
+        }
 
         await _metadataService.SaveMetadata(metadata, cancellationToken);
         await _metadataRepository.SaveChangesAsync(cancellationToken);

@@ -53,11 +53,11 @@ namespace Eryph.Modules.Controller.DataServices
             if (metadata.Id == null)
                 throw new ArgumentException($"{nameof(metadata.Id)} is missing", nameof(metadata));
 
-            if (metadata.VMId != vm.VMId)
-                throw new ArgumentException($"{nameof(metadata.VMId)} is invalid.", nameof(metadata));
+            if (metadata.VmId != vm.VMId)
+                throw new ArgumentException($"{nameof(metadata.VmId)} is invalid.", nameof(metadata));
 
-            if (metadata.MachineId != vm.Id)
-                throw new ArgumentException($"{nameof(metadata.MachineId)} is invalid.", nameof(metadata));
+            if (metadata.CatletId != vm.Id)
+                throw new ArgumentException($"{nameof(metadata.CatletId)} is invalid.", nameof(metadata));
 
 
             await _metadataService.SaveMetadata(metadata);

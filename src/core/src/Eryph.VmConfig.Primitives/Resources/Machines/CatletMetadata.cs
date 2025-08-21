@@ -3,36 +3,32 @@ using System.Collections.Generic;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
+using Eryph.Core.Genetics;
 using JetBrains.Annotations;
 
-namespace Eryph.Resources.Machines
+namespace Eryph.Resources.Machines;
+
+// The change tracking in the controller module must be updated when modifying this class.
+public sealed class CatletMetadata
 {
-    // The change tracking in the controller module must be updated when modifying this class.
-    public sealed class CatletMetadata
-    {
-        public Guid Id { get; set; }
+    public Guid Id { get; set; }
 
-        [PrivateIdentifier]
-        public Guid VMId { get; set; }
+    [PrivateIdentifier]
+    public Guid VmId { get; set; }
 
-        public Guid MachineId { get; set; }
+    public Guid CatletId { get; set; }
 
-        public string Architecture { get; set; }
+    public Architecture Architecture { get; set; }
 
-        [CanBeNull] public string Parent { get; set; }
+    public bool SecureDataHidden { get; set; }
 
-        [CanBeNull] public CatletConfig ParentConfig { get; set; }
+    // TODO Should we store the variables separately?
+    public IReadOnlyDictionary<VariableName, string> Variables { get; set; } = new Dictionary<VariableName, string>();
 
-        [CanBeNull] public FodderConfig[] Fodder { get; set; }
+    // new metadata
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> PinnedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
 
-        [CanBeNull] public VariableConfig[] Variables { get; set; }
+    public string ConfigYaml { get; set; }
 
-        /// <summary>
-        /// Contains the architectures which have been resolved for the fodder genes
-        /// when the catlet has been created.
-        /// </summary>
-        [CanBeNull] public IReadOnlyDictionary<string, string> ResolvedFodderGenes { get; set; }
-
-        public bool SecureDataHidden { get; set; }
-    }
+    public CatletConfig BuiltConfig { get; set; }
 }

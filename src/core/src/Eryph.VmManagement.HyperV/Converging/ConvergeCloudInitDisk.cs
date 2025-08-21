@@ -105,7 +105,7 @@ namespace Eryph.VmManagement.Converging
             Prelude.TryAsync(async () =>
             {
                 var configDrive = new ConfigDriveBuilder()
-                    .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.Metadata.MachineId.ToString()))
+                    .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.Metadata.CatletId.ToString()))
                     .Build();
 
                 if (config != null)

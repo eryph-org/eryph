@@ -83,7 +83,7 @@ namespace Eryph.Modules.Controller.Inventory
 
                 await optionalMetadata.IfSomeAsync(async metadata =>
                 {
-                    var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId));
+                    var optionalMachine = (await _vmDataService.GetVM(metadata.CatletId));
                     var project = await FindRequiredProject(vmInfo.ProjectName, vmInfo.ProjectId);
                     if (project.BeingDeleted)
                     {
@@ -93,15 +93,15 @@ namespace Eryph.Modules.Controller.Inventory
                     }
 
                     //machine not found or metadata is assigned to new VM - a new VM resource will be created
-                    if (optionalMachine.IsNone || metadata.VMId != vmInfo.VMId)
+                    if (optionalMachine.IsNone || metadata.VmId != vmInfo.VMId)
                     {
                         // create new metadata for machines that have been imported
-                        if (metadata.VMId != vmInfo.VMId)
+                        if (metadata.VmId != vmInfo.VMId)
                         {
                             var oldMetadataId = metadata.Id;
                             metadata.Id = Guid.NewGuid();
-                            metadata.MachineId = Guid.NewGuid();
-                            metadata.VMId = vmInfo.VMId;
+                            metadata.CatletId = Guid.NewGuid();
+                            metadata.VmId = vmInfo.VMId;
                             
                             await _dispatcher.StartNew(
                                 project.TenantId,
@@ -111,17 +111,17 @@ namespace Eryph.Modules.Controller.Inventory
                                     AgentName = hostMachine.Name,
                                     CurrentMetadataId = oldMetadataId,
                                     NewMetadataId = metadata.Id,
-                                    CatletId = metadata.MachineId,
+                                    CatletId = metadata.CatletId,
                                     VMId = vmInfo.VMId,
                                 });
                         }
 
-                        if (metadata.MachineId == Guid.Empty)
-                            metadata.MachineId = Guid.NewGuid();
+                        if (metadata.CatletId == Guid.Empty)
+                            metadata.CatletId = Guid.NewGuid();
 
 
                         var catlet = await VirtualMachineInfoToCatlet(
-                            vmInfo, hostMachine, timestamp, metadata.MachineId, project);
+                            vmInfo, hostMachine, timestamp, metadata.CatletId, project);
                         await _vmDataService.AddNewVM(catlet, metadata);
 
                         return;

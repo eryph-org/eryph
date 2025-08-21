@@ -51,45 +51,13 @@ namespace Eryph.Modules.Controller.Compute
                 return;
             }
 
-            var resolvedFodderGenes = metadata.ResolvedFodderGenes.ToSeq()
-                .Map(kvp => from geneId in GeneIdentifier.NewValidation(kvp.Key)
-                            from architecture in Architecture.NewValidation(kvp.Value)
-                            select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))
-                .Sequence();
-            if (resolvedFodderGenes.IsFail)
-            {
-                await Fail(Error.New(
-                        $"The metadata for catlet {message.CatletId} contains invalid fodder information",
-                        Error.Many(resolvedFodderGenes.FailToSeq()))
-                    .Print());
-                return;
-            }
-
-            // This saga only updates the config drive which is attached to the catlet without
-            // updating the catlet itself. We breed a fake catlet config which can be passed
-            // to the UpdateCatletConfigDriveCommand to update the config drive.
-            // We provide neither Name nor Hostname as the config is only used to update
-            // the config drive after the first startup and the hostname should not
-            // be changed by cloud-init.
-            var config = new CatletConfig()
-            {
-                Fodder = metadata.Fodder,
-                Variables = metadata.Variables,
-            };
-
-            var breedingResult = CatletBreeding.Breed(metadata.ParentConfig, config);
-            if (breedingResult.IsLeft)
-            {
-                await Fail(Error.New(
-                        $"Could not breed config for catlet '{catlet.Name}' ({catlet.Id}).",
-                        Error.Many(breedingResult.LeftToSeq()))
-                    .Print());
-                return;
-            }
+            // TODO feed system variables?
+            // TODO feed variables from metadata
+            // TODO Hide secret data already here
 
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
-                Config = breedingResult.ValueUnsafe(),
+                Config = metadata.BuiltConfig,
                 VMId = catlet.VMId,
                 CatletId = catlet.Id,
                 MachineMetadata = metadata

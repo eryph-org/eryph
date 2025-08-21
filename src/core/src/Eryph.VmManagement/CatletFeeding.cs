@@ -23,8 +23,8 @@ public static class CatletFeeding
         CatletMetadata catletMetadata) =>
         FeedSystemVariables(
             config,
-            catletMetadata.MachineId.ToString(),
-            catletMetadata.VMId.ToString());
+            catletMetadata.CatletId.ToString(),
+            catletMetadata.VmId.ToString());
 
     public static CatletConfig FeedSystemVariables(
         CatletConfig config,

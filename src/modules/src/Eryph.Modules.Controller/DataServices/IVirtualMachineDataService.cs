@@ -13,7 +13,7 @@ internal interface IVirtualMachineDataService
     Task<Option<Catlet>> GetByVMId(Guid id);
 
     Task<Option<Catlet>> GetVM(Guid id);
-    Task<Catlet> AddNewVM(Catlet vm, CatletMetadata metadata);
+    Task<Catlet> AddNewVM(Catlet catlet, CatletMetadata metadata);
 
     Task<Unit> RemoveVM(Guid id);
 
