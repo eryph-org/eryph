@@ -59,7 +59,7 @@ internal class ExpandCatletConfigSaga(
             return;
         }
 
-        Data.Data.Architecture = Architecture.New(metadata.Architecture);
+        Data.Data.Architecture = metadata.Architecture;
 
         await StartNewTask(new ResolveCatletSpecificationCommand
         {

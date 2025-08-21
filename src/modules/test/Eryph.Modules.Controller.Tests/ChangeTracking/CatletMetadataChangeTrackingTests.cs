@@ -34,8 +34,8 @@ public abstract class CatletMetadataChangeTrackingTests(
     private readonly Resources.Machines.CatletMetadata _expectedMetadata = new()
     {
         Id = MetadataId,
-        Parent = "acme-org/acme-linux/starter",
-        VMId = VmId,
+        //Parent = "acme-org/acme-linux/starter",
+        VmId = VmId,
     };
 
     [Fact]
@@ -45,7 +45,7 @@ public abstract class CatletMetadataChangeTrackingTests(
         var newMetadata = new Resources.Machines.CatletMetadata()
         {
             Id = newMetadataId,
-            Parent = "acme-org/acme-unix/legacy",
+            //Parent = "acme-org/acme-unix/legacy",
         };
         await WithHostScope(async stateStore =>
         {
@@ -70,13 +70,13 @@ public abstract class CatletMetadataChangeTrackingTests(
         await WithHostScope(async stateStore =>
         {
             var dbMetadata = await stateStore.For<CatletMetadata>().GetByIdAsync(MetadataId);
-            UpdateMetadata(dbMetadata!, m => m.VMId = newVmId);
+            UpdateMetadata(dbMetadata!, m => m.VmId = newVmId);
 
             await stateStore.SaveChangesAsync();
         });
 
         var metadata = await ReadMetadata(MetadataId);
-        _expectedMetadata.VMId = newVmId;
+        _expectedMetadata.VmId = newVmId;
         metadata.Should().BeEquivalentTo(_expectedMetadata);
     }
 
@@ -86,7 +86,7 @@ public abstract class CatletMetadataChangeTrackingTests(
         await WithHostScope(async stateStore =>
         {
             var dbMetadata = await stateStore.For<CatletMetadata>().GetByIdAsync(MetadataId);
-            UpdateMetadata(dbMetadata!, m => m.VMId = Guid.NewGuid());
+            UpdateMetadata(dbMetadata!, m => m.VmId = Guid.NewGuid());
 
             await stateStore.SaveChangesAsync();
         });

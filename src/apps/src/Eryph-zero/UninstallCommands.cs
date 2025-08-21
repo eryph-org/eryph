@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Eryph.Core;
+using Eryph.Modules.Controller.Serializers;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Configuration;
 using Eryph.Modules.HostAgent.Networks;
@@ -134,9 +135,8 @@ internal class UninstallCommands
     private static Aff<DriverCommandsRuntime, Guid> GetVmId(
         string path) =>
         from metadataJson in readAllText(path)
-        from metadata in Eff(() => JsonDocument.Parse(metadataJson))
-        from vmId in Eff(() => metadata.RootElement.GetProperty(nameof(CatletMetadata.VMId)).GetGuid())
-        select vmId;
+        from metadataInfo in Eff(() => CatletMetadataJsonSerializer.DeserializeInfo(metadataJson))
+        select metadataInfo.VmId;
 
     private static Aff<DriverCommandsRuntime, Unit> TryStopAndRemoveVm(Guid vmId) =>
         StopAndRemoveVm(vmId) | @catch(e => logWarning<UninstallCommands>(

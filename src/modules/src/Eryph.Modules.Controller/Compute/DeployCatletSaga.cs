@@ -119,21 +119,13 @@ internal class DeployCatletSaga(
 
             Data.Data.ProjectId = project.Id;
 
-            var catletMetadata = new Resources.Machines.CatletMetadata
+            var catletMetadata = new CatletMetadata
             {
                 Id = response.MetadataId,
-                MachineId = Data.Data.CatletId,
-                VMId = response.VmId,
-                Fodder = Data.Data.Config!.Fodder,
-                Variables = Data.Data.Config.Variables,
-                Parent = Data.Data.Config.Parent,
-                ParentConfig = null!,
-                Architecture = Data.Data.Architecture!.Value,
-                ResolvedFodderGenes = Data.Data.ResolvedGenes.Keys.ToSeq()
-                    .Filter(g => g.GeneType is GeneType.Fodder)
-                    .ToDictionary(
-                        ugi => ugi.Id.Value,
-                        ugi => ugi.Architecture.Value),
+                CatletId = Data.Data.CatletId,
+                VmId = response.VmId,
+                Architecture = Data.Data.Architecture,
+                PinnedGenes = Data.Data.ResolvedGenes,
             };
 
             var savedCatlet = await vmDataService.AddNewVM(new Catlet
