@@ -61,6 +61,7 @@ internal class RepositoryGenePool(
                     clientOptions)))
             .MapFail(ex => Error.New("Could not create the gene pool API client.", ex))
         select client;
+
     public Aff<CancelRt, Option<GeneSetInfo>> GetGeneSet(
     GeneSetIdentifier geneSetId) =>
     from genePoolClient in CreateClient()
@@ -151,7 +152,7 @@ internal class RepositoryGenePool(
         GeneHash geneHash,
         GenePartsState partsState,
         string downloadPath,
-        Func<long, long, Task<Unit>> reportProgress) =>
+        Func<long, long, Task> reportProgress) =>
         retryWhile(
             // This retry is triggered when the download URL is about to expire.
             // We just fetch new download URLs and retry immediately. We only limit
@@ -170,7 +171,7 @@ internal class RepositoryGenePool(
         GeneHash geneHash,
         GenePartsState partsState,
         string downloadPath,
-        Func<long, long, Task<Unit>> reportProgress,
+        Func<long, long, Task> reportProgress,
         RepositoryGeneInfo geneRepositoryInfo) =>
         from _1 in SuccessAff(unit)
         let manifestPath = GenePoolPaths.GetTempGeneManifestPath(downloadPath)
@@ -197,7 +198,7 @@ internal class RepositoryGenePool(
         RepositoryGeneInfo repositoryGeneInfo,
         GenePartsState partsState,
         string downloadPath,
-        Func<long, long, Task<Unit>> reportProgress) =>
+        Func<long, long, Task> reportProgress) =>
         from url in repositoryGeneInfo.DownloadUris
             .Find(genePartHash)
             .ToAff(Error.New($"The gene part {genePartHash.Hash} is not available in the gene pool."))
@@ -224,10 +225,7 @@ internal class RepositoryGenePool(
                     await using var progressStream = new ProgressStream(
                         bufferStream,
                         TimeSpan.FromSeconds(10),
-                        async (progress, _) =>
-                        {
-                            await reportProgress(downloadedBytes + progress, totalBytes);
-                        });
+                        async (progress, _) => await reportProgress(downloadedBytes + progress, totalBytes));
                     await FetchGenePart(progressStream, url, genePartHash, rt.CancellationToken);
                     return fileSystem.GetFileSize(path);
                 }

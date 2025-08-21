@@ -54,7 +54,7 @@ public class ValidateCatletDeploymentSaga(
             await StartNewTask(new PrepareGeneCommand
             {
                 AgentName = Data.Data.AgentName,
-                Gene = pendingGene.Key,
+                Id = pendingGene.Key,
                 Hash = pendingGene.Value,
             });
         }

@@ -76,8 +76,7 @@ public class GenePoolModule
         genePoolFactory.Register<RepositoryGenePool>(serviceProvider.GetRequiredService<GenePoolSettings>());
         container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
         container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
-        container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();
-        container.RegisterSingleton<IGeneRequestBackgroundQueue, GeneBackgroundTaskQueue>();
+        container.RegisterSingleton<IGeneRequestRegistry, GeneRequestRegistry>();
         container.RegisterSingleton<IGenePoolInventoryFactory, GenePoolInventoryFactory>();
         container.Register<IGenePoolReader, GenePoolReader>(Lifestyle.Scoped);
 

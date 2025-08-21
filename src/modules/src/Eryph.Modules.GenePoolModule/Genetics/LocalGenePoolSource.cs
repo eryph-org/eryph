@@ -79,9 +79,6 @@ internal class LocalGenePoolSource(
         from _ in SuccessAff(unit)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         from mergedGenes in GetMergedGenes(uniqueGeneId.Id.GeneSet)
-        from _2 in guard(
-            mergedGenes.Contains(geneHash),
-            Error.New($"The gene {uniqueGeneId} ({geneHash.Hash}) is not present in the local gene pool."))
         from content in Aff<CancelRt, Option<string>>(async rt =>
         {
             if (!fileSystem.FileExists(genePath))
@@ -90,12 +87,12 @@ internal class LocalGenePoolSource(
 
             return Some(content);
         })
-        select content;
+        select content.Filter(_ => mergedGenes.Contains(geneHash));
 
     public Aff<CancelRt, HashMap<GenePartHash, Option<long>>> GetDownloadedGeneParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Func<long, long, Task<Unit>> reportProgress) =>
+        Func<long, long, Task> reportProgress) =>
         from manifest in ReadTempGeneManifest(uniqueGeneId, geneHash)
         from geneParts in manifest
             .Map(m => GetDownloadedGeneParts(uniqueGeneId, geneHash, m, reportProgress))
@@ -106,7 +103,7 @@ internal class LocalGenePoolSource(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         GeneManifestData manifest,
-        Func<long, long, Task<Unit>> reportProgress) =>
+        Func<long, long, Task> reportProgress) =>
         from geneParts in GeneManifestUtils.GetParts(manifest).ToAff()
         from totalBytes in Optional(manifest.Size).ToAff(
             Error.New($"The gene manifest of {uniqueGeneId} ({geneHash.Hash}) does not contain a size."))
@@ -116,7 +113,11 @@ internal class LocalGenePoolSource(
                 from partInfo in GetDownloadedGenePart(uniqueGeneId, geneHash, part)
                 let result = partInfos.Add(part, partInfo)
                 let availableBytes = result.Values.Somes().Sum()
-                from _ in Aff<CancelRt, Unit>(async _ => await reportProgress(availableBytes, totalBytes))
+                from _ in Aff<CancelRt, Unit>(async _ =>
+                {
+                    await reportProgress(availableBytes, totalBytes);
+                    return unit;
+                })
                 select result)
         select result;
 
@@ -133,13 +134,15 @@ internal class LocalGenePoolSource(
                 return None;
 
             using var hashAlgorithm = genePartHash.CreateAlgorithm();
-            await using var dataStream = fileSystem.OpenRead(genePartPath);
-            // Use a buffered stream as HashAlgorithm.ComputeHashAsync()
-            // uses an extremely small buffer (4096 bytes) which slows
-            // down the hashing operation significantly.
-            await using var bufferedStream = new BufferedStream(dataStream, BufferSize);
-            await hashAlgorithm.ComputeHashAsync(bufferedStream, rt.CancellationToken);
-
+            await using (var dataStream = fileSystem.OpenRead(genePartPath))
+            {
+                // Use a buffered stream as HashAlgorithm.ComputeHashAsync()
+                // uses an extremely small buffer (4096 bytes) which slows
+                // down the hashing operation significantly.
+                await using var bufferedStream = new BufferedStream(dataStream, BufferSize);
+                await hashAlgorithm.ComputeHashAsync(bufferedStream, rt.CancellationToken);
+            }
+            
             var actualGenePartHash = hashAlgorithm.ToGenePartHash();
 
             if (actualGenePartHash.Hash == genePartHash.Hash)
@@ -153,7 +156,7 @@ internal class LocalGenePoolSource(
     public Aff<CancelRt, Unit> MergeGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Func<long, long, Task<Unit>> reportProgress) =>
+        Func<long, long, Task> reportProgress) =>
         from _1 in SuccessAff(unit)
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         // We are going to re(write) the gene on the disk. Remove it from the merged genes

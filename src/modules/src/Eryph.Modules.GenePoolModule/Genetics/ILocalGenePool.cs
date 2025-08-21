@@ -35,9 +35,9 @@ internal interface ILocalGenePool
     Aff<CancelRt, HashMap<GenePartHash, Option<long>>> GetDownloadedGeneParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Func<long, long, Task<Unit>> reportProgress);
+        Func<long, long, Task> reportProgress);
 
     Aff<CancelRt, Unit> MergeGene(
         UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash, Func<long, long, Task<Unit>> reportProgress);
+        GeneHash geneHash, Func<long, long, Task> reportProgress);
 }

@@ -21,5 +21,5 @@ public interface IGeneProvider
     Aff<CancelRt, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Func<string, int, Task<Unit>> reportProgress);
+        Func<string, int, Task> reportProgress);
 }

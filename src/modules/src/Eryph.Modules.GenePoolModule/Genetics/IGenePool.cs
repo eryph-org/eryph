@@ -20,7 +20,6 @@ internal interface IGenePool
     Aff<CancelRt, Option<GeneSetInfo>> GetGeneSet(
         GeneSetIdentifier geneSetId);
 
-
     Aff<CancelRt, Option<GeneContentInfo>> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash);
@@ -30,7 +29,7 @@ internal interface IGenePool
         GeneHash geneHash,
         GenePartsState partsState,
         string downloadPath,
-        Func<long, long, Task<Unit>> reportProgress);
+        Func<long, long, Task> reportProgress);
 
     public string PoolName { get; }
 }
