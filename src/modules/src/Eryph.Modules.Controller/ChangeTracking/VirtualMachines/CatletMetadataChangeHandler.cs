@@ -5,6 +5,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Configuration.Model;
+using Eryph.Modules.Controller.Serializers;
+using Eryph.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 
@@ -41,9 +44,17 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
             return;
         }
 
-        var realMetadata = JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(metadata.Metadata);
+        var metadataConfig = new CatletMetadataConfigModel
+        {
+            Id = metadata.Id,
+            CatletId = metadata.CatletId,
+            VmId = metadata.VmId,
+            Metadata = CatletMetadataContentJsonSerializer.SerializeToElement(metadata.Metadata),
+            IsDeprecated = metadata.IsDeprecated,
+            SecretDataHidden = metadata.SecretDataHidden,
+        };
 
-        var json = JsonSerializer.Serialize(realMetadata);
+        var json = CatletMetadataConfigModelJsonSerializer.Serialize(metadataConfig);
         await _fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
     }
 }

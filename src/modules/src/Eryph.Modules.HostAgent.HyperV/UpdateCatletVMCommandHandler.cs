@@ -33,14 +33,15 @@ internal class UpdateCatletVMCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from hostInfo in hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
-        let vmId = command.VMId
+        let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
         from plannedStorageSettings in VMStorageSettings.Plan(
                 vmHostAgentConfig, LongToString(command.NewStorageId),
                 command.Config, currentStorageSettings)
             .WriteTrace()
-        from _ in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
+        from _ in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
+        // TODO How is responsible for feeding/substitution
         //let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         /*
         from fedConfig in CatletFeeding.Feed(
@@ -56,7 +57,7 @@ internal class UpdateCatletVMCommandHandler(
         from vmInfoConsistent in EnsureNameConsistent(vmInfo, substitutedConfig, Engine).WriteTrace()
         from vmInfoConverged in VirtualMachine.Converge(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfoConsistent,
-                substitutedConfig, command.MachineMetadata, command.MachineNetworkSettings,
+                substitutedConfig, command.CatletId, command.MachineNetworkSettings,
                 plannedStorageSettings, command.ResolvedGenes.ToSeq())
             .WriteTrace()
         let timestamp = DateTimeOffset.UtcNow
@@ -64,7 +65,6 @@ internal class UpdateCatletVMCommandHandler(
         select new ConvergeCatletResult
         {
             VmId = vmInfoConverged.Value.Id,
-            MetadataId = command.MachineMetadata.Id,
             Inventory = inventory,
             Timestamp = timestamp,
         };

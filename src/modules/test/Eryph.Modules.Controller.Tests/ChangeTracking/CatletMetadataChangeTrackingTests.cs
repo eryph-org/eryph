@@ -4,6 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Catlets;
+using Eryph.Configuration.Model;
+using Eryph.Core.Genetics;
+using Eryph.Modules.Controller.Serializers;
+using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -30,29 +35,41 @@ public abstract class CatletMetadataChangeTrackingTests(
     : ChangeTrackingTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid MetadataId = Guid.NewGuid();
+    private static readonly Guid CatletId = Guid.NewGuid();
     private static readonly Guid VmId = Guid.NewGuid();
-    private readonly Resources.Machines.CatletMetadata _expectedMetadata = new()
+
+    private readonly CatletMetadataContent _expectedMetadataContent = new()
     {
-        Id = MetadataId,
-        //Parent = "acme-org/acme-linux/starter",
-        VmId = VmId,
+        Architecture = Architecture.New("hyperv/amd64"),
+        BuiltConfig = new CatletConfig
+        {
+            Parent = "acme-org/acme-linux/starter",
+        },
     };
 
     [Fact]
     public async Task Metadata_new_is_detected()
     {
         var newMetadataId = Guid.NewGuid();
-        var newMetadata = new Resources.Machines.CatletMetadata()
+        var newCatletId = Guid.NewGuid();
+        var newVmId = Guid.NewGuid();
+        var newMetadata = new CatletMetadataContent()
         {
-            Id = newMetadataId,
-            //Parent = "acme-org/acme-unix/legacy",
+            Architecture = Architecture.New("hyperv/amd64"),
+            BuiltConfig = new CatletConfig
+            {
+                Parent = "acme-org/acme-unix/legacy",
+            },
         };
+
         await WithHostScope(async stateStore =>
         {
             var dbMetadata = new CatletMetadata()
             {
                 Id = newMetadataId,
-                Metadata = JsonSerializer.Serialize(newMetadata),
+                CatletId = newCatletId,
+                VmId = newVmId,
+                Metadata = newMetadata,
             };
             await stateStore.For<CatletMetadata>().AddAsync(dbMetadata);
 
@@ -70,15 +87,35 @@ public abstract class CatletMetadataChangeTrackingTests(
         await WithHostScope(async stateStore =>
         {
             var dbMetadata = await stateStore.For<CatletMetadata>().GetByIdAsync(MetadataId);
-            UpdateMetadata(dbMetadata!, m => m.VmId = newVmId);
+            dbMetadata!.SecretDataHidden = true;
 
             await stateStore.SaveChangesAsync();
         });
 
         var metadata = await ReadMetadata(MetadataId);
-        _expectedMetadata.VmId = newVmId;
-        metadata.Should().BeEquivalentTo(_expectedMetadata);
+        metadata.SecretDataHidden.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Metadata_content_update_is_detected()
+    {
+        var newVmId = Guid.NewGuid();
+        await WithHostScope(async stateStore =>
+        {
+            var dbMetadata = await stateStore.For<CatletMetadata>().GetByIdAsync(MetadataId);
+            dbMetadata!.Metadata!.Architecture = new Architecture("any");
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        var metadata = await ReadMetadata(MetadataId);
+        var metadataContent = CatletMetadataJsonSerializer.Deserialize(metadata.Metadata);
+        
+        _expectedMetadataContent.Architecture = new Architecture("any");
+
+        metadataContent.Should().BeEquivalentTo(_expectedMetadataContent);
+    }
+
 
     [Fact]
     public async Task Metadata_delete_is_detected()
@@ -86,7 +123,7 @@ public abstract class CatletMetadataChangeTrackingTests(
         await WithHostScope(async stateStore =>
         {
             var dbMetadata = await stateStore.For<CatletMetadata>().GetByIdAsync(MetadataId);
-            UpdateMetadata(dbMetadata!, m => m.VmId = Guid.NewGuid());
+            dbMetadata!.SecretDataHidden = true;
 
             await stateStore.SaveChangesAsync();
         });
@@ -110,26 +147,18 @@ public abstract class CatletMetadataChangeTrackingTests(
         await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata()
         {
             Id = MetadataId,
-            Metadata = JsonSerializer.Serialize(_expectedMetadata),
+            CatletId = CatletId,
+            VmId = VmId,
+            Metadata = _expectedMetadataContent,
         });
     }
 
     private string GetMetadataPath(Guid metadataId) =>
         Path.Combine(ChangeTrackingConfig.VirtualMachinesConfigPath, $"{metadataId}.json");
 
-    private async Task<Resources.Machines.CatletMetadata> ReadMetadata(Guid metadataId)
+    private async Task<CatletMetadataConfigModel> ReadMetadata(Guid metadataId)
     {
         var json = await MockFileSystem.File.ReadAllTextAsync(GetMetadataPath(metadataId), Encoding.UTF8);
-        return JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(json)!;
-    }
-
-    private void UpdateMetadata(
-        CatletMetadata dbMetadata,
-        Action<Resources.Machines.CatletMetadata> update)
-    {
-        var metadata = JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(
-            dbMetadata.Metadata)!;
-        update(metadata);
-        dbMetadata.Metadata = JsonSerializer.Serialize(metadata);
+        return CatletMetadataConfigModelJsonSerializer.Deserialize(JsonDocument.Parse(json));
     }
 }

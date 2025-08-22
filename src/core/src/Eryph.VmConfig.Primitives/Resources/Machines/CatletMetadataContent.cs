@@ -9,18 +9,9 @@ using JetBrains.Annotations;
 namespace Eryph.Resources.Machines;
 
 // The change tracking in the controller module must be updated when modifying this class.
-public sealed class CatletMetadata
+public sealed class CatletMetadataContent
 {
-    public Guid Id { get; set; }
-
-    [PrivateIdentifier]
-    public Guid VmId { get; set; }
-
-    public Guid CatletId { get; set; }
-
     public Architecture Architecture { get; set; }
-
-    public bool SecureDataHidden { get; set; }
 
     // TODO Should we store the variables separately?
     public IReadOnlyDictionary<VariableName, string> Variables { get; set; } = new Dictionary<VariableName, string>();

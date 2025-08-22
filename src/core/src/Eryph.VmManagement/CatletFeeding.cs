@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,11 +21,9 @@ public static class CatletFeeding
 {
     public static CatletConfig FeedSystemVariables(
         CatletConfig config,
-        CatletMetadata catletMetadata) =>
-        FeedSystemVariables(
-            config,
-            catletMetadata.CatletId.ToString(),
-            catletMetadata.VmId.ToString());
+        Guid catletId,
+        Guid vmId) =>
+        FeedSystemVariables(config, catletId.ToString(), vmId.ToString());
 
     public static CatletConfig FeedSystemVariables(
         CatletConfig config,

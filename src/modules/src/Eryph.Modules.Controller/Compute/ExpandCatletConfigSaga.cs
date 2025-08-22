@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
+using Eryph.Resources.Machines;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -51,15 +51,20 @@ internal class ExpandCatletConfigSaga(
 
         Data.Data.AgentName = machineInfo.AgentName;
 
-        var metadata = await metadataService.GetMetadata(machineInfo.MetadataId)
-            .Map(m => m.IfNoneUnsafe((CatletMetadata?)null));
+        var metadata = await metadataService.GetMetadata(machineInfo.MetadataId);
         if (metadata is null)
         {
             await Fail($"Config for existing catlet cannot be expanded because the metadata for catlet {Data.Data.CatletId} does not exist.");
             return;
         }
 
-        Data.Data.Architecture = metadata.Architecture;
+        if (metadata.IsDeprecated || metadata.Metadata is null)
+        {
+            await Fail($"Config for existing catlet cannot be expanded because the catlet {Data.Data.CatletId} has been created with an old version of eryph.");
+            return;
+        }
+
+        Data.Data.Architecture = metadata.Metadata.Architecture;
 
         await StartNewTask(new ResolveCatletSpecificationCommand
         {
@@ -93,9 +98,4 @@ internal class ExpandCatletConfigSaga(
         config.Correlate<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
-
-    private Task<Option<(Catlet Catlet, CatletMetadata Metadata)>> GetCatletMetadata(Guid catletId) =>
-        from catlet in vmDataService.GetVM(catletId)
-        from metadata in metadataService.GetMetadata(catlet.MetadataId)
-        select (catlet, metadata);
 }

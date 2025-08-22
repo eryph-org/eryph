@@ -711,15 +711,9 @@ public class CatletFeedingTests
         var catletId = Guid.NewGuid();
         var vmId = Guid.NewGuid();
 
-        var metadata = new CatletMetadata()
-        {
-            CatletId = catletId,
-            VmId = vmId,
-        };
-
         var config = new CatletConfig();
 
-        var result = CatletFeeding.FeedSystemVariables(config, metadata);
+        var result = CatletFeeding.FeedSystemVariables(config, catletId, vmId);
 
         result.Variables.Should().SatisfyRespectively(
             variable =>

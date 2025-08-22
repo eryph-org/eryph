@@ -48,7 +48,7 @@ namespace Eryph.VmManagement.Converging
                     return await (from d in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).ToAsync()
                         from networkData in GenerateNetworkData(vmInfo).ToAsync()
                         from _ in GenerateConfigDriveDisk(configDriveIsoPath,
-                            Context.Metadata.SecureDataHidden,
+                            Context.SecretDataHidden,
                             string.IsNullOrWhiteSpace(Context.Config.Hostname) ? Context.Config.Name : Context.Config.Hostname,
                             networkData,
                             Context.Config.Fodder)
@@ -88,6 +88,7 @@ namespace Eryph.VmManagement.Converging
                             })
                         
                     };
+                    // TODO what does this do?
                     config.Add(physicalNetworkSettings);
                 });
 
@@ -105,7 +106,7 @@ namespace Eryph.VmManagement.Converging
             Prelude.TryAsync(async () =>
             {
                 var configDrive = new ConfigDriveBuilder()
-                    .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.Metadata.CatletId.ToString()))
+                    .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.CatletId.ToString()))
                     .Build();
 
                 if (config != null)

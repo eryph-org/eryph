@@ -9,7 +9,9 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     {
         public CatletConfig Config { get; set; }
 
-        public Guid NewMachineId { get; set; }
+        public Guid CatletId { get; set; }
+
+        public Guid MetadataId { get; set; }
 
         [PrivateIdentifier]
         public string AgentName { get; set; }

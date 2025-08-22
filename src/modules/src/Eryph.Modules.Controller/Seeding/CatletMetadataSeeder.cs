@@ -44,29 +44,55 @@ internal class CatletMetadataSeeder : SeederBase
         if (exists)
             return;
 
-        Resources.Machines.CatletMetadata metadata;
-        try
+        var document = JsonDocument.Parse(json);
+        var version = CatletMetadataConfigModelJsonSerializer.GetVersion(document);
+        if (version == 1)
         {
-            metadata = CatletMetadataJsonSerializer.Deserialize(json);
+            await SeedV1Metadata(document, cancellationToken);
         }
-        catch
+        else if (version == 2)
         {
-            // If the metadata cannot be deserialized, we assume it is an old version.
-            // In this case, we extract some IDs from the JSON and create
-            // a minimal metadata entry.
-            var metadataInfo = CatletMetadataJsonSerializer.DeserializeInfo(json);
-            // TODO mark as deprecated metadata to block updates
-            var dbMetadata = new CatletMetadata
-            {
-                Id = metadataInfo.Id,
-            };
-            await _metadataRepository.AddAsync(dbMetadata, cancellationToken);
-            await _metadataRepository.SaveChangesAsync(cancellationToken);
-
-            return;
+            await SeedMetadata(document, cancellationToken);
+        }
+        else
+        {
+            throw new SeederException($"The catlet metadata {entityId} has the unsupported version {version}.");
         }
 
-        await _metadataService.SaveMetadata(metadata, cancellationToken);
         await _metadataRepository.SaveChangesAsync(cancellationToken);
+    }
+
+
+    private async Task SeedV1Metadata(
+        JsonDocument document,
+        CancellationToken cancellationToken)
+    {
+        var metadataInfo = CatletMetadataConfigModelJsonSerializer.DeserializeV1(document);
+        var metadata = new CatletMetadata
+        {
+            Id = metadataInfo.Id,
+            CatletId = metadataInfo.CatletId,
+            VmId = metadataInfo.VmId,
+            IsDeprecated = true,
+        };
+        await _metadataService.AddMetadata(metadata, cancellationToken);
+    }
+
+    private async Task SeedMetadata(
+        JsonDocument document,
+        CancellationToken cancellationToken)
+    {
+        var metadataConfig = CatletMetadataConfigModelJsonSerializer.Deserialize(document);
+        var metadata = new CatletMetadata
+        {
+            Id = metadataConfig.Id,
+            CatletId = metadataConfig.CatletId,
+            VmId = metadataConfig.VmId,
+            IsDeprecated = metadataConfig.IsDeprecated,
+            SecretDataHidden = metadataConfig.SecretDataHidden,
+            Metadata = CatletMetadataJsonSerializer.Deserialize(metadataConfig.Metadata),
+        };
+
+        await _metadataService.AddMetadata(metadata, cancellationToken);
     }
 }

@@ -32,7 +32,7 @@ internal class SyncVmNetworkPortsCommandHandler(
     private static Aff<AgentRuntime, Unit> HandleCommand(
         SyncVmNetworkPortsCommand command) =>
         from psEngine in default(AgentRuntime).Powershell
-        from vmInfo in VmQueries.GetOptionalVmInfo(psEngine, command.VMId).ToAff()
+        from vmInfo in VmQueries.GetOptionalVmInfo(psEngine, command.VmId).ToAff()
         from _ in vmInfo
             // This command is only used to sync the ports when the network adapters
             // of a running VM have been modified. A different event and handler

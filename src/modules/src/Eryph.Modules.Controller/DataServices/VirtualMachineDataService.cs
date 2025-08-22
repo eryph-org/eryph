@@ -8,7 +8,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
+using Rebus.Retry.FailFast;
 
 namespace Eryph.Modules.Controller.DataServices
 {
@@ -38,34 +38,35 @@ namespace Eryph.Modules.Controller.DataServices
             return res!;
         }
 
-        public async Task<Catlet> AddNewVM(Catlet vm,
-            [NotNull] CatletMetadata metadata)
+        public async Task<Catlet> AddNewVM(
+            Catlet catlet,
+            CatletMetadataContent? metadataContent,
+            bool secretDataHidden = false)
         {
-            if (vm.ProjectId == Guid.Empty)
-                throw new ArgumentException($"{nameof(Catlet.ProjectId)} is missing", nameof(vm));
+            if (catlet.ProjectId == Guid.Empty)
+                throw new ArgumentException($"{nameof(Catlet.ProjectId)} is missing", nameof(catlet));
 
-            if (vm.Id == Guid.Empty)
-                throw new ArgumentException($"{nameof(Catlet.Id)} is missing", nameof(vm));
+            if (catlet.Id == Guid.Empty)
+                throw new ArgumentException($"{nameof(Catlet.Id)} is missing", nameof(catlet));
 
-            if (vm.VMId == null)
-                throw new ArgumentException($"{nameof(Catlet.VMId)} is missing", nameof(vm));
+            if (catlet.MetadataId == Guid.Empty)
+                throw new ArgumentException($"{nameof(Catlet.MetadataId)} is missing", nameof(catlet));
 
-            if (metadata.Id == null)
-                throw new ArgumentException($"{nameof(metadata.Id)} is missing", nameof(metadata));
+            if (catlet.VMId == Guid.Empty)
+                throw new ArgumentException($"{nameof(Catlet.VMId)} is missing", nameof(catlet));
 
-            if (metadata.VmId != vm.VMId)
-                throw new ArgumentException($"{nameof(metadata.VmId)} is invalid.", nameof(metadata));
+            var metadata = new CatletMetadata
+            {
+                Id = catlet.MetadataId,
+                CatletId = catlet.Id,
+                VmId = catlet.VMId,
+                Metadata = metadataContent,
+                IsDeprecated = false,
+                SecretDataHidden = false,
+            };
+            await _metadataService.AddMetadata(metadata);
 
-            if (metadata.CatletId != vm.Id)
-                throw new ArgumentException($"{nameof(metadata.CatletId)} is invalid.", nameof(metadata));
-
-
-            await _metadataService.SaveMetadata(metadata);
-
-            vm.MetadataId = metadata.Id;
-
-            var res = await _repository.AddAsync(vm);
-            return res;
+            return await _repository.AddAsync(catlet);
         }
 
         public async Task<Unit> RemoveVM(Guid id)

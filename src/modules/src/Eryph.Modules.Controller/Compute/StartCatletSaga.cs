@@ -32,7 +32,7 @@ internal class StartCatletSaga(IWorkflow workflow,
         await StartNewTask(new StartCatletVMCommand
         {
             CatletId = message.CatletId,
-            VMId = Data.Data.VmId,
+            VmId = Data.Data.VmId,
         });
     }
 
