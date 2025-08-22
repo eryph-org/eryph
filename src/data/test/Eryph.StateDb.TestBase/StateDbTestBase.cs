@@ -130,7 +130,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
             _ => throw new NotSupportedException($"Database type '{_databaseFixture}' is not supported."),
         };
 
-    private void RegisterStateStore(SimpleInjectorAddOptions options)
+    protected void RegisterStateStore(SimpleInjectorAddOptions options)
     {
         switch (_databaseFixture)
         {
