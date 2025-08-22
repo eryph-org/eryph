@@ -11,6 +11,7 @@ using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Inventory;
+using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -23,7 +24,6 @@ using Rebus.Sagas;
 using Rebus.Handlers;
 
 using static LanguageExt.Prelude;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -60,9 +60,11 @@ internal class DeployCatletSaga(
         if (!message.CatletId.HasValue)
         {
             Data.Data.CatletId = Guid.NewGuid();
+            Data.Data.MetadataId = Guid.NewGuid();
             await StartNewTask(new CreateCatletVMCommand
             {
-                NewMachineId = Data.Data.CatletId,
+                CatletId = Data.Data.CatletId,
+                MetadataId = Data.Data.MetadataId,
                 Config = Data.Data.Config,
                 AgentName = Data.Data.AgentName,
                 StorageId = idGenerator.CreateId(),
@@ -71,19 +73,21 @@ internal class DeployCatletSaga(
         }
 
         Data.Data.CatletId = message.CatletId.Value;
-        var metadata = await GetCatletMetadata(Data.Data.CatletId);
-        if (metadata.IsNone)
+        var catlet = await vmDataService.GetVM(Data.Data.CatletId)
+            .Map(o => o.IfNoneUnsafe((Catlet?)null));
+        if (catlet is null)
         {
-            await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
+            await Fail($"The catlet {Data.Data.CatletId} was not found.");
             return;
         }
 
-        Data.Data.ProjectId = metadata.ValueUnsafe().Catlet.ProjectId;
+        Data.Data.MetadataId = catlet.MetadataId;
+        Data.Data.ProjectId = catlet.ProjectId;
 
         await StartNewTask(new UpdateCatletNetworksCommand
         {
             CatletId = Data.Data.CatletId,
-            CatletMetadataId = metadata.ValueUnsafe().Metadata.Id,
+            CatletMetadataId = Data.Data.MetadataId,
             Config = Data.Data.Config,
             ProjectId = Data.Data.ProjectId,
         });
@@ -119,19 +123,20 @@ internal class DeployCatletSaga(
 
             Data.Data.ProjectId = project.Id;
 
-            var catletMetadata = new CatletMetadata
+            var catletMetadata = new CatletMetadataContent
             {
-                Id = response.MetadataId,
-                CatletId = Data.Data.CatletId,
-                VmId = response.VmId,
+                BuiltConfig = Data.Data.Config,
                 Architecture = Data.Data.Architecture,
                 PinnedGenes = Data.Data.ResolvedGenes,
+                // TODO save YAML
+                ConfigYaml = "missing",
             };
 
             var savedCatlet = await vmDataService.AddNewVM(new Catlet
             {
                 ProjectId = project.Id,
                 Id = Data.Data.CatletId,
+                MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
                 VMId = response.Inventory.VMId,
                 Name = response.Inventory.Name,
@@ -162,21 +167,22 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.CatletNetworksUpdated;
 
-            var metadata = await GetCatletMetadata(Data.Data.CatletId);
-            if (metadata.IsNone)
+            var catlet = await vmDataService.GetVM(Data.Data.CatletId)
+                .Map(o => o.IfNoneUnsafe((Catlet?)null));
+            if (catlet is null)
             {
-                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
+                await Fail($"The catlet {Data.Data.CatletId} was not found.");
                 return;
             }
 
             await StartNewTask(new UpdateCatletVMCommand
             {
                 CatletId = Data.Data.CatletId,
-                VMId = metadata.ValueUnsafe().Catlet.VMId,
+                VmId = catlet.VMId,
+                MetadataId = Data.Data.MetadataId,
                 Config = Data.Data.Config,
                 AgentName = Data.Data.AgentName,
                 NewStorageId = idGenerator.CreateId(),
-                MachineMetadata = metadata.ValueUnsafe().Metadata,
                 MachineNetworkSettings = r.NetworkSettings,
                 ResolvedGenes = Data.Data.ResolvedGenes.Keys.ToList(),
             });
@@ -200,8 +206,8 @@ internal class DeployCatletSaga(
                 Timestamp = response.Timestamp,
             });
 
-            var metadata = await GetCatletMetadata(Data.Data.CatletId);
-            if (metadata.IsNone)
+            var metadata = await metadataService.GetMetadata(Data.Data.MetadataId);
+            if (metadata is null)
             {
                 await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
                 return;
@@ -210,9 +216,10 @@ internal class DeployCatletSaga(
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
                 Config = Data.Data.Config,
-                VMId = response.Inventory.VMId,
+                VmId = response.Inventory.VMId,
                 CatletId = Data.Data.CatletId,
-                MachineMetadata = metadata.ValueUnsafe().Metadata,
+                MetadataId = Data.Data.MetadataId,
+                SecretDataHidden = metadata.SecretDataHidden,
             });
         });
     }
@@ -242,17 +249,18 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.NetworksUpdated;
 
-            var metadata = await GetCatletMetadata(Data.Data.CatletId);
-            if (metadata.IsNone)
+            var catlet = await vmDataService.GetVM(Data.Data.CatletId)
+                .Map(o => o.IfNoneUnsafe((Catlet?)null));
+            if (catlet is null)
             {
-                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
+                await Fail($"The catlet {Data.Data.CatletId} was not found.");
                 return;
             }
 
             await StartNewTask(new SyncVmNetworkPortsCommand
             {
                 CatletId = Data.Data.CatletId,
-                VMId = metadata.ValueUnsafe().Catlet.VMId,
+                VmId = catlet.VMId,
             });
         });
     }
@@ -280,9 +288,4 @@ internal class DeployCatletSaga(
         config.Correlate<OperationTaskStatusEvent<SyncVmNetworkPortsCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
-
-    private Task<Option<(Catlet Catlet, CatletMetadata Metadata)>> GetCatletMetadata(Guid catletId) =>
-        from catlet in vmDataService.GetVM(catletId)
-        from metadata in metadataService.GetMetadata(catlet.MetadataId)
-        select (catlet, metadata);
 }

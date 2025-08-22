@@ -1,22 +1,25 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Resources.Machines;
-using LanguageExt;
+using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.Controller.DataServices;
 
 public interface IVirtualMachineMetadataService
 {
-    Task<Option<CatletMetadata>> GetMetadata(
+    Task<CatletMetadata?> GetMetadata(
         Guid id,
-        CancellationToken cancellationToken = default);
-    
-    Task<Unit> SaveMetadata(
-        CatletMetadata metadata,
         CancellationToken cancellationToken = default);
 
-    Task<Unit> RemoveMetadata(
+    Task MarkSecretDataHidden(
         Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task RemoveMetadata(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task AddMetadata(
+        CatletMetadata metadata,
         CancellationToken cancellationToken = default);
 }

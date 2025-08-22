@@ -8,6 +8,7 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Resources.Machines;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -15,7 +16,6 @@ using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -43,11 +43,16 @@ namespace Eryph.Modules.Controller.Compute
                 return;
             }
 
-            var metadata = await _metadataService.GetMetadata(catlet.MetadataId)
-                .Map(m => m.IfNoneUnsafe((CatletMetadata?)null));
+            var metadata = await _metadataService.GetMetadata(catlet.MetadataId);
             if (metadata is null)
             {
                 await Fail($"Catlet config drive cannot be updated because the metadata for catlet '{catlet.Name}' ({catlet.Id}) does not exist.");
+                return;
+            }
+
+            if (metadata.IsDeprecated || metadata.Metadata is null)
+            {
+                await Fail($"Catlet config drive cannot be updated because the catlet '{catlet.Name}' ({catlet.Id}) has been created with an old version of eryph.");
                 return;
             }
 
@@ -57,10 +62,11 @@ namespace Eryph.Modules.Controller.Compute
 
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
-                Config = metadata.BuiltConfig,
-                VMId = catlet.VMId,
+                Config = metadata.Metadata.BuiltConfig,
+                VmId = catlet.VMId,
                 CatletId = catlet.Id,
-                MachineMetadata = metadata
+                MetadataId = catlet.MetadataId,
+                SecretDataHidden = metadata.SecretDataHidden,
             });
         }
 

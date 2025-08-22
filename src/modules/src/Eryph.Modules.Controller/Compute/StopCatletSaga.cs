@@ -40,21 +40,21 @@ internal class StopCatletSaga(
                 await StartNewTask(new ShutdownVMCommand
                 {
                     CatletId = message.CatletId,
-                    VMId = Data.Data.VmId,
+                    VmId = Data.Data.VmId,
                 });
                 return;
             case CatletStopMode.Hard:
                 await StartNewTask(new StopVMCommand
                 {
                     CatletId = message.CatletId,
-                    VMId = Data.Data.VmId,
+                    VmId = Data.Data.VmId,
                 });
                 return;
             case CatletStopMode.Kill:
                 await StartNewTask(new KillVMCommand
                 {
                     CatletId = message.CatletId,
-                    VMId = Data.Data.VmId,
+                    VmId = Data.Data.VmId,
                 });
                 return;
             default:

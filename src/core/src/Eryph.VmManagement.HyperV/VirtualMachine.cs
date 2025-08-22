@@ -139,14 +139,16 @@ public static class VirtualMachine
         Func<string, Task> reportProgress,
         TypedPsObject<VirtualMachineInfo> vmInfo,
         CatletConfig machineConfig,
-        CatletMetadata metadata,
+        Guid catletId,
         MachineNetworkSettings[] networkSetting,
         VMStorageSettings storageSettings,
         Seq<UniqueGeneIdentifier> resolvedGenes) =>
         from _1 in RightAsync<Error, Unit>(unit)
+        let vmId = vmInfo.Value.Id
+        // Pass false for SecretDataHidden as we do not touch the config drive
         let convergeContext = new ConvergeContext(
             vmHostAgentConfig, engine, portManager, reportProgress, machineConfig, 
-            metadata, storageSettings, networkSetting, hostInfo, resolvedGenes)
+            catletId, vmId, false, storageSettings, networkSetting, hostInfo, resolvedGenes)
         let convergeTasks = Seq<ConvergeTaskBase>(
             new ConvergeSecureBoot(convergeContext),
             new ConvergeTpm(convergeContext),
@@ -155,7 +157,6 @@ public static class VirtualMachine
             new ConvergeMemory(convergeContext),
             new ConvergeDrives(convergeContext),
             new ConvergeNetworkAdapters(convergeContext))
-        let vmId = vmInfo.Value.Id
         from _2 in convergeTasks
             .Map(task => from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
                          from _ in task.Converge(reloadedVmInfo).ToAsync()
@@ -172,17 +173,18 @@ public static class VirtualMachine
         Func<string, Task> reportProgress,
         TypedPsObject<VirtualMachineInfo> vmInfo,
         CatletConfig machineConfig,
-        CatletMetadata metadata,
+        Guid catletId,
+        bool secretDataHidden,
         VMStorageSettings storageSettings) =>
         from _1 in RightAsync<Error, Unit>(unit)
+        let vmId = vmInfo.Value.Id
         // Pass empty MachineNetworkSettings as converging the cloud init disk
         // does not require them.
         let convergeContext = new ConvergeContext(
             vmHostAgentConfig, engine, portManager, reportProgress, machineConfig,
-            metadata, storageSettings, [], hostInfo, Empty)
+            catletId, vmId, secretDataHidden, storageSettings, [], hostInfo, Empty)
         let convergeTasks = Seq1<ConvergeTaskBase>(
             new ConvergeCloudInitDisk(convergeContext))
-        let vmId = vmInfo.Value.Id
         from _2 in convergeTasks
             .Map(task => from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
                 from _ in task.Converge(reloadedVmInfo).ToAsync()

@@ -34,7 +34,7 @@ internal class VirtualMachineShutdownHandler(
 
     protected static Aff<AgentRuntime, CatletStateResponse> HandleCommand(ShutdownVMCommand command) =>
         from powershell in default(AgentRuntime).Powershell
-        from vmInfo in getVmInfo(command.VMId)
+        from vmInfo in getVmInfo(command.VmId)
         from _ in timeout(
             EryphConstants.OperationTimeout,
             from ct in cancelToken<AgentRuntime>()
@@ -50,7 +50,7 @@ internal class VirtualMachineShutdownHandler(
                 e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
                 _ => unitAff)
         let timestamp = DateTimeOffset.UtcNow
-        from reloadedVmInfo in getVmInfo(command.VMId)
+        from reloadedVmInfo in getVmInfo(command.VmId)
         select new CatletStateResponse
         {
             Status = VmStateUtils.toVmStatus(reloadedVmInfo.Value.State),

@@ -13,13 +13,14 @@ using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
+using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 using Catlet = Eryph.StateDb.Model.Catlet;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
@@ -175,11 +176,11 @@ internal class GetCatletConfigurationHandler(
 
         };
 
+
         //remove all settings also configured in image
-        var metadataEntity = await stateStore.Read<StateDb.Model.CatletMetadata>().GetByIdAsync(catlet.MetadataId, cancellationToken);
-        CatletMetadata? metadata = null;
-        if (metadataEntity != null)
-            metadata = JsonSerializer.Deserialize<CatletMetadata>(metadataEntity.Metadata);
+        var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(catlet.MetadataId, cancellationToken);
+        if (metadata is null || metadata.IsDeprecated || metadata.Metadata is null)
+            return new BadRequestResult("The catlet has been created with an old version of eryph")
 
         if (metadata != null)
         {
@@ -202,7 +203,7 @@ internal class GetCatletConfigurationHandler(
                         foreach (var variableConfig in fodderConfig.Variables)
                         {
                             if (variableConfig.Secret.GetValueOrDefault())
-                            {
+                            {,
                                 variableConfig.Value = "#REDACTED";
                             }
                         }

@@ -50,24 +50,19 @@ internal class CatletStateChangedEventHandler(
         if (message.UpTime.TotalMinutes < 15)
             return;
 
-        var metadataResult = await metadataService.GetMetadata(catlet.MetadataId);
-        if (metadataResult.IsNone)
+        var metadata = await metadataService.GetMetadata(catlet.MetadataId);
+        if (metadata is null || metadata.SecretDataHidden || metadata.IsDeprecated || metadata.Metadata is null)
             return;
 
-        var metadata = metadataResult.ValueUnsafe();
-        
-        if (metadata.SecureDataHidden)
-            return;
-
-        var anySensitive = metadata.BuiltConfig.Fodder.ToSeq().Exists(
+        // TODO is this still correct? How and where do we store the secrets?
+        var anySensitive = metadata.Metadata.BuiltConfig.Fodder.ToSeq().Exists(
                                f => f.Secret.GetValueOrDefault()
                                     || f.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault()))
-                           || metadata.BuiltConfig.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
+                           || metadata.Metadata.BuiltConfig.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
         if (!anySensitive)
             return;
         
-        metadata.SecureDataHidden = true;
-        await metadataService.SaveMetadata(metadata);
+        await metadataService.MarkSecretDataHidden(catlet.MetadataId);
 
         await opDispatcher.StartNew(
             catlet.Project.Id,

@@ -50,7 +50,7 @@ internal class DestroyCatletSaga(
         await StartNewTask(new RemoveCatletVMCommand
         {
             CatletId = Data.Data.MachineId,
-            VMId = catlet.VMId
+            VmId = catlet.VMId
         });
     }
 

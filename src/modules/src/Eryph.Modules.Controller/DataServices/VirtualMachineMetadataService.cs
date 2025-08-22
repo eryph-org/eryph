@@ -4,60 +4,37 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Modules.Controller.Serializers;
+using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using LanguageExt;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
+
+using static LanguageExt.Prelude;
+using DbCatletMetadata = Eryph.StateDb.Model.CatletMetadata;
 
 namespace Eryph.Modules.Controller.DataServices;
 
-internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
+internal class VirtualMachineMetadataService(
+    IStateStoreRepository<DbCatletMetadata> repository)
+    : IVirtualMachineMetadataService
 {
-    private readonly IStateStoreRepository<StateDb.Model.CatletMetadata> _repository;
-
-    public VirtualMachineMetadataService(
-        IStateStoreRepository<StateDb.Model.CatletMetadata> repository)
-    {
-        _repository = repository;
-    }
-
-    public async Task<Option<CatletMetadata>> GetMetadata(
+    public async Task<CatletMetadata?> GetMetadata(
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        if (id == Guid.Empty)
-            return Option<CatletMetadata>.None;
-
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
-
-        if(entity == null)
-            return Option<CatletMetadata>.None;
-
-        return DeserializeMetadataEntity(entity);
+        // TODO use spec to force detached entity. The metadata should not be changed normally.
+        return await repository.GetByIdAsync(id, cancellationToken);
     }
 
-    public async Task<Unit> SaveMetadata(
+    public async Task AddMetadata(
         CatletMetadata metadata,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(
-            metadata.Id, cancellationToken);
-        if (entity is null)
-        {
-            entity = new StateDb.Model.CatletMetadata
-            {
-                Id = metadata.Id,
-                Metadata = JsonSerializer.Serialize(metadata)
-            };
-            await _repository.AddAsync(entity, cancellationToken);
-        }
-        else
-        {
-            entity.Metadata = JsonSerializer.Serialize(metadata);
-        }
+        await repository.AddAsync(metadata, cancellationToken);
 
-        entity.Genes = metadata.PinnedGenes.Keys.ToSeq()
+        metadata.Genes = (metadata.Metadata?.PinnedGenes.Keys).ToSeq()
             .Map(g => new CatletMetadataGene
             {
                 MetadataId = metadata.Id,
@@ -66,27 +43,28 @@ internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
                 Architecture = g.Architecture.Value,
             })
             .ToList();
-
-        return Unit.Default;
     }
 
-    public async Task<Unit> RemoveMetadata(
+    public async Task MarkSecretDataHidden(
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(
-            id, cancellationToken);
-        if(entity == null)
-            return Unit.Default;
-
-        await _repository.DeleteAsync(entity, cancellationToken);
-
-        return Unit.Default;
+        var metadata = await repository.GetByIdAsync(id, cancellationToken);
+        if (metadata is null)
+            throw new InvalidOperationException($"The catlet metadata {id} does not exist.");
+        
+        metadata.SecretDataHidden = true;
+        await repository.UpdateAsync(metadata, cancellationToken);
     }
 
-    private static Option<CatletMetadata> DeserializeMetadataEntity(
-        [CanBeNull] StateDb.Model.CatletMetadata metadataEntity)
+    public async Task RemoveMetadata(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
-        return JsonSerializer.Deserialize<CatletMetadata>(metadataEntity.Metadata);
+        var entity = await repository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
+            return;
+
+        await repository.DeleteAsync(entity, cancellationToken);
     }
 }

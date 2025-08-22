@@ -42,7 +42,7 @@ internal class RemoveVirtualMachineHandler(
 
     private Aff<AgentRuntime, Unit> HandleCommand(
         RemoveCatletVMCommand command) =>
-        from optionalVmInfo in getOptionalVmInfo(command.VMId)
+        from optionalVmInfo in getOptionalVmInfo(command.VmId)
         from _ in optionalVmInfo.Map(RemoveVm).Sequence()
         select unit;
 

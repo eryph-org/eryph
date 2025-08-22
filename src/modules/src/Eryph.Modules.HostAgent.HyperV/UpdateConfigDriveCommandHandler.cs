@@ -41,9 +41,9 @@ internal class UpdateConfigDriveCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
-        let vmId = command.VMId
+        let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
-        from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
+        from metadata in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
         //let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
@@ -60,7 +60,7 @@ internal class UpdateConfigDriveCommandHandler(
             .ToAsync()
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfo,
-                substitutedConfig, command.MachineMetadata, currentStorageSettings)
+                substitutedConfig, command.CatletId, command.SecretDataHidden, currentStorageSettings)
             .WriteTrace()
         select Unit.Default;
 }
