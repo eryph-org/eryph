@@ -77,8 +77,10 @@ public static class ApiModuleFactoryExtensions
 
             hostBuilder.ConfigureFrameworkServices((_, services) =>
             {
-                services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>, ModuleFilters>();
-                services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>();
+                services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>>(
+                    _ => new ModuleFilters(configureModuleContainer));
+                services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>(
+                    _ => new ModuleFilters(configureModuleContainer));
             });
         }).WithWebHostBuilder(webBuilder =>
         {
