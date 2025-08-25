@@ -1,19 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO.Abstractions;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Serializers;
+using Eryph.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Seeding;
 
@@ -67,14 +63,28 @@ internal class CatletMetadataSeeder : SeederBase
         JsonDocument document,
         CancellationToken cancellationToken)
     {
-        var metadataInfo = CatletMetadataConfigModelJsonSerializer.DeserializeV1(document);
+        var root = document.RootElement;
+
+        if (!root.TryGetProperty("Id", out var id))
+            throw new JsonException("The catlet metadata JSON does not contain an ID.");
+
+        if (!root.TryGetProperty("CatletId", out var catletId) && !root.TryGetProperty("MachineId", out catletId))
+            throw new JsonException("The catlet metadata JSON does not contain a catlet ID.");
+
+        if (!root.TryGetProperty("VmId", out var vmId) && !root.TryGetProperty("VMId", out vmId))
+            throw new JsonException("The catlet metadata JSON does not contain a VM ID.");
+
+
         var metadata = new CatletMetadata
         {
-            Id = metadataInfo.Id,
-            CatletId = metadataInfo.CatletId,
-            VmId = metadataInfo.VmId,
+            Id = id.GetGuid(),
+            CatletId = catletId.GetGuid(),
+            VmId = vmId.GetGuid(),
             IsDeprecated = true,
+            SecretDataHidden = root.TryGetProperty("SecureDataHidden", out var secretDataHidden)
+                               && secretDataHidden.GetBoolean(),
         };
+            
         await _metadataService.AddMetadata(metadata, cancellationToken);
     }
 
@@ -90,7 +100,9 @@ internal class CatletMetadataSeeder : SeederBase
             VmId = metadataConfig.VmId,
             IsDeprecated = metadataConfig.IsDeprecated,
             SecretDataHidden = metadataConfig.SecretDataHidden,
-            Metadata = CatletMetadataJsonSerializer.Deserialize(metadataConfig.Metadata),
+            Metadata = metadataConfig.Metadata.HasValue
+                ? CatletMetadataContentJsonSerializer.Deserialize(metadataConfig.Metadata.Value)
+                : null,
         };
 
         await _metadataService.AddMetadata(metadata, cancellationToken);
