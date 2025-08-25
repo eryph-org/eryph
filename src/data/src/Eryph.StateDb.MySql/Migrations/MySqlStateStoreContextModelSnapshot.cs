@@ -51,9 +51,21 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Metadata")
+                    b.Property<Guid>("CatletId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("MetadataJson")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<bool>("SecretDataHidden")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid>("VmId")
+                        .HasColumnType("char(36)");
 
                     b.HasKey("Id");
 

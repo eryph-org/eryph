@@ -46,8 +46,20 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Metadata")
+                    b.Property<Guid>("CatletId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MetadataJson")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SecretDataHidden")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("VmId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
