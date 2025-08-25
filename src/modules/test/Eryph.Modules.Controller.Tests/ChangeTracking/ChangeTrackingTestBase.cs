@@ -50,7 +50,7 @@ public abstract class ChangeTrackingTestBase(
                 services.AddSimpleInjector(container, options =>
                 {
                     options.AddLogging();
-                    options.RegisterSqliteStateStore();
+                    RegisterStateStore(options);
                     options.AddChangeTracking();
                 });
             });

@@ -33,7 +33,8 @@ public static class ApiModuleFactoryExtensions
 {
     public static WebModuleFactory<ComputeApiModule> WithApiHost(
         this WebModuleFactory<ComputeApiModule> factory,
-        Action<Container> configureContainer) =>
+        Action<Container> configureContainer,
+        Action<SimpleInjectorAddOptions> configureModuleContainer) =>
         factory.WithModuleHostBuilder(hostBuilder =>
         {
             Container container = new();
@@ -76,8 +77,10 @@ public static class ApiModuleFactoryExtensions
 
             hostBuilder.ConfigureFrameworkServices((_, services) =>
             {
-                services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>, ModuleFilters>();
-                services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>();
+                services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>>(
+                    _ => new ModuleFilters(configureModuleContainer));
+                services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>(
+                    _ => new ModuleFilters(configureModuleContainer));
             });
         }).WithWebHostBuilder(webBuilder =>
         {
@@ -117,7 +120,8 @@ public static class ApiModuleFactoryExtensions
                 .ToList();
         }
 
-    private class ModuleFilters
+    private class ModuleFilters(
+        Action<SimpleInjectorAddOptions> configureModuleContainer)
         : IAddSimpleInjectorFilter<ComputeApiModule>,
             IConfigureContainerFilter<ComputeApiModule>
     {
@@ -126,7 +130,7 @@ public static class ApiModuleFactoryExtensions
         {
             return (context, options) =>
             {
-                options.RegisterSqliteStateStore();
+                configureModuleContainer(options);
                 next(context, options);
             };
         }

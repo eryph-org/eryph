@@ -38,7 +38,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         WebModuleFactory<ComputeApiModule> factory)
         : base(outputHelper)
     {
-        _factory = factory.WithApiHost(ConfigureDatabase);
+        _factory = factory.WithApiHost(ConfigureDatabase, RegisterStateStore);
     }
 
     protected override async Task SeedAsync(IStateStore stateStore)
