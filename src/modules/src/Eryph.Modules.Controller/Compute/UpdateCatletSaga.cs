@@ -156,9 +156,4 @@ internal class UpdateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<DeployCatletCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
-
-    private Task<Option<(Catlet Catlet, CatletMetadataContent Metadata)>> GetCatletMetadata(Guid catletId) =>
-        from catlet in vmDataService.GetVM(catletId)
-        from metadata in metadataService.GetMetadata(catlet.MetadataId)
-        select (catlet, metadata);
 }
