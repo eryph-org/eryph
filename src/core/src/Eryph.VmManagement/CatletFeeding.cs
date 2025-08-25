@@ -141,7 +141,7 @@ public static class CatletFeeding
         from filteredGeneFodderWithName in name.Match(
             Some: n => from food in geneFodderWithName
                           .Find(fwn => fwn.Name == n)
-                          .ToEither(Error.New($"The food '{n}' does not exist in the gene '{uniqueGeneId.Id} ({uniqueGeneId.Architecture})'."))
+                          .ToEither(Error.New($"The food '{n}' does not exist in the gene {uniqueGeneId} ({geneHash})."))
                           .ToAsync()
                        select Seq1(food),
             None: () => geneFodderWithName)

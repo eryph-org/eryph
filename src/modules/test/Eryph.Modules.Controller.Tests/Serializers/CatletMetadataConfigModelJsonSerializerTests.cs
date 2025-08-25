@@ -1,16 +1,5 @@
-﻿using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
-using Eryph.Configuration.Model;
-using Eryph.Core.Genetics;
+﻿using System.Text.Json;
 using Eryph.Modules.Controller.Serializers;
-using Eryph.Resources.Machines;
 using Eryph.Serializers;
 
 namespace Eryph.Modules.Controller.Tests.Serializers;
@@ -23,7 +12,13 @@ public class CatletMetadataConfigModelJsonSerializerTests
         var result = CatletMetadataConfigModelJsonSerializer.Deserialize(
             JsonDocument.Parse(CatletMetadataConfigModelTestData.MetadataJson));
 
-        result.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Metadata);
+        result.Should().BeEquivalentTo(
+            CatletMetadataConfigModelTestData.Metadata,
+            options => options.Excluding(c => c.Metadata));
+
+        result.Metadata.HasValue.Should().BeTrue();
+        var content = CatletMetadataContentJsonSerializer.Deserialize(result.Metadata!.Value);
+        content.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Content);
     }
 
     [Fact]
@@ -33,6 +28,12 @@ public class CatletMetadataConfigModelJsonSerializerTests
             CatletMetadataConfigModelTestData.Metadata);
         var result = CatletMetadataConfigModelJsonSerializer.Deserialize(JsonDocument.Parse(json));
 
-        result.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Metadata);
+        result.Should().BeEquivalentTo(
+            CatletMetadataConfigModelTestData.Metadata,
+            options => options.Excluding(c => c.Metadata));
+
+        result.Metadata.HasValue.Should().BeTrue();
+        var content = CatletMetadataContentJsonSerializer.Deserialize(result.Metadata!.Value);
+        content.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Content);
     }
 }
