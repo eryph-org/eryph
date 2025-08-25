@@ -36,7 +36,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Metadata = table.Column<string>(type: "TEXT", nullable: false)
+                    CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    VmId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SecretDataHidden = table.Column<bool>(type: "INTEGER", nullable: false),
+                    IsDeprecated = table.Column<bool>(type: "INTEGER", nullable: false),
+                    MetadataJson = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

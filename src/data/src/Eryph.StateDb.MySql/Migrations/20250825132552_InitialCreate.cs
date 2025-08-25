@@ -46,7 +46,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Metadata = table.Column<string>(type: "longtext", nullable: false)
+                    CatletId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    VmId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    SecretDataHidden = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsDeprecated = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    MetadataJson = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
