@@ -33,7 +33,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
         : base(outputHelper)
     {
         Factory = new WebModuleFactory<ComputeApiModule>()
-            .WithApiHost(ConfigureDatabase);
+            .WithApiHost(ConfigureDatabase, RegisterStateStore);
     }
 
     protected override async Task SeedAsync(IStateStore stateStore)
