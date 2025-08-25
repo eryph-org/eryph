@@ -1,12 +1,8 @@
-﻿using Eryph.Resources.Machines;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Dbosoft.Functional.Json.DataTypes;
+using Eryph.Resources.Machines;
 
 namespace Eryph.Serializers;
 
@@ -23,7 +19,7 @@ public static class CatletMetadataContentJsonSerializer
         new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             Converters =
             {

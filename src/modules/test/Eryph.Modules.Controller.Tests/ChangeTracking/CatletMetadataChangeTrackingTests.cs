@@ -9,6 +9,7 @@ using Eryph.Configuration.Model;
 using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.Serializers;
 using Eryph.Resources.Machines;
+using Eryph.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -53,7 +54,7 @@ public abstract class CatletMetadataChangeTrackingTests(
         var newMetadataId = Guid.NewGuid();
         var newCatletId = Guid.NewGuid();
         var newVmId = Guid.NewGuid();
-        var newMetadata = new CatletMetadataContent()
+        var newMetadataContent = new CatletMetadataContent()
         {
             Architecture = Architecture.New("hyperv/amd64"),
             BuiltConfig = new CatletConfig
@@ -69,7 +70,7 @@ public abstract class CatletMetadataChangeTrackingTests(
                 Id = newMetadataId,
                 CatletId = newCatletId,
                 VmId = newVmId,
-                Metadata = newMetadata,
+                Metadata = newMetadataContent,
             };
             await stateStore.For<CatletMetadata>().AddAsync(dbMetadata);
 
@@ -77,7 +78,12 @@ public abstract class CatletMetadataChangeTrackingTests(
         });
 
         var metadata = await ReadMetadata(newMetadataId);
-        metadata.Should().BeEquivalentTo(newMetadata);
+        metadata.Id.Should().Be(newMetadataId);
+        metadata.CatletId.Should().Be(newCatletId);
+        metadata.VmId.Should().Be(newVmId);
+
+        var metadataContent = CatletMetadataContentJsonSerializer.Deserialize(metadata.Metadata!.Value);
+        metadataContent.Should().BeEquivalentTo(newMetadataContent);
     }
 
     [Fact]
@@ -109,7 +115,7 @@ public abstract class CatletMetadataChangeTrackingTests(
         });
 
         var metadata = await ReadMetadata(MetadataId);
-        var metadataContent = CatletMetadataJsonSerializer.Deserialize(metadata.Metadata);
+        var metadataContent = CatletMetadataContentJsonSerializer.Deserialize(metadata.Metadata!.Value);
         
         _expectedMetadataContent.Architecture = new Architecture("any");
 
