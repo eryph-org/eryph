@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
-using LanguageExt;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -49,8 +48,7 @@ internal sealed class GeneRequestRegistry(
             }
             else
             {
-                geneTasks = new System.Collections.Generic.HashSet<IOperationTaskMessage>(
-                    OperationTaskMessageEqualityComparer.Default);
+                geneTasks = new HashSet<IOperationTaskMessage>(OperationTaskMessageEqualityComparer.Default);
                 _pendingTasks.Add(geneInfo, geneTasks);
                 geneTasks.Add(task);
                 
@@ -135,9 +133,10 @@ internal sealed class GeneRequestRegistry(
     public async Task CompleteRequest(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        Fin<PrepareGeneResponse> result)
+        LanguageExt.Fin<PrepareGeneResponse> result)
     {
         List<IOperationTaskMessage> tasksToComplete = [];
+        List<List<IOperationTaskMessage>> tasksToUpdate = [];
         await _semaphore.WaitAsync();
         try
         {
@@ -145,6 +144,12 @@ internal sealed class GeneRequestRegistry(
                 tasksToComplete = [..geneTasks];
 
             _pendingTasks.Remove((uniqueGeneId, geneHash));
+
+            foreach (var gene in _queue.ToList().Skip(1))
+            {
+                _pendingTasks.TryGetValue(gene, out geneTasks);
+                tasksToUpdate.Add(geneTasks?.ToList() ?? []);
+            }
         }
         finally
         {
@@ -159,6 +164,17 @@ internal sealed class GeneRequestRegistry(
             logger.LogDebug("Sending result to task {TaskId} for gene {GeneId} ({GeneHash}).",
                 task.TaskId, uniqueGeneId, geneHash);
             await result.FailOrComplete(taskMessaging, task);
+        }
+
+        // Update the number of pending tasks for the remaining tasks in the queue.
+        // We skip the first entry in the queue as it will be picked up for processing.
+        foreach (var (tasks, index) in tasksToUpdate.Select((t, i) => (t, i)))
+        {
+            var message = $"Waiting for {index + 1} other task(s)...";
+            foreach(var task in tasks)
+            {
+                await taskMessaging.ProgressMessage(task, new { message, progress = 0 });
+            }
         }
     }
 

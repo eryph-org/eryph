@@ -44,6 +44,8 @@ internal class GeneticsRequestWatcherService(
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var geneProvider = scope.GetInstance<IGeneProvider>();
+        await geneRequestRegistry.ReportProgress(geneId, geneHash, $"Processing {geneId} ({geneHash})", 0);
+        
         var result = await geneProvider.ProvideGene(
             geneId,
             geneHash,
