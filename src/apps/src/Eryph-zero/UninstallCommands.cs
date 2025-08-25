@@ -135,8 +135,15 @@ internal class UninstallCommands
     private static Aff<DriverCommandsRuntime, Guid> GetVmId(
         string path) =>
         from metadataJson in readAllText(path)
-        from metadataInfo in Eff(() => CatletMetadataJsonSerializer.DeserializeInfo(metadataJson))
-        select metadataInfo.VmId;
+        from vmId in use(
+            Eff(() => JsonDocument.Parse(metadataJson)),
+            metadata => from p in Eff(() => metadata.RootElement.GetProperty("VMId"))
+                                  | Eff(() => metadata.RootElement.GetProperty("VmId"))
+                                  | @catch(Error.New($"The metadata '{path}' does not contain a VM ID."))
+                        from vmId in Eff(() => p.GetGuid())
+                                     | @catch(Error.New($"The metadata '{path}' contains an invalid VM ID."))
+                        select vmId)
+        select vmId;
 
     private static Aff<DriverCommandsRuntime, Unit> TryStopAndRemoveVm(Guid vmId) =>
         StopAndRemoveVm(vmId) | @catch(e => logWarning<UninstallCommands>(

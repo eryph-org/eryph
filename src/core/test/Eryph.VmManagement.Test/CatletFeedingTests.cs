@@ -24,7 +24,7 @@ namespace Eryph.VmManagement.Test;
 
 public class CatletFeedingTests
 {
-    private readonly Mock<IGenePoolReader> _genepoolReaderMock = new();
+    private readonly MockGenePoolReader _genepoolReaderMock = new();
 
     [Theory, CombinatorialData]
     public void Feed_AllFoodShouldBeEaten_EatsAllFood(
@@ -51,9 +51,9 @@ public class CatletFeedingTests
             ],
         };
 
-        var resolvedGenes = ArrangeFood(architecture);
+        ArrangeFood(architecture);
 
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
         result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
             fodder =>
@@ -102,9 +102,9 @@ public class CatletFeedingTests
             ],
         };
 
-        var resolvedGenes = ArrangeFood(architecture);
+        ArrangeFood(architecture);
 
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
         result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
             fodder =>
@@ -154,9 +154,9 @@ public class CatletFeedingTests
             ],
         };
 
-        var resolvedGenes = ArrangeFood(architecture);
+        ArrangeFood(architecture);
 
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
         result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
             fodder =>
@@ -201,9 +201,9 @@ public class CatletFeedingTests
             ],
         };
 
-        var resolvedGenes = ArrangeFood(architecture);
+        ArrangeFood(architecture);
 
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
         result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
             fodder =>
@@ -258,9 +258,9 @@ public class CatletFeedingTests
             ],
         };
 
-        var resolvedGenes = ArrangeFood(architecture);
+        ArrangeFood(architecture);
 
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
         result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
             fodder =>
             {
@@ -288,11 +288,10 @@ public class CatletFeedingTests
             });
     }
 
-    private HashMap<UniqueGeneIdentifier, GeneHash> ArrangeFood(string architecture)
+    private void ArrangeFood(string architecture)
     {
-        _genepoolReaderMock.SetupGeneSets();
-
-        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
+        _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             architecture,
             new FodderGeneConfig()
@@ -319,8 +318,6 @@ public class CatletFeedingTests
                     }
                 ]
             });
-
-        return HashMap(fodderInfo);
     }
 
     [Theory, CombinatorialData]
@@ -351,8 +348,8 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets();
-        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
+        _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             architecture,
             new FodderGeneConfig
@@ -379,9 +376,7 @@ public class CatletFeedingTests
                 ],
             });
 
-        var resolvedGenes = HashMap(fodderInfo);
-
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
         var newConfig = result.Should().BeRight().Subject;
 
@@ -424,8 +419,8 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets();
-        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
+        _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             "any",
             new FodderGeneConfig
@@ -451,9 +446,7 @@ public class CatletFeedingTests
                 ],
             });
 
-        var resolvedGenes = HashMap(fodderInfo);
-
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
@@ -476,8 +469,6 @@ public class CatletFeedingTests
                 },
             ],
         };
-
-        _genepoolReaderMock.SetupGeneSets();
 
         var result = CatletFeeding.Feed(config, Empty, _genepoolReaderMock.Object);
 
@@ -560,8 +551,8 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets(
-            ("acme/acme-tools/latest", "acme/acme-tools/1.0"));
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/latest", "acme/acme-tools/1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
 
         var result = CatletFeeding.Feed(config, Empty, _genepoolReaderMock.Object);
 
@@ -586,8 +577,7 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets(
-            ("acme/acme-tools/latest", "acme/acme-tools/1.0"));
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/latest", "acme/acme-tools/1.0");
 
         var result = CatletFeeding.Feed(config, Empty, _genepoolReaderMock.Object);
 
@@ -614,7 +604,7 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets();
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
 
         var uniqueGeneId = new UniqueGeneIdentifier(
             GeneType.Fodder,
@@ -635,13 +625,8 @@ public class CatletFeedingTests
             .Should().Be("Gene 'gene:acme/acme-tools/1.0:test-fodder' does not exist in local genepool.");
     }
 
-    [Theory]
-    [InlineData("any", "hyperv/any")]
-    [InlineData("any", "hyperv/amd64")]
-    [InlineData("hyperv/any", "hyperv/amd64")]
-    public void Feed_FoodDoesNotExistInFodderGene_ReturnsError(
-        string architecture,
-        string otherArchitecture)
+    [Fact]
+    public void Feed_FoodDoesNotExistInFodderGene_ReturnsError()
     {
         var config = new CatletConfig
         {
@@ -656,11 +641,11 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets();
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
 
         _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
-            architecture,
+            "hyperv/amd64",
             new FodderGeneConfig()
             {
                 Name = "test-fodder",
@@ -674,35 +659,12 @@ public class CatletFeedingTests
                 ]
             });
 
-        var fodderInfo = _genepoolReaderMock.SetupFodderGene(
-            "gene:acme/acme-tools/1.0:test-fodder",
-            otherArchitecture,
-            new FodderGeneConfig()
-            {
-                Name = "test-fodder",
-                Fodder =
-                [
-                    new FodderConfig()
-                    {
-                        Name = "food1",
-                        Content = "food 1 content",
-                    },
-                    new FodderConfig()
-                    {
-                        Name = "food2",
-                        Content = "food 2 content",
-                    }
-                ]
-            });
-
-        var resolvedGenes = HashMap(fodderInfo);
-
-        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
         error.Inner.Should().BeSome().Which.Message
-            .Should().Be($"The food 'food2' does not exist in the gene 'gene:acme/acme-tools/1.0:test-fodder ({architecture})'.");
+            .Should().Match("The food 'food2' does not exist in the gene fodder::gene:acme/acme-tools/1.0:test-fodder[hyperv/amd64] (sha256:*).");
     }
 
     [Fact]

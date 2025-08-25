@@ -21,8 +21,7 @@ namespace Eryph.VmManagement.Test;
 
 public class CatletSpecificationBuilderTests
 {
-    private readonly Mock<IGenePoolReader> _genepoolReaderMock = new();
-    private readonly CancellationToken _cancelToken = new();
+    private readonly MockGenePoolReader _genepoolReaderMock = new();
 
     [Fact]
     public async Task ResolveConfig_ConfigWithGeneSetTagReferences_ReturnsResolvedData()
@@ -68,26 +67,17 @@ public class CatletSpecificationBuilderTests
                 Name = "acme-os-base",
             });
 
-        _genepoolReaderMock.SetupGeneSets(
-            ("acme/acme-os/starter", "acme/acme-os/starter-1.0"),
-            ("acme/acme-os/starter-1.0", null),
-            ("acme/acme-os/latest", "acme/acme-os/1.0"),
-            ("acme/acme-os/1.0", null),
-            ("acme/acme-images/latest", "acme/acme-images/1.0"),
-            ("acme/acme-images/1.0", null),
-            ("acme/acme-tools/latest", "acme/acme-tools/1.0"),
-            ("acme/acme-tools/1.0", null));
-
-        /*
-        _geneProviderMock.SetupGenes(
-            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet", "any"),
-            (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet", "any"));
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/starter", "acme/acme-os/starter-1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/starter-1.0", None);
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/latest", "acme/acme-os/1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/1.0", None);
+        _genepoolReaderMock.SetupGeneSet("acme/acme-images/latest", "acme/acme-images/1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-images/1.0", None);
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/latest", "acme/acme-tools/1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
 
 
-        ArrangeInventory("acme/acme-os/starter-1.0", "acme/acme-os/1.0");
-        */
-
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, _cancelToken);
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
         var result = either.Should().BeRight().Subject;
 
         var resolvedGeneSets = result.ResolvedGeneSets.ToDictionary();
@@ -120,16 +110,16 @@ public class CatletSpecificationBuilderTests
 
         // Gene sets should only be resolved exactly once.
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/starter"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/starter"), CancellationToken.None),
             Times.Once);
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/latest"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/latest"), CancellationToken.None),
             Times.Once);
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-images/latest"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-images/latest"), CancellationToken.None),
             Times.Once);
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-tools/latest"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-tools/latest"), CancellationToken.None),
             Times.Once);
     }
 
@@ -177,14 +167,13 @@ public class CatletSpecificationBuilderTests
                 Name = "acme-os-base",
             });
 
-        _genepoolReaderMock.SetupGeneSets(
-            ("acme/acme-os/starter-1.0", null),
-            ("acme/acme-os/1.0", null),
-            ("acme/acme-images/1.0", null),
-            ("acme/acme-tools/1.0", null));
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/starter-1.0", None);
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/1.0", None);
+        _genepoolReaderMock.SetupGeneSet("acme/acme-images/1.0", None);
+        _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
 
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, _cancelToken);
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
         var result = either.Should().BeRight().Subject;
 
         var resolvedGeneSets = result.ResolvedGeneSets.ToDictionary();
@@ -204,28 +193,18 @@ public class CatletSpecificationBuilderTests
         resolvedParents.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
             .WhoseValue.Name.Should().Be("acme-os-starter");
 
-        /*
-        commandResponse.Inventory.Should().Satisfy(
-            geneData => geneData.Id.GeneType == GeneType.Catlet
-                        && geneData.Id.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/starter-1.0")
-                        && geneData.Id.Id.GeneName == GeneName.New("catlet"),
-            geneData => geneData.Id.GeneType == GeneType.Catlet
-                        && geneData.Id.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/1.0")
-                        && geneData.Id.Id.GeneName == GeneName.New("catlet"));
-        */
-
         // Gene sets should only be resolved exactly once.
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/1.0"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/1.0"), CancellationToken.None),
             Times.Once);
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/1.0"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/1.0"), CancellationToken.None),
             Times.Once);
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-images/1.0"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-images/1.0"), CancellationToken.None),
             Times.Once);
         _genepoolReaderMock.Verify(
-            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-tools/1.0"), _cancelToken),
+            m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-tools/1.0"), CancellationToken.None),
             Times.Once);
     }
 
@@ -243,10 +222,7 @@ public class CatletSpecificationBuilderTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets();
-        
-
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, _cancelToken);
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
         
         var result = either.Should().BeRight().Subject;
         result.ResolvedCatlets.Should().BeEmpty();
@@ -269,11 +245,10 @@ public class CatletSpecificationBuilderTests
                 Parent = "acme/acme-os/1.0",
             });
 
-        _genepoolReaderMock.SetupGeneSets(
-            ("acme/acme-os/starter-1.0", null));
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/starter-1.0", None);
 
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, _cancelToken);
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve genes in the ancestor catlet -> acme/acme-os/starter-1.0.");
@@ -295,9 +270,8 @@ public class CatletSpecificationBuilderTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets();
-
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, _cancelToken);
+        
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve genes in the catlet config.");
@@ -319,9 +293,8 @@ public class CatletSpecificationBuilderTests
             ],
         };
 
-        _genepoolReaderMock.SetupGeneSets();
-
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, _cancelToken);
+        
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve genes in the catlet config.");
@@ -353,13 +326,13 @@ public class CatletSpecificationBuilderTests
                 Parent = "acme/acme-os/first",
             });
 
-        _genepoolReaderMock.SetupGeneSets(
-            ("acme/acme-os/first", "acme/acme-os/first-1.0"),
-            ("acme/acme-os/first-1.0", null),
-            ("acme/acme-os/second", "acme/acme-os/second-1.0"),
-            ("acme/acme-os/second-1.0", null));
+        
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/first", "acme/acme-os/first-1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/first-1.0", None);
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/second", "acme/acme-os/second-1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/second-1.0", None);
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, _cancelToken);
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be(
