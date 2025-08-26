@@ -102,7 +102,6 @@ public static class CatletSpecificationBuilder
             .ToEitherAsync(Error.New($"The gene set {id} is the parent of a catlet but does not contain a catlet gene."))
         from config in ReadCatletConfig(catletGeneId, catletGeneHash, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
-        // TODO add step to normalize fodder and volumes sources here instead of in the CatletPedigree
         from resolveResult in ResolveGeneSets(config, resolvedGeneSets, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from parentsResult in ResolveParent(config.Parent, resolveResult, resolvedCatlets,
@@ -164,13 +163,58 @@ public static class CatletSpecificationBuilder
     public static EitherAsync<Error, CatletConfig> ReadCatletConfig(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        IGenePoolReader genepoolReader,
+        IGenePoolReader genePoolReader,
         CancellationToken cancellationToken) =>
-        from json in genepoolReader.GetGeneContent(uniqueGeneId, geneHash, cancellationToken)
+        from json in genePoolReader.GetGeneContent(uniqueGeneId, geneHash, cancellationToken)
+        from genes in genePoolReader.GetGenes(uniqueGeneId.Id.GeneSet, cancellationToken)
+        let geneIds = genes.Keys.ToSeq()
         from config in Try(() => CatletConfigJsonSerializer.Deserialize(json))
             .ToEither(ex => Error.New($"Could not deserialize catlet config in gene {uniqueGeneId} ({geneHash}).", Error.New(ex)))
             .ToAsync()
-        select config;
+        from normalizedConfig in NormalizeSources(config, uniqueGeneId.Id.GeneSet, genes.Keys.ToSeq())
+            .MapLeft(e => Error.New($"Cannot normalize the gene pool sources in the catlet gene {uniqueGeneId} ({geneHash}.", e))
+        select normalizedConfig;
+
+    private static EitherAsync<Error, CatletConfig> NormalizeSources(
+        CatletConfig config,
+        GeneSetIdentifier geneSetId,
+        Seq<UniqueGeneIdentifier> genes) =>
+        from normalizedDrives in config.Drives.ToSeq()
+            .Map(d => NormalizeSource(d, genes))
+            .SequenceSerial()
+        from normalizedFodder in config.Fodder.ToSeq()
+            .Map(f => NormalizeSource(f, geneSetId))
+            .SequenceSerial()
+        select config.CloneWith(c =>
+        {
+            c.Drives = normalizedDrives.ToArray();
+            c.Fodder = normalizedFodder.ToArray();
+        });
+
+    private static EitherAsync<Error, FodderConfig> NormalizeSource(
+        FodderConfig config,
+        GeneSetIdentifier geneSetId) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        select config.CloneWith(c =>
+        {
+            c.Source = Optional(c.Source).Filter(notEmpty)
+                .IfNone(() => new GeneIdentifier(geneSetId, GeneName.New("catlet")).Value);
+        });
+
+    private static EitherAsync<Error, CatletDriveConfig> NormalizeSource(
+        CatletDriveConfig config,
+        Seq<UniqueGeneIdentifier> genes) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let driveType = config.Type ?? CatletDriveType.VHD
+        let source = GeneName.NewOption(config.Name)
+            .Bind(n => genes.Find(g => g.GeneType is GeneType.Volume && g.Id.GeneName == n))
+            .Map(g => g.Id.Value)
+        select config.CloneWith(c =>
+        {
+            c.Source = driveType != CatletDriveType.VHD || notEmpty(c.Source)
+                ? c.Source
+                : source.IfNoneUnsafe((string?)null);
+        });
 
     private static Error CreateError(
         Seq<AncestorInfo> visitedAncestors,
