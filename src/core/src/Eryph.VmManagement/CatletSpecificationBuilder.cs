@@ -8,11 +8,11 @@ using LanguageExt;
 using LanguageExt.Common;
 using System.Linq;
 using System.Threading;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
 
-using ArchitectureMap = HashMap<GeneIdentifierWithType, Architecture>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 using ResolvedGenes = HashMap<UniqueGeneIdentifier, GeneHash>;
@@ -96,7 +96,7 @@ public static class CatletSpecificationBuilder
         let catletGeneId = new UniqueGeneIdentifier(
             GeneType.Catlet,
             new GeneIdentifier(resolvedId, GeneName.New("catlet")),
-            // Catlets are never architecture-specific. Hence, we hardcode any here.
+            // Catlets are never architecture-specific. Hence, we hard code any here.
             Architecture.New(EryphConstants.AnyArchitecture))
         from catletGeneHash in genes.Find(catletGeneId)
             .ToEitherAsync(Error.New($"The gene set {id} is the parent of a catlet but does not contain a catlet gene."))
@@ -196,10 +196,6 @@ public static class CatletSpecificationBuilder
             .Map(geneSetId => genePoolReader.GetGenes(geneSetId, cancellationToken))
             .SequenceSerial()
             .Map(r => r.Map(m => m.ToSeq()).Flatten().ToHashMap())
-        //from result in genes.ToSeq().Fold<Validation<Error, ArchitectureMap>>(
-        //    new ArchitectureMap(),
-        //    (state, geneId) => state.Bind(m =>
-        //        ResolveArchitecture(geneId, catletArchitecture, m, genePoolReader, cancellationToken)))
         from result in genes
             .Map(g => ResolveGene(g, catletArchitecture, cachedGenes))
             .Sequence()
@@ -208,78 +204,40 @@ public static class CatletSpecificationBuilder
             .MapLeft(errors => Error.New("Could not  resolve some genes.", Error.Many(errors)))
         select result;
 
-    private static Validation<Error, (UniqueGeneIdentifier, GeneHash)> ResolveGene(
+    public static Validation<Error, (UniqueGeneIdentifier, GeneHash)> ResolveGene(
         GeneIdentifierWithType geneIdWithType,
         Architecture catletArchitecture,
         HashMap<UniqueGeneIdentifier, GeneHash> cachedGenes) =>
-        from architecture in FindBestArchitecture(
-            geneIdWithType.GeneIdentifier.GeneSet,
-            geneIdWithType.GeneType,
-            geneIdWithType.GeneIdentifier.GeneName,
-            catletArchitecture,
-            cachedGenes.Keys.ToSeq())
-        //from manifest in genePoolReader.GetGeneSetTagManifest(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
-        //from manifest in optionalManifest.ToEitherAsync(
-        //    Error.New($"The gene set '{geneIdWithType.GeneIdentifier.GeneSet}' is not available in the gene pool."))
-        //from architecture in GeneSetTagManifestUtils.FindBestArchitecture(
-        //    manifest.Manifest, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
-        from validArchitecture in architecture.ToValidation(
-            Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture."))
-        let uniqueGeneId = new UniqueGeneIdentifier(
-            geneIdWithType.GeneType,
-            geneIdWithType.GeneIdentifier,
-            validArchitecture)
-        from geneHash in cachedGenes.Find(uniqueGeneId).ToValidation(
-            Error.New($"BUG! Cannot find resolved gene {uniqueGeneId}."))
-        select (uniqueGeneId, geneHash);
+        from resolvedId in ResolveGene(geneIdWithType, catletArchitecture, cachedGenes.Keys.ToSeq())
+        from geneHash in cachedGenes.Find(resolvedId).ToValidation(
+            Error.New($"BUG! Cannot find resolved gene {resolvedId}."))
+        select (resolvedId, geneHash);
 
-    private static Validation<Error, ArchitectureMap> ResolveArchitecture(
-        GeneIdentifierWithType geneIdWithType,
-        Architecture catletArchitecture,
-        ArchitectureMap resolvedArchitectures,
-        Seq<UniqueGeneIdentifier> cachedGenes) =>
-        resolvedArchitectures.Find(geneIdWithType).Match(
-            Some: _ => resolvedArchitectures,
-            None: () =>
-                from resolvedArchitecture in ResolveArchitecture(geneIdWithType, catletArchitecture, cachedGenes)
-                select resolvedArchitectures.Add(geneIdWithType, resolvedArchitecture));
-
-    private static Validation<Error, Architecture> ResolveArchitecture(
+    private static Validation<Error, UniqueGeneIdentifier> ResolveGene(
         GeneIdentifierWithType geneIdWithType,
         Architecture catletArchitecture,
         Seq<UniqueGeneIdentifier> cachedGenes) =>
-        from architecture in FindBestArchitecture(
-            geneIdWithType.GeneIdentifier.GeneSet,
-            geneIdWithType.GeneType,
-            geneIdWithType.GeneIdentifier.GeneName,
-            catletArchitecture,
-            cachedGenes)
-        // TODO add additional check if any version of the gene exists and otherwise return a different error
-        //from manifest in genePoolReader.GetGeneSetTagManifest(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
-        //from manifest in optionalManifest.ToEitherAsync(
-        //    Error.New($"The gene set '{geneIdWithType.GeneIdentifier.GeneSet}' is not available in the gene pool."))
-        //from architecture in GeneSetTagManifestUtils.FindBestArchitecture(
-        //    manifest.Manifest, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
-        from validArchitecture in architecture.ToValidation(
-            Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture."))
-        select validArchitecture;
-
-    private static Validation<Error, Option<Architecture>> FindBestArchitecture(
-        GeneSetIdentifier geneSetId,
-        GeneType geneType,
-        GeneName geneName,
-        Architecture catletArchitecture,
-        Seq<UniqueGeneIdentifier> uniqueGeneIds) =>
-        from _ in Success<Error, Unit>(unit)
-        let filteredByGeneSet = uniqueGeneIds.Filter(i => i.Id.GeneSet == geneSetId)
-        let filteredByTypeAndName = filteredByGeneSet
-            .Filter(i => i.GeneType == geneType && i.Id.GeneName == geneName)
-        let architectures = filteredByTypeAndName
-            .Map(i => i.Architecture)
-        let bestArchitecture = architectures.Find(ga => ga == catletArchitecture)
-                               | architectures.Find(ga =>
-                                   ga.Hypervisor == catletArchitecture.Hypervisor
-                                   && ga.ProcessorArchitecture == ProcessorArchitecture.New("any"))
-                               | architectures.Find(ga => ga.IsAny)
-        select bestArchitecture;
+        from _1 in Success<Error, Unit>(unit)
+        let filteredGenes = cachedGenes
+            .Filter(i => i.GeneType == geneIdWithType.GeneType && i.Id == geneIdWithType.GeneIdentifier)
+        from _2 in guard(filteredGenes.Count > 0, Error.New($"The gene {geneIdWithType} does not exist."))
+        let hypervisorCompatibleGenes = filteredGenes
+            .Filter(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
+                         || g.Architecture.Hypervisor.IsAny)
+        from _3 in guard(
+            hypervisorCompatibleGenes.Count > 0,
+            Error.New($"The gene {geneIdWithType} is not compatible with the hypervisor {catletArchitecture.Hypervisor}."))
+        let processorCompatibleGenes = hypervisorCompatibleGenes
+            .Filter(g => g.Architecture.ProcessorArchitecture == catletArchitecture.ProcessorArchitecture
+                         || g.Architecture.ProcessorArchitecture.IsAny)
+        from _4 in guard(
+            processorCompatibleGenes.Count > 0,
+            Error.New($"The gene {geneIdWithType} is not compatible with the processor architecture {catletArchitecture.ProcessorArchitecture}."))
+        let bestMatch = processorCompatibleGenes.Find(g => g.Architecture == catletArchitecture)
+                        | processorCompatibleGenes.Find(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
+                                                             && g.Architecture.ProcessorArchitecture.IsAny)
+                        | processorCompatibleGenes.Find(g => g.Architecture.IsAny)
+        from result in bestMatch.ToValidation(
+            Error.New($"BUG! Could not find best match for gene '{geneIdWithType}'."))
+        select result;
 }
