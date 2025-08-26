@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
@@ -96,6 +97,30 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
             None: () => HashMap((uniqueGeneId, hash)));
     }
 
+    /// <summary>
+    /// Arranges a volume gene. The <paramref name="content"/> is only used to compute
+    /// a <see cref="GeneHash"/> in a stable way. The <paramref name="content"/>
+    /// cannot be read with <see cref="IGenePoolReader.GetGeneContent(UniqueGeneIdentifier, GeneHash, CancellationToken)"/>.
+    /// </summary>
+    public void SetupVolumeGene(
+        string geneIdentifier,
+        string architecture,
+        string content)
+    {
+        var validGeneId = GeneIdentifier.New(geneIdentifier);
+        var validArchitecture = Architecture.New(architecture);
+        var uniqueGeneId = new UniqueGeneIdentifier(GeneType.Volume, validGeneId, validArchitecture);
+        var hash = ComputeHash(content);
+
+        // Do not add to _geneContents as the content of volume genes should never be read.
+
+        _genes = _genes.AddOrUpdate(
+            validGeneId.GeneSet,
+            Some: existing => existing.Add(uniqueGeneId, hash),
+            None: () => HashMap((uniqueGeneId, hash)));
+    }
+
+
     private static GeneHash ComputeHash(GeneManifestData manifest)
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(manifest, GeneModelDefaults.SerializerOptions);
@@ -103,4 +128,7 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
 
         return GeneHash.New($"sha256:{Convert.ToHexString(hash).ToLowerInvariant()}");
     }
+
+    private static GeneHash ComputeHash(string content) =>
+        GeneHash.New($"sha256:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant()}");
 }

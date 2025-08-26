@@ -99,16 +99,6 @@ public class CatletSpecificationBuilderTests
         resolvedParents.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
             .WhoseValue.Name.Should().Be("acme-os-starter");
 
-        /*
-        commandResponse.Inventory.Should().Satisfy(
-            geneData => geneData.Id.GeneType == GeneType.Catlet
-                        && geneData.Id.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/starter-1.0")
-                        && geneData.Id.Id.GeneName == GeneName.New("catlet"),
-            geneData => geneData.Id.GeneType == GeneType.Catlet
-                        && geneData.Id.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/1.0")
-                        && geneData.Id.Id.GeneName == GeneName.New("catlet"));
-        */
-
         // Gene sets should only be resolved exactly once.
         _genepoolReaderMock.Verify(
             m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-os/starter"), CancellationToken.None),
@@ -207,6 +197,133 @@ public class CatletSpecificationBuilderTests
         _genepoolReaderMock.Verify(
             m => m.GetReferencedGeneSet(GeneSetIdentifier.New("acme/acme-tools/1.0"), CancellationToken.None),
             Times.Once);
+    }
+
+    [Theory]
+    [InlineData("acme/acme-os/latest")]
+    [InlineData("acme/acme-os/1.0")]
+    public async Task ResolveConfig_ChildUsesDriveGeneFromParent_ResolvedDriveSourceIsIncluded(string parentId)
+    {
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os",
+                Drives =
+                [
+                    new CatletDriveConfig
+                    {
+                        Name = "sda",
+                    }
+                ],
+            });
+
+        _genepoolReaderMock.SetupVolumeGene("gene:acme/acme-os/1.0:sda", "hyperv/amd64", "sda");
+
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/latest", "acme/acme-os/1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/1.0", None);
+
+        
+        var config = new CatletConfig
+        {
+            Name = "catlet",
+            Parent = parentId,
+        };
+
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+
+        either.Should().BeRight().Which.ResolvedCatlets.ToDictionary()
+            .Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0")).WhoseValue.Drives
+            .Should().SatisfyRespectively(
+                drive =>
+                {
+                    drive.Name.Should().Be("sda");
+                    drive.Source.Should().Be("gene:acme/acme-os/1.0:sda");
+                });
+    }
+
+    /// <summary>
+    /// Replication for https://github.com/eryph-org/eryph/issues/352
+    /// </summary>
+    [Theory]
+    [InlineData("acme/acme-os/latest")]
+    [InlineData("acme/acme-os/1.0")]
+    public async Task ResolveConfig_ParentHasDriveWhichIsNotAGene_DriveIsIncludedWithoutSource(string parentId)
+    {
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os",
+                Drives =
+                [
+                    new CatletDriveConfig
+                    {
+                        Name = "sda",
+                    }
+                ],
+            });
+
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/latest", "acme/acme-os/1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/1.0", None);
+
+
+        var config = new CatletConfig
+        {
+            Name = "catlet",
+            Parent = parentId,
+        };
+
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+
+        either.Should().BeRight().Which.ResolvedCatlets.ToDictionary()
+            .Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0")).WhoseValue.Drives
+            .Should().SatisfyRespectively(
+                drive =>
+                {
+                    drive.Name.Should().Be("sda");
+                    drive.Source.Should().BeNull();
+                });
+    }
+
+    [Theory]
+    [InlineData("acme/acme-os/latest")]
+    [InlineData("acme/acme-os/1.0")]
+    public async Task ResolveConfig_ChildUsesFodderFromParent_ResolvedFodderSourceIsIncluded(string parentId)
+    {
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os",
+                Fodder =
+                [
+                    new FodderConfig()
+                    {
+                        Name = "parent-fodder",
+                        Content = "parent fodder content",
+                    }
+                ]
+            });
+
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/latest", "acme/acme-os/1.0");
+        _genepoolReaderMock.SetupGeneSet("acme/acme-os/1.0", None);
+
+
+
+        var config = new CatletConfig
+        {
+            Name = "catlet",
+            Parent = parentId,
+        };
+
+
+        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+
+        either.Should().BeRight().Which.ResolvedCatlets.ToDictionary()
+            .Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0")).WhoseValue.Fodder
+            .Should().SatisfyRespectively(
+                fodder => fodder.Source.Should().Be("gene:acme/acme-os/1.0:catlet"));
     }
 
     [Fact]
