@@ -77,11 +77,12 @@ public class GenePoolPathsTests
         string architecture,
         string expected)
     {
-        var result = GenePoolPaths.GetGenePath(
-            @"Z:\volumes\genepool",
+        var uniqueGeneId = new UniqueGeneIdentifier(
             geneType,
-            Architecture.New(architecture),
-            GeneIdentifier.New(geneId));
+            GeneIdentifier.New(geneId),
+            Architecture.New(architecture));
+
+        var result = GenePoolPaths.GetGenePath(@"Z:\volumes\genepool", uniqueGeneId);
 
         result.Should().Be(expected);
     }

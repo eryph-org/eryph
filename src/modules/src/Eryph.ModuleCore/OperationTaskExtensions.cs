@@ -24,6 +24,17 @@ public static class OperationTaskExtensions
         return unit;
     }
 
+    public static async Task<Unit> FailOrComplete<TRet>(
+        this ValueTask<Fin<TRet>> task,
+        ITaskMessaging messaging,
+        IOperationTaskMessage message)
+        where TRet : notnull
+    {
+        var result = await task;
+        await result.FailOrComplete(messaging, message);
+        return unit;
+    }
+
     public static Task<Unit> FailOrComplete<TRet>(
         this Fin<TRet> fin,
         ITaskMessaging messaging,

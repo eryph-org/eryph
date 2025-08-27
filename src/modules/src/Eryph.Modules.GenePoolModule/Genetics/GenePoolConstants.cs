@@ -2,11 +2,6 @@
 
 public static class GenePoolConstants
 {
-    internal static class Local
-    {
-        public static readonly string Name = "local";
-    }
-
     public const string PartClientName = "gene_part_client";
 
     public static GenePoolSettings ProductionGenePool => new (
@@ -20,6 +15,4 @@ public static class GenePoolConstants
         new("https://eryphgenepoolapistaging.azurewebsites.net/"),
         new("https://dbosoftb2cstaging.b2clogin.com/tfp/dbosoftb2cstaging.onmicrosoft.com/B2C_1A_SIGNUP_SIGNIN/v2.0"),
         "56136c3f-d46e-4644-a66c-b88304d09da8", true);
-
-
 }

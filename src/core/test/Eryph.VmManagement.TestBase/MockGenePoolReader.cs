@@ -120,7 +120,6 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
             None: () => HashMap((uniqueGeneId, hash)));
     }
 
-
     private static GeneHash ComputeHash(GeneManifestData manifest)
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(manifest, GeneModelDefaults.SerializerOptions);
