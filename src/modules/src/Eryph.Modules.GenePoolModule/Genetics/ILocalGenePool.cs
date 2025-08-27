@@ -40,4 +40,6 @@ internal interface ILocalGenePool
     Aff<CancelRt, Unit> MergeGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash, Func<long, long, Task> reportProgress);
+
+    Aff<string> GetTempGenePath(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash);
 }

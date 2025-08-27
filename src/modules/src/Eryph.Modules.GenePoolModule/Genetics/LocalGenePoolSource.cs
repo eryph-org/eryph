@@ -16,6 +16,8 @@ using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using Medallion.Threading;
+using Medallion.Threading.FileSystem;
 using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
@@ -23,14 +25,25 @@ using GeneType = Eryph.Core.Genetics.GeneType;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
+/// <summary>
+/// Handles the storage of genes in the local file system.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This class must be scoped or transient. It caches the gene pool path
+/// provided by <see cref="IGenePoolPathProvider"/> for performance
+/// reasons but that path can change at runtime.
+/// </para>
+/// </remarks>
 [UsedImplicitly]
 internal class LocalGenePoolSource(
     IFileSystemService fileSystem,
-    ILogger log,
-    string poolName,
-    string genePoolPath)
+    IGenePoolPathProvider genePoolPathProvider,
+    ILogger log)
     : ILocalGenePool
 {
+    private readonly Aff<String> _genePoolPathLazy = genePoolPathProvider.GetGenePoolPath().Memo();
+
     // TODO make this class transient and cache the resolution of IGEnePoolPathProvider
 
     // TODO add file system locking with DistributedLock
@@ -40,18 +53,14 @@ internal class LocalGenePoolSource(
 
     private const int BufferSize = 1 * 1024 * 1024;
 
-    public Aff<CancelRt, bool> HasGene(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash) =>
-        from mergedGenes in GetMergedGenes(uniqueGeneId.Id.GeneSet)
-        let isGeneMerged = mergedGenes.Contains(geneHash)
-        let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
-        from fileExists in Eff(() => fileSystem.FileExists(genePath))
-        select isGeneMerged && fileExists;
+    public Aff<string> GetTempGenePath(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash) =>
+        from genePoolPath in _genePoolPathLazy
+        let genePath = GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash)
+        select genePath;
 
     public Aff<CancelRt, Option<GenesetTagManifestData>> GetCachedGeneSet(
     GeneSetIdentifier geneSetId) =>
-    from _ in SuccessAff(unit)
+    from genePoolPath in _genePoolPathLazy
     let manifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneSetId)
     from manifest in Aff<CancelRt, Option<GenesetTagManifestData>>(async rt =>
     {
@@ -74,9 +83,9 @@ internal class LocalGenePoolSource(
     public Aff<CancelRt, Option<string>> GetCachedGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
+        from genePoolPath in _genePoolPathLazy
         from downloadedParts in GetDownloadedGeneParts(
             uniqueGeneId, geneHash, (_, _) => Task.FromResult(unit))
-        from _ in SuccessAff(unit)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         from mergedGenes in GetMergedGenes(uniqueGeneId.Id.GeneSet)
         from content in Aff<CancelRt, Option<string>>(async rt =>
@@ -125,7 +134,7 @@ internal class LocalGenePoolSource(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         GenePartHash genePartHash) =>
-        from _ in SuccessAff<CancelRt, Unit>(unit)
+        from genePoolPath in _genePoolPathLazy
         let genePath = GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash)
         let genePartPath = GenePoolPaths.GetTempGenePartPath(genePath, genePartHash)
         from size in Aff<CancelRt, Option<long>>(async rt =>
@@ -157,7 +166,7 @@ internal class LocalGenePoolSource(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<long, long, Task> reportProgress) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         // We are going to re(write) the gene on the disk. Remove it from the merged genes
         // until merge has been completed successfully.
@@ -215,7 +224,7 @@ internal class LocalGenePoolSource(
         select unit;
 
     public Aff<CancelRt, Unit> CacheGeneSet(GeneSetInfo geneSetInfo) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetInfo.Id)
         let manifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneSetInfo.Id)
         from _2 in Aff<CancelRt, Unit>(async rt =>
@@ -256,7 +265,7 @@ internal class LocalGenePoolSource(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         string content) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         // This logic is only triggered when the gene was included when a downloaded
@@ -278,7 +287,7 @@ internal class LocalGenePoolSource(
 
     public Aff<CancelRt, string> CacheGeneContent(
         GeneContentInfo geneContentInfo) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneContentInfo.UniqueId.Id.GeneSet)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneContentInfo.UniqueId)
         // We are going to re(write) the gene on the disk. Remove it from the merged genes
@@ -306,7 +315,7 @@ internal class LocalGenePoolSource(
     public Aff<CancelRt, Option<long>> GetGeneSize(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from _ in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         from geneExists in Eff(() => fileSystem.FileExists(genePath))
         from fileSize in geneExists
@@ -333,7 +342,7 @@ internal class LocalGenePoolSource(
     private Aff<CancelRt, Unit> RemoveCachedGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         from _2 in RemoveMergedGene(uniqueGeneId, geneHash)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
@@ -349,7 +358,7 @@ internal class LocalGenePoolSource(
     private Aff<CancelRt, Option<GeneManifestData>> ReadTempGeneManifest(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from _ in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let genePath = GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash)
         let manifestPath = GenePoolPaths.GetTempGeneManifestPath(genePath)
         from manifest in Aff<CancelRt, Option<GeneManifestData>>(async rt =>
@@ -368,48 +377,53 @@ internal class LocalGenePoolSource(
                 $"The manifest of the gene {uniqueGeneId} ({geneHash.Hash}) in the local gene pool is corrupted."))
         select manifest;
 
-    private Aff<Seq<GeneHash>> GetMergedGenes(
+    private Aff<CancelRt, Seq<GeneHash>> GetMergedGenes(
         GeneSetIdentifier geneSetId) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetId)
-        from hashes in Aff(async () =>
-        {
-            var genesInfo = await ReadGenesInfo(geneSetPath);
-            return genesInfo.MergedGenes.ToSeq();
-        })
+        from hashes in use(
+            AcquireGeneSetLock(geneSetId),
+            _ => Aff(async () =>
+            {
+                var genesInfo = await ReadGenesInfo(geneSetPath);
+                return genesInfo.MergedGenes.ToSeq();
+            }))
         from result in hashes
             .Map(GeneHash.NewValidation)
             .Sequence()
-            .ToAff(errors =>
-                Error.New($"The merged genes of the gene set '{geneSetId}' are invalid.", Error.Many(errors)))
+            .ToAff(errors => Error.New($"The merged genes of the gene set '{geneSetId}' are invalid.", Error.Many(errors)))
         select result;
 
-    private Aff<Unit> AddMergedGene(
+    private Aff<CancelRt, Unit> AddMergedGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
-        from _2 in Aff(async () =>
-        {
-            var genesInfo = await ReadGenesInfo(geneSetPath);
-            genesInfo.MergedGenes = toSet(genesInfo.MergedGenes).Add(geneHash.Value).ToList();
-            await WriteGenesInfo(geneSetPath, genesInfo);
-            return unit;
-        })
+        from _ in use(
+            AcquireGeneSetLock(uniqueGeneId.Id.GeneSet),
+            _ => Aff(async () =>
+            {
+                var genesInfo = await ReadGenesInfo(geneSetPath);
+                genesInfo.MergedGenes = toSet(genesInfo.MergedGenes).Add(geneHash.Value).ToList();
+                await WriteGenesInfo(geneSetPath, genesInfo);
+                return unit;
+            }))
         select unit;
 
-    private Aff<Unit> RemoveMergedGene(
+    private Aff<CancelRt, Unit> RemoveMergedGene(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from _1 in SuccessAff(unit)
+        from genePoolPath in _genePoolPathLazy
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
-        from _2 in Aff(async () =>
-        {
-            var genesInfo = await ReadGenesInfo(geneSetPath);
-            genesInfo.MergedGenes = toSet(genesInfo.MergedGenes).Remove(geneHash.Value).ToList();
-            await WriteGenesInfo(geneSetPath, genesInfo);
-            return unit;
-        })
+        from _ in use(
+            AcquireGeneSetLock(uniqueGeneId.Id.GeneSet),
+            _ => Aff(async () =>
+            {
+                var genesInfo = await ReadGenesInfo(geneSetPath);
+                genesInfo.MergedGenes = toSet(genesInfo.MergedGenes).Remove(geneHash.Value).ToList();
+                await WriteGenesInfo(geneSetPath, genesInfo);
+                return unit;
+            }))
         select unit;
 
     private async Task<GenesInfo> ReadGenesInfo(string geneSetPath)
@@ -431,4 +445,24 @@ internal class LocalGenePoolSource(
     {
         public IReadOnlyList<string> MergedGenes { get; set; } = [];
     }
+
+    private Aff<CancelRt, IDistributedSynchronizationHandle> AcquireGeneSetLock(
+        GeneSetIdentifier geneSetId) =>
+        from genePoolPath in _genePoolPathLazy
+        let geneSetLockPath = GenePoolPaths.GetGeneSetLockPath(genePoolPath, geneSetId)
+        from @lock in Aff<CancelRt, IDistributedSynchronizationHandle>(
+            async rt => await new FileDistributedLock(new FileInfo(geneSetLockPath))
+                .AcquireAsync(cancellationToken: rt.CancellationToken))
+        select @lock;
+
+    // TODO add gene locking
+
+    private Aff<CancelRt, IDistributedSynchronizationHandle> AcquireGeneLock(
+        UniqueGeneIdentifier uniqueGeneId) =>
+        from genePoolPath in _genePoolPathLazy
+        let geneSetLockPath = GenePoolPaths.GetGeneLockPath(genePoolPath, uniqueGeneId)
+        from @lock in Aff<CancelRt, IDistributedSynchronizationHandle>(
+            async rt => await new FileDistributedLock(new FileInfo(geneSetLockPath))
+                .AcquireAsync(cancellationToken: rt.CancellationToken))
+        select @lock;
 }

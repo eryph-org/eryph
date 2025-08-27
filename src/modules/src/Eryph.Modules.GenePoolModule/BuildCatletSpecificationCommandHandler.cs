@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
@@ -9,7 +6,6 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.GenePool;
 using Eryph.Messages.Resources.CatletSpecifications;
-using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.GenePool.Inventory;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
@@ -17,15 +13,15 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.GenePool;
 
 [UsedImplicitly]
 internal class BuildCatletSpecificationCommandHandler(
     ITaskMessaging messaging,
     IGenePoolReader genePoolReader,
-    IGenePoolPathProvider genePoolPathProvider,
-    IGenePoolFactory genePoolFactory,
-    IGenePoolInventoryFactory inventoryFactory)
+    IGenePoolInventory genePoolInventory)
     : IHandleMessages<OperationTask<BuildCatletSpecificationGenePoolCommand>>
 {
     public Task Handle(OperationTask<BuildCatletSpecificationGenePoolCommand> message) =>
@@ -38,9 +34,6 @@ internal class BuildCatletSpecificationCommandHandler(
             genePoolCommand.CatletArchitecture,
             genePoolReader,
             CancellationToken.None)
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
-        let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
-        let inventory = inventoryFactory.Create(genePoolPath, localGenePool)
         let timestamp = DateTimeOffset.UtcNow
         from geneData in InventorizeGenes(result.ResolvedGenes.Keys.ToSeq())
         select new BuildCatletSpecificationGenePoolCommandResponse
@@ -53,12 +46,10 @@ internal class BuildCatletSpecificationCommandHandler(
 
     private EitherAsync<Error, Seq<GeneData>> InventorizeGenes(
         Seq<UniqueGeneIdentifier> genes) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
-        let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
-        let inventory = inventoryFactory.Create(genePoolPath, localGenePool)
+        from _ in RightAsync<Error, Unit>(unit)
         let geneSetIds = genes.Map(g => g.Id.GeneSet).Distinct()
         from geneData in geneSetIds
-            .Map(inventory.InventorizeGeneSet)
+            .Map(genePoolInventory.InventorizeGeneSet)
             .SequenceSerial()
             .RunWithCancel(CancellationToken.None)
             .ToEitherAsync()

@@ -27,13 +27,12 @@ namespace Eryph.Modules.GenePool.Genetics;
 internal class LocalFirstGeneProvider(
     IGenePoolPathProvider genePoolPathProvider,
     IGenePoolFactory genepoolFactory,
+    ILocalGenePool localGenePool,
     ILogger log)
     : IGeneProvider
 {
     public Aff<CancelRt, GenesetTagManifestData> GetGeneSetManifest(
         GeneSetIdentifier geneSetId) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from cachedManifest in localGenePool.GetCachedGeneSet(geneSetId)
         from pulledGeneSet in cachedManifest.Match(
                 Some: cm => notEmpty(cm.Reference)
@@ -51,8 +50,6 @@ internal class LocalFirstGeneProvider(
 
     private Aff<CancelRt, Option<GenesetTagManifestData>> PullAndCacheGeneSet(
         GeneSetIdentifier geneSetId) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from pulledGeneSet in IterateGenePools(
                 genepoolFactory,
                 pool => pool.GetGeneSet(geneSetId))
@@ -64,8 +61,6 @@ internal class LocalFirstGeneProvider(
     public Aff<CancelRt, string> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         // We check if a complete packed gene (all gene parts present) exists
         // in the local gene pool. In this case, we extract the packed gene
         // and replace the local one. Normally, the gene content is downloaded
@@ -103,8 +98,6 @@ internal class LocalFirstGeneProvider(
     private Aff<CancelRt, Option<string>> PullAndCacheGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from pulledGene in IterateGenePools(
             genepoolFactory,
             genePool => genePool.GetGeneContent(uniqueGeneId, geneHash))
@@ -117,8 +110,6 @@ internal class LocalFirstGeneProvider(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<string, int, Task> reportProgress) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from _ in EnsureGene(uniqueGeneId, geneHash, reportProgress)
         let timestamp = DateTimeOffset.UtcNow
         from geneSize in localGenePool.GetGeneSize(uniqueGeneId, geneHash)
@@ -140,9 +131,6 @@ internal class LocalFirstGeneProvider(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Func<string, int, Task> reportProgress) =>
-        from _1 in SuccessAff(unit)
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath().ToAff()
-        let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from localGeneParts in localGenePool.GetDownloadedGeneParts(
             uniqueGeneId,
             geneHash,
@@ -174,6 +162,7 @@ internal class LocalFirstGeneProvider(
                         .Somes()
                         .Map(pi => partsState.AddPart(pi.Part, pi.Size))
                         .SequenceSerial()
+                    from tempGenePath in localGenePool.GetTempGenePath(uniqueGeneId, geneHash)
                     from result in retry(
                         Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(5),
                         IterateGenePools(
@@ -182,7 +171,7 @@ internal class LocalFirstGeneProvider(
                                 uniqueGeneId,
                                 geneHash,
                                 partsState,
-                                GenePoolPaths.GetTempGenePath(genePoolPath, uniqueGeneId, geneHash),
+                                GenePoolPaths.GetTempGenePath(tempGenePath, uniqueGeneId, geneHash),
                                 async (long processedBytes, long totalBytes) =>
                                 {
                                     var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);

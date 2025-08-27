@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.Sys;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.GenePool.Genetics;
@@ -26,20 +27,15 @@ namespace Eryph.Modules.GenePool;
 [UsedImplicitly]
 internal class RemoveGenesVmHostCommandHandler(
     ITaskMessaging messaging,
-    IGenePoolPathProvider genePoolPathProvider,
-    IGenePoolFactory genePoolFactory)
+    ILocalGenePool localGenePool)
     : IHandleMessages<OperationTask<RemoveGenesVmHostCommand>>
 {
     public Task Handle(OperationTask<RemoveGenesVmHostCommand> message) =>
-        Handle(message.Command).FailOrComplete(messaging, message);
+        Handle(message.Command).RunWithCancel(CancellationToken.None).FailOrComplete(messaging, message);
 
-    public EitherAsync<Error, Unit> Handle(RemoveGenesVmHostCommand command) =>
-        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
-        let genePool = genePoolFactory.CreateLocal(genePoolPath)
+    public Aff<CancelRt, Unit> Handle(RemoveGenesVmHostCommand command) =>
         from _ in command.Genes.ToSeq()
-            .Map(genePool.RemoveCachedGene)
+            .Map(localGenePool.RemoveCachedGene)
             .SequenceSerial()
-            .RunWithCancel(CancellationToken.None)
-            .ToEitherAsync()
         select unit;
 }

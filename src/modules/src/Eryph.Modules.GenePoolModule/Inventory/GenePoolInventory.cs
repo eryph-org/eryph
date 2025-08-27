@@ -24,15 +24,16 @@ namespace Eryph.Modules.GenePool.Inventory;
 internal class GenePoolInventory(
     ILogger logger,
     IFileSystemService fileSystemService,
-    string genePoolPath,
+    IGenePoolPathProvider genePoolPathProvider,
     ILocalGenePool genePool)
     : IGenePoolInventory
 {
     public Aff<CancelRt, Seq<GeneData>> InventorizeGenePool() =>
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         from manifestPaths in Eff(() => fileSystemService.GetFiles(
                 genePoolPath, "geneset-tag.json", SearchOption.AllDirectories))
         from geneSets in manifestPaths.ToSeq()
-            .Map(p => InventorizeGeneSet(p).Match(
+            .Map(p => InventorizeGeneSet(genePoolPath, p).Match(
                 Succ: identity,
                 Fail: error =>
                 {
@@ -54,6 +55,7 @@ internal class GenePoolInventory(
         select geneSetData;
 
     private Aff<CancelRt, Seq<GeneData>> InventorizeGeneSet(
+        string genePoolPath,
         string geneSetManifestPath) =>
         from geneSetId in GenePoolPaths.GetGeneSetIdFromManifestPath(genePoolPath, geneSetManifestPath)
             .ToAff()

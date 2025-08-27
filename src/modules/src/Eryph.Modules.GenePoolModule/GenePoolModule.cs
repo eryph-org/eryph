@@ -75,11 +75,11 @@ public class GenePoolModule
         
         genePoolFactory.Register<RepositoryGenePool>(serviceProvider.GetRequiredService<GenePoolSettings>());
         container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
-        container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
         container.RegisterSingleton<IGeneRequestRegistry, GeneRequestRegistry>();
-        container.RegisterSingleton<IGenePoolInventoryFactory, GenePoolInventoryFactory>();
+        container.Register<IGenePoolInventory, GenePoolInventory>(Lifestyle.Scoped);
+        container.Register<IGeneProvider, LocalFirstGeneProvider>(Lifestyle.Scoped);
+        container.Register<ILocalGenePool, LocalGenePoolSource>(Lifestyle.Scoped);
         container.Register<IGenePoolReader, GenePoolReader>(Lifestyle.Scoped);
-
 
         container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
         container.Collection.Register(typeof(IHandleMessages<>), typeof(GenePoolModule).Assembly);

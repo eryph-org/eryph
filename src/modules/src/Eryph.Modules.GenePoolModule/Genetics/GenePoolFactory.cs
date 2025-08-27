@@ -11,18 +11,13 @@ internal class GenePoolFactory(Container container) : IGenePoolFactory
     private readonly Dictionary<string, InstanceProducer<IGenePool>> _producers =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public IEnumerable<string> RemotePools => _producers.Keys
-        .Where(x=> x != GenePoolConstants.Local.Name);
+    public IReadOnlyList<string> RemotePools => _producers.Keys.ToList();
 
     IGenePool IGenePoolFactory.CreateNew(string name)
     {
         var result = _producers[name].GetInstance();
         return result;
     }
-
-    ILocalGenePool IGenePoolFactory.CreateLocal(string genePoolPath) =>
-        ActivatorUtilities.CreateInstance<LocalGenePoolSource>(
-            container, GenePoolConstants.Local.Name, genePoolPath);
 
     public void Register<TImplementation>(GenePoolSettings settings)
         where TImplementation : class, IGenePool
