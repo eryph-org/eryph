@@ -1,9 +1,7 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations.Events;
+﻿using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -20,9 +18,11 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
-using Rebus.Sagas;
 using Rebus.Handlers;
-
+using Rebus.Sagas;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -82,6 +82,7 @@ internal class DeployCatletSaga(
         }
 
         Data.Data.MetadataId = catlet.MetadataId;
+        Data.Data.VmId = catlet.VMId;
         Data.Data.ProjectId = catlet.ProjectId;
 
         await StartNewTask(new UpdateCatletNetworksCommand
@@ -122,6 +123,7 @@ internal class DeployCatletSaga(
                 throw new InvalidOperationException($"Project '{projectName}' not found.");
 
             Data.Data.ProjectId = project.Id;
+            Data.Data.VmId = response.Inventory.VmId;
 
             var catletMetadata = new CatletMetadataContent
             {
@@ -137,7 +139,7 @@ internal class DeployCatletSaga(
                 {
                     Id = Data.Data.MetadataId,
                     CatletId = Data.Data.CatletId,
-                    VmId = response.Inventory.VMId,
+                    VmId = response.Inventory.VmId,
                     Metadata = catletMetadata,
                     IsDeprecated = false,
                     SecretDataHidden = false,
@@ -149,7 +151,7 @@ internal class DeployCatletSaga(
                 Id = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
-                VMId = response.Inventory.VMId,
+                VMId = response.Inventory.VmId,
                 Name = response.Inventory.Name,
                 Environment = environmentName.Value,
                 DataStore = datastoreName.Value,
@@ -163,7 +165,8 @@ internal class DeployCatletSaga(
             {
                 CatletId = Data.Data.CatletId,
                 CatletMetadataId = savedCatlet.MetadataId,
-                Config = Data.Data.Config,
+                Config = CatletSystemDataFeeding.FeedSystemVariables(
+                    Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
                 ProjectId = project.Id,
             });
         });
@@ -191,7 +194,8 @@ internal class DeployCatletSaga(
                 CatletId = Data.Data.CatletId,
                 VmId = catlet.VMId,
                 MetadataId = Data.Data.MetadataId,
-                Config = Data.Data.Config,
+                Config = CatletSystemDataFeeding.FeedSystemVariables(
+                    Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
                 AgentName = Data.Data.AgentName,
                 NewStorageId = idGenerator.CreateId(),
                 MachineNetworkSettings = r.NetworkSettings,
@@ -226,8 +230,9 @@ internal class DeployCatletSaga(
 
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
-                Config = Data.Data.Config,
-                VmId = response.Inventory.VMId,
+                Config = CatletSystemDataFeeding.FeedSystemVariables(
+                    Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
+                VmId = response.Inventory.VmId,
                 CatletId = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,
                 SecretDataHidden = metadata.SecretDataHidden,
@@ -278,7 +283,6 @@ internal class DeployCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<SyncVmNetworkPortsCommand> message)
     {
-        // TODO update catlet metadata with config of successful deployment
         return FailOrRun(message, Complete);
     }
 

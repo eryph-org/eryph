@@ -71,7 +71,7 @@ namespace Eryph.Modules.Controller.Inventory
                 await _lockManager.AcquireVhdLock(vhdId);
             }
 
-            foreach (var vmId in vms.Select(x => x.VMId).OrderBy(g => g))
+            foreach (var vmId in vms.Select(x => x.VmId).OrderBy(g => g))
             {
                 await _lockManager.AcquireVmLock(vmId);
             }
@@ -82,7 +82,7 @@ namespace Eryph.Modules.Controller.Inventory
                 var metadata = await _metadataService.GetMetadata(vmInfo.MetadataId);
                 if (metadata is null)
                 {
-                    _logger.LogTrace("Skipping VM {VmId} during inventory as it is not managed by eryph...", vmInfo.VMId);
+                    _logger.LogTrace("Skipping VM {VmId} during inventory as it is not managed by eryph...", vmInfo.VmId);
                     continue;
                 }
 
@@ -90,19 +90,19 @@ namespace Eryph.Modules.Controller.Inventory
                 if (project.BeingDeleted)
                 {
                     _logger.LogDebug("Skipping inventory update for VM {VmId}. The project {ProjectName}({ProjectId}) is marked as deleted.",
-                        vmInfo.VMId, project.Name, project.Id);
+                        vmInfo.VmId, project.Name, project.Id);
                     return;
                 }
 
                 var optionalMachine = await _vmDataService.GetVM(metadata.CatletId);
 
                 //machine not found or metadata is assigned to new VM - a new VM resource will be created
-                if (optionalMachine.IsNone || metadata.VmId != vmInfo.VMId)
+                if (optionalMachine.IsNone || metadata.VmId != vmInfo.VmId)
                 {
                     var catletId = metadata.CatletId;
                     var metadataId = metadata.Id;
                     
-                    if (metadata.VmId != vmInfo.VMId)
+                    if (metadata.VmId != vmInfo.VmId)
                     {
                         // This VM is a copy/import of another VM. We assign
                         // new IDs and track it as separate catlet.
@@ -114,7 +114,7 @@ namespace Eryph.Modules.Controller.Inventory
                             {
                                 Id = metadataId,
                                 CatletId = catletId,
-                                VmId = vmInfo.VMId,
+                                VmId = vmInfo.VmId,
                                 Metadata = metadata.Metadata,
                                 IsDeprecated = metadata.IsDeprecated,
                                 // TODO Should we set this to false to force a sanitization
@@ -131,7 +131,7 @@ namespace Eryph.Modules.Controller.Inventory
                                 CurrentMetadataId = metadata.Id,
                                 NewMetadataId = metadataId,
                                 CatletId = catletId,
-                                VmId = vmInfo.VMId,
+                                VmId = vmInfo.VmId,
                             });
                     }
 
@@ -239,7 +239,7 @@ namespace Eryph.Modules.Controller.Inventory
                 Id = machineId,
                 Project = project,
                 ProjectId = project.Id,
-                VMId = vmInfo.VMId,
+                VMId = vmInfo.VmId,
                 Name = vmInfo.Name,
                 Status = vmInfo.Status.ToCatletStatus(),
                 Host = hostMachine,

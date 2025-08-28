@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Variables;
-using Eryph.Core;
 using Eryph.Core.Genetics;
-using Eryph.Resources.Machines;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -19,40 +14,6 @@ namespace Eryph.VmManagement;
 
 public static class CatletFeeding
 {
-    public static CatletConfig FeedSystemVariables(
-        CatletConfig config,
-        Guid catletId,
-        Guid vmId) =>
-        FeedSystemVariables(config, catletId.ToString(), vmId.ToString());
-
-    public static CatletConfig FeedSystemVariables(
-        CatletConfig config,
-        string catletId,
-        string vmId) =>
-        config.CloneWith(c =>
-        {
-            c.Variables =
-            [
-                ..c.Variables ?? [],
-                new VariableConfig
-                {
-                    Name = EryphConstants.SystemVariables.CatletId,
-                    Type = VariableType.String,
-                    Value = catletId,
-                    Required = false,
-                    Secret = false,
-                },
-                new VariableConfig
-                {
-                    Name = EryphConstants.SystemVariables.VmId,
-                    Type = VariableType.String,
-                    Value = vmId,
-                    Required = false,
-                    Secret = false,
-                },
-            ];
-        });
-
     public static EitherAsync<Error, CatletConfig> Feed(
         CatletConfig catletConfig,
         HashMap<UniqueGeneIdentifier, GeneHash> resolvedGenes,
