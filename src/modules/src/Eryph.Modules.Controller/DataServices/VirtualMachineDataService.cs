@@ -18,8 +18,10 @@ namespace Eryph.Modules.Controller.DataServices
         private readonly IStateStoreRepository<Catlet> _repository;
         private readonly IStateStore _stateStore;
 
-        public VirtualMachineDataService(IStateStoreRepository<Catlet> repository,
-            IVirtualMachineMetadataService metadataService, IStateStore stateStore)
+        public VirtualMachineDataService(
+            IStateStoreRepository<Catlet> repository,
+            IVirtualMachineMetadataService metadataService,
+            IStateStore stateStore)
         {
             _repository = repository;
             _metadataService = metadataService;
@@ -38,10 +40,7 @@ namespace Eryph.Modules.Controller.DataServices
             return res!;
         }
 
-        public async Task<Catlet> AddNewVM(
-            Catlet catlet,
-            CatletMetadataContent? metadataContent,
-            bool secretDataHidden = false)
+        public async Task<Catlet> AddNewVM(Catlet catlet)
         {
             if (catlet.ProjectId == Guid.Empty)
                 throw new ArgumentException($"{nameof(Catlet.ProjectId)} is missing", nameof(catlet));
@@ -54,17 +53,6 @@ namespace Eryph.Modules.Controller.DataServices
 
             if (catlet.VMId == Guid.Empty)
                 throw new ArgumentException($"{nameof(Catlet.VMId)} is missing", nameof(catlet));
-
-            var metadata = new CatletMetadata
-            {
-                Id = catlet.MetadataId,
-                CatletId = catlet.Id,
-                VmId = catlet.VMId,
-                Metadata = metadataContent,
-                IsDeprecated = false,
-                SecretDataHidden = false,
-            };
-            await _metadataService.AddMetadata(metadata);
 
             return await _repository.AddAsync(catlet);
         }

@@ -1,31 +1,24 @@
-﻿using Eryph.ConfigModel;
+﻿using System;
+using System.Net;
+using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core;
+using Eryph.Core.Sys;
 using Eryph.Core.Genetics;
-using Eryph.Core.VmAgent;
 using Eryph.GenePool;
 using Eryph.GenePool.Client;
+using Eryph.GenePool.Model;
 using Eryph.Messages.Genes.Commands;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-using Eryph.Core.Sys;
-using Eryph.GenePool.Model;
-using LanguageExt.UnsafeValueAccess;
-using Microsoft.Identity.Client;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
 internal class LocalFirstGeneProvider(
-    IGenePoolPathProvider genePoolPathProvider,
     IGenePoolFactory genepoolFactory,
     ILocalGenePool localGenePool,
     ILogger log)
@@ -71,7 +64,7 @@ internal class LocalFirstGeneProvider(
             uniqueGeneId, geneHash, (_, _) => Task.FromResult(unit))
         from _ in Some(downloadedParts)
             .Filter(dp => !dp.IsEmpty)
-            .Map(dp => MergeGeneContentParts(uniqueGeneId, geneHash, dp, localGenePool))
+            .Map(dp => MergeGeneContentParts(uniqueGeneId, geneHash, dp))
             .Sequence()
         from cachedGeneContent in localGenePool.GetCachedGeneContent(uniqueGeneId, geneHash)
         from pulledGeneContent in cachedGeneContent.Match(
@@ -84,8 +77,7 @@ internal class LocalFirstGeneProvider(
     private Aff<CancelRt, Unit> MergeGeneContentParts(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        HashMap<GenePartHash, Option<long>> downloadedParts,
-        ILocalGenePool localGenePool) =>
+        HashMap<GenePartHash, Option<long>> downloadedParts) =>
         from validParts in downloadedParts.Values.ToSeq()
             .Sequence()
             .ToAff(Error.New($"The local gene pool contains an incomplete packed version of the gene {uniqueGeneId} ({geneHash})."))

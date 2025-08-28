@@ -34,8 +34,9 @@ internal static class HashAlgorithmExtensions
                 nameof(hashAlgorithm));
 
         if (sha256.Hash is null)
-            throw new HashVerificationException(
-                $"The hash of the gene has not been computed.");
+            throw new ArgumentException(
+                "The hash of the gene has not been computed.",
+                nameof(hashAlgorithm));
 
         return new GeneHash($"sha256:{Convert.ToHexString(sha256.Hash).ToLowerInvariant()}");
     }
@@ -48,8 +49,10 @@ internal static class HashAlgorithmExtensions
                 nameof(hashAlgorithm));
 
         if (sha1.Hash is null)
-            throw new HashVerificationException(
-                $"The hash of the gene part has not been computed.");
+            throw new ArgumentException(
+                "The hash of the gene part has not been computed.",
+                nameof(hashAlgorithm));
+
         return new GenePartHash($"sha1:{Convert.ToHexString(sha1.Hash).ToLowerInvariant()}");
     }
 }
