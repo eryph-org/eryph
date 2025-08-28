@@ -27,6 +27,8 @@ public class DeployCatletSagaData : TaskWorkflowSagaData
 
     public CatletConfig Config { get; set; }
 
+    public string ConfigYaml { get; set; }
+
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 
     public Architecture Architecture { get; set; }

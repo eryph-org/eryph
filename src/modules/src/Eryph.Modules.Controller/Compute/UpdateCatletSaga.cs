@@ -65,6 +65,8 @@ internal class UpdateCatletSaga(
             return;
         }
 
+        // TODO ensure the project, environment and data store did not change
+
         var metadata = await metadataService.GetMetadata(machineInfo.MetadataId);
         if (metadata is null)
         {
@@ -105,6 +107,7 @@ internal class UpdateCatletSaga(
             await StartNewTask(new ValidateCatletDeploymentCommand
             {
                 TenantId = Data.Data.TenantId,
+                ProjectId = Data.Data.ProjectId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
@@ -125,6 +128,7 @@ internal class UpdateCatletSaga(
             await StartNewTask(new DeployCatletCommand
             {
                 TenantId = Data.Data.TenantId,
+                ProjectId = Data.Data.ProjectId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,

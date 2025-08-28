@@ -42,9 +42,7 @@ internal class ResolveCatletSpecificationSaga(
         Data.Data.State = ResolveCatletSpecificationSagaState.Initiated;
         Data.Data.ConfigYaml = message.ConfigYaml;
         Data.Data.Architecture = message.Architecture;
-        // TODO different placement?
         Data.Data.AgentName = message.AgentName;
-        // Data.Data.AgentName = agentLocator.FindAgentForGenePool();
 
         var parsedConfig = ParseCatletConfigYaml(message.ConfigYaml);
         if (parsedConfig.IsLeft)

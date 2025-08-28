@@ -14,6 +14,8 @@ public class ValidateCatletDeploymentCommand : IHasCorrelationId, ICommandWithNa
 {
     public Guid TenantId { get; set; }
 
+    public Guid ProjectId { get; set; }
+
     public string AgentName { get; set; }
 
     public Architecture Architecture { get; set; }

@@ -16,13 +16,13 @@ using Eryph.StateDb.Specifications;
 using IdGen;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -49,13 +49,12 @@ internal class DeployCatletSaga(
     {
         Data.Data.State = DeployCatletSagaState.Initiated;
         Data.Data.TenantId = message.TenantId;
+        Data.Data.ProjectId = message.ProjectId;
         Data.Data.AgentName = message.AgentName;
         Data.Data.Architecture = message.Architecture;
         Data.Data.Config = message.Config;
+        Data.Data.ConfigYaml = message.ConfigYaml;
         Data.Data.ResolvedGenes = message.ResolvedGenes;
-
-        // TODO Should we know the project ID already?
-        // TODO What happens if the project is changed?
 
         if (!message.CatletId.HasValue)
         {
@@ -83,7 +82,6 @@ internal class DeployCatletSaga(
 
         Data.Data.MetadataId = catlet.MetadataId;
         Data.Data.VmId = catlet.VMId;
-        Data.Data.ProjectId = catlet.ProjectId;
 
         await StartNewTask(new UpdateCatletNetworksCommand
         {
@@ -104,25 +102,6 @@ internal class DeployCatletSaga(
             await lockManager.AcquireVmLock(response.VmId);
             Data.Data.State = DeployCatletSagaState.VmCreated;
 
-            var projectName = Optional(Data.Data.Config?.Project).Filter(notEmpty).Match(
-                Some: n => ProjectName.New(n),
-                None: () => ProjectName.New("default"));
-
-            var environmentName = Optional(Data.Data.Config?.Environment).Filter(notEmpty).Match(
-                Some: n => EnvironmentName.New(n),
-                None: () => EnvironmentName.New("default"));
-
-            var datastoreName = Optional(Data.Data.Config?.Store).Filter(notEmpty).Match(
-                Some: n => DataStoreName.New(n),
-                None: () => DataStoreName.New("default"));
-
-            var project = await stateStore.For<Project>()
-                .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, projectName.Value));
-
-            if (project == null)
-                throw new InvalidOperationException($"Project '{projectName}' not found.");
-
-            Data.Data.ProjectId = project.Id;
             Data.Data.VmId = response.Inventory.VmId;
 
             var catletMetadata = new CatletMetadataContent
@@ -130,8 +109,7 @@ internal class DeployCatletSaga(
                 BuiltConfig = Data.Data.Config,
                 Architecture = Data.Data.Architecture,
                 PinnedGenes = Data.Data.ResolvedGenes,
-                // TODO save YAML
-                ConfigYaml = "missing",
+                ConfigYaml = Data.Data.ConfigYaml.ReplaceLineEndings("\n"),
             };
 
             await metadataService.AddMetadata(
@@ -147,14 +125,15 @@ internal class DeployCatletSaga(
 
             var savedCatlet = await vmDataService.AddNewVM(new Catlet
             {
-                ProjectId = project.Id,
+                ProjectId = Data.Data.ProjectId,
                 Id = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
                 VMId = response.Inventory.VmId,
                 Name = response.Inventory.Name,
-                Environment = environmentName.Value,
-                DataStore = datastoreName.Value,
+                Environment = Data.Data.Config!.Environment!,
+                DataStore = Data.Data.Config!.Store!,
+                StorageIdentifier = Data.Data.Config!.Location!,
                 // Ensure that any inventory updates are applied as the
                 // information which we save right now is incomplete.
                 LastSeen = DateTimeOffset.MinValue,
@@ -167,7 +146,7 @@ internal class DeployCatletSaga(
                 CatletMetadataId = savedCatlet.MetadataId,
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
                     Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
-                ProjectId = project.Id,
+                ProjectId = Data.Data.ProjectId,
             });
         });
     }

@@ -7,6 +7,9 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -15,6 +18,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class CreateCatletSaga(
+    IStateStore stateStore,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>,
@@ -25,14 +29,14 @@ internal class CreateCatletSaga(
     {
         Data.Data.State = CreateCatletSagaState.Initiated;
         Data.Data.TenantId = message.TenantId;
-        // TODO should we resolve the agent differently?
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
+        Data.Data.ConfigYaml = message.ConfigYaml;
 
         await StartNewTask(new ResolveCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
+            ConfigYaml = message.ConfigYaml,
             Architecture = Data.Data.Architecture,
         });
     }
@@ -49,9 +53,20 @@ internal class CreateCatletSaga(
             Data.Data.BuiltConfig = response.BuiltConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 
+            var project = await stateStore.For<Project>()
+                .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, Data.Data.BuiltConfig.Project!));
+            if (project is null)
+            {
+                await Fail($"The project '{Data.Data.BuiltConfig.Project}' does not exist");
+                return;
+            }
+
+            Data.Data.ProjectId = project.Id;
+
             await StartNewTask(new ValidateCatletDeploymentCommand
             {
                 TenantId = Data.Data.TenantId,
+                ProjectId = Data.Data.ProjectId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
@@ -72,9 +87,11 @@ internal class CreateCatletSaga(
             await StartNewTask(new DeployCatletCommand
             {
                 TenantId = Data.Data.TenantId,
+                ProjectId = Data.Data.ProjectId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
+                ConfigYaml = Data.Data.ConfigYaml,
                 ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });

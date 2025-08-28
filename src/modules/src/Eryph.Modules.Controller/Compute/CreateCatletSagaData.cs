@@ -8,7 +8,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class CreateCatletSagaData : TaskWorkflowSagaData
 {
-    public CatletConfig? Config { get; set; }
+    public string? ConfigYaml { get; set; }
 
     public CatletConfig? BuiltConfig { get; set; }
 
@@ -18,9 +18,9 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
         
     public Guid TenantId { get; set; }
 
+    public Guid ProjectId { get; set; }
+
     public Architecture? Architecture { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
-
-    public IReadOnlyList<UniqueGeneIdentifier> PendingGenes { get; set; } = [];
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
 }

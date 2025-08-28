@@ -32,9 +32,12 @@ internal class LocalFirstGeneProvider(
                     // Gene set references should always be checked online, but we ignore
                     // any network errors. We have a cached version if the gene set reference,
                     // and it should be possible to proceed when the gene pool is not reachable.
-                    ? PullAndCacheGeneSet(geneSetId).Catch(
-                        ex => ex is GenepoolClientException && !IsUnexpectedHttpClientError(ex),
-                        SuccessAff(Some(cm)))
+                    // We also return the cached version when the gene set does not exist on
+                    // any remote gene pool. This is useful for local development when the gene
+                    // set has been copied by hand into the local gene pool.
+                    ? PullAndCacheGeneSet(geneSetId)
+                        .Map(r => r | Some(cm))
+                        .Catch(ex => ex is GenepoolClientException && !IsUnexpectedHttpClientError(ex), SuccessAff(Some(cm)))
                     : SuccessAff<CancelRt, Option<GenesetTagManifestData>>(Some(cm)),
                 None: () => PullAndCacheGeneSet(geneSetId))
         from result in pulledGeneSet.ToAff(
@@ -82,7 +85,7 @@ internal class LocalFirstGeneProvider(
             .Sequence()
             .ToAff(Error.New($"The local gene pool contains an incomplete packed version of the gene {uniqueGeneId} ({geneHash})."))
         from _1 in guard(
-            validParts.Count < 1 && validParts.Sum() <= EryphConstants.Limits.MaxGeneSizeDirectDownload,
+            validParts.Count <= 1 && validParts.Sum() <= EryphConstants.Limits.MaxGeneSizeDirectDownload,
             Error.New($"The packed version of the gene {uniqueGeneId} ({geneHash}) in the local gene pool it too big."))
         from _2 in localGenePool.MergeGene(uniqueGeneId, geneHash, (_,_) => Task.FromResult(unit))
         select unit;

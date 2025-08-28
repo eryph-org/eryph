@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Variables;
 using Eryph.Core.Genetics;
-using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines;
 
