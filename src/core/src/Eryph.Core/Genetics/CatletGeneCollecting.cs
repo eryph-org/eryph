@@ -44,7 +44,12 @@ public static class CatletGeneCollecting
         Optional(fodderConfig.Source)
             .Filter(notEmpty)
             .Map(ParseSource)
-            .MapT(geneId => new GeneIdentifierWithType(GeneType.Fodder, geneId))
+            .MapT(geneId => new GeneIdentifierWithType(
+                    // The source of a fodder can be either a dedicated fodder gene or
+                    // a catlet gene. By convention, the gene named catlet is always
+                    // the catlet gene.
+                    geneId.GeneName == GeneName.New("catlet") ? GeneType.Catlet : GeneType.Fodder,
+                    geneId))
             .Sequence();
 
     private static Validation<Error, GeneIdentifier> ParseSource(string source) =>

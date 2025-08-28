@@ -7,13 +7,52 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
 
+#nullable enable
+
 public static class CatletConfigNormalizer
 {
+    public static Validation<Error, CatletConfig> Normalize(
+        CatletConfig catletConfig) =>
+        from catletName in Optional(catletConfig.Name).Filter(notEmpty).Match(
+            Some: CatletName.NewValidation,
+            None: () => CatletName.New(EryphConstants.DefaultCatletName))
+        from parent in Optional(catletConfig.Parent)
+            .Filter(notEmpty)
+            .Map(GeneSetIdentifier.NewValidation)
+            .Sequence()
+        let hostName = Optional(catletConfig.Hostname).Filter(notEmpty).IfNone(catletName.Value)
+        from projectName in Optional(catletConfig.Project).Filter(notEmpty).Match(
+            Some: ProjectName.NewValidation,
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName))
+        from dataStoreName in Optional(catletConfig.Store).Filter(notEmpty).Match(
+            Some: DataStoreName.NewValidation,
+            None: () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
+        from environmentName in Optional(catletConfig.Environment).Filter(notEmpty).Match(
+            Some: EnvironmentName.NewValidation,
+            None: () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
+        from storageIdentifier in Optional(catletConfig.Location)
+            .Filter(notEmpty)
+            .Map(StorageIdentifier.NewValidation)
+            .Sequence()
+            // TODO implement additional normalization
+            // TODO normalization of MAC addresses?
+        select catletConfig.CloneWith(c =>
+        {
+            c.Name = catletName.Value;
+            c.Parent = parent.Map(p => p.Value).IfNoneUnsafe((string?)null);
+            c.Hostname = hostName;
+            c.Project = projectName.Value;
+            c.Environment = environmentName.Value;
+            c.Store = dataStoreName.Value;
+            c.Location = storageIdentifier.Map(s => s.Value).IfNoneUnsafe((string?)null);
+        });
+
     /// <summary>
     /// Minimizes the given <paramref name="config"/>.
     /// </summary>

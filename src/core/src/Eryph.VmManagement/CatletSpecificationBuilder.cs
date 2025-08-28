@@ -26,15 +26,17 @@ public static class CatletSpecificationBuilder
         CancellationToken cancellation) =>
         from _1 in RightAsync<Error, Unit>(unit)
         let configWithEarlyDefaults = CatletConfigDefaults.ApplyEarlyDefaults(catletConfig)
-        // TODO apply additional normalization of eryph names?
-        // TODO normalization of MAC addresses?
-        from resolveResult in ResolveConfig(configWithEarlyDefaults, genePoolReader, cancellation)
+        from normalizedConfig in CatletConfigNormalizer.Normalize(configWithEarlyDefaults)
+            .ToEither()
+            .MapLeft(errors => Error.New("Could not normalize the catlet config.", Error.Many(errors)))
+            .ToAsync()
+        from resolveResult in ResolveConfig(normalizedConfig, genePoolReader, cancellation)
         let resolvedGeneSets = resolveResult.ResolvedGeneSets
         let parentConfigs = resolveResult.ResolvedCatlets
-        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(catletConfig, resolvedGeneSets)
-            .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
-            .ToAsync()
-        from breedingResult in CatletPedigree.Breed(catletConfig, resolvedGeneSets, parentConfigs)
+        //from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(normalizedConfig, resolvedGeneSets)
+        //    .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
+        //    .ToAsync()
+        from breedingResult in CatletPedigree.Breed(normalizedConfig, resolvedGeneSets, parentConfigs)
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
             .ToAsync()
         let bredConfigWithDefaults = CatletConfigDefaults.ApplyDefaults(breedingResult.Config)
@@ -241,11 +243,12 @@ public static class CatletSpecificationBuilder
             .SequenceSerial()
             .Map(r => r.Map(m => m.ToSeq()).Flatten().ToHashMap())
         from result in genes
+            .Distinct()
             .Map(g => ResolveGene(g, catletArchitecture, cachedGenes))
             .Sequence()
             .ToEither().ToAsync()
             .Map(r => r.ToHashMap())
-            .MapLeft(errors => Error.New("Could not  resolve some genes.", Error.Many(errors)))
+            .MapLeft(errors => Error.New("Could not resolve some genes.", Error.Many(errors)))
         select result;
 
     public static Validation<Error, (UniqueGeneIdentifier, GeneHash)> ResolveGene(

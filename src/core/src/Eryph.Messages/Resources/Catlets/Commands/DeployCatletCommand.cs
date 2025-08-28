@@ -14,11 +14,15 @@ public class DeployCatletCommand : IHasCorrelationId, ICommandWithName
 {
     public Guid TenantId { get; set; }
 
+    public Guid ProjectId { get; set; }
+
     public string AgentName { get; set; }
 
     public Architecture Architecture { get; set; }
 
     public CatletConfig Config { get; set; }
+
+    public string ConfigYaml { get; set; }
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 
