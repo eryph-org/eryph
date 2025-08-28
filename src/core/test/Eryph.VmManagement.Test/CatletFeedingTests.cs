@@ -1,19 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Variables;
-using Eryph.Core;
 using Eryph.Core.Genetics;
-using Eryph.Resources.Machines;
 using Eryph.VmManagement.TestBase;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
-using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using Xunit;
@@ -665,34 +657,5 @@ public class CatletFeedingTests
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
         error.Inner.Should().BeSome().Which.Message
             .Should().Match("The food 'food2' does not exist in the gene fodder::gene:acme/acme-tools/1.0:test-fodder[hyperv/amd64] (sha256:*).");
-    }
-
-    [Fact]
-    public void FeedSystemVariables_SystemVariablesAreAppended()
-    {
-        var catletId = Guid.NewGuid();
-        var vmId = Guid.NewGuid();
-
-        var config = new CatletConfig();
-
-        var result = CatletFeeding.FeedSystemVariables(config, catletId, vmId);
-
-        result.Variables.Should().SatisfyRespectively(
-            variable =>
-            {
-                variable.Name.Should().Be(EryphConstants.SystemVariables.CatletId);
-                variable.Value.Should().Be(catletId.ToString());
-                variable.Type.Should().Be(VariableType.String);
-                variable.Required.Should().BeFalse();
-                variable.Secret.Should().BeFalse();
-            },
-            variable =>
-            {
-                variable.Name.Should().Be(EryphConstants.SystemVariables.VmId);
-                variable.Value.Should().Be(vmId.ToString());
-                variable.Type.Should().Be(VariableType.String);
-                variable.Required.Should().BeFalse();
-                variable.Secret.Should().BeFalse();
-            });
     }
 }

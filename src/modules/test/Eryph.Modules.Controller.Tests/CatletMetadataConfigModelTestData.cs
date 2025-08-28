@@ -31,7 +31,7 @@ internal static class CatletMetadataConfigModelTestData
               "catlet::gene:acme/acme-os/1.0:catlet[any]": "sha256:a8a2f6ebe286697c527eb35a58b5539532e9b3ae3b64d4eb0a46fb657b41562c",
               "fodder::gene:acme/acme-tools/1.0:test-food[hyperv/amd64]": "sha256:cb476d331140e6e28442a79f26d3a1120faf2d110659508a4415ae5ce138bbf1"
             },
-            "config_yaml": "name: test-catlet\r\nparent: acme/acme-os/1.0",
+            "config_yaml": "name: test-catlet\nparent: acme/acme-os/1.0\n",
             "built_config": {
               "name": "test-catlet",
               "parent": "acme/acme-os/1.0"
@@ -48,10 +48,7 @@ internal static class CatletMetadataConfigModelTestData
             Name = "test-catlet",
             Parent = "acme/acme-os/1.0",
         },
-        ConfigYaml = """
-                     name: test-catlet
-                     parent: acme/acme-os/1.0
-                     """,
+        ConfigYaml = "name: test-catlet\nparent: acme/acme-os/1.0\n",
         PinnedGenes = new Dictionary<UniqueGeneIdentifier, GeneHash>
         {
             {

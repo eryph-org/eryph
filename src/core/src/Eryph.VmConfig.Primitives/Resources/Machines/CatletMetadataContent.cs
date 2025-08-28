@@ -19,6 +19,12 @@ public sealed class CatletMetadataContent
     // new metadata
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> PinnedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
 
+    /// <summary>
+    /// The original YAML configuration of the catlet.
+    /// </summary>
+    /// <remarks>
+    /// The line breaks must be normalized to LF-only.
+    /// </remarks>
     public string ConfigYaml { get; set; }
 
     public CatletConfig BuiltConfig { get; set; }

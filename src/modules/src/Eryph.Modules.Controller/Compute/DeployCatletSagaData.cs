@@ -21,6 +21,8 @@ public class DeployCatletSagaData : TaskWorkflowSagaData
 
     public Guid MetadataId { get; set; }
 
+    public Guid VmId { get; set; }
+
     public string AgentName { get; set; }
 
     public CatletConfig Config { get; set; }

@@ -35,7 +35,7 @@ public class VirtualMachineInventory(
         from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vmInfo.GetList(x => x.NetworkAdapters))
         select new VirtualMachineData
         {
-            VMId = vmInfo.Value.Id,
+            VmId = vmInfo.Value.Id,
             MetadataId = GetMetadataId(vmInfo),
             Status = VmStateUtils.toVmStatus(vmInfo.Value.State),
             Name = vmInfo.Value.Name,
