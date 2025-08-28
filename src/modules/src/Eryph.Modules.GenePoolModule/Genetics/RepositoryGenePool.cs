@@ -314,7 +314,7 @@ internal class RepositoryGenePool(
         var actualGenePartHash = hashAlgorithm.ToGenePartHash();
 
         if (genePartHash != actualGenePartHash)
-            throw new HashVerificationException("Failed to verify the hash of the gene part. Maybe it got corrupted during transfer.");
+            throw Error.New("Failed to verify the hash of the gene part. Maybe it got corrupted during transfer.");
     }
 
     private async Task CopyToAsync(
@@ -347,8 +347,6 @@ internal class RepositoryGenePool(
         GeneManifestData Manifest,
         HashMap<GenePartHash, Uri> DownloadUris,
         DateTimeOffset DownloadExpiresAt);
-
-
 
     private static bool IsNotFoundError(Error error) =>
         error.Exception.Case is GenepoolClientException { StatusCode: HttpStatusCode.NotFound };

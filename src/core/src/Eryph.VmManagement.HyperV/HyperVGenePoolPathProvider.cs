@@ -1,7 +1,6 @@
 ﻿using Eryph.Core;
 using Eryph.Core.VmAgent;
 using LanguageExt;
-using LanguageExt.Common;
 
 namespace Eryph.VmManagement;
 

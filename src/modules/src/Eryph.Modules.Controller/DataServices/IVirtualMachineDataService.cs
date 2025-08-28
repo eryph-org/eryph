@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Eryph.Resources.Machines;
 using Eryph.StateDb.Model;
 using LanguageExt;
 
@@ -13,10 +12,7 @@ internal interface IVirtualMachineDataService
 
     Task<Option<Catlet>> GetVM(Guid id);
 
-    Task<Catlet> AddNewVM(
-        Catlet catlet,
-        CatletMetadataContent? metadata,
-         bool secretDataHidden = false);
+    Task<Catlet> AddNewVM(Catlet catlet);
 
     Task<Unit> RemoveVM(Guid id);
 

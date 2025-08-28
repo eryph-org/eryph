@@ -132,6 +132,17 @@ internal class DeployCatletSaga(
                 ConfigYaml = "missing",
             };
 
+            await metadataService.AddMetadata(
+                new CatletMetadata
+                {
+                    Id = Data.Data.MetadataId,
+                    CatletId = Data.Data.CatletId,
+                    VmId = response.Inventory.VMId,
+                    Metadata = catletMetadata,
+                    IsDeprecated = false,
+                    SecretDataHidden = false,
+                });
+
             var savedCatlet = await vmDataService.AddNewVM(new Catlet
             {
                 ProjectId = project.Id,
@@ -146,7 +157,7 @@ internal class DeployCatletSaga(
                 // information which we save right now is incomplete.
                 LastSeen = DateTimeOffset.MinValue,
                 LastSeenState = DateTimeOffset.MinValue,
-            }, catletMetadata);
+            });
 
             await StartNewTask(new UpdateCatletNetworksCommand
             {

@@ -26,7 +26,6 @@ public static class CatletMetadataContentJsonSerializer
                 new JsonStringEnumConverter(),
                 new NewTypeJsonConverter()
             },
-            WriteIndented = true,
         });
 
     public static JsonSerializerOptions Options => LazyOptions.Value;

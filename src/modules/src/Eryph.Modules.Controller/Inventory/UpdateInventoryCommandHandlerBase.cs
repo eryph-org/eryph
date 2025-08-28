@@ -109,6 +109,19 @@ namespace Eryph.Modules.Controller.Inventory
                         catletId = Guid.NewGuid();
                         metadataId = Guid.NewGuid();
 
+                        await _metadataService.AddMetadata(
+                            new CatletMetadata
+                            {
+                                Id = metadataId,
+                                CatletId = catletId,
+                                VmId = vmInfo.VMId,
+                                Metadata = metadata.Metadata,
+                                IsDeprecated = metadata.IsDeprecated,
+                                // TODO Should we set this to false to force a sanitization
+                                SecretDataHidden = metadata.SecretDataHidden,
+                            });
+
+
                         await _dispatcher.StartNew(
                             project.TenantId,
                             _messageContext.GetTraceId(),
@@ -125,7 +138,7 @@ namespace Eryph.Modules.Controller.Inventory
                     var catlet = await VirtualMachineInfoToCatlet(
                         vmInfo, hostMachine, timestamp, catletId, project);
                     catlet.MetadataId = metadataId;
-                    await _vmDataService.AddNewVM(catlet, metadata.Metadata, metadata.SecretDataHidden);
+                    await _vmDataService.AddNewVM(catlet);
 
                     return;
                 }
