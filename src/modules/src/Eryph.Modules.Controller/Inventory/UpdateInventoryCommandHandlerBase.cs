@@ -94,7 +94,7 @@ namespace Eryph.Modules.Controller.Inventory
                     return;
                 }
 
-                var optionalMachine = await _vmDataService.GetVM(metadata.CatletId);
+                var optionalMachine = await _vmDataService.Get(metadata.CatletId);
 
                 //machine not found or metadata is assigned to new VM - a new VM resource will be created
                 if (optionalMachine.IsNone || metadata.VmId != vmInfo.VmId)
@@ -138,7 +138,8 @@ namespace Eryph.Modules.Controller.Inventory
                     var catlet = await VirtualMachineInfoToCatlet(
                         vmInfo, hostMachine, timestamp, catletId, project);
                     catlet.MetadataId = metadataId;
-                    await _vmDataService.AddNewVM(catlet);
+                    catlet.IsDeprecated = metadata.IsDeprecated;
+                    await _vmDataService.Add(catlet);
 
                     return;
                 }
@@ -239,7 +240,7 @@ namespace Eryph.Modules.Controller.Inventory
                 Id = machineId,
                 Project = project,
                 ProjectId = project.Id,
-                VMId = vmInfo.VmId,
+                VmId = vmInfo.VmId,
                 Name = vmInfo.Name,
                 Status = vmInfo.Status.ToCatletStatus(),
                 Host = hostMachine,

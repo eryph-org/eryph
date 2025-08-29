@@ -72,7 +72,7 @@ internal class DeployCatletSaga(
         }
 
         Data.Data.CatletId = message.CatletId.Value;
-        var catlet = await vmDataService.GetVM(Data.Data.CatletId)
+        var catlet = await vmDataService.Get(Data.Data.CatletId)
             .Map(o => o.IfNoneUnsafe((Catlet?)null));
         if (catlet is null)
         {
@@ -81,7 +81,7 @@ internal class DeployCatletSaga(
         }
 
         Data.Data.MetadataId = catlet.MetadataId;
-        Data.Data.VmId = catlet.VMId;
+        Data.Data.VmId = catlet.VmId;
 
         await StartNewTask(new UpdateCatletNetworksCommand
         {
@@ -123,13 +123,13 @@ internal class DeployCatletSaga(
                     SecretDataHidden = false,
                 });
 
-            var savedCatlet = await vmDataService.AddNewVM(new Catlet
+            var savedCatlet = await vmDataService.Add(new Catlet
             {
                 ProjectId = Data.Data.ProjectId,
                 Id = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
-                VMId = response.Inventory.VmId,
+                VmId = response.Inventory.VmId,
                 Name = response.Inventory.Name,
                 Environment = Data.Data.Config!.Environment!,
                 DataStore = Data.Data.Config!.Store!,
@@ -160,7 +160,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.CatletNetworksUpdated;
 
-            var catlet = await vmDataService.GetVM(Data.Data.CatletId)
+            var catlet = await vmDataService.Get(Data.Data.CatletId)
                 .Map(o => o.IfNoneUnsafe((Catlet?)null));
             if (catlet is null)
             {
@@ -171,7 +171,7 @@ internal class DeployCatletSaga(
             await StartNewTask(new UpdateCatletVMCommand
             {
                 CatletId = Data.Data.CatletId,
-                VmId = catlet.VMId,
+                VmId = catlet.VmId,
                 MetadataId = Data.Data.MetadataId,
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
                     Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
@@ -244,7 +244,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.NetworksUpdated;
 
-            var catlet = await vmDataService.GetVM(Data.Data.CatletId)
+            var catlet = await vmDataService.Get(Data.Data.CatletId)
                 .Map(o => o.IfNoneUnsafe((Catlet?)null));
             if (catlet is null)
             {
@@ -255,7 +255,7 @@ internal class DeployCatletSaga(
             await StartNewTask(new SyncVmNetworkPortsCommand
             {
                 CatletId = Data.Data.CatletId,
-                VmId = catlet.VMId,
+                VmId = catlet.VmId,
             });
         });
     }

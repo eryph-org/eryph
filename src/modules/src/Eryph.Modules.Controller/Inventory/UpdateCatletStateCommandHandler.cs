@@ -23,7 +23,7 @@ internal class UpdateCatletStateCommandHandler(
     {
         await lockManager.AcquireVmLock(message.Command.VmId);
 
-        var catletResult = await vmDataService.GetVM(message.Command.CatletId);
+        var catletResult = await vmDataService.Get(message.Command.CatletId);
         if (catletResult.IsNone)
             return;
 

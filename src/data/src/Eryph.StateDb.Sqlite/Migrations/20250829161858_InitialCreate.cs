@@ -321,12 +321,13 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     LastSeenState = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CatletType = table.Column<int>(type: "INTEGER", nullable: false),
                     UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: false),
-                    VMId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    VmId = table.Column<Guid>(type: "TEXT", nullable: false),
                     MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),
                     StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
                     DataStore = table.Column<string>(type: "TEXT", nullable: false),
                     Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
+                    IsDeprecated = table.Column<bool>(type: "INTEGER", nullable: false),
                     HostId = table.Column<Guid>(type: "TEXT", nullable: true),
                     CpuCount = table.Column<int>(type: "INTEGER", nullable: false),
                     StartupMemory = table.Column<long>(type: "INTEGER", nullable: false),
@@ -508,7 +509,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     SwitchName = table.Column<string>(type: "TEXT", nullable: true),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: false)
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {

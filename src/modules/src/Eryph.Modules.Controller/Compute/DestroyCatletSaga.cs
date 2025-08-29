@@ -37,7 +37,7 @@ internal class DestroyCatletSaga(
     {
         Data.Data.MachineId = message.Resource.Id;
         Data.Data.DestroyedResources = [new Resource(ResourceType.Catlet, message.Resource.Id)];
-        var catletResult = await vmDataService.GetVM(Data.Data.MachineId);
+        var catletResult = await vmDataService.Get(Data.Data.MachineId);
         if (catletResult.IsNone)
         {
             await Complete();
@@ -45,12 +45,12 @@ internal class DestroyCatletSaga(
         }
 
         var catlet = catletResult.ValueUnsafe();
-        Data.Data.VmId = catlet.VMId;
+        Data.Data.VmId = catlet.VmId;
 
         await StartNewTask(new RemoveCatletVMCommand
         {
             CatletId = Data.Data.MachineId,
-            VmId = catlet.VMId
+            VmId = catlet.VmId
         });
     }
 
@@ -82,7 +82,7 @@ internal class DestroyCatletSaga(
                 .Append(disksToDetach)
                 .ToList();
 
-            await vmDataService.RemoveVM(Data.Data.MachineId);
+            await vmDataService.Remove(Data.Data.MachineId);
 
             await StartNewTask(new DestroyResourcesCommand
             {

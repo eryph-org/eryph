@@ -431,13 +431,13 @@ internal class ProjectNetworkPlanBuilder(
             .AddRouterPeerPort(
                 projectRouterName,
                 projectProviderRouterName,
-                MacAddresses.FormatMacAddress(MacAddresses.GenerateMacAddress($"{projectRouterName}-{projectProviderRouterName}")),
+                MacAddressGenerator.Generate($"{projectRouterName}-{projectProviderRouterName}").Value,
                 providerRouterIpInfo.ProjectRouterIp,
                 providerRouterIpInfo.Network)
             .AddRouterPeerPort(
                 projectProviderRouterName,
                 projectRouterName,
-                MacAddresses.FormatMacAddress(MacAddresses.GenerateMacAddress($"{projectProviderRouterName}-{projectRouterName}")),
+                MacAddressGenerator.Generate($"{projectProviderRouterName}-{projectRouterName}").Value,
                 providerRouterIpInfo.ProviderRouterIp,
                 providerRouterIpInfo.Network)
         select result;

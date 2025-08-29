@@ -26,13 +26,13 @@ internal class StopCatletSaga(
     protected override async Task Initiated(StopCatletCommand message)
     {
         Data.Data.CatletId = message.CatletId;
-        var catlet = await vmDataService.GetVM(message.CatletId);
+        var catlet = await vmDataService.Get(message.CatletId);
         if (catlet.IsNone)
         {
             await Fail($"The catlet {message.CatletId} does not exist.");
             return;
         }
-        Data.Data.VmId = catlet.ValueUnsafe().VMId;
+        Data.Data.VmId = catlet.ValueUnsafe().VmId;
 
         switch (message.Mode)
         {

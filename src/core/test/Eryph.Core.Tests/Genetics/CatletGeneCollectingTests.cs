@@ -52,7 +52,7 @@ public class CatletGeneCollectingTests
             geneId =>
             {
                 geneId.GeneIdentifier.Should().Be(GeneIdentifier.New("gene:dbosoft/test/1.0:catlet"));
-                geneId.GeneType.Should().Be(GeneType.Fodder);
+                geneId.GeneType.Should().Be(GeneType.Catlet);
             });
     }
 

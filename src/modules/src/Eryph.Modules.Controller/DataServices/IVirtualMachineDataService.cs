@@ -8,13 +8,13 @@ namespace Eryph.Modules.Controller.DataServices;
 
 internal interface IVirtualMachineDataService
 {
-    Task<Option<Catlet>> GetByVMId(Guid id);
+    Task<Catlet?> GetByVmId(Guid id);
 
-    Task<Option<Catlet>> GetVM(Guid id);
+    Task<Option<Catlet>> Get(Guid id);
 
-    Task<Catlet> AddNewVM(Catlet catlet);
+    Task<Catlet> Add(Catlet catlet);
 
-    Task<Unit> RemoveVM(Guid id);
+    Task Remove(Guid id);
 
-    Task<IEnumerable<Catlet>> GetAll();
+    Task<IReadOnlyList<Guid>> GetAllVmIds(string agentName);
 }
