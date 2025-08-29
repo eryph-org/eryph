@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
@@ -33,6 +34,13 @@ public class VirtualMachineInventory(
         from firmwareData in GetFirmwareData(vmInfo)
         from securityData in GetSecurityData(vmInfo)
         from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vmInfo.GetList(x => x.NetworkAdapters))
+        from networkAdapters in vmInfo.GetList(x => x.NetworkAdapters)
+            .Map(a => a.CastSafe<VMNetworkAdapter>())
+            .Sequence()
+            .ToAsync()
+        from networkAdaptersData in networkAdapters
+            .Map(GetNetworkAdapterData)
+            .SequenceSerial()
         select new VirtualMachineData
         {
             VmId = vmInfo.Value.Id,
@@ -52,22 +60,27 @@ public class VirtualMachineInventory(
             DataStore = vmStorageSettings.Bind(x => x.StorageNames.DataStoreName).IfNone(""),
             Environment = vmStorageSettings.Bind(x => x.StorageNames.EnvironmentName).IfNone(""),
             Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x => x.HardDrives)).ToArray(),
-            NetworkAdapters = vmInfo.GetList(x => x.NetworkAdapters).Map(a =>
-            {
-                var connectedAdapter = a.Cast<VMNetworkAdapter>();
-                var res = new VirtualMachineNetworkAdapterData
-                {
-                    Id = a.Value.Id,
-                    AdapterName = a.Value.Name,
-                    VirtualSwitchName = connectedAdapter.Value.SwitchName,
-                    VirtualSwitchId = connectedAdapter.Value.SwitchId,
-                    MacAddress = connectedAdapter.Value.MacAddress,
-                };
-                return res;
-            }).ToArray(),
+            NetworkAdapters = networkAdaptersData.ToArray(),
             Networks = networks.ToArray(),
             Security = securityData,
-        };           
+        };
+
+    private EitherAsync<Error, VirtualMachineNetworkAdapterData> GetNetworkAdapterData(
+        TypedPsObject<VMNetworkAdapter> adapter) =>
+        from macAddress in Optional(adapter.Value.MacAddress)
+            // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.
+            .Filter(a => a != "000000000000")
+            .Map(EryphMacAddress.NewEither)
+            .Sequence()
+            .ToAsync()
+        select new VirtualMachineNetworkAdapterData
+        {
+            Id = adapter.Value.Id,
+            AdapterName = adapter.Value.Name,
+            VirtualSwitchName = adapter.Value.SwitchName,
+            VirtualSwitchId = adapter.Value.SwitchId,
+            MacAddress = macAddress.Map(a => a.Value).IfNoneUnsafe((string)null),
+        };
 
     private EitherAsync<Error, VirtualMachineCpuData> GetCpuData(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>

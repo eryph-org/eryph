@@ -1,4 +1,5 @@
 ﻿using Dbosoft.OVN.Windows;
+using Eryph.ConfigModel;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -67,14 +68,17 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
         from ipAddresses in getRequiredValue<string[]>(guestNetworkData, "IPAddresses")
         from netmasks in getRequiredValue<string[]>(guestNetworkData, "Subnets")
         from subnets in convertSubnets(ipAddresses.ToSeq(), netmasks.ToSeq())
+        from macAddress in Optional(adapter.MacAddress)
+            // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.
+            .Filter(a => a != "000000000000")
+            .Map(EryphMacAddress.NewEither)
+            .Sequence()
+            .ToEff()
         select new MachineNetworkData
         {
             PortName = portName.IfNoneUnsafe((string)null),
             AdapterName = adapter.Name,
-            MacAddress = Optional(adapter.MacAddress)
-                // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.
-                .Filter(a => a != "000000000000")
-                .IfNoneUnsafe((string)null),
+            MacAddress = macAddress.Map(a => a.Value).IfNoneUnsafe((string)null),
             IPAddresses = ipAddresses,
             DefaultGateways = defaultGateways,
             DnsServers = dnsServers,

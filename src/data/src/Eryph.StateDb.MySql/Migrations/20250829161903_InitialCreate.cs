@@ -379,7 +379,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     LastSeenState = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     CatletType = table.Column<int>(type: "int", nullable: false),
                     UpTime = table.Column<TimeSpan>(type: "time(6)", nullable: false),
-                    VMId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    VmId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Path = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -388,6 +388,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     DataStore = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsDeprecated = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     HostId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     CpuCount = table.Column<int>(type: "int", nullable: false),
                     StartupMemory = table.Column<long>(type: "bigint", nullable: false),
@@ -597,7 +598,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SwitchName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    MacAddress = table.Column<string>(type: "longtext", nullable: false)
+                    MacAddress = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>

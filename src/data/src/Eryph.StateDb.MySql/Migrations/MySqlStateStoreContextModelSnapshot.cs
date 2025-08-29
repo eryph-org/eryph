@@ -108,7 +108,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("MacAddress")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Name")
@@ -687,6 +686,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid?>("HostId")
                         .HasColumnType("char(36)");
 
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTimeOffset>("LastSeen")
                         .HasColumnType("datetime(6)");
 
@@ -720,7 +722,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<TimeSpan>("UpTime")
                         .HasColumnType("time(6)");
 
-                    b.Property<Guid>("VMId")
+                    b.Property<Guid>("VmId")
                         .HasColumnType("char(36)");
 
                     b.HasIndex("HostId");

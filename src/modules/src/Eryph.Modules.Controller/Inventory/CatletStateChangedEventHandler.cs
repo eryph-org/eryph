@@ -9,7 +9,6 @@ using Eryph.Modules.Controller.DataServices;
 using Eryph.Rebus;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
-using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Pipeline;
@@ -30,11 +29,10 @@ internal class CatletStateChangedEventHandler(
     {
         await lockManager.AcquireVmLock(message.VmId);
 
-        var catletResult = await vmDataService.GetByVMId(message.VmId);
-        if (catletResult.IsNone)
+        var catlet = await vmDataService.GetByVmId(message.VmId);
+        if (catlet is null)
             return;
 
-        var catlet = catletResult.ValueUnsafe();
         if (catlet.LastSeenState < message.Timestamp)
         {
             catlet.UpTime = message.Status is VmStatus.Stopped ? TimeSpan.Zero : message.UpTime;

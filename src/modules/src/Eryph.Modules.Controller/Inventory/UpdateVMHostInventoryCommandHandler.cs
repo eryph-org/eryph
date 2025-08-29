@@ -35,6 +35,7 @@ internal class UpdateVMHostInventoryCommandHandler(
         IHandleMessages<UpdateVMHostInventoryCommand>
 {
     private readonly IInventoryLockManager _lockManager = lockManager;
+    private readonly IVirtualMachineDataService _vmDataService = vmDataService;
 
     public async Task Handle(UpdateVMHostInventoryCommand message)
     {
@@ -50,6 +51,12 @@ internal class UpdateVMHostInventoryCommandHandler(
         if (IsUpdateOutdated(vmHost, message.Timestamp))
             return;
 
+        var knownVmIds = await _vmDataService.GetAllVmIds(message.HostInventory.Name);
+        foreach (var vmId in knownVmIds)
+        {
+            await _lockManager.AcquireVmLock(vmId);
+        }
+
         var diskIdentifiers = CollectDiskIdentifiers(message.DiskInventory.ToSeq());
         foreach (var diskIdentifier in diskIdentifiers)
         {
@@ -62,6 +69,17 @@ internal class UpdateVMHostInventoryCommandHandler(
         }
 
         await UpdateVMs(message.Timestamp, message.VMInventory, vmHost);
+
+        foreach (var missingVmId in knownVmIds.Except(message.VMInventory.Select(vm => vm.VmId)))
+        {
+            var catlet = await _vmDataService.GetByVmId(missingVmId);
+            if (catlet is null || catlet.LastSeenState > message.Timestamp)
+                continue;
+
+            catlet.Status = CatletStatus.Missing;
+            catlet.LastSeenState = message.Timestamp;
+            catlet.UpTime = TimeSpan.Zero;
+        }
 
         await CheckDisks(message.Timestamp, vmHost.Name);
 

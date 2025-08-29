@@ -47,7 +47,7 @@ internal class UpdateCatletSaga(
             return;
         }
 
-        var machineInfo = await vmDataService.GetVM(Data.Data.CatletId)
+        var machineInfo = await vmDataService.Get(Data.Data.CatletId)
             .Map(m => m.IfNoneUnsafe((Catlet?)null));
         if (machineInfo is null)
         {

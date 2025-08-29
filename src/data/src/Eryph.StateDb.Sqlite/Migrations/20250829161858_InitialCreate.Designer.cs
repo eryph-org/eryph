@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20250825132547_InitialCreate")]
+    [Migration("20250829161858_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -106,7 +106,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MacAddress")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -685,6 +684,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid?>("HostId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
@@ -718,7 +720,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<TimeSpan>("UpTime")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("VMId")
+                    b.Property<Guid>("VmId")
                         .HasColumnType("TEXT");
 
                     b.HasIndex("HostId");

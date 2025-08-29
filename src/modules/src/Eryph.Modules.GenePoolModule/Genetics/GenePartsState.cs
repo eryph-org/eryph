@@ -7,6 +7,13 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
+/// <summary>
+/// Maintains a list of the successfully downloaded gene parts.
+/// </summary>
+/// <remarks>
+/// This class provides an in-memory side effect which simplifies
+/// the implementation of the gene pool logic.
+/// </remarks>
 internal class GenePartsState : IDisposable
 {
     private readonly Dictionary<GenePartHash, long> _existingParts = new();
@@ -24,6 +31,7 @@ internal class GenePartsState : IDisposable
 
     public void Dispose()
     {
-        //
+        // The IDisposable interface is only implemented to provide
+        // support for the use() function.
     }
 }

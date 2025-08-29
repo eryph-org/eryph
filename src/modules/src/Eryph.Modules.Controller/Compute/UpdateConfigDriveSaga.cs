@@ -35,7 +35,7 @@ namespace Eryph.Modules.Controller.Compute
 
         protected override async Task Initiated(UpdateConfigDriveCommand message)
         {
-            var catlet = await _vmDataService.GetVM(message.CatletId)
+            var catlet = await _vmDataService.Get(message.CatletId)
                 .Map(m => m.IfNoneUnsafe((Catlet?)null));
             if (catlet is null)
             {
@@ -63,7 +63,7 @@ namespace Eryph.Modules.Controller.Compute
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
                 Config = metadata.Metadata.BuiltConfig,
-                VmId = catlet.VMId,
+                VmId = catlet.VmId,
                 CatletId = catlet.Id,
                 MetadataId = catlet.MetadataId,
                 SecretDataHidden = metadata.SecretDataHidden,

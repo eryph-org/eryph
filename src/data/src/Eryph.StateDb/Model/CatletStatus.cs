@@ -32,4 +32,10 @@ public enum CatletStatus
     /// considers the catlet not fully functional.
     /// </summary>
     Error = 4,
+
+    /// <summary>
+    /// The catlet is managed by eryph, but it was not found when
+    /// the Hyper-V host was inventoried.
+    /// </summary>
+    Missing = 5,
 }
