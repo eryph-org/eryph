@@ -1,12 +1,10 @@
-﻿using Eryph.ConfigModel;
+﻿using System;
+using System.Linq;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.StateDb.Model;
 using LanguageExt;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi;
@@ -29,7 +27,15 @@ public static class CatletConfigBuilder
                 Count = catlet.CpuCount,
             },
             Memory = BuildMemoryConfig(catlet),
-            Drives = catlet.Drives.ToSeq().Map(BuildDriveConfig).ToArray()
+            Drives = catlet.Drives.ToSeq().Map(BuildDriveConfig).ToArray(),
+            Capabilities = BuildCapabilityConfigs(catlet).ToArray(),
+            Networks = networkPorts.ToSeq()
+                .Map(BuildNetworkConfig)
+                .Somes()
+                .ToArray(),
+            NetworkAdapters = catlet.NetworkAdapters.ToSeq()
+                .Map(BuildNetworkAdapterConfig)
+                .ToArray()
         };
 
     private static CatletMemoryConfig BuildMemoryConfig(
@@ -47,6 +53,51 @@ public static class CatletConfigBuilder
                 .ToNullable(),
         };
 
+    private static Seq<CatletCapabilityConfig> BuildCapabilityConfigs(
+        Catlet catlet) =>
+        Seq(BuildDynamicMemoryCapabilityConfig(catlet),
+            BuildNestedVirtualizationCapabilityConfig(catlet),
+            BuildSecureBootCapabilityConfig(catlet),
+            BuildTpmCapabilityConfig(catlet))
+            .Somes();
+
+    private static Option<CatletCapabilityConfig> BuildDynamicMemoryCapabilityConfig(
+        Catlet catlet) =>
+        from _ in catlet.Features.Find(f => f == CatletFeature.DynamicMemory)
+        select new CatletCapabilityConfig
+        {
+            Name = EryphConstants.Capabilities.DynamicMemory,
+        };
+
+    private static Option<CatletCapabilityConfig> BuildNestedVirtualizationCapabilityConfig(
+        Catlet catlet) =>
+        from _ in catlet.Features.Find(f => f == CatletFeature.NestedVirtualization)
+        select new CatletCapabilityConfig
+        {
+            Name = EryphConstants.Capabilities.NestedVirtualization,
+        };
+
+    private static Option<CatletCapabilityConfig> BuildSecureBootCapabilityConfig(
+        Catlet catlet) =>
+        from _ in catlet.Features.Find(f => f == CatletFeature.SecureBoot)
+        select new CatletCapabilityConfig
+        {
+            Name = EryphConstants.Capabilities.SecureBoot,
+        };
+
+    private static Option<CatletCapabilityConfig> BuildTpmCapabilityConfig(
+        Catlet catlet) =>
+        from _ in catlet.Features.Find(f => f == CatletFeature.Tpm)
+        let details = Optional(catlet.SecureBootTemplate)
+            .Filter(notEmpty)
+            .Map(t => $"template:{t}")
+            .ToSeq()
+        select new CatletCapabilityConfig
+        {
+            Name = EryphConstants.Capabilities.SecureBoot,
+            Details = details.ToArray()
+        };
+    
     private static CatletDriveConfig BuildDriveConfig(
         int position,
         CatletDrive drive) =>
@@ -81,8 +132,42 @@ public static class CatletConfigBuilder
                 .ToNullable(),
         };
 
-    // TODO network ports
-    // TODO capabilities
+    private static CatletNetworkAdapterConfig BuildNetworkAdapterConfig(
+        CatletNetworkAdapter networkAdapter) =>
+        new()
+        {
+            Name = networkAdapter.Name,
+            MacAddress = networkAdapter.MacAddress,
+        };
+
+    private static Option<CatletNetworkConfig> BuildNetworkConfig(
+        CatletNetworkPort networkPort) =>
+        
+        from ipAssignment in networkPort.IpAssignments.ToSeq()
+            .OfType<IpPoolAssignment>()
+            .HeadOrNone()
+        from subnet in Some(ipAssignment.Subnet).OfType<VirtualNetworkSubnet>().ToOption()
+        select new CatletNetworkConfig
+        {
+            Name = networkPort.Network.Name,
+            // TODO lookup adapter name by mac address
+            // AdapterName = networkPort.Name,
+            SubnetV4 = BuildSubnetConfig(networkPort).IfNoneUnsafe((CatletSubnetConfig?)null),
+            // TODO lookup adapter name
+            //AdapterName = networkPort.
+        };
+
+    private static Option<CatletSubnetConfig> BuildSubnetConfig(
+        CatletNetworkPort networkPort) =>
+        from ipAssignment in networkPort.IpAssignments.ToSeq()
+            .OfType<IpPoolAssignment>()
+            .HeadOrNone()
+        from subnet in Some(ipAssignment.Subnet).OfType<VirtualNetworkSubnet>().ToOption()
+        select new CatletSubnetConfig
+        {
+            Name = subnet.Name,
+            IpPool = ipAssignment.Pool.Name,
+        };
 
     private static string ToDriveName(int position) =>
         $"sda{(char)('a' + position % 26)}";

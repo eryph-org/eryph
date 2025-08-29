@@ -54,7 +54,6 @@ internal class GetCatletConfigurationHandler(
             new CatletNetworkPortSpecs.GetByCatletMetadataId(catlet.MetadataId),
             cancellationToken);
 
-
         var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(
             catlet.MetadataId, cancellationToken);
         if (metadata is null || metadata.IsDeprecated || metadata.Metadata is null)
@@ -71,8 +70,6 @@ internal class GetCatletConfigurationHandler(
 
         var sanitizedConfig = CatletConfigRedactor.RedactSecrets(config);
         var minimizedConfig = CatletConfigNormalizer.Minimize(sanitizedConfig);
-
-
 
         var result = new CatletConfiguration
         {

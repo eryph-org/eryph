@@ -25,7 +25,7 @@ public static class CatletSpecificationBuilder
         IGenePoolReader genePoolReader,
         CancellationToken cancellation) =>
         from _1 in RightAsync<Error, Unit>(unit)
-        let configWithEarlyDefaults = CatletConfigDefaults.ApplyEarlyDefaults(catletConfig)
+        let configWithEarlyDefaults = CatletConfigDefaults.ApplyDefaultNetwork(catletConfig)
         from normalizedConfig in CatletConfigNormalizer.Normalize(configWithEarlyDefaults)
             .ToEither()
             .MapLeft(errors => Error.New("Could not normalize the catlet config.", Error.Many(errors)))
