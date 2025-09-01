@@ -10,25 +10,25 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Rebus.TransactionScopes;
+
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
 public class EntityOperationRequestHandler<TEntity>(
+    IApiResultFactory apiResultFactory,
+    IEndpointResolver endpointResolver,
+    IHttpContextAccessor httpContextAccessor,
+    IMapper mapper,
     IOperationDispatcher operationDispatcher,
     IStateStoreRepository<TEntity> repository,
-    IEndpointResolver endpointResolver,
-    IMapper mapper,
-    IUserRightsProvider userRightsProvider,
-    IHttpContextAccessor httpContextAccessor,
-    ProblemDetailsFactory problemDetailsFactory)
+    IUserRightsProvider userRightsProvider)
     : OperationRequestHandlerBase(
+            apiResultFactory,
             endpointResolver,
             httpContextAccessor,
             mapper,
-            problemDetailsFactory,
             operationDispatcher,
             userRightsProvider),
         IEntityOperationRequestHandler<TEntity>
