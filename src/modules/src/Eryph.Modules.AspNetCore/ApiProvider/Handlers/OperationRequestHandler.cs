@@ -13,24 +13,23 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Rebus.TransactionScopes;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
 public class OperationRequestHandler<TEntity>(
+    IApiResultFactory apiResultFactory,
     IEndpointResolver endpointResolver,
     IHttpContextAccessor httpContextAccessor,
     IMapper mapper,
     IOperationDispatcher operationDispatcher,
-    ProblemDetailsFactory problemDetailsFactory,
     IStateStore stateStore,
     IUserRightsProvider userRightsProvider)
     : OperationRequestHandlerBase(
+            apiResultFactory,
             endpointResolver,
             httpContextAccessor,
             mapper,
-            problemDetailsFactory,
             operationDispatcher,
             userRightsProvider),
         IOperationRequestHandler<TEntity> where TEntity : class

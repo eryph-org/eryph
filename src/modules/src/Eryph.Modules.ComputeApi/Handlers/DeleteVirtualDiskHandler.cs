@@ -12,26 +12,25 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
 internal class DeleteVirtualDiskHandler(
+    IApiResultFactory apiResultFactory,
     IOperationDispatcher operationDispatcher,
     IStateStoreRepository<VirtualDisk> repository,
     IEndpointResolver endpointResolver,
     IMapper mapper,
     IUserRightsProvider userRightsProvider,
-    IHttpContextAccessor httpContextAccessor,
-    ProblemDetailsFactory problemDetailsFactory)
+    IHttpContextAccessor httpContextAccessor)
     : EntityOperationRequestHandler<VirtualDisk>(
+        apiResultFactory,
+        endpointResolver,
+        httpContextAccessor,
+        mapper,
         operationDispatcher,
         repository,
-        endpointResolver,
-        mapper,
-        userRightsProvider,
-        httpContextAccessor,
-        problemDetailsFactory)
+        userRightsProvider)
 {
     protected override ActionResult? ValidateRequest(VirtualDisk model)
     {
