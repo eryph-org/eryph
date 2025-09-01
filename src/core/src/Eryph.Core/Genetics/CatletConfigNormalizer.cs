@@ -87,7 +87,7 @@ public static class CatletConfigNormalizer
             .Filter(notEmpty)
             .Map(FodderName.NewValidation)
             .Sequence()
-        from source in Optional(fodderConfig.Name)
+        from source in Optional(fodderConfig.Source)
             .Filter(notEmpty)
             .Map(GeneIdentifier.NewValidation)
             .Sequence()
@@ -95,7 +95,7 @@ public static class CatletConfigNormalizer
         select fodderConfig.CloneWith(c =>
         {
             c.Name = name.Map(n => n.Value).IfNoneUnsafe((string?)null);
-            c.Source = name.Map(n => n.Value).IfNoneUnsafe((string?)null);
+            c.Source = source.Map(n => n.Value).IfNoneUnsafe((string?)null);
             c.Variables = variables.ToArray();
         });
 

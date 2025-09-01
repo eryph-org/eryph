@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 
@@ -10,10 +9,6 @@ public sealed class CatletMetadataContent
 {
     public Architecture Architecture { get; set; }
 
-    // TODO Should we store the variables separately?
-    public IReadOnlyDictionary<VariableName, string> Variables { get; set; } = new Dictionary<VariableName, string>();
-
-    // new metadata
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> PinnedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
 
     /// <summary>

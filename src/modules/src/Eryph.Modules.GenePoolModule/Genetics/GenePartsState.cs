@@ -14,7 +14,7 @@ namespace Eryph.Modules.GenePool.Genetics;
 /// This class provides an in-memory side effect which simplifies
 /// the implementation of the gene pool logic.
 /// </remarks>
-internal class GenePartsState : IDisposable
+internal sealed class GenePartsState : IDisposable
 {
     private readonly Dictionary<GenePartHash, long> _existingParts = new();
 

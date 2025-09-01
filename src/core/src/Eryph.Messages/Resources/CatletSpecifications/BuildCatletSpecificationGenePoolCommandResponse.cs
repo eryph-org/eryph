@@ -17,5 +17,5 @@ public class BuildCatletSpecificationGenePoolCommandResponse
 
     public DateTimeOffset Timestamp { get; set; }
 
-    public IReadOnlyList<GeneData> Inventory = [];
+    public IReadOnlyList<GeneData> Inventory { get; set; } = [];
 }

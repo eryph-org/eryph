@@ -63,9 +63,9 @@ internal class RepositoryGenePool(
         select client;
 
     public Aff<CancelRt, Option<GeneSetInfo>> GetGeneSet(
-    GeneSetIdentifier geneSetId) =>
-    from genePoolClient in CreateClient()
-    from response in AffMaybe<CancelRt, GenesetTagDownloadResponse>(
+        GeneSetIdentifier geneSetId) =>
+        from genePoolClient in CreateClient()
+        from response in AffMaybe<CancelRt, GenesetTagDownloadResponse>(
         async rt =>
         {
             try
@@ -91,7 +91,7 @@ internal class RepositoryGenePool(
         .Sequence()
     select result;
 
-    private Eff<GeneSetInfo> CreateGeneSetInfo(
+    private static Eff<GeneSetInfo> CreateGeneSetInfo(
         GeneSetIdentifier geneSetId,
         GenesetTagDownloadResponse response) =>
         from manifest in Optional(response.Manifest)
@@ -108,7 +108,6 @@ internal class RepositoryGenePool(
                 uniqueGeneId.GeneType is GeneType.Catlet or GeneType.Fodder,
                 Error.New($"The content of the gene {uniqueGeneId} cannot be downloaded directly."))
             .ToAff()
-        from genePoolClient in CreateClient()
         from geneInfo in FetchGene(uniqueGeneId, geneHash)
         from contentInfo in geneInfo
             .Map(gi => GetGeneContent(uniqueGeneId, geneHash, gi))
@@ -270,7 +269,7 @@ internal class RepositoryGenePool(
         .Sequence()
     select result;
 
-    private Eff<RepositoryGeneInfo> CreateRepositoryGeneInfo(
+    private static Eff<RepositoryGeneInfo> CreateRepositoryGeneInfo(
         GeneHash geneHash,
         GetGeneResponse response) =>
         from manifest in Optional(response.Manifest)
@@ -317,7 +316,7 @@ internal class RepositoryGenePool(
             throw Error.New("Failed to verify the hash of the gene part. Maybe it got corrupted during transfer.");
     }
 
-    private async Task CopyToAsync(
+    private static async Task CopyToAsync(
         Stream source,
         Stream destination,
         CancellationToken cancellationToken = default)
@@ -343,7 +342,7 @@ internal class RepositoryGenePool(
         }
     }
 
-    private record RepositoryGeneInfo(
+    private sealed record RepositoryGeneInfo(
         GeneManifestData Manifest,
         HashMap<GenePartHash, Uri> DownloadUris,
         DateTimeOffset DownloadExpiresAt);

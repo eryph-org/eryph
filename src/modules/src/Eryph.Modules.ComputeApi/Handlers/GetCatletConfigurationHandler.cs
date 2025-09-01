@@ -1,4 +1,20 @@
-﻿using System;
+﻿using Ardalis.Specification;
+using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Json;
+using Eryph.Core;
+using Eryph.Core.Genetics;
+using Eryph.Modules.AspNetCore;
+using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.ComputeApi.Model.V1;
+using Eryph.Resources.Machines;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,25 +23,12 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
-using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Json;
-using Eryph.Core;
-using Eryph.Core.Genetics;
-using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.ComputeApi.Model.V1;
-using Eryph.Resources.Machines;
-using Eryph.StateDb;
-using Eryph.StateDb.Model;
-using Eryph.StateDb.Specifications;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
-
 using Catlet = Eryph.StateDb.Model.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
 internal class GetCatletConfigurationHandler(
+    IApiResultFactory resultFactory,
     IStateStore stateStore)
     : IGetRequestHandler<Catlet, CatletConfiguration>
 {
@@ -50,6 +53,13 @@ internal class GetCatletConfigurationHandler(
         if (catlet == null)
             return new NotFoundResult();
 
+        if (catlet.IsDeprecated)
+        {
+            return resultFactory.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The catlet is deprecated and cannot be managed.");
+        }
+
         var networkPorts = await stateStore.Read<CatletNetworkPort>().ListAsync(
             new CatletNetworkPortSpecs.GetByCatletMetadataId(catlet.MetadataId),
             cancellationToken);
@@ -57,8 +67,8 @@ internal class GetCatletConfigurationHandler(
         var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(
             catlet.MetadataId, cancellationToken);
         if (metadata is null || metadata.IsDeprecated || metadata.Metadata is null)
-            // TODO proper API error handling
-            return new BadRequestResult();
+            throw new InvalidOperationException(
+                $"The metadata for catlet {catletIdResult.Id} is missing or incomplete.");
 
         var config = CatletConfigBuilder.BuildConfig(catlet, networkPorts.ToSeq().Strict())
             .Run().ThrowIfFail();

@@ -14,7 +14,7 @@ namespace Eryph.Core.Genetics;
 
 using GeneMap = HashMap<UniqueGeneIdentifier, GeneHash>;
 
-public class CatletConfigUpdater
+public static class CatletConfigUpdater
 {
     public static Either<Error, (CatletConfig Config, GeneMap PinnedGenes)> ApplyUpdate(
         CatletConfig config,

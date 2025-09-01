@@ -1,10 +1,6 @@
-﻿using Eryph.ConfigModel.Catlets;
+﻿using System;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
