@@ -166,7 +166,7 @@ internal class LocalFirstGeneProvider(
                                 uniqueGeneId,
                                 geneHash,
                                 partsState,
-                                GenePoolPaths.GetTempGenePath(tempGenePath, uniqueGeneId, geneHash),
+                                tempGenePath,
                                 async (long processedBytes, long totalBytes) =>
                                 {
                                     var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);

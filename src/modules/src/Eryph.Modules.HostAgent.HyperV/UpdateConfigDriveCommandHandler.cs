@@ -1,15 +1,9 @@
-﻿using System.IO.Abstractions;
-using Dbosoft.OVN.Windows;
+﻿using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus.Operations;
-using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
-using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Resources.Machines;
 using Eryph.VmManagement;
-using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using Eryph.VmManagement.Tracing;
@@ -17,9 +11,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
 
@@ -29,7 +20,6 @@ internal class UpdateConfigDriveCommandHandler(
     IHyperVOvsPortManager portManager,
     ITaskMessaging messaging,
     ILogger log,
-    IFileSystemService fileSystem,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
@@ -39,20 +29,12 @@ internal class UpdateConfigDriveCommandHandler(
         UpdateCatletConfigDriveCommand command) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
         let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
         from metadata in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-        //let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
-        /*
-        from fedConfig in CatletFeeding.Feed(
-            CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
-            command.ResolvedGenes.ToSeq(),
-            genepoolReader)
-        */
         let fedConfig = command.Config
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()

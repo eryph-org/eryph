@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.StateDb.Model;
@@ -15,6 +16,10 @@ public static class CatletConfigBuilder
         Catlet catlet,
         Seq<CatletNetworkPort> networkPorts) =>
         from _ in SuccessEff(unit)
+        let adaptersMap = catlet.NetworkAdapters.ToSeq()
+            .Filter(a => notEmpty(a.MacAddress))
+            .Map(a => (a.MacAddress!, a))
+            .ToHashMap()
         select new CatletConfig
         {
             Name = catlet.Name,
@@ -30,7 +35,7 @@ public static class CatletConfigBuilder
             Drives = catlet.Drives.ToSeq().Map(BuildDriveConfig).ToArray(),
             Capabilities = BuildCapabilityConfigs(catlet).ToArray(),
             Networks = networkPorts.ToSeq()
-                .Map(BuildNetworkConfig)
+                .Map(np => BuildNetworkConfig(np, adaptersMap))
                 .Somes()
                 .ToArray(),
             NetworkAdapters = catlet.NetworkAdapters.ToSeq()
@@ -141,20 +146,18 @@ public static class CatletConfigBuilder
         };
 
     private static Option<CatletNetworkConfig> BuildNetworkConfig(
-        CatletNetworkPort networkPort) =>
-        
+        CatletNetworkPort networkPort,
+        HashMap<string, CatletNetworkAdapter> adaptersMap) =>
         from ipAssignment in networkPort.IpAssignments.ToSeq()
             .OfType<IpPoolAssignment>()
             .HeadOrNone()
         from subnet in Some(ipAssignment.Subnet).OfType<VirtualNetworkSubnet>().ToOption()
+        let adapterName = adaptersMap.Find(networkPort.MacAddress).Map(a => a.Name)
         select new CatletNetworkConfig
         {
             Name = networkPort.Network.Name,
-            // TODO lookup adapter name by mac address
-            // AdapterName = networkPort.Name,
             SubnetV4 = BuildSubnetConfig(networkPort).IfNoneUnsafe((CatletSubnetConfig?)null),
-            // TODO lookup adapter name
-            //AdapterName = networkPort.
+            AdapterName = adapterName.IfNoneUnsafe((string?)null),
         };
 
     private static Option<CatletSubnetConfig> BuildSubnetConfig(

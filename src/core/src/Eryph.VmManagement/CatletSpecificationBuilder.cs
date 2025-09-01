@@ -169,7 +169,6 @@ public static class CatletSpecificationBuilder
         CancellationToken cancellationToken) =>
         from json in genePoolReader.GetGeneContent(uniqueGeneId, geneHash, cancellationToken)
         from genes in genePoolReader.GetGenes(uniqueGeneId.Id.GeneSet, cancellationToken)
-        let geneIds = genes.Keys.ToSeq()
         from config in Try(() => CatletConfigJsonSerializer.Deserialize(json))
             .ToEither(ex => Error.New($"Could not deserialize catlet config in gene {uniqueGeneId} ({geneHash}).", Error.New(ex)))
             .ToAsync()

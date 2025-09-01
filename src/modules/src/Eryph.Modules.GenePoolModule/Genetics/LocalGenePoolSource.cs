@@ -80,8 +80,6 @@ internal class LocalGenePoolSource(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
         from genePoolPath in _genePoolPathMemo
-        from downloadedParts in GetDownloadedGeneParts(
-            uniqueGeneId, geneHash, (_, _) => Task.FromResult(unit))
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         from content in use(AcquireGeneLock(uniqueGeneId), _ =>
             Aff<CancelRt, Option<string>>(async rt =>
@@ -166,7 +164,6 @@ internal class LocalGenePoolSource(
         GeneHash geneHash,
         Func<long, long, Task> reportProgress) =>
         from genePoolPath in _genePoolPathMemo
-        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         from _ in use(AcquireGeneLock(uniqueGeneId), _ =>
             // We are going to re(write) the gene on the disk. Remove it from the merged genes
             // until merge has been completed successfully.
@@ -201,7 +198,6 @@ internal class LocalGenePoolSource(
                     await using var progressStream = new ProgressStream(
                         fileStream,
                         TimeSpan.FromSeconds(10),
-                        // TODO Fix cancellation token
                         async (writtenBytes, _) => await reportProgress(writtenBytes, originalSize));
 
                     await decompressionStream.CopyToAsync(progressStream, BufferSize, rt.CancellationToken);
@@ -268,7 +264,6 @@ internal class LocalGenePoolSource(
         GeneHash geneHash,
         string content) =>
         from genePoolPath in _genePoolPathMemo
-        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         // This logic is only triggered when the gene was included when a downloaded
         // gene set tag manifest. The manifest is cached and must be downloaded before
@@ -292,7 +287,6 @@ internal class LocalGenePoolSource(
     public Aff<CancelRt, string> CacheGeneContent(
         GeneContentInfo geneContentInfo) =>
         from genePoolPath in _genePoolPathMemo
-        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneContentInfo.UniqueId.Id.GeneSet)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneContentInfo.UniqueId)
         from content in use(AcquireGeneLock(geneContentInfo.UniqueId), _ =>
             // We are going to re(write) the gene on the disk. Remove it from the merged genes
@@ -349,7 +343,6 @@ internal class LocalGenePoolSource(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash) =>
         from genePoolPath in _genePoolPathMemo
-        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         from _ in use(AcquireGeneLock(uniqueGeneId), _ =>
             from _1 in RemoveMergedGene(uniqueGeneId, geneHash)
             let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
@@ -379,7 +372,6 @@ internal class LocalGenePoolSource(
             return Some(JsonSerializer.Deserialize<GeneManifestData>(json, GeneModelDefaults.SerializerOptions));
         })
         let actualGeneHash = manifest.Map(GeneManifestUtils.ComputeHash)
-        // TODO error or return nothing?
         from _2 in guard(
             actualGeneHash.IsNone || actualGeneHash == geneHash,
             Error.New(

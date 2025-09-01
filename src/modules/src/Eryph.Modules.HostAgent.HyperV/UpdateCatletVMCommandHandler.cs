@@ -19,7 +19,6 @@ namespace Eryph.Modules.HostAgent;
 internal class UpdateCatletVMCommandHandler(
     IPowershellEngine engine,
     IHyperVOvsPortManager portManager,
-    IFileSystemService fileSystem,
     ITaskMessaging messaging,
     ILogger log,
     IHostInfoProvider hostInfoProvider,
@@ -31,7 +30,6 @@ internal class UpdateCatletVMCommandHandler(
         UpdateCatletVMCommand command) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from hostInfo in hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
         let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)

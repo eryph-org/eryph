@@ -1,9 +1,4 @@
 ﻿using Eryph.ConfigModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -23,7 +18,6 @@ public class GenePartHash : EryphName<GenePartHash>
             let normalizedAlgorithm = algorithm.ToLowerInvariant()
             from _2 in guard(normalizedAlgorithm is "sha1", Error.New($"The algorithm '{algorithm}' is invalid."))
             let hash = parts[1].ToLowerInvariant()
-            // TODO Would be better to share this code with the gene pool client
             from _3 in guard(
                 hash.ToSeq().All(c => c is >= 'a' and <= 'f' or >= '0' and <= '9')
                 && hash.Length == 40,

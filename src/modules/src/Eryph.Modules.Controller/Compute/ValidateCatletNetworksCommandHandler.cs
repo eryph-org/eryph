@@ -1,13 +1,7 @@
-﻿using Dbosoft.Rebus.Operations;
-using Eryph.Messages;
+﻿using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Rebus.Handlers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace Eryph.Modules.Controller.Compute;
 

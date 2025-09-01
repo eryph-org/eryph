@@ -94,6 +94,8 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
     [UsedImplicitly]
     public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
     {
+        container.Register<IApiResultFactory, ApiResultFactory>(Lifestyle.Scoped);
+
         container.Register(
             serviceProvider.GetRequiredService<IStateStoreContextConfigurer>,
             Lifestyle.Scoped);
@@ -145,6 +147,7 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
         container.Register<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped);
         container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
         container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);
+        
 
         container.ConfigureRebus(configurer =>
         {
