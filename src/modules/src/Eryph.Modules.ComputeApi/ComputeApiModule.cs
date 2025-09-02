@@ -110,8 +110,8 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
         // Find scopes that include the required scope in their implied scopes
         foreach (var scope in allScopes)
         {
-            var impliedScopes = ScopeHierarchy.GetImpliedScopes(scope);
-            if (impliedScopes.Contains(requiredScope) && !allowedScopes.Contains(scope))
+            var impliedScopesSet = ScopeHierarchy.GetImpliedScopes(scope).ToHashSet();
+            if (impliedScopesSet.Contains(requiredScope) && !allowedScopes.Contains(scope))
             {
                 allowedScopes.Add(scope);
             }
