@@ -76,10 +76,10 @@ public sealed class ValidateScopePermissionsHandler(
             .Select(permission => permission[OpenIddictConstants.Permissions.Prefixes.Scope.Length..])
             .ToImmutableArray();
 
-        _logger.LogDebug("Client '{ClientId}' has the following assigned scopes: {AssignedScopes}",
+        _logger.LogTrace("Client '{ClientId}' has the following assigned scopes: {AssignedScopes}",
             context.ClientId, string.Join(", ", applicationScopes));
 
-        _logger.LogDebug("Client '{ClientId}' is requesting the following scopes: {RequestedScopes}",
+        _logger.LogTrace("Client '{ClientId}' is requesting the following scopes: {RequestedScopes}",
             context.ClientId, string.Join(", ", requestedScopes));
 
         // Validate each requested scope using hierarchical scope logic
@@ -87,9 +87,9 @@ public sealed class ValidateScopePermissionsHandler(
             .Where(scope => !IsRequestedScopeAllowed(scope, applicationScopes))
             .ToArray();
 
-        if (invalidScopes.Length == 0)
+        if (invalidScopes.Length > 0)
         {
-            _logger.LogWarning("Client '{ClientId}' requested invalid scopes: {InvalidScopes}. " +
+            _logger.LogDebug("Client '{ClientId}' requested invalid scopes: {InvalidScopes}. " +
                 "Available scopes: {AvailableScopes}",
                 context.ClientId,
                 string.Join(", ", invalidScopes),
