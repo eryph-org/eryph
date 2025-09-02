@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations;
+﻿using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -21,7 +16,13 @@ using LanguageExt;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Rebus.Pipeline;
-
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection.Metadata;
+using System.Threading.Tasks;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Inventory
@@ -29,7 +30,7 @@ namespace Eryph.Modules.Controller.Inventory
     internal class UpdateInventoryCommandHandlerBase
     {
         private readonly IOperationDispatcher _dispatcher;
-        private readonly IVirtualMachineDataService _vmDataService;
+        private readonly ICatletDataService _vmDataService;
         private readonly IInventoryLockManager _lockManager;
         private readonly ICatletMetadataService _metadataService;
         private readonly IStateStore _stateStore;
@@ -40,7 +41,7 @@ namespace Eryph.Modules.Controller.Inventory
             IInventoryLockManager lockManager,
             ICatletMetadataService metadataService,
             IOperationDispatcher dispatcher,
-            IVirtualMachineDataService vmDataService, 
+            ICatletDataService vmDataService, 
             IStateStore stateStore,
             IMessageContext messageContext,
             ILogger logger)
@@ -54,13 +55,12 @@ namespace Eryph.Modules.Controller.Inventory
             _logger = logger;
         }
 
-        protected async Task UpdateVMs(
+        protected async Task UpdateVms(
             DateTimeOffset timestamp,
-            IEnumerable<VirtualMachineData> vmList,
-            CatletFarm hostMachine)
+            IReadOnlyList<VirtualMachineData> vmInfos,
+            CatletFarm host)
         {
-            var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
-            var diskInfos = vms.SelectMany(x => x.Drives)
+            var diskInfos = vmInfos.SelectMany(x => x.Drives)
                 .Select(d => d.Disk)
                 .Where(d => d != null)
                 .ToSeq();
@@ -71,131 +71,164 @@ namespace Eryph.Modules.Controller.Inventory
                 await _lockManager.AcquireVhdLock(vhdId);
             }
 
-            foreach (var vmId in vms.Select(x => x.VmId).OrderBy(g => g))
+            foreach (var vmId in vmInfos.Select(x => x.VmId).OrderBy(g => g))
             {
                 await _lockManager.AcquireVmLock(vmId);
             }
 
-            foreach (var vmInfo in vms)
+            foreach (var vmInfo in vmInfos)
             {
-                //get known metadata for VM, if metadata is unknown skip this VM as it is not in Eryph management
-                var metadata = await _metadataService.GetMetadata(vmInfo.MetadataId);
-                if (metadata is null)
-                {
-                    _logger.LogTrace("Skipping VM {VmId} during inventory as it is not managed by eryph...", vmInfo.VmId);
-                    continue;
-                }
-
-                var project = await FindRequiredProject(vmInfo.ProjectName, vmInfo.ProjectId);
-                if (project.BeingDeleted)
-                {
-                    _logger.LogDebug("Skipping inventory update for VM {VmId}. The project {ProjectName}({ProjectId}) is marked as deleted.",
-                        vmInfo.VmId, project.Name, project.Id);
-                    return;
-                }
-
-                var optionalMachine = await _vmDataService.Get(metadata.CatletId);
-
-                //machine not found or metadata is assigned to new VM - a new VM resource will be created
-                if (optionalMachine.IsNone || metadata.VmId != vmInfo.VmId)
-                {
-                    var catletId = metadata.CatletId;
-                    var metadataId = metadata.Id;
-                    
-                    if (metadata.VmId != vmInfo.VmId)
-                    {
-                        // This VM is a copy/import of another VM. We assign
-                        // new IDs and track it as separate catlet.
-                        catletId = Guid.NewGuid();
-                        metadataId = Guid.NewGuid();
-
-                        await _metadataService.AddMetadata(
-                            new CatletMetadata
-                            {
-                                Id = metadataId,
-                                CatletId = catletId,
-                                VmId = vmInfo.VmId,
-                                Metadata = metadata.Metadata,
-                                IsDeprecated = metadata.IsDeprecated,
-                                // TODO Should we set this to false to force a sanitization
-                                SecretDataHidden = metadata.SecretDataHidden,
-                            });
-
-
-                        await _dispatcher.StartNew(
-                            project.TenantId,
-                            _messageContext.GetTraceId(),
-                            new UpdateCatletMetadataCommand
-                            {
-                                AgentName = hostMachine.Name,
-                                CurrentMetadataId = metadata.Id,
-                                NewMetadataId = metadataId,
-                                CatletId = catletId,
-                                VmId = vmInfo.VmId,
-                            });
-                    }
-
-                    var catlet = await VirtualMachineInfoToCatlet(
-                        vmInfo, hostMachine, timestamp, catletId, project);
-                    catlet.MetadataId = metadataId;
-                    catlet.IsDeprecated = metadata.IsDeprecated;
-                    await _vmDataService.Add(catlet);
-
-                    return;
-                }
-
-                await optionalMachine.IfSomeAsync(async existingMachine =>
-                {
-                    if (existingMachine.LastSeen >= timestamp)
-                    {
-                        _logger.LogDebug("Skipping inventory update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent information is dated {LastSeen:O}.",
-                            existingMachine.Id, timestamp, existingMachine.LastSeen);
-                        return;
-                    }
-                    
-                    existingMachine.LastSeen = timestamp;
-
-                    await _stateStore.LoadPropertyAsync(existingMachine, x => x.Project);
-
-                    Debug.Assert(existingMachine.Project != null);  
-
-                    await _stateStore.LoadCollectionAsync(existingMachine, x => x.ReportedNetworks);
-                    await _stateStore.LoadCollectionAsync(existingMachine, x => x.NetworkAdapters);
-
-
-                    // update data for existing machine
-                    var newMachine = await VirtualMachineInfoToCatlet(vmInfo,
-                        hostMachine, timestamp, existingMachine.Id, existingMachine.Project);
-                    existingMachine.Name = newMachine.Name;
-                    existingMachine.Host = hostMachine;
-                    existingMachine.AgentName = newMachine.AgentName;
-                    existingMachine.Frozen = newMachine.Frozen;
-                    existingMachine.DataStore = newMachine.DataStore;
-                    existingMachine.Environment = newMachine.Environment;
-                    existingMachine.Path = newMachine.Path;
-                    existingMachine.StorageIdentifier = newMachine.StorageIdentifier;
-                    existingMachine.ReportedNetworks = newMachine.ReportedNetworks;
-                    existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
-                    existingMachine.Drives = newMachine.Drives;
-                    existingMachine.CpuCount = newMachine.CpuCount;
-                    existingMachine.StartupMemory = newMachine.StartupMemory;
-                    existingMachine.MinimumMemory = newMachine.MinimumMemory;
-                    existingMachine.MaximumMemory = newMachine.MaximumMemory;
-                    existingMachine.Features = newMachine.Features;
-                    existingMachine.SecureBootTemplate = newMachine.SecureBootTemplate;
-
-                    if (existingMachine.LastSeenState >= timestamp)
-                    {
-                        _logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent state information is dated {LastSeen:O}.",
-                            existingMachine.Id, timestamp, existingMachine.LastSeenState);
-                        return;
-                    }
-
-                    existingMachine.LastSeenState = timestamp;
-                    existingMachine.Status = newMachine.Status;
-                    existingMachine.UpTime = newMachine.UpTime;
-                });
+                await UpdateVm(timestamp, vmInfo, host);
             }
+        }
+
+        protected async Task UpdateVm(
+            DateTimeOffset timestamp,
+            VirtualMachineData vmInfo,
+            CatletFarm host)
+        {
+            // Get known metadata for VM, if metadata is unknown skip this VM as it is not in Eryph management
+            var metadata = await _metadataService.GetMetadata(vmInfo.MetadataId);
+            if (metadata is null)
+            {
+                _logger.LogTrace("Skipping VM {VmId} during inventory as it is not managed by eryph...", vmInfo.VmId);
+                return;
+            }
+
+            var project = await FindRequiredProject(vmInfo.ProjectName, vmInfo.ProjectId);
+            if (project.BeingDeleted)
+            {
+                _logger.LogDebug("Skipping inventory update for VM {VmId}. The project {ProjectName}({ProjectId}) is marked as deleted.",
+                    vmInfo.VmId, project.Name, project.Id);
+                return;
+            }
+
+            if (metadata.VmId != vmInfo.VmId)
+            {
+                await AddCopiedVm(timestamp, vmInfo, host, project, metadata);
+                return;
+            }
+
+            var existingCatlet = await _vmDataService.Get(metadata.CatletId);
+            if (existingCatlet is null)
+            {
+                await AddNewVm(timestamp, vmInfo, host, project, metadata);
+                return;
+            }
+
+            await UpdateExistingVm(timestamp, vmInfo, host, existingCatlet);
+        }
+
+        private async Task AddCopiedVm(
+            DateTimeOffset timestamp,
+            VirtualMachineData vmInfo,
+            CatletFarm host,
+            Project project,
+            CatletMetadata existingMetadata)
+        {
+            // This VM is a copy/import of another VM. We assign
+            // new IDs and track it as separate catlet.
+            var catletId = Guid.NewGuid();
+            var metadataId = Guid.NewGuid();
+
+            await _metadataService.AddMetadata(new CatletMetadata
+            {
+                Id = metadataId,
+                CatletId = catletId,
+                VmId = vmInfo.VmId,
+                Metadata = existingMetadata.Metadata,
+                IsDeprecated = existingMetadata.IsDeprecated,
+                SecretDataHidden = existingMetadata.SecretDataHidden,
+            });
+
+
+            await _dispatcher.StartNew(
+                project.TenantId,
+                _messageContext.GetTraceId(),
+                new UpdateCatletMetadataCommand
+                {
+                    AgentName = host.Name,
+                    CurrentMetadataId = existingMetadata.Id,
+                    NewMetadataId = metadataId,
+                    CatletId = catletId,
+                    VmId = vmInfo.VmId,
+                });
+            
+
+            var newCatlet = await VirtualMachineInfoToCatlet(
+                vmInfo, host, timestamp, catletId, project);
+            newCatlet.MetadataId = metadataId;
+            newCatlet.IsDeprecated = existingMetadata.IsDeprecated;
+            
+            await _vmDataService.Add(newCatlet);
+        }
+
+        private async Task AddNewVm(
+            DateTimeOffset timestamp,
+            VirtualMachineData vmInfo,
+            CatletFarm host,
+            Project project,
+            CatletMetadata existingMetadata)
+        {
+            var newCatlet = await VirtualMachineInfoToCatlet(
+                vmInfo, host, timestamp, existingMetadata.CatletId, project);
+            newCatlet.MetadataId = existingMetadata.Id;
+            newCatlet.IsDeprecated = existingMetadata.IsDeprecated;
+
+            await _vmDataService.Add(newCatlet);
+        }
+
+        private async Task UpdateExistingVm(
+            DateTimeOffset timestamp,
+            VirtualMachineData vmInfo,
+            CatletFarm host,
+            Catlet existingCatlet)
+        {
+            // Skip the update when we already have newer data
+            if (existingCatlet.LastSeen >= timestamp)
+            {
+                _logger.LogDebug("Skipping inventory update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent information is dated {LastSeen:O}.",
+                    existingCatlet.Id, timestamp, existingCatlet.LastSeen);
+                return;
+            }
+
+            await _stateStore.LoadCollectionAsync(existingCatlet, x => x.ReportedNetworks);
+            await _stateStore.LoadCollectionAsync(existingCatlet, x => x.NetworkAdapters);
+
+            var convertedVmInfo = await VirtualMachineInfoToCatlet(vmInfo,
+                host, timestamp, existingCatlet.Id, existingCatlet.Project);
+
+            existingCatlet.LastSeen = timestamp;
+            existingCatlet.Name = convertedVmInfo.Name;
+            existingCatlet.Host = host;
+            existingCatlet.AgentName = convertedVmInfo.AgentName;
+            existingCatlet.Frozen = convertedVmInfo.Frozen;
+            existingCatlet.DataStore = convertedVmInfo.DataStore;
+            existingCatlet.Environment = convertedVmInfo.Environment;
+            existingCatlet.Path = convertedVmInfo.Path;
+            existingCatlet.StorageIdentifier = convertedVmInfo.StorageIdentifier;
+            existingCatlet.ReportedNetworks = convertedVmInfo.ReportedNetworks;
+            existingCatlet.NetworkAdapters = convertedVmInfo.NetworkAdapters;
+            existingCatlet.Drives = convertedVmInfo.Drives;
+            existingCatlet.CpuCount = convertedVmInfo.CpuCount;
+            existingCatlet.StartupMemory = convertedVmInfo.StartupMemory;
+            existingCatlet.MinimumMemory = convertedVmInfo.MinimumMemory;
+            existingCatlet.MaximumMemory = convertedVmInfo.MaximumMemory;
+            existingCatlet.Features = convertedVmInfo.Features;
+            existingCatlet.SecureBootTemplate = convertedVmInfo.SecureBootTemplate;
+
+            // Skip the update of the state information when we already have newer data.
+            // We must check this separately as the state information is monitored separately.
+            if (existingCatlet.LastSeenState >= timestamp)
+            {
+                _logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent state information is dated {LastSeen:O}.",
+                    existingCatlet.Id, timestamp, existingCatlet.LastSeenState);
+                return;
+            }
+
+            existingCatlet.LastSeenState = timestamp;
+            existingCatlet.Status = convertedVmInfo.Status;
+            existingCatlet.UpTime = convertedVmInfo.UpTime;
         }
 
         protected async Task<Option<Project>> FindProject(
@@ -243,6 +276,8 @@ namespace Eryph.Modules.Controller.Inventory
                 VmId = vmInfo.VmId,
                 Name = vmInfo.Name,
                 Status = vmInfo.Status.ToCatletStatus(),
+                LastSeen = timestamp,
+                LastSeenState = timestamp,
                 Host = hostMachine,
                 AgentName = hostMachine.Name,
                 DataStore = vmInfo.DataStore,

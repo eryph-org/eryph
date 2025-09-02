@@ -22,12 +22,13 @@ internal class StartCatletSaga(IWorkflow workflow,
     {
         Data.Data.CatletId = message.CatletId;
         var catlet = await vmDataService.Get(message.CatletId);
-        if (catlet.IsNone)
+        if (catlet is null)
         {
             await Fail($"The catlet {message.CatletId} does not exist.");
             return;
         }
-        Data.Data.VmId = catlet.ValueUnsafe().VmId;
+
+        Data.Data.VmId = catlet.VmId;
         
         await StartNewTask(new StartCatletVMCommand
         {

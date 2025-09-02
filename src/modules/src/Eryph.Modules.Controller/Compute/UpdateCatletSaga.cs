@@ -1,34 +1,21 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Yaml;
-using Eryph.Core.Genetics;
-using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.StateDb.Model;
-using IdGen;
 using JetBrains.Annotations;
-using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
-using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Eryph.Resources.Machines;
 
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class UpdateCatletSaga(
     IWorkflow workflow,
-    IBus bus,
-    IIdGenerator<long> idGenerator,
-    IVirtualMachineDataService vmDataService,
+    ICatletDataService vmDataService,
     ICatletMetadataService metadataService)
     : OperationTaskWorkflowSaga<UpdateCatletCommand, EryphSagaData<UpdateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>,
@@ -47,17 +34,16 @@ internal class UpdateCatletSaga(
             return;
         }
 
-        var machineInfo = await vmDataService.Get(Data.Data.CatletId)
-            .Map(m => m.IfNoneUnsafe((Catlet?)null));
-        if (machineInfo is null)
+        var catlet = await vmDataService.Get(Data.Data.CatletId);
+        if (catlet is null)
         {
             await Fail($"Catlet cannot be updated because the catlet {Data.Data.CatletId} does not exist.");
             return;
         }
 
-        Data.Data.ProjectId = machineInfo.ProjectId;
-        Data.Data.AgentName = machineInfo.AgentName;
-        Data.Data.TenantId = machineInfo.Project.TenantId;
+        Data.Data.ProjectId = catlet.ProjectId;
+        Data.Data.AgentName = catlet.AgentName;
+        Data.Data.TenantId = catlet.Project.TenantId;
 
         if (Data.Data.ProjectId == Guid.Empty)
         {
@@ -67,7 +53,7 @@ internal class UpdateCatletSaga(
 
         // TODO ensure the project, environment and data store did not change
 
-        var metadata = await metadataService.GetMetadata(machineInfo.MetadataId);
+        var metadata = await metadataService.GetMetadata(catlet.MetadataId);
         if (metadata is null)
         {
             await Fail($"Catlet cannot be updated because the metadata for catlet {Data.Data.CatletId} does not exist.");

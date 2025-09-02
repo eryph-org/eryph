@@ -37,6 +37,6 @@ internal class UpdateVMInventoryCommandHandler(
         if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
             return;
         
-        await UpdateVMs(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
+        await UpdateVms(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
     }
 }

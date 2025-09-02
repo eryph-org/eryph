@@ -1,22 +1,15 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.StateDb.Model;
 using JetBrains.Annotations;
-using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Resources.Machines;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -41,17 +34,16 @@ internal class ExpandCatletConfigSaga(
             return;
         }
 
-        var machineInfo = await vmDataService.Get(Data.Data.CatletId)
-            .Map(m => m.IfNoneUnsafe((Catlet?)null));
-        if (machineInfo is null)
+        var catlet = await vmDataService.Get(Data.Data.CatletId);
+        if (catlet is null)
         {
             await Fail($"Config for existing catlet cannot be expanded because the catlet {Data.Data.CatletId} does not exist.");
             return;
         }
 
-        Data.Data.AgentName = machineInfo.AgentName;
+        Data.Data.AgentName = catlet.AgentName;
 
-        var metadata = await metadataService.GetMetadata(machineInfo.MetadataId);
+        var metadata = await metadataService.GetMetadata(catlet.MetadataId);
         if (metadata is null)
         {
             await Fail($"Config for existing catlet cannot be expanded because the metadata for catlet {Data.Data.CatletId} does not exist.");

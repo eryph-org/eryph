@@ -6,8 +6,6 @@ using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
-using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -27,12 +25,12 @@ internal class StopCatletSaga(
     {
         Data.Data.CatletId = message.CatletId;
         var catlet = await vmDataService.Get(message.CatletId);
-        if (catlet.IsNone)
+        if (catlet is null)
         {
             await Fail($"The catlet {message.CatletId} does not exist.");
             return;
         }
-        Data.Data.VmId = catlet.ValueUnsafe().VmId;
+        Data.Data.VmId = catlet.VmId;
 
         switch (message.Mode)
         {
