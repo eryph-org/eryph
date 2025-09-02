@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using JetBrains.Annotations;
 using LanguageExt;
 
 using static LanguageExt.Prelude;
@@ -16,7 +11,7 @@ public static class CatletConfigDefaults
 {
     /// <summary>
     /// Applies the default network in case the <paramref name="config"/>
-    /// contain no networks at all.
+    /// contains no networks at all.
     /// </summary>
     /// <remarks>
     /// The default network must be added before the breeding. This way,

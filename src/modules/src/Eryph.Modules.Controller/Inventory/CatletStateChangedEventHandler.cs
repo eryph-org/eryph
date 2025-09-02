@@ -19,8 +19,8 @@ namespace Eryph.Modules.Controller.Inventory;
 internal class CatletStateChangedEventHandler(
     IInventoryLockManager lockManager,
     IOperationDispatcher opDispatcher,
-    IVirtualMachineMetadataService metadataService,
-    IVirtualMachineDataService vmDataService,
+    ICatletMetadataService metadataService,
+    ICatletDataService vmDataService,
     IMessageContext messageContext,
     ILogger logger)
     : IHandleMessages<CatletStateChangedEvent>

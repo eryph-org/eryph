@@ -16,13 +16,13 @@ namespace Eryph.Modules.Controller.Seeding;
 internal class CatletMetadataSeeder : SeederBase
 {
     private readonly IStateStoreRepository<CatletMetadata> _metadataRepository;
-    private readonly IVirtualMachineMetadataService _metadataService;
+    private readonly ICatletMetadataService _metadataService;
 
     public CatletMetadataSeeder(
         ChangeTrackingConfig config,
         IFileSystem fileSystem,
         IStateStoreRepository<CatletMetadata> metadataRepository,
-        IVirtualMachineMetadataService metadataService)
+        ICatletMetadataService metadataService)
         : base(fileSystem, config.VirtualMachinesConfigPath)
     {
         _metadataRepository = metadataRepository;
@@ -35,7 +35,7 @@ internal class CatletMetadataSeeder : SeederBase
         CancellationToken cancellationToken = default)
     {
         bool exists = await _metadataRepository.AnyAsync(
-            new CatletMetadataSpecs.GetById(entityId),
+            new CatletMetadataSpecs.GetByIdReadonly(entityId),
             cancellationToken);
         if (exists)
             return;

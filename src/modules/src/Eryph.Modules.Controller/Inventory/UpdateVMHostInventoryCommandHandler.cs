@@ -17,10 +17,10 @@ namespace Eryph.Modules.Controller.Inventory;
 [UsedImplicitly]
 internal class UpdateVMHostInventoryCommandHandler(
     IInventoryLockManager lockManager,
-    IVirtualMachineMetadataService metadataService,
+    ICatletMetadataService metadataService,
     IOperationDispatcher dispatcher,
     IMessageContext messageContext,
-    IVirtualMachineDataService vmDataService,
+    ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
     ILogger logger)
@@ -35,7 +35,7 @@ internal class UpdateVMHostInventoryCommandHandler(
         IHandleMessages<UpdateVMHostInventoryCommand>
 {
     private readonly IInventoryLockManager _lockManager = lockManager;
-    private readonly IVirtualMachineDataService _vmDataService = vmDataService;
+    private readonly ICatletDataService _vmDataService = vmDataService;
 
     public async Task Handle(UpdateVMHostInventoryCommand message)
     {

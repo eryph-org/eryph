@@ -29,7 +29,7 @@ internal class UpdateCatletSaga(
     IBus bus,
     IIdGenerator<long> idGenerator,
     IVirtualMachineDataService vmDataService,
-    IVirtualMachineMetadataService metadataService)
+    ICatletMetadataService metadataService)
     : OperationTaskWorkflowSaga<UpdateCatletCommand, EryphSagaData<UpdateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,

@@ -24,9 +24,9 @@ namespace Eryph.Modules.Controller.Compute
         OperationTaskWorkflowSaga<UpdateConfigDriveCommand, UpdateConfigDriveSagaData>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>
     {
-        private readonly IVirtualMachineDataService _vmDataService;
-        private readonly IVirtualMachineMetadataService _metadataService;
-        public UpdateConfigDriveSaga(IWorkflow workflow, IVirtualMachineDataService vmDataService, IVirtualMachineMetadataService metadataService) 
+        private readonly ICatletDataService _vmDataService;
+        private readonly ICatletMetadataService _metadataService;
+        public UpdateConfigDriveSaga(IWorkflow workflow, ICatletDataService vmDataService, ICatletMetadataService metadataService) 
             : base(workflow)
         {
             _vmDataService = vmDataService;

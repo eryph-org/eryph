@@ -31,14 +31,14 @@ namespace Eryph.Modules.Controller.Inventory
         private readonly IOperationDispatcher _dispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IInventoryLockManager _lockManager;
-        private readonly IVirtualMachineMetadataService _metadataService;
+        private readonly ICatletMetadataService _metadataService;
         private readonly IStateStore _stateStore;
         private readonly IMessageContext _messageContext;
         private readonly ILogger _logger;
 
         protected UpdateInventoryCommandHandlerBase(
             IInventoryLockManager lockManager,
-            IVirtualMachineMetadataService metadataService,
+            ICatletMetadataService metadataService,
             IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService, 
             IStateStore stateStore,

@@ -35,7 +35,7 @@ internal class DeployCatletSaga(
     IIdGenerator<long> idGenerator,
     IInventoryLockManager lockManager,
     IVirtualMachineDataService vmDataService,
-    IVirtualMachineMetadataService metadataService)
+    ICatletMetadataService metadataService)
     : OperationTaskWorkflowSaga<DeployCatletCommand, EryphSagaData<DeployCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletVMCommand>>,
@@ -195,7 +195,6 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.VmUpdated;
 
-            //TODO: replace this with operation call
             await bus.SendLocal(new UpdateInventoryCommand
             {
                 AgentName = Data.Data.AgentName,
