@@ -84,6 +84,8 @@ internal class GetCatletConfigurationHandler(
         var result = new CatletConfiguration
         {
             Configuration = CatletConfigJsonSerializer.SerializeToElement(minimizedConfig),
+            DeployedConfig = CatletConfigJsonSerializer.SerializeToElement(metadata.Metadata.BuiltConfig),
+            ConfigYaml =  metadata.Metadata.ConfigYaml
         };
 
         return result;

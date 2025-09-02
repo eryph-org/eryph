@@ -34,8 +34,7 @@ internal class UpdateConfigDriveCommandHandler(
         let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
         from metadata in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
-        from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
-            .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
+        from currentStorageSettings in VMStorageSettings.FromVm(vmHostAgentConfig, vmInfo).WriteTrace()
         let fedConfig = command.Config
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()

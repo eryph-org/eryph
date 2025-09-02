@@ -33,10 +33,8 @@ internal class UpdateCatletVMCommandHandler(
         from hostInfo in hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
         let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
-        from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
-        from plannedStorageSettings in VMStorageSettings.Plan(
-                vmHostAgentConfig, LongToString(command.NewStorageId),
-                command.Config, currentStorageSettings)
+        from currentStorageSettings in VMStorageSettings.FromVm(vmHostAgentConfig, vmInfo).WriteTrace()
+        from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, command.Config, currentStorageSettings)
             .WriteTrace()
         from _ in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(command.Config)
