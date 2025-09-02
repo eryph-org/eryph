@@ -454,13 +454,10 @@ public class ValidateScopePermissionsHandlerTests
         var mockTransaction = new Mock<OpenIddictServerTransaction>();
         mockTransaction.SetupGet(t => t.Request).Returns(request);
 
-        var context = new ValidateTokenRequestContext(mockTransaction.Object);
-        
-        // Use reflection to set the ClientId since it's read-only
-        var clientIdProperty = typeof(ValidateTokenRequestContext).GetProperty("ClientId");
-        clientIdProperty?.SetValue(context, clientId);
+        var mockContext = new Mock<ValidateTokenRequestContext>(mockTransaction.Object) { CallBase = true };
+        mockContext.SetupGet(c => c.ClientId).Returns(clientId);
 
-        return context;
+        return mockContext.Object;
     }
 }
 
