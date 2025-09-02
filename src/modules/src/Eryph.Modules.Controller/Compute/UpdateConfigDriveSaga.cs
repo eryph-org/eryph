@@ -56,13 +56,10 @@ namespace Eryph.Modules.Controller.Compute
                 return;
             }
 
-            // TODO feed system variables?
-            // TODO feed variables from metadata
-            // TODO Hide secret data already here
-
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
-                Config = metadata.Metadata.BuiltConfig,
+                Config = CatletSystemDataFeeding.FeedSystemVariables(
+                    metadata.Metadata.BuiltConfig, catlet.Id, catlet.VmId),
                 VmId = catlet.VmId,
                 CatletId = catlet.Id,
                 MetadataId = catlet.MetadataId,

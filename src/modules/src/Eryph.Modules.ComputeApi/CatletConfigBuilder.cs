@@ -85,14 +85,6 @@ public static class CatletConfigBuilder
     private static Option<CatletCapabilityConfig> BuildSecureBootCapabilityConfig(
         Catlet catlet) =>
         from _ in catlet.Features.Find(f => f == CatletFeature.SecureBoot)
-        select new CatletCapabilityConfig
-        {
-            Name = EryphConstants.Capabilities.SecureBoot,
-        };
-
-    private static Option<CatletCapabilityConfig> BuildTpmCapabilityConfig(
-        Catlet catlet) =>
-        from _ in catlet.Features.Find(f => f == CatletFeature.Tpm)
         let details = Optional(catlet.SecureBootTemplate)
             .Filter(notEmpty)
             .Map(t => $"template:{t}")
@@ -100,7 +92,15 @@ public static class CatletConfigBuilder
         select new CatletCapabilityConfig
         {
             Name = EryphConstants.Capabilities.SecureBoot,
-            Details = details.ToArray()
+            Details = details.ToArray(),
+        };
+
+    private static Option<CatletCapabilityConfig> BuildTpmCapabilityConfig(
+        Catlet catlet) =>
+        from _ in catlet.Features.Find(f => f == CatletFeature.Tpm)
+        select new CatletCapabilityConfig
+        {
+            Name = EryphConstants.Capabilities.SecureBoot,
         };
     
     private static CatletDriveConfig BuildDriveConfig(
@@ -133,7 +133,7 @@ public static class CatletConfigBuilder
                 // this means the drive size has not been changed and should be omitted.
                 // This check handles the case when the catlet gene in the gene pool has no
                 // disk sizes specified in the config.
-                .Filter(_ => disk.Parent?.GeneSet is null || disk.SizeBytes == disk.Parent.SizeBytes)
+                .Filter(_ => disk.Parent?.GeneSet is null || disk.SizeBytes != disk.Parent.SizeBytes)
                 .ToNullable(),
         };
 
@@ -151,7 +151,6 @@ public static class CatletConfigBuilder
         from ipAssignment in networkPort.IpAssignments.ToSeq()
             .OfType<IpPoolAssignment>()
             .HeadOrNone()
-        from subnet in Some(ipAssignment.Subnet).OfType<VirtualNetworkSubnet>().ToOption()
         let adapterName = adaptersMap.Find(networkPort.MacAddress).Map(a => a.Name)
         select new CatletNetworkConfig
         {

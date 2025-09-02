@@ -19,6 +19,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Json;
+using Eryph.Core;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Rebus.Sagas;
 using static LanguageExt.Prelude;
@@ -98,11 +100,13 @@ internal class ResolveCatletSpecificationSaga(
     }
 
     private static Either<Error, CatletConfig> ParseCatletConfigYaml(string yaml) =>
-        // TODO improve error mapping / consider JSON path
-        // TODO normalize config?
         from parsedConfig in Try(() => CatletConfigYamlSerializer.Deserialize(yaml))
             .ToEither(ex => Error.New("The catlet configuration is invalid.", Error.New(ex)))
         from _ in CatletConfigValidations.ValidateCatletConfig(parsedConfig)
+            // The YAML serializer does not expose a readily usable naming policy. Hence,
+            // we use the naming policy of the JSON serializer. The two should match anyway
+            // as the underlying schema is the same.
+            .MapFail(i => i.ToJsonPath(CatletConfigJsonSerializer.Options.PropertyNamingPolicy))
             .MapFail(i => i.ToError())
             .ToEither()
             .MapLeft(errors => Error.New("The catlet configuration is invalid.", Error.Many(errors)))
