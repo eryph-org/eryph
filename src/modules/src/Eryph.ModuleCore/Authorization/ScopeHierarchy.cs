@@ -72,9 +72,12 @@ public static class ScopeHierarchy
         yield return scope;
 
         // Add any implied scopes
-        foreach (var impliedScope in impliedScopes)
+        if (ScopeHierarchyList.TryGetValue(scope, out var impliedScopes))
         {
-            yield return impliedScope;
+            foreach (var impliedScope in impliedScopes)
+            {
+                yield return impliedScope;
+            }
         }
     }
 
