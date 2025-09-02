@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Asp.Versioning;
 using Dbosoft.Hosuto.Modules;
 using Eryph.Core;
+using Eryph.ModuleCore.Authorization;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
@@ -13,6 +15,7 @@ using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,18 +81,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(EryphConstants.Authorization.Scopes.IdentityClientsRead,
-                policy => policy.Requirements.Add(new HasScopeRequirement(
-                    authority,
-                    EryphConstants.Authorization.Scopes.IdentityClientsRead,
-                    EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-                    EryphConstants.Authorization.Scopes.IdentityRead,
-                    EryphConstants.Authorization.Scopes.IdentityWrite)));
-            options.AddPolicy(EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-                policy => policy.Requirements.Add(new HasScopeRequirement(
-                    authority,
-                    EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-                    EryphConstants.Authorization.Scopes.IdentityWrite)));
+            ConfigureIdentityScopes(options, authority);
         });
 
         services.AddOpenIddict()
@@ -149,6 +141,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                 options.AddEventHandler(ValidateClientCredentialsEvents.BuildInValidateClientAssertionParameters.Descriptor);
                 options.AddEventHandler(ValidateClientCredentialsEvents.ValidateClientAssertionParameters.Descriptor);
 
+                // replace built-in scope permission validation with hierarchy-aware validation
+                options.RemoveEventHandler(ValidateScopePermissions.Descriptor);
+                options.AddEventHandler(ValidateScopePermissionsHandler.Descriptor);
+
             })
 
             // Register the OpenIddict validation components.
@@ -178,5 +174,59 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
+    }
+
+    private static void ConfigureIdentityScopes(AuthorizationOptions options, string authority)
+    {
+        // Define identity API scopes that need policies
+        var identityApiScopes = new[]
+        {
+            EryphConstants.Authorization.Scopes.IdentityClientsRead,
+            EryphConstants.Authorization.Scopes.IdentityClientsWrite,
+        };
+
+        // Create policies for each scope using hierarchy-aware scope resolution
+        foreach (var scope in identityApiScopes)
+        {
+            CreateIdentityScopePolicy(options, authority, scope);
+        }
+    }
+
+    private static void CreateIdentityScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
+    {
+        // Get all scopes that can satisfy this requirement (including higher-level scopes)
+        var allowedScopes = GetIdentityScopesThatAllowAccess(requiredScope);
+        
+        options.AddPolicy(requiredScope,
+            policy => policy.Requirements.Add(new HasScopeRequirement(
+                authority,
+                allowedScopes.ToArray())));
+    }
+
+    private static string[] GetIdentityScopesThatAllowAccess(string requiredScope)
+    {
+        // Start with the scope itself
+        var allowedScopes = new List<string> { requiredScope };
+
+        // Add any scopes that imply this scope through hierarchy
+        var allIdentityScopes = new[]
+        {
+            EryphConstants.Authorization.Scopes.IdentityRead,
+            EryphConstants.Authorization.Scopes.IdentityWrite,
+            EryphConstants.Authorization.Scopes.IdentityClientsRead,
+            EryphConstants.Authorization.Scopes.IdentityClientsWrite,
+        };
+
+        // Find scopes that include the required scope in their implied scopes
+        foreach (var scope in allIdentityScopes)
+        {
+            var impliedScopes = ScopeHierarchy.GetImpliedScopes(scope);
+            if (impliedScopes.Contains(requiredScope) && !allowedScopes.Contains(scope))
+            {
+                allowedScopes.Add(scope);
+            }
+        }
+
+        return allowedScopes.ToArray();
     }
 }

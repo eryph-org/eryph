@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Eryph.Core;
+using Eryph.ModuleCore.Authorization;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
@@ -55,49 +58,65 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
 
     public static void ConfigureScopes(AuthorizationOptions options, string authority)
     {
-        options.AddPolicy(EryphConstants.Authorization.Scopes.CatletsRead,
-            policy => policy.Requirements.Add(new HasScopeRequirement(
-                authority,
-                EryphConstants.Authorization.Scopes.CatletsRead,
-                EryphConstants.Authorization.Scopes.CatletsWrite,
-                EryphConstants.Authorization.Scopes.ComputeRead,
-                EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Scopes.CatletsWrite,
-            policy => policy.Requirements.Add(new HasScopeRequirement(
-                authority,
-                EryphConstants.Authorization.Scopes.CatletsWrite,
-                EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Scopes.CatletsControl,
-            policy => policy.Requirements.Add(new HasScopeRequirement(
-                authority,
-                EryphConstants.Authorization.Scopes.CatletsControl,
-                EryphConstants.Authorization.Scopes.CatletsWrite,
-                EryphConstants.Authorization.Scopes.ComputeWrite)));
+        // Define compute API scopes that need policies
+        var computeApiScopes = new[]
+        {
+            EryphConstants.Authorization.Scopes.CatletsRead,
+            EryphConstants.Authorization.Scopes.CatletsWrite,
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.GenesRead,
+            EryphConstants.Authorization.Scopes.GenesWrite,
+            EryphConstants.Authorization.Scopes.ProjectsRead,
+            EryphConstants.Authorization.Scopes.ProjectsWrite,
+        };
 
-        options.AddPolicy(EryphConstants.Authorization.Scopes.GenesRead,
-            policy => policy.Requirements.Add(new HasScopeRequirement(
-                authority,
-                EryphConstants.Authorization.Scopes.GenesRead,
-                EryphConstants.Authorization.Scopes.GenesWrite,
-                EryphConstants.Authorization.Scopes.ComputeRead,
-                EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Scopes.GenesWrite,
-            policy => policy.Requirements.Add(new HasScopeRequirement(
-                authority,
-                EryphConstants.Authorization.Scopes.GenesWrite,
-                EryphConstants.Authorization.Scopes.ComputeWrite)));
+        // Create policies for each scope using hierarchy-aware scope resolution
+        foreach (var scope in computeApiScopes)
+        {
+            CreateScopePolicy(options, authority, scope);
+        }
+    }
 
-        options.AddPolicy(EryphConstants.Authorization.Scopes.ProjectsRead,
+    private static void CreateScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
+    {
+        // Get all scopes that can satisfy this requirement (including higher-level scopes)
+        var allowedScopes = GetScopesThatAllowAccess(requiredScope);
+        
+        options.AddPolicy(requiredScope,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
-                EryphConstants.Authorization.Scopes.ProjectsRead,
-                EryphConstants.Authorization.Scopes.ProjectsWrite,
-                EryphConstants.Authorization.Scopes.ComputeRead,
-                EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Scopes.ProjectsWrite,
-            policy => policy.Requirements.Add(new HasScopeRequirement(
-                authority,
-                EryphConstants.Authorization.Scopes.ProjectsWrite,
-                EryphConstants.Authorization.Scopes.ComputeWrite)));
+                allowedScopes.ToArray())));
+    }
+
+    private static string[] GetScopesThatAllowAccess(string requiredScope)
+    {
+        // Start with the scope itself
+        var allowedScopes = new List<string> { requiredScope };
+
+        // Add any scopes that imply this scope through hierarchy
+        var allScopes = new[]
+        {
+            EryphConstants.Authorization.Scopes.ComputeRead,
+            EryphConstants.Authorization.Scopes.ComputeWrite,
+            EryphConstants.Authorization.Scopes.CatletsRead,
+            EryphConstants.Authorization.Scopes.CatletsWrite,
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.GenesRead,
+            EryphConstants.Authorization.Scopes.GenesWrite,
+            EryphConstants.Authorization.Scopes.ProjectsRead,
+            EryphConstants.Authorization.Scopes.ProjectsWrite,
+        };
+
+        // Find scopes that include the required scope in their implied scopes
+        foreach (var scope in allScopes)
+        {
+            var impliedScopes = ScopeHierarchy.GetImpliedScopes(scope);
+            if (impliedScopes.Contains(requiredScope) && !allowedScopes.Contains(scope))
+            {
+                allowedScopes.Add(scope);
+            }
+        }
+
+        return allowedScopes.ToArray();
     }
 }
