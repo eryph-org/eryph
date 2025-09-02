@@ -21,9 +21,6 @@ public sealed class ValidateScopePermissionsHandler : IOpenIddictServerHandler<V
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly ILogger<ValidateScopePermissionsHandler> _logger;
 
-    public ValidateScopePermissionsHandler() => 
-        throw new InvalidOperationException("This handler requires dependency injection.");
-
     public ValidateScopePermissionsHandler(
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictScopeManager scopeManager,
