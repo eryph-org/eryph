@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations.Events;
+﻿using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
@@ -10,14 +8,23 @@ using Eryph.ModuleCore;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using IdGen;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using System;
+using System.Threading.Tasks;
+using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
+using LanguageExt;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class CreateCatletSaga(
+    IStorageIdentifierGenerator storageIdentifierGenerator,
     IStateStore stateStore,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
@@ -50,11 +57,10 @@ internal class CreateCatletSaga(
         {
             Data.Data.State = CreateCatletSagaState.SpecificationBuilt;
 
-            Data.Data.BuiltConfig = response.BuiltConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 
             var project = await stateStore.For<Project>()
-                .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, Data.Data.BuiltConfig.Project!));
+                .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, response.BuiltConfig.Project!));
             if (project is null)
             {
                 await Fail($"The project '{Data.Data.BuiltConfig.Project}' does not exist");
@@ -62,6 +68,10 @@ internal class CreateCatletSaga(
             }
 
             Data.Data.ProjectId = project.Id;
+
+            var storageIdentifier = storageIdentifierGenerator.Generate();
+            Data.Data.BuiltConfig = GenerateMacAddresses(ApplyStorageIdentifier(
+                response.BuiltConfig, storageIdentifier));
 
             await StartNewTask(new ValidateCatletDeploymentCommand
             {
@@ -120,4 +130,40 @@ internal class CreateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<DeployCatletCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
+
+    private CatletConfig ApplyStorageIdentifier(
+        CatletConfig catletConfig,
+        string storageIdentifier) =>
+        catletConfig.CloneWith(c =>
+        {
+            c.Location = Optional(c.Location).Filter(notEmpty).IfNone(storageIdentifier);
+            c.Drives = c.Drives.ToSeq()
+                .Map(d => ApplyStorageIdentifier(d, c.Location))
+                .ToArray();
+        });
+
+    private CatletDriveConfig ApplyStorageIdentifier(
+        CatletDriveConfig driveConfig,
+        string storageIdentifier) =>
+        driveConfig.CloneWith(d =>
+        {
+            d.Location = Optional(d.Location).Filter(notEmpty).IfNone(storageIdentifier);
+        });
+
+    private CatletConfig GenerateMacAddresses(
+        CatletConfig catletConfig) =>
+        catletConfig.CloneWith(c =>
+        {
+            c.NetworkAdapters = c.NetworkAdapters.ToSeq()
+                .Map(GenerateMacAddress)
+                .ToArray();
+        });
+
+    private CatletNetworkAdapterConfig GenerateMacAddress(
+        CatletNetworkAdapterConfig adapterConfig) =>
+        adapterConfig.CloneWith(a =>
+        {
+            a.MacAddress = Optional(a.MacAddress).Filter(notEmpty)
+                .IfNone(() => MacAddressGenerator.Generate().Value);
+        });
 }

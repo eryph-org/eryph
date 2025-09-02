@@ -48,8 +48,7 @@ namespace Eryph.Modules.HostAgent
             CreateCatletVMCommand command) =>
             from hostSettings in _hostSettingsProvider.GetHostSettings()
             from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-            from plannedStorageSettings in VMStorageSettings.Plan(
-                vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
+            from plannedStorageSettings in VMStorageSettings.FromCatletConfig(command.Config, vmHostAgentConfig)
             from createdVM in CreateVM(plannedStorageSettings, Engine, command.Config)
             from _ in SetMetadataId(createdVM, command.MetadataId)
             let timestamp = DateTimeOffset.UtcNow

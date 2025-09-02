@@ -15,7 +15,7 @@ namespace Eryph.Core.Genetics;
 public static class CatletConfigDefaults
 {
     /// <summary>
-    /// Applies the default network in case the <paramref name="configs"/>
+    /// Applies the default network in case the <paramref name="config"/>
     /// contain no networks at all.
     /// </summary>
     /// <remarks>
@@ -47,7 +47,20 @@ public static class CatletConfigDefaults
                 .IfNone(EryphConstants.DefaultCatletName);
             c.Cpu = ApplyCpuDefaults(c.Cpu);
             c.Memory = ApplyMemoryDefaults(c.Memory);
+
+            var networks = c.Networks.ToSeq().Map(ApplyNetworkDefaults).ToSeq();
+            var additionalAdapters = networks
+                .Map(n => n.AdapterName)
+                .Except(c.NetworkAdapters.ToSeq().Map(a => a.Name))
+                .Map(name => new CatletNetworkAdapterConfig()
+                {
+                    Name = name,
+                });
+
             c.Networks = c.Networks.ToSeq().Map(ApplyNetworkDefaults).ToArray();
+            c.NetworkAdapters = c.NetworkAdapters.ToSeq()
+                .Concat(additionalAdapters)
+                .ToArray();
         });
 
     private static CatletCpuConfig ApplyCpuDefaults(

@@ -26,7 +26,7 @@ public class VirtualMachineInventory(
     public EitherAsync<Error, VirtualMachineData> InventorizeVM(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from hostInfo in hostInfoProvider.GetHostInfoAsync()
-        from vmStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
+        from vmStorageSettings in VMStorageSettings.FromVm(vmHostAgentConfig, vmInfo)
         from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(
             engine, vmHostAgentConfig, vmInfo.GetList(x => x.HardDrives))
         from cpuData in GetCpuData(vmInfo)
@@ -51,14 +51,14 @@ public class VirtualMachineInventory(
             Cpu = cpuData,
             Memory = memoryData,
             Firmware = firmwareData,
-            Frozen = vmStorageSettings.Map(x => x.Frozen).IfNone(true),
-            VMPath = vmStorageSettings.Map(x => x.VMPath).IfNone(""),
-            StorageIdentifier = vmStorageSettings.Bind(x => x.StorageIdentifier).IfNone(""),
-            ProjectId = vmStorageSettings.Bind(x => x.StorageNames.ProjectId).Map(id => (Guid?)id)
+            Frozen = vmStorageSettings.Frozen,
+            VMPath = vmStorageSettings.VMPath,
+            StorageIdentifier = vmStorageSettings.StorageIdentifier.IfNone(""),
+            ProjectId = vmStorageSettings.StorageNames.ProjectId.Map(id => (Guid?)id)
                 .IfNoneUnsafe((Guid?)null),
-            ProjectName = vmStorageSettings.Bind(x => x.StorageNames.ProjectName).IfNone(""),
-            DataStore = vmStorageSettings.Bind(x => x.StorageNames.DataStoreName).IfNone(""),
-            Environment = vmStorageSettings.Bind(x => x.StorageNames.EnvironmentName).IfNone(""),
+            ProjectName = vmStorageSettings.StorageNames.ProjectName.IfNone(""),
+            DataStore = vmStorageSettings.StorageNames.DataStoreName.IfNone(""),
+            Environment = vmStorageSettings.StorageNames.EnvironmentName.IfNone(""),
             Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x => x.HardDrives)).ToArray(),
             NetworkAdapters = networkAdaptersData.ToArray(),
             Networks = networks.ToArray(),

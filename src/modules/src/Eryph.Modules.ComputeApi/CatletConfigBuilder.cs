@@ -22,6 +22,7 @@ public static class CatletConfigBuilder
             .ToHashMap()
         select new CatletConfig
         {
+            ConfigType = CatletConfigType.Instance,
             Name = catlet.Name,
             Project = catlet.Project.Name,
             Environment = catlet.Environment,
