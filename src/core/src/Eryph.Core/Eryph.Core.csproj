@@ -5,12 +5,12 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" />
     <PackageReference Include="Dbosoft.Functional" Version="3.2.0" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.9.1-PullRequest0103.4" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.1-PullRequest0103.4" />
-    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.9.1-PullRequest0103.4" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.1-PullRequest0103.4" />
-    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.9.1-PullRequest0103.4" />
-    <PackageReference Include="Eryph.ConfigModel.Yaml" Version="0.9.1-PullRequest0103.4" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.9.1-PullRequest0105.4" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.1-PullRequest0105.4" />
+    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.9.1-PullRequest0105.4" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.1-PullRequest0105.4" />
+    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.9.1-PullRequest0105.4" />
+    <PackageReference Include="Eryph.ConfigModel.Yaml" Version="0.9.1-PullRequest0105.4" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

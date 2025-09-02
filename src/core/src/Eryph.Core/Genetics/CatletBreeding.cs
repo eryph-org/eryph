@@ -77,13 +77,13 @@ public static class CatletBreeding
             CatletDriveName.NewEither,
             (parent, child) =>
                 from _ in Right<Error, Unit>(unit)
-                let diskType = (Optional(child.Type) | Optional(parent.Type)).IfNone(CatletDriveType.VHD)
+                let diskType = (Optional(child.Type) | Optional(parent.Type)).IfNone(CatletDriveType.Vhd)
                 let source = Optional(child.Source) | Optional(parent.Source)
                 let size = Optional(child.Size).Filter(s => s != 0) | Optional(parent.Size)
                 let location = Optional(child.Location).Filter(notEmpty) | Optional(parent.Location)
                 let store = Optional(child.Store).Filter(notEmpty) | Optional(parent.Store)
                 from __ in guardnot(
-                        source.Bind(GeneIdentifier.NewOption).IsSome && diskType != CatletDriveType.VHD,
+                        source.Bind(GeneIdentifier.NewOption).IsSome && diskType != CatletDriveType.Vhd,
                         Error.New("The drive must be a plain VHD when using a gene pool source."))
                     .ToEither()
                 select new CatletDriveConfig()
