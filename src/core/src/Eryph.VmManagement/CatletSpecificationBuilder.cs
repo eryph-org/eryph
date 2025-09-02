@@ -33,9 +33,6 @@ public static class CatletSpecificationBuilder
         from resolveResult in ResolveConfig(normalizedConfig, genePoolReader, cancellation)
         let resolvedGeneSets = resolveResult.ResolvedGeneSets
         let parentConfigs = resolveResult.ResolvedCatlets
-        //from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(normalizedConfig, resolvedGeneSets)
-        //    .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
-        //    .ToAsync()
         from breedingResult in CatletPedigree.Breed(normalizedConfig, resolvedGeneSets, parentConfigs)
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
             .ToAsync()
@@ -206,13 +203,13 @@ public static class CatletSpecificationBuilder
         CatletDriveConfig config,
         Seq<UniqueGeneIdentifier> genes) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let driveType = config.Type ?? CatletDriveType.VHD
+        let driveType = config.Type ?? CatletDriveType.Vhd
         let source = GeneName.NewOption(config.Name)
             .Bind(n => genes.Find(g => g.GeneType is GeneType.Volume && g.Id.GeneName == n))
             .Map(g => g.Id.Value)
         select config.CloneWith(c =>
         {
-            c.Source = driveType != CatletDriveType.VHD || notEmpty(c.Source)
+            c.Source = driveType != CatletDriveType.Vhd || notEmpty(c.Source)
                 ? c.Source
                 : source.IfNoneUnsafe((string?)null);
         });

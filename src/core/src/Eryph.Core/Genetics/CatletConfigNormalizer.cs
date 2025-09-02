@@ -74,7 +74,7 @@ public static class CatletConfigNormalizer
         let source = geneSource.Map(g => g.Value) | Optional(config.Source).Filter(notEmpty)
         select config.CloneWith(c =>
         {
-            c.Type = Optional(c.Type).IfNone(CatletDriveType.VHD);
+            c.Type = Optional(c.Type).IfNone(CatletDriveType.Vhd);
             c.Name = name.Value;
             c.Source = source.IfNoneUnsafe((string?)null);
             c.Store = dataStoreName.Value;

@@ -282,7 +282,7 @@ namespace Eryph.Modules.Controller.Inventory
             return new CatletDrive
             {
                 Id = driveData.Id,
-                Type = driveData.Type ?? CatletDriveType.VHD,
+                Type = driveData.Type ?? CatletDriveType.Dvd,
                 AttachedDisk = disk.IfNoneUnsafe(() => null)
             };
         }

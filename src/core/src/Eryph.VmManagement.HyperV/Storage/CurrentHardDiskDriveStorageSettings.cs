@@ -47,7 +47,7 @@ public class CurrentHardDiskDriveStorageSettings : HardDiskDriveStorageSettings
             .Sequence()
         select new CurrentHardDiskDriveStorageSettings
         {
-            Type = CatletDriveType.VHD,
+            Type = CatletDriveType.Vhd,
             AttachPath = snapshotPath | vhdPath | hdInfo.Path,
             Frozen = !diskSettings.Map(d => d.StorageIdentifier.IsSome || d.Gene.IsSome).IfNone(false)
                      || !diskSettings.Map(d => d.StorageNames.IsValid).IfNone(false)
