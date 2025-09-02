@@ -15,21 +15,15 @@ namespace Eryph.Modules.Identity.Events.Validations;
 /// Custom handler that replaces OpenIddict's built-in scope validation with hierarchy-aware validation.
 /// This handler validates both scope existence and client permissions using hierarchical scope logic.
 /// </summary>
-public sealed class ValidateScopePermissionsHandler : IOpenIddictServerHandler<ValidateTokenRequestContext>
+public sealed class ValidateScopePermissionsHandler(
+    IOpenIddictApplicationManager applicationManager,
+    IOpenIddictScopeManager scopeManager,
+    ILogger<ValidateScopePermissionsHandler> logger)
+    : IOpenIddictServerHandler<ValidateTokenRequestContext>
 {
-    private readonly IOpenIddictApplicationManager _applicationManager;
-    private readonly IOpenIddictScopeManager _scopeManager;
-    private readonly ILogger<ValidateScopePermissionsHandler> _logger;
-
-    public ValidateScopePermissionsHandler(
-        IOpenIddictApplicationManager applicationManager,
-        IOpenIddictScopeManager scopeManager,
-        ILogger<ValidateScopePermissionsHandler> logger)
-    {
-        _applicationManager = applicationManager ?? throw new ArgumentNullException(nameof(applicationManager));
-        _scopeManager = scopeManager ?? throw new ArgumentNullException(nameof(scopeManager));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    private readonly IOpenIddictApplicationManager _applicationManager = applicationManager ?? throw new ArgumentNullException(nameof(applicationManager));
+    private readonly IOpenIddictScopeManager _scopeManager = scopeManager ?? throw new ArgumentNullException(nameof(scopeManager));
+    private readonly ILogger<ValidateScopePermissionsHandler> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     public static OpenIddictServerHandlerDescriptor Descriptor { get; }
         = OpenIddictServerHandlerDescriptor.CreateBuilder<ValidateTokenRequestContext>()
@@ -77,13 +71,15 @@ public sealed class ValidateScopePermissionsHandler : IOpenIddictServerHandler<V
 
         // Get the permissions associated with the application
         var applicationPermissions = await _applicationManager.GetPermissionsAsync(application, context.CancellationToken);
-            .Select(permission => permission.Substring(scopePrefixLength))
+        var applicationScopes = applicationPermissions
+            .Where(permission => permission.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.Ordinal))
+            .Select(permission => permission[OpenIddictConstants.Permissions.Prefixes.Scope.Length..])
             .ToImmutableArray();
 
-        _logger.LogDebug("Client '{ClientId}' has the following assigned scopes: {AssignedScopes}", 
+        _logger.LogDebug("Client '{ClientId}' has the following assigned scopes: {AssignedScopes}",
             context.ClientId, string.Join(", ", applicationScopes));
 
-        _logger.LogDebug("Client '{ClientId}' is requesting the following scopes: {RequestedScopes}", 
+        _logger.LogDebug("Client '{ClientId}' is requesting the following scopes: {RequestedScopes}",
             context.ClientId, string.Join(", ", requestedScopes));
 
         // Validate each requested scope using hierarchical scope logic
@@ -91,11 +87,11 @@ public sealed class ValidateScopePermissionsHandler : IOpenIddictServerHandler<V
             .Where(scope => !IsRequestedScopeAllowed(scope, applicationScopes))
             .ToArray();
 
-        if (invalidScopes.Any())
+        if (invalidScopes.Length == 0)
         {
             _logger.LogWarning("Client '{ClientId}' requested invalid scopes: {InvalidScopes}. " +
-                "Available scopes: {AvailableScopes}", 
-                context.ClientId, 
+                "Available scopes: {AvailableScopes}",
+                context.ClientId,
                 string.Join(", ", invalidScopes),
                 string.Join(", ", ScopeHierarchy.GetAvailableScopes(applicationScopes)));
 
@@ -110,14 +106,11 @@ public sealed class ValidateScopePermissionsHandler : IOpenIddictServerHandler<V
 
     private static bool IsRequestedScopeAllowed(string requestedScope, ImmutableArray<string> applicationScopes)
     {
-        // Handle built-in OpenIddict scopes that are typically auto-approved
-        if (requestedScope == OpenIddictConstants.Scopes.OpenId || 
-            requestedScope == OpenIddictConstants.Scopes.OfflineAccess)
-        {
-            return true;
-        }
+        // Handle built-in OpenIddict scopes
+        return requestedScope is OpenIddictConstants.Scopes.OpenId 
+                   or OpenIddictConstants.Scopes.OfflineAccess ||
 
-        // Use hierarchical scope validation for application-specific scopes
-        return ScopeHierarchy.IsScopeAllowed(requestedScope, applicationScopes);
+               // Use hierarchical scope validation for application-specific scopes
+               ScopeHierarchy.IsScopeAllowed(requestedScope, applicationScopes);
     }
 }

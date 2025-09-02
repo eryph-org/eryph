@@ -34,6 +34,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     public override string Path => endpointResolver.GetEndpoint("identity").ToString();
 
 #pragma warning disable S2325
+    // ReSharper disable once UnusedMember.Global
     public void AddSimpleInjector(SimpleInjectorAddOptions options)
 #pragma warning restore S2325
     {
@@ -42,6 +43,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     }
 
 #pragma warning disable S2325
+    // ReSharper disable once UnusedMember.Global
     public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
 #pragma warning restore S2325
         IHostEnvironment env)
@@ -93,7 +95,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                 // Note: call ReplaceDefaultEntities() to replace the default OpenIddict entities.
                 options.UseEntityFrameworkCore()
                     .UseDbContext<IdentityDbContext>()
-                    .ReplaceDefaultEntities<ApplicationEntity, 
+                    .ReplaceDefaultEntities<ApplicationEntity,
                         AuthorizationEntity,
                         OpenIddictEntityFrameworkCoreScope, TokenEntity, string>();
 
@@ -196,7 +198,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     {
         // Get all scopes that can satisfy this requirement (including higher-level scopes)
         var allowedScopes = GetIdentityScopesThatAllowAccess(requiredScope);
-        
+
         options.AddPolicy(requiredScope,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
@@ -220,8 +222,8 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         // Find scopes that include the required scope in their implied scopes
         foreach (var scope in allIdentityScopes)
         {
-            var impliedScopesSet = new HashSet<string>(impliedScopes);
-            if (impliedScopesSet.Contains(requiredScope) && !allowedScopes.Contains(scope))
+            var impliedScopes = ScopeHierarchy.GetImpliedScopes(scope);
+            if (impliedScopes.Contains(requiredScope) && !allowedScopes.Contains(scope))
             {
                 allowedScopes.Add(scope);
             }
