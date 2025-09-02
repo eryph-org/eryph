@@ -72,9 +72,6 @@ public static class ScopeHierarchy
         yield return scope;
 
         // Add any implied scopes
-        if (!ScopeHierarchyList.TryGetValue(scope, out var impliedScopes)) yield break;
-
-
         foreach (var impliedScope in impliedScopes)
         {
             yield return impliedScope;
