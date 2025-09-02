@@ -62,7 +62,7 @@ public sealed class ValidateScopePermissionsHandler(
         var application = await _applicationManager.FindByClientIdAsync(context.ClientId!, context.CancellationToken);
         if (application == null)
         {
-            context.Logger.LogError("The client application associated with '{ClientId}' cannot be found.", context.ClientId);
+            _logger.LogError("The client application associated with '{ClientId}' cannot be found.", context.ClientId);
             context.Reject(
                 error: OpenIddictConstants.Errors.InvalidClient,
                 description: "The client application cannot be found.");

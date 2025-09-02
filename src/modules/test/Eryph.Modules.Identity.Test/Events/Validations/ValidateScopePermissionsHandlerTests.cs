@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
@@ -80,6 +79,12 @@ public class ValidateScopePermissionsHandlerTests
     {
         // Arrange
         var context = CreateContext("non-existent-client", [EryphConstants.Authorization.Scopes.CatletsRead]);
+        
+        // Setup scope manager to return that scope exists (so we get to client validation)
+        _mockScopeManager
+            .Setup(x => x.FindByNameAsync(EryphConstants.Authorization.Scopes.CatletsRead, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Mock<object>().Object);
+        
         _mockApplicationManager
             .Setup(x => x.FindByClientIdAsync("non-existent-client", It.IsAny<CancellationToken>()))
             .ReturnsAsync(null!);
@@ -432,7 +437,7 @@ public class ValidateScopePermissionsHandlerTests
         // Mock that the scope doesn't exist
         _mockScopeManager
             .Setup(x => x.FindByNameAsync("non-existent-scope", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((object?)null);
+            .ReturnsAsync((object)null);
 
         // Act
         await _handler.HandleAsync(context);
@@ -445,19 +450,23 @@ public class ValidateScopePermissionsHandlerTests
 
     private static ValidateTokenRequestContext CreateContext(string clientId, IEnumerable<string> requestedScopes)
     {
-        // Create a real OpenIddictRequest and populate it with scopes
+        // Create a real request with scopes
         var request = new OpenIddictRequest
         {
-            Scope = string.Join(" ", requestedScopes)
+            Scope = string.Join(" ", requestedScopes),
+            ClientId = clientId
         };
 
-        var mockTransaction = new Mock<OpenIddictServerTransaction>();
-        mockTransaction.SetupGet(t => t.Request).Returns(request);
+        // Create a real transaction using parameterless constructor
+        var transaction = new OpenIddictServerTransaction
+        {
+            Request = request
+        };
 
-        var mockContext = new Mock<ValidateTokenRequestContext>(mockTransaction.Object) { CallBase = true };
-        mockContext.SetupGet(c => c.ClientId).Returns(clientId);
-
-        return mockContext.Object;
+        // Create the real context 
+        var context = new ValidateTokenRequestContext(transaction);
+        
+        return context;
     }
 }
 
