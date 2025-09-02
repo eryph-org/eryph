@@ -2,17 +2,16 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eryph.StateDb.Model;
-using LanguageExt;
 
 namespace Eryph.Modules.Controller.DataServices;
 
-internal interface IVirtualMachineDataService
+internal interface ICatletDataService
 {
     Task<Catlet?> GetByVmId(Guid id);
 
-    Task<Option<Catlet>> Get(Guid id);
+    Task<Catlet?> Get(Guid id);
 
-    Task<Catlet> Add(Catlet catlet);
+    Task Add(Catlet catlet);
 
     Task Remove(Guid id);
 

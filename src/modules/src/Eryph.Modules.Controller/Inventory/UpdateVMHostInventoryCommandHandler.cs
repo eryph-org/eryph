@@ -68,7 +68,7 @@ internal class UpdateVMHostInventoryCommandHandler(
             await AddOrUpdateDisk(vmHost.Name, message.Timestamp, diskInfo);
         }
 
-        await UpdateVMs(message.Timestamp, message.VMInventory, vmHost);
+        await UpdateVms(message.Timestamp, message.VMInventory, vmHost);
 
         foreach (var missingVmId in knownVmIds.Except(message.VMInventory.Select(vm => vm.VmId)))
         {

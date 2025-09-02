@@ -2,81 +2,65 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using JetBrains.Annotations;
-using LanguageExt;
-using Rebus.Retry.FailFast;
 
-namespace Eryph.Modules.Controller.DataServices
+namespace Eryph.Modules.Controller.DataServices;
+
+internal class CatletDataService(
+    IStateStoreRepository<Catlet> repository,
+    ICatletMetadataService metadataService,
+    IStateStore stateStore) : ICatletDataService
 {
-    internal class CatletDataService : ICatletDataService
+    public async Task<Catlet?> GetByVmId(Guid id)
     {
-        private readonly ICatletMetadataService _metadataService;
-        private readonly IStateStoreRepository<Catlet> _repository;
-        private readonly IStateStore _stateStore;
+        return await repository.GetBySpecAsync(new CatletSpecs.GetByVMId(id));
+    }
 
-        public CatletDataService(
-            IStateStoreRepository<Catlet> repository,
-            ICatletMetadataService metadataService,
-            IStateStore stateStore)
-        {
-            _repository = repository;
-            _metadataService = metadataService;
-            _stateStore = stateStore;
-        }
+    public async Task<Catlet?> Get(Guid id)
+    {
+        var res = await repository.GetBySpecAsync(new CatletSpecs.GetById(id));
+        return res!;
+    }
 
-        public async Task<Catlet?> GetByVmId(Guid id)
-        {
-            return await _repository.GetBySpecAsync(new CatletSpecs.GetByVMId(id));
-        }
+    public async Task Add(Catlet catlet)
+    {
+        if (catlet.ProjectId == Guid.Empty)
+            throw new ArgumentException($"{nameof(Catlet.ProjectId)} is missing", nameof(catlet));
 
-        public async Task<Option<Catlet>> Get(Guid id)
-        {
-            var res = await _repository.GetBySpecAsync(new CatletSpecs.GetById(id));
-            return res!;
-        }
+        if (catlet.Id == Guid.Empty)
+            throw new ArgumentException($"{nameof(Catlet.Id)} is missing", nameof(catlet));
 
-        public async Task<Catlet> Add(Catlet catlet)
-        {
-            if (catlet.ProjectId == Guid.Empty)
-                throw new ArgumentException($"{nameof(Catlet.ProjectId)} is missing", nameof(catlet));
+        if (catlet.MetadataId == Guid.Empty)
+            throw new ArgumentException($"{nameof(Catlet.MetadataId)} is missing", nameof(catlet));
 
-            if (catlet.Id == Guid.Empty)
-                throw new ArgumentException($"{nameof(Catlet.Id)} is missing", nameof(catlet));
+        if (catlet.VmId == Guid.Empty)
+            throw new ArgumentException($"{nameof(Catlet.VmId)} is missing", nameof(catlet));
 
-            if (catlet.MetadataId == Guid.Empty)
-                throw new ArgumentException($"{nameof(Catlet.MetadataId)} is missing", nameof(catlet));
+        await repository.AddAsync(catlet);
+    }
 
-            if (catlet.VmId == Guid.Empty)
-                throw new ArgumentException($"{nameof(Catlet.VmId)} is missing", nameof(catlet));
+    public async Task Remove(Guid id)
+    {
+        var entity = await repository.GetByIdAsync(id);
+        if (entity is null)
+            return;
 
-            return await _repository.AddAsync(catlet);
-        }
+        // Remove floating ports
+        var catletPorts = await stateStore.For<CatletNetworkPort>().ListAsync(
+            new CatletNetworkPortSpecs.GetByCatletMetadataId(entity.MetadataId));
 
-        public async Task Remove(Guid id)
-        {
-            var entity = await _repository.GetByIdAsync(id);
-            if (entity is null)
-                return;
+        await stateStore.For<FloatingNetworkPort>().DeleteRangeAsync(
+            catletPorts.Where(cp => cp.FloatingPort is not null).Select(cp => cp.FloatingPort!));
 
-            // Remove floating ports
-            var catletPorts = await _stateStore.For<CatletNetworkPort>().ListAsync(
-                new CatletNetworkPortSpecs.GetByCatletMetadataId(entity.MetadataId));
+        await repository.DeleteAsync(entity);
+        await metadataService.RemoveMetadata(entity.MetadataId);
+    }
 
-            await _stateStore.For<FloatingNetworkPort>().DeleteRangeAsync(
-                catletPorts.Where(cp => cp.FloatingPort is not null).Select(cp => cp.FloatingPort!));
-
-            await _repository.DeleteAsync(entity);
-            await _metadataService.RemoveMetadata(entity.MetadataId);
-        }
-
-        public async Task<IReadOnlyList<Guid>> GetAllVmIds(string agent)
-        {
-            return await _stateStore.Read<Catlet>().ListAsync(
-                new CatletSpecs.GetAllVmIds(agent));
-        }
+    public async Task<IReadOnlyList<Guid>> GetAllVmIds(string agent)
+    {
+        return await stateStore.Read<Catlet>().ListAsync(
+            new CatletSpecs.GetAllVmIds(agent));
     }
 }

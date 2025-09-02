@@ -34,7 +34,7 @@ internal class DeployCatletSaga(
     IBus bus,
     IIdGenerator<long> idGenerator,
     IInventoryLockManager lockManager,
-    IVirtualMachineDataService vmDataService,
+    ICatletDataService vmDataService,
     ICatletMetadataService metadataService)
     : OperationTaskWorkflowSaga<DeployCatletCommand, EryphSagaData<DeployCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
@@ -74,8 +74,8 @@ internal class DeployCatletSaga(
         }
 
         Data.Data.CatletId = message.CatletId.Value;
-        var catlet = await vmDataService.Get(Data.Data.CatletId)
-            .Map(o => o.IfNoneUnsafe((Catlet?)null));
+
+        var catlet = await vmDataService.Get(Data.Data.CatletId);
         if (catlet is null)
         {
             await Fail($"The catlet {Data.Data.CatletId} was not found.");
@@ -126,7 +126,7 @@ internal class DeployCatletSaga(
                     SecretDataHidden = false,
                 });
 
-            var savedCatlet = await vmDataService.Add(new Catlet
+            await vmDataService.Add(new Catlet
             {
                 ProjectId = Data.Data.ProjectId,
                 Id = Data.Data.CatletId,
@@ -146,7 +146,7 @@ internal class DeployCatletSaga(
             await StartNewTask(new UpdateCatletNetworksCommand
             {
                 CatletId = Data.Data.CatletId,
-                CatletMetadataId = savedCatlet.MetadataId,
+                CatletMetadataId = Data.Data.MetadataId,
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
                     Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
                 ProjectId = Data.Data.ProjectId,
@@ -163,8 +163,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.CatletNetworksUpdated;
 
-            var catlet = await vmDataService.Get(Data.Data.CatletId)
-                .Map(o => o.IfNoneUnsafe((Catlet?)null));
+            var catlet = await vmDataService.Get(Data.Data.CatletId);
             if (catlet is null)
             {
                 await Fail($"The catlet {Data.Data.CatletId} was not found.");
@@ -246,8 +245,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.NetworksUpdated;
 
-            var catlet = await vmDataService.Get(Data.Data.CatletId)
-                .Map(o => o.IfNoneUnsafe((Catlet?)null));
+            var catlet = await vmDataService.Get(Data.Data.CatletId);
             if (catlet is null)
             {
                 await Fail($"The catlet {Data.Data.CatletId} was not found.");

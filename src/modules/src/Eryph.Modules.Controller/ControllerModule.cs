@@ -112,7 +112,7 @@ namespace Eryph.Modules.Controller
             container.RegisterConditional<IOperationMessaging, EryphRebusOperationMessaging>(Lifestyle.Scoped, _ => true);
             container.AddRebusOperationsHandlers<OperationManager, OperationTaskManager>();
 
-            container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
+            container.Register<ICatletDataService, CatletDataService>(Lifestyle.Scoped);
             container.Register<ICatletMetadataService, CatletMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
             container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);

@@ -5,7 +5,6 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
-using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 
@@ -23,11 +22,10 @@ internal class UpdateCatletStateCommandHandler(
     {
         await lockManager.AcquireVmLock(message.Command.VmId);
 
-        var catletResult = await vmDataService.Get(message.Command.CatletId);
-        if (catletResult.IsNone)
+        var catlet = await vmDataService.Get(message.Command.CatletId);
+        if (catlet is null)
             return;
 
-        var catlet = catletResult.ValueUnsafe();
         if (catlet.LastSeenState < message.Command.Timestamp)
         {
             catlet.UpTime = message.Command.Status is VmStatus.Stopped ? TimeSpan.Zero : message.Command.UpTime;
