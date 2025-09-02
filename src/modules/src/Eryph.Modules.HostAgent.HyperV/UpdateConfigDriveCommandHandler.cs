@@ -1,6 +1,7 @@
 ﻿using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
@@ -40,9 +41,15 @@ internal class UpdateConfigDriveCommandHandler(
             .ToEither()
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
             .ToAsync()
+        // We must redact the config after substituting the variables as the placeholder,
+        // which is used to replace secret values, is not a valid variable value for some
+        // variable types (e.g. boolean, number).
+        let redactedConfig = command.SecretDataHidden
+            ? CatletConfigRedactor.RedactSecrets(substitutedConfig)
+            : substitutedConfig
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfo,
-                substitutedConfig, command.CatletId, command.SecretDataHidden, currentStorageSettings)
+                redactedConfig, command.CatletId, command.SecretDataHidden, currentStorageSettings)
             .WriteTrace()
         select Unit.Default;
 }

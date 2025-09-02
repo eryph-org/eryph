@@ -34,7 +34,6 @@ internal class DeployCatletSaga(
     IBus bus,
     IIdGenerator<long> idGenerator,
     IInventoryLockManager lockManager,
-    IStateStore stateStore,
     IVirtualMachineDataService vmDataService,
     IVirtualMachineMetadataService metadataService)
     : OperationTaskWorkflowSaga<DeployCatletCommand, EryphSagaData<DeployCatletSagaData>>(workflow),
@@ -64,6 +63,9 @@ internal class DeployCatletSaga(
             {
                 CatletId = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,
+                // We can use the config without feeding the system variables
+                // as the create command only uses small subset of the config
+                // which is independent of the system variables.
                 Config = Data.Data.Config,
                 AgentName = Data.Data.AgentName,
                 StorageId = idGenerator.CreateId(),
@@ -87,7 +89,8 @@ internal class DeployCatletSaga(
         {
             CatletId = Data.Data.CatletId,
             CatletMetadataId = Data.Data.MetadataId,
-            Config = Data.Data.Config,
+            Config = CatletSystemDataFeeding.FeedSystemVariables(
+                Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
             ProjectId = Data.Data.ProjectId,
         });
     }
