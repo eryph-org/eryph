@@ -1,31 +1,23 @@
 ﻿using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
-using Eryph.Core.Genetics;
-using Eryph.Modules.Controller.Serializers;
-using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
-using LanguageExt;
-
-using static LanguageExt.Prelude;
-using DbCatletMetadata = Eryph.StateDb.Model.CatletMetadata;
+using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.Controller.DataServices;
 
-internal class VirtualMachineMetadataService(
-    IStateStoreRepository<DbCatletMetadata> repository)
-    : IVirtualMachineMetadataService
+internal class CatletMetadataService(
+    IStateStoreRepository<CatletMetadata> repository)
+    : ICatletMetadataService
 {
     public async Task<CatletMetadata?> GetMetadata(
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        // TODO use spec to force detached entity. The metadata should not be changed normally.
-        return await repository.GetByIdAsync(id, cancellationToken);
+        return await repository.GetBySpecAsync(
+            new CatletMetadataSpecs.GetByIdReadonly(id),
+            cancellationToken);
     }
 
     public async Task AddMetadata(

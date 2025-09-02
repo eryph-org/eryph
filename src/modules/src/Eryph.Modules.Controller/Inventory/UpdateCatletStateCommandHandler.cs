@@ -15,7 +15,7 @@ namespace Eryph.Modules.Controller.Inventory;
 internal class UpdateCatletStateCommandHandler(
     ITaskMessaging messaging,
     IInventoryLockManager lockManager,
-    IVirtualMachineDataService vmDataService,
+    ICatletDataService vmDataService,
     ILogger logger)
     : IHandleMessages<OperationTask<UpdateCatletStateCommand>>
 {

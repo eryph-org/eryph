@@ -13,7 +13,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class StartCatletSaga(IWorkflow workflow,
-    IVirtualMachineDataService vmDataService) :
+    ICatletDataService vmDataService) :
     OperationTaskWorkflowSaga<StartCatletCommand, EryphSagaData<StartCatletSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<StartCatletVMCommand>>,
     IHandleMessages<OperationTaskStatusEvent<UpdateCatletStateCommand>>

@@ -12,15 +12,15 @@ using Rebus.Retry.FailFast;
 
 namespace Eryph.Modules.Controller.DataServices
 {
-    internal class VirtualMachineDataService : IVirtualMachineDataService
+    internal class CatletDataService : ICatletDataService
     {
-        private readonly IVirtualMachineMetadataService _metadataService;
+        private readonly ICatletMetadataService _metadataService;
         private readonly IStateStoreRepository<Catlet> _repository;
         private readonly IStateStore _stateStore;
 
-        public VirtualMachineDataService(
+        public CatletDataService(
             IStateStoreRepository<Catlet> repository,
-            IVirtualMachineMetadataService metadataService,
+            ICatletMetadataService metadataService,
             IStateStore stateStore)
         {
             _repository = repository;

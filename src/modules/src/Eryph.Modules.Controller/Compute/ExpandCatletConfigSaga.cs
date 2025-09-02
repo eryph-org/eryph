@@ -23,8 +23,8 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class ExpandCatletConfigSaga(
     IWorkflow workflow,
-    IVirtualMachineDataService vmDataService,
-    IVirtualMachineMetadataService metadataService)
+    ICatletDataService vmDataService,
+    ICatletMetadataService metadataService)
     : OperationTaskWorkflowSaga<ExpandCatletConfigCommand, EryphSagaData<ExpandCatletConfigSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>
 {

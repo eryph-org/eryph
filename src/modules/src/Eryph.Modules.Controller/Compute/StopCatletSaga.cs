@@ -16,7 +16,7 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class StopCatletSaga(
     IWorkflow workflow,
-    IVirtualMachineDataService vmDataService)
+    ICatletDataService vmDataService)
     : OperationTaskWorkflowSaga<StopCatletCommand, EryphSagaData<StopCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ShutdownVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<StopVMCommand>>,

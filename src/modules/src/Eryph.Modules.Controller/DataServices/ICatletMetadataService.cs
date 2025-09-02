@@ -5,7 +5,7 @@ using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.Controller.DataServices;
 
-public interface IVirtualMachineMetadataService
+public interface ICatletMetadataService
 {
     Task<CatletMetadata?> GetMetadata(
         Guid id,

@@ -67,7 +67,7 @@ public abstract class SeederTestBase : StateDbTestBase
         container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
         container.Register<IDefaultNetworkConfigRealizer, DefaultNetworkConfigRealizer>(Lifestyle.Scoped);
         container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
-        container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
+        container.Register<ICatletMetadataService, CatletMetadataService>(Lifestyle.Scoped);
 
         var builder = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>

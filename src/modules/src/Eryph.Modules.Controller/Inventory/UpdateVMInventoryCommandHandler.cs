@@ -14,10 +14,10 @@ namespace Eryph.Modules.Controller.Inventory;
 [UsedImplicitly]
 internal class UpdateVMInventoryCommandHandler(
     IInventoryLockManager lockManager,
-    IVirtualMachineMetadataService metadataService,
+    ICatletMetadataService metadataService,
     IOperationDispatcher dispatcher,
     IMessageContext messageContext,
-    IVirtualMachineDataService vmDataService,
+    ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
     ILogger logger)
