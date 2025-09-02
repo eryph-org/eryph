@@ -77,9 +77,10 @@ public sealed class ValidateScopePermissionsHandler : IOpenIddictServerHandler<V
 
         // Get the permissions associated with the application
         var applicationPermissions = await _applicationManager.GetPermissionsAsync(application, context.CancellationToken);
+        var scopePrefixLength = OpenIddictConstants.Permissions.Prefixes.Scope.Length;
         var applicationScopes = applicationPermissions
             .Where(permission => permission.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.Ordinal))
-            .Select(permission => permission[OpenIddictConstants.Permissions.Prefixes.Scope.Length..])
+            .Select(permission => permission.AsSpan().Slice(scopePrefixLength).ToString())
             .ToImmutableArray();
 
         _logger.LogDebug("Client '{ClientId}' has the following assigned scopes: {AssignedScopes}", 
