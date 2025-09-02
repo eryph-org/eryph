@@ -220,8 +220,8 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         // Find scopes that include the required scope in their implied scopes
         foreach (var scope in allIdentityScopes)
         {
-            var impliedScopes = ScopeHierarchy.GetImpliedScopes(scope);
-            if (impliedScopes.Contains(requiredScope) && !allowedScopes.Contains(scope))
+            var impliedScopesSet = new HashSet<string>(impliedScopes);
+            if (impliedScopesSet.Contains(requiredScope) && !allowedScopes.Contains(scope))
             {
                 allowedScopes.Add(scope);
             }
