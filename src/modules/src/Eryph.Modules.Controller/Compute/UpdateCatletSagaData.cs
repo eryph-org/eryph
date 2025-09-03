@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
-using LanguageExt;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -12,8 +10,6 @@ public class UpdateCatletSagaData
     public UpdateCatletSagaState State { get; set; }
 
     public CatletConfig? Config { get; set; }
-
-    public CatletConfig? BuiltConfig { get; set; }
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash>? ResolvedGenes { get; set; }
 
