@@ -14,7 +14,8 @@ public static class CatletConfigBuilder
 {
     public static Eff<CatletConfig> BuildConfig(
         Catlet catlet,
-        Seq<CatletNetworkPort> networkPorts) =>
+        Seq<CatletNetworkPort> networkPorts,
+        CatletConfig originalConfig) =>
         from _ in SuccessEff(unit)
         let adaptersMap = catlet.NetworkAdapters.ToSeq()
             .Filter(a => notEmpty(a.MacAddress))
@@ -24,10 +25,15 @@ public static class CatletConfigBuilder
         {
             ConfigType = CatletConfigType.Instance,
             Name = catlet.Name,
+            Parent = originalConfig.Parent,
             Project = catlet.Project.Name,
             Environment = catlet.Environment,
             Store = catlet.DataStore,
             Location = catlet.StorageIdentifier,
+            // Hyper-V can report the actual hostname which is configured inside the VM,
+            // but we do not inventory that information currently. Hence, we just
+            // use the hostname at deploy time.
+            Hostname = originalConfig.Hostname,
             Cpu = new CatletCpuConfig
             {
                 Count = catlet.CpuCount,

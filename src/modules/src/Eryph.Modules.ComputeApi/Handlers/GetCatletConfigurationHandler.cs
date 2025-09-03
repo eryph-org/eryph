@@ -70,7 +70,7 @@ internal class GetCatletConfigurationHandler(
             throw new InvalidOperationException(
                 $"The metadata for catlet {catletIdResult.Id} is missing or incomplete.");
 
-        var config = CatletConfigBuilder.BuildConfig(catlet, networkPorts.ToSeq().Strict())
+        var config = CatletConfigBuilder.BuildConfig(catlet, networkPorts.ToSeq().Strict(), metadata.Metadata.BuiltConfig)
             .Run().ThrowIfFail();
 
         // Variables and fodder cannot change after the first deployment. Hence, we
