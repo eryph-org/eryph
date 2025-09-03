@@ -12,8 +12,8 @@
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="2.0.0" />
     <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.15" />
     <PackageReference Include="Dbosoft.OVN.Windows" Version="1.0.0-rc.15" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.1-PullRequest0105.4" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.1-PullRequest0105.4" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.1-PullRequest0105.5" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.1-PullRequest0105.5" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
