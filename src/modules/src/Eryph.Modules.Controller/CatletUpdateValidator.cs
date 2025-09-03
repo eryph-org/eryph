@@ -24,12 +24,11 @@ public static class CatletUpdateValidator
         | ValidatePropertyValue<CatletConfig, DataStoreName>(updateConfig, c => c.Store, catlet.DataStore)
         | ValidatePropertyValue<CatletConfig, StorageIdentifier>(updateConfig, c => c.Location, catlet.StorageIdentifier)
         | ValidatePropertyValue<CatletConfig, GeneSetIdentifier>(updateConfig, c => c.Parent, originalConfig.Parent)
-        // TODO validate actual host name
-        | ValidateProperty(updateConfig, c => c.Hostname, v => ValidateHostname(v, originalConfig.Hostname), required: true);
-        
-        // TODO validate actual host name
-        // TODO Validate fodder and variables immutable
-        // TODO Validate no new gene pool drives added
+        | ValidateProperty(updateConfig, c => c.Hostname, v => ValidateHostname(v, originalConfig.Hostname), required: true)
+        | ValidateProperty(updateConfig, c => c.Fodder, _ => Fail<Error, Unit>(Error.New("The value is not allowed.")))
+        | ValidateProperty(updateConfig, c => c.Variables, _ => Fail<Error, Unit>(Error.New("The value is not allowed.")));
+
+    // TODO Validate no new gene pool drives added
 
     private static Validation<Error, Unit> ValidateConfigType(CatletConfigType configType) =>
         guard(configType is CatletConfigType.Instance,
