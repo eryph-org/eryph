@@ -6,7 +6,7 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
-using Newtonsoft.Json;
+
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 

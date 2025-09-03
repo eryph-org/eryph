@@ -104,6 +104,7 @@ internal class UpdateCatletSaga(
             {
                 TenantId = Data.Data.TenantId,
                 ProjectId = Data.Data.ProjectId,
+                CatletId = Data.Data.CatletId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.Config,
