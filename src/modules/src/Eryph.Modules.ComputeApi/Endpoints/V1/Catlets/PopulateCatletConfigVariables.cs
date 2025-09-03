@@ -14,7 +14,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.Specifications;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +26,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class PopulateCatletConfigVariables(
     ICreateEntityRequestHandler<Catlet> operationHandler,
-    IReadonlyStateStoreRepository<Catlet> repository,
     IUserRightsProvider userRightsProvider)
     : NewOperationRequestEndpoint<PopulateCatletConfigVariablesRequest, Catlet>(
         operationHandler)
@@ -81,18 +79,6 @@ public class PopulateCatletConfigVariables(
             return Problem(
                 statusCode: StatusCodes.Status403Forbidden,
                 detail: "You do not have write access to the given project.");
-
-        var catletName = string.IsNullOrWhiteSpace(config.Name)
-            ? EryphConstants.DefaultCatletName
-            : config.Name;
-        var existingCatlet = await repository.GetBySpecAsync(
-            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value, environmentName.Value),
-            cancellationToken);
-
-        if (existingCatlet != null)
-            return Problem(
-                statusCode: StatusCodes.Status409Conflict,
-                detail: $"A catlet with the name '{catletName}' already exists in the project '{projectName.Value}'. Catlet names must be unique within a project.");
 
         return await base.HandleAsync(request, cancellationToken);
     }
