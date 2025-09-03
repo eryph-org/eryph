@@ -19,8 +19,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands
 
         public Guid MetadataId { get; set; }
 
-        public long NewStorageId { get; set; }
-
         public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 
         public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }

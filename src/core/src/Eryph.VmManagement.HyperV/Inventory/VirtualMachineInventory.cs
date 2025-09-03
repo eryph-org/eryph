@@ -54,8 +54,7 @@ public class VirtualMachineInventory(
             Frozen = vmStorageSettings.Frozen,
             VMPath = vmStorageSettings.VMPath,
             StorageIdentifier = vmStorageSettings.StorageIdentifier.IfNone(""),
-            ProjectId = vmStorageSettings.StorageNames.ProjectId.Map(id => (Guid?)id)
-                .IfNoneUnsafe((Guid?)null),
+            ProjectId = vmStorageSettings.StorageNames.ProjectId.ToNullable(),
             ProjectName = vmStorageSettings.StorageNames.ProjectName.IfNone(""),
             DataStore = vmStorageSettings.StorageNames.DataStoreName.IfNone(""),
             Environment = vmStorageSettings.StorageNames.EnvironmentName.IfNone(""),

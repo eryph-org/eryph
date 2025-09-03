@@ -63,15 +63,13 @@ internal class CreateCatletSaga(
                 .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, response.BuiltConfig.Project!));
             if (project is null)
             {
-                await Fail($"The project '{Data.Data.BuiltConfig.Project}' does not exist");
+                await Fail($"The project '{response.BuiltConfig.Project}' does not exist");
                 return;
             }
 
             Data.Data.ProjectId = project.Id;
-
-            var storageIdentifier = storageIdentifierGenerator.Generate();
-            Data.Data.BuiltConfig = GenerateMacAddresses(ApplyStorageIdentifier(
-                response.BuiltConfig, storageIdentifier));
+            Data.Data.BuiltConfig = CatletConfigInstantiator.Instantiate(
+                response.BuiltConfig, storageIdentifierGenerator.Generate());
 
             await StartNewTask(new ValidateCatletDeploymentCommand
             {
@@ -130,40 +128,4 @@ internal class CreateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<DeployCatletCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
-
-    private CatletConfig ApplyStorageIdentifier(
-        CatletConfig catletConfig,
-        string storageIdentifier) =>
-        catletConfig.CloneWith(c =>
-        {
-            c.Location = Optional(c.Location).Filter(notEmpty).IfNone(storageIdentifier);
-            c.Drives = c.Drives.ToSeq()
-                .Map(d => ApplyStorageIdentifier(d, c.Location))
-                .ToArray();
-        });
-
-    private CatletDriveConfig ApplyStorageIdentifier(
-        CatletDriveConfig driveConfig,
-        string storageIdentifier) =>
-        driveConfig.CloneWith(d =>
-        {
-            d.Location = Optional(d.Location).Filter(notEmpty).IfNone(storageIdentifier);
-        });
-
-    private CatletConfig GenerateMacAddresses(
-        CatletConfig catletConfig) =>
-        catletConfig.CloneWith(c =>
-        {
-            c.NetworkAdapters = c.NetworkAdapters.ToSeq()
-                .Map(GenerateMacAddress)
-                .ToArray();
-        });
-
-    private CatletNetworkAdapterConfig GenerateMacAddress(
-        CatletNetworkAdapterConfig adapterConfig) =>
-        adapterConfig.CloneWith(a =>
-        {
-            a.MacAddress = Optional(a.MacAddress).Filter(notEmpty)
-                .IfNone(() => MacAddressGenerator.Generate().Value);
-        });
 }

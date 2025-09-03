@@ -69,12 +69,13 @@ namespace Eryph.VmManagement.Converging
             from configs in vmNetworkAdapters
                 .Map(GenerateNetworkData)
                 .SequenceSerial()
-            select new NetworkData(configs);
+            select new NetworkData(configs.ToArray());
 
         private EitherAsync<Error, object> GenerateNetworkData(
             TypedPsObject<VMNetworkAdapter> adapter) =>
             from macAddress in EryphMacAddress.NewEither(adapter.Value.MacAddress).ToAsync()
-            select new
+            // We must cast to object as LanguageExt does handle the anonymous type correctly
+            select (object)new
             {
                 type = "physical",
                 name = adapter.Value.Name,

@@ -32,7 +32,6 @@ namespace Eryph.Modules.Controller.Compute;
 internal class DeployCatletSaga(
     IWorkflow workflow,
     IBus bus,
-    IIdGenerator<long> idGenerator,
     IInventoryLockManager lockManager,
     ICatletDataService vmDataService,
     ICatletMetadataService metadataService)
@@ -68,7 +67,6 @@ internal class DeployCatletSaga(
                 // which is independent of the system variables.
                 Config = Data.Data.Config,
                 AgentName = Data.Data.AgentName,
-                StorageId = idGenerator.CreateId(),
             });
             return;
         }
@@ -178,7 +176,6 @@ internal class DeployCatletSaga(
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
                     Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
                 AgentName = Data.Data.AgentName,
-                NewStorageId = idGenerator.CreateId(),
                 MachineNetworkSettings = r.NetworkSettings,
                 ResolvedGenes = Data.Data.ResolvedGenes.Keys.ToList(),
             });

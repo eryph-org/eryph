@@ -33,8 +33,7 @@ namespace Eryph.VmManagement.Storage
             from settings in FromStorageNames(storageNames.Names, storageNames.StorageIdentifier, vm.Value.Path, vmHostAgentConfig)
                 .BiBind(
                     Right: RightAsync<Error, VMStorageSettings>,
-                    Left:
-                    _ => RightAsync<Error, VMStorageSettings>(new VMStorageSettings
+                    Left: _ => RightAsync<Error, VMStorageSettings>(new VMStorageSettings
                     {
                         StorageNames = storageNames.Names,
                         StorageIdentifier = storageNames.StorageIdentifier,
