@@ -1,8 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch",
-      "WebFetch(domain:github.com)"
+      "Bash(dotnet test:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet run:*)"
     ],
     "deny": [],
     "ask": []
