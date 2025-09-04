@@ -36,13 +36,7 @@ public sealed class ValidateScopePermissionsHandler(
             throw new ArgumentNullException(nameof(context));
 
         // Get and normalize requested scopes - filter out null/empty/whitespace, trim, and deduplicate
-        var rawScopes = context.Request.GetScopes();
-        if (rawScopes == null)
-        {
-            return;
-        }
-
-        var requestedScopes = rawScopes
+        var requestedScopes = context.Request.GetScopes()
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Select(s => s.Trim())
             .ToHashSet(StringComparer.Ordinal);
