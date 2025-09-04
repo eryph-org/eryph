@@ -72,7 +72,7 @@ public class ScopeHierarchyTests
         var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.CatletsWrite);
 
         // Assert
-        result.Should().Contain([
+        result.Should().BeEquivalentTo([
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl
@@ -86,7 +86,7 @@ public class ScopeHierarchyTests
         var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.CatletsControl);
 
         // Assert
-        result.Should().Contain([
+        result.Should().BeEquivalentTo([
             EryphConstants.Authorization.Scopes.CatletsControl,
             EryphConstants.Authorization.Scopes.CatletsRead
         ]);
@@ -407,7 +407,7 @@ public class ScopeHierarchyTests
         var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.CatletsRead);
 
         // Assert
-        result.Should().Contain([
+        result.Should().BeEquivalentTo([
             EryphConstants.Authorization.Scopes.CatletsRead,      // The scope itself
             EryphConstants.Authorization.Scopes.CatletsWrite,     // Direct parent
             EryphConstants.Authorization.Scopes.CatletsControl,   // Another parent  
@@ -423,7 +423,7 @@ public class ScopeHierarchyTests
         var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.IdentityClientsRead);
 
         // Assert
-        result.Should().Contain([
+        result.Should().BeEquivalentTo([
             EryphConstants.Authorization.Scopes.IdentityClientsRead,   // The scope itself
             EryphConstants.Authorization.Scopes.IdentityClientsWrite,  // Direct parent
             EryphConstants.Authorization.Scopes.IdentityRead,          // Higher level parent
