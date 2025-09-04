@@ -17,16 +17,14 @@ namespace Eryph.Modules.Identity.Test.Events.Validations;
 public class ValidateScopePermissionsHandlerTests
 {
     private readonly Mock<IOpenIddictApplicationManager> _mockApplicationManager;
-    private readonly Mock<IOpenIddictScopeManager> _mockScopeManager;
     private readonly Mock<ILogger<ValidateScopePermissionsHandler>> _mockLogger;
     private readonly ValidateScopePermissionsHandler _handler;
 
     public ValidateScopePermissionsHandlerTests()
     {
         _mockApplicationManager = new Mock<IOpenIddictApplicationManager>();
-        _mockScopeManager = new Mock<IOpenIddictScopeManager>();
         _mockLogger = new Mock<ILogger<ValidateScopePermissionsHandler>>();
-        _handler = new ValidateScopePermissionsHandler(_mockApplicationManager.Object, _mockScopeManager.Object, _mockLogger.Object);
+        _handler = new ValidateScopePermissionsHandler(_mockApplicationManager.Object, _mockLogger.Object);
     }
 
     [Fact]
@@ -34,15 +32,7 @@ public class ValidateScopePermissionsHandlerTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new ValidateScopePermissionsHandler(null!, _mockScopeManager.Object, _mockLogger.Object));
-    }
-
-    [Fact]
-    public void Constructor_WithNullScopeManager_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new ValidateScopePermissionsHandler(_mockApplicationManager.Object, null!, _mockLogger.Object));
+            new ValidateScopePermissionsHandler(null!, _mockLogger.Object));
     }
 
     [Fact]
@@ -50,7 +40,7 @@ public class ValidateScopePermissionsHandlerTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new ValidateScopePermissionsHandler(_mockApplicationManager.Object, _mockScopeManager.Object, null!));
+            new ValidateScopePermissionsHandler(_mockApplicationManager.Object, null!));
     }
 
     [Fact]
@@ -79,11 +69,6 @@ public class ValidateScopePermissionsHandlerTests
     {
         // Arrange
         var context = CreateContext("non-existent-client", [EryphConstants.Authorization.Scopes.CatletsRead]);
-        
-        // Setup scope manager to return that scope exists (so we get to client validation)
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(EryphConstants.Authorization.Scopes.CatletsRead, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
         
         _mockApplicationManager
             .Setup(x => x.FindByClientIdAsync("non-existent-client", It.IsAny<CancellationToken>()))
@@ -117,9 +102,6 @@ public class ValidateScopePermissionsHandlerTests
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
         
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(EryphConstants.Authorization.Scopes.CatletsRead, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
 
         // Act
         await _handler.HandleAsync(context);
@@ -147,9 +129,6 @@ public class ValidateScopePermissionsHandlerTests
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
         
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(EryphConstants.Authorization.Scopes.CatletsRead, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
 
         // Act
         await _handler.HandleAsync(context);
@@ -183,13 +162,6 @@ public class ValidateScopePermissionsHandlerTests
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
         
-        // Mock all requested scopes exist
-        foreach (var scope in requestedScopes)
-        {
-            _mockScopeManager
-                .Setup(x => x.FindByNameAsync(scope, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Mock<object>().Object);
-        }
 
         // Act
         await _handler.HandleAsync(context);
@@ -216,11 +188,6 @@ public class ValidateScopePermissionsHandlerTests
         _mockApplicationManager
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
-        
-        // Mock scope exists for the invalid scope test (scope exists but permission is missing)
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(EryphConstants.Authorization.Scopes.GenesRead, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
 
         // Act
         await _handler.HandleAsync(context);
@@ -254,13 +221,6 @@ public class ValidateScopePermissionsHandlerTests
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
         
-        // Mock all requested scopes exist
-        foreach (var scope in requestedScopes)
-        {
-            _mockScopeManager
-                .Setup(x => x.FindByNameAsync(scope, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Mock<object>().Object);
-        }
 
         // Act
         await _handler.HandleAsync(context);
@@ -294,13 +254,6 @@ public class ValidateScopePermissionsHandlerTests
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
         
-        // Mock all requested scopes exist
-        foreach (var scope in requestedScopes)
-        {
-            _mockScopeManager
-                .Setup(x => x.FindByNameAsync(scope, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Mock<object>().Object);
-        }
 
         // Act
         await _handler.HandleAsync(context);
@@ -333,9 +286,6 @@ public class ValidateScopePermissionsHandlerTests
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
         
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(EryphConstants.Authorization.Scopes.CatletsRead, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
 
         // Act
         await _handler.HandleAsync(context);
@@ -347,6 +297,7 @@ public class ValidateScopePermissionsHandlerTests
     [Theory]
     [InlineData("compute:catlets:write", "compute:catlets:read")]
     [InlineData("compute:catlets:write", "compute:catlets:control")]
+    [InlineData("compute:catlets:control", "compute:catlets:read")]
     [InlineData("compute:genes:write", "compute:genes:read")]
     [InlineData("compute:projects:write", "compute:projects:read")]
     [InlineData("identity:write", "identity:read")]
@@ -369,9 +320,6 @@ public class ValidateScopePermissionsHandlerTests
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
 
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(requestedScope, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
 
         // Act
         await _handler.HandleAsync(context);
@@ -398,15 +346,6 @@ public class ValidateScopePermissionsHandlerTests
         _mockApplicationManager
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
-        
-        // Mock scope existence for built-in scopes
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(OpenIddictConstants.Scopes.OpenId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
-        
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync(OpenIddictConstants.Scopes.OfflineAccess, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<object>().Object);
 
         // Act
         await _handler.HandleAsync(context);
@@ -416,15 +355,13 @@ public class ValidateScopePermissionsHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WithNonExistentScope_RejectsWithInvalidScope()
+    public async Task HandleAsync_WithWhitespaceInScopes_NormalizesAndSucceeds()
     {
         // Arrange
         var clientId = "test-client";
-        var requestedScopes = new[] { "non-existent-scope" };
-        var applicationPermissions = new[] { $"{OpenIddictConstants.Permissions.Prefixes.Scope}{EryphConstants.Authorization.Scopes.CatletsWrite}" };
-        
-        var context = CreateContext(clientId, requestedScopes);
+        var context = CreateContextWithRawScopes(clientId, "  compute:catlets:read   compute:catlets:read  "); // Whitespace + duplicate
         var mockApplication = new Mock<object>();
+        var applicationPermissions = new[] { $"{OpenIddictConstants.Permissions.Prefixes.Scope}{EryphConstants.Authorization.Scopes.CatletsWrite}" };
         
         _mockApplicationManager
             .Setup(x => x.FindByClientIdAsync(clientId, It.IsAny<CancellationToken>()))
@@ -433,19 +370,42 @@ public class ValidateScopePermissionsHandlerTests
         _mockApplicationManager
             .Setup(x => x.GetPermissionsAsync(mockApplication.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync([..applicationPermissions]);
-        
-        // Mock that the scope doesn't exist
-        _mockScopeManager
-            .Setup(x => x.FindByNameAsync("non-existent-scope", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((object)null);
 
         // Act
         await _handler.HandleAsync(context);
 
         // Assert
-        context.IsRejected.Should().BeTrue();
-        context.Error.Should().Be(OpenIddictConstants.Errors.InvalidScope);
-        context.ErrorDescription.Should().Be("The specified scope is not supported.");
+        context.IsRejected.Should().BeFalse("Handler should normalize scopes and remove duplicates");
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithEmptyScopes_SkipsValidation()
+    {
+        // Arrange
+        var clientId = "test-client";
+        var context = CreateContextWithRawScopes(clientId, "   \t  "); // Only whitespace
+
+        // Act
+        await _handler.HandleAsync(context);
+
+        // Assert
+        context.IsRejected.Should().BeFalse();
+        _mockApplicationManager.Verify(x => x.FindByClientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithNullScopes_SkipsValidation()
+    {
+        // Arrange
+        var clientId = "test-client";
+        var context = CreateContextWithRawScopes(clientId, null); // Null scopes
+
+        // Act
+        await _handler.HandleAsync(context);
+
+        // Assert
+        context.IsRejected.Should().BeFalse();
+        _mockApplicationManager.Verify(x => x.FindByClientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static ValidateTokenRequestContext CreateContext(string clientId, IEnumerable<string> requestedScopes)
@@ -454,6 +414,27 @@ public class ValidateScopePermissionsHandlerTests
         var request = new OpenIddictRequest
         {
             Scope = string.Join(" ", requestedScopes),
+            ClientId = clientId
+        };
+
+        // Create a real transaction using parameterless constructor
+        var transaction = new OpenIddictServerTransaction
+        {
+            Request = request
+        };
+
+        // Create the real context 
+        var context = new ValidateTokenRequestContext(transaction);
+        
+        return context;
+    }
+
+    private static ValidateTokenRequestContext CreateContextWithRawScopes(string clientId, string scopeString)
+    {
+        // Create a real request with raw scope string
+        var request = new OpenIddictRequest
+        {
+            Scope = scopeString,
             ClientId = clientId
         };
 

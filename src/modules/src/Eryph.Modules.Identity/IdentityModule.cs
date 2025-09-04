@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Asp.Versioning;
 using Dbosoft.Hosuto.Modules;
@@ -180,15 +179,8 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 
     private static void ConfigureIdentityScopes(AuthorizationOptions options, string authority)
     {
-        // Define identity API scopes that need policies
-        var identityApiScopes = new[]
-        {
-            EryphConstants.Authorization.Scopes.IdentityClientsRead,
-            EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-        };
-
         // Create policies for each scope using hierarchy-aware scope resolution
-        foreach (var scope in identityApiScopes)
+        foreach (var scope in ScopeDefinitions.IdentityApiScopes)
         {
             CreateIdentityScopePolicy(options, authority, scope);
         }

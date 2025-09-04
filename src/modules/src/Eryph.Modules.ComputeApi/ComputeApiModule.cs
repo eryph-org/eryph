@@ -58,20 +58,8 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
 
     public static void ConfigureScopes(AuthorizationOptions options, string authority)
     {
-        // Define compute API scopes that need policies
-        var computeApiScopes = new[]
-        {
-            EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsWrite,
-            EryphConstants.Authorization.Scopes.CatletsControl,
-            EryphConstants.Authorization.Scopes.GenesRead,
-            EryphConstants.Authorization.Scopes.GenesWrite,
-            EryphConstants.Authorization.Scopes.ProjectsRead,
-            EryphConstants.Authorization.Scopes.ProjectsWrite,
-        };
-
         // Create policies for each scope using hierarchy-aware scope resolution
-        foreach (var scope in computeApiScopes)
+        foreach (var scope in ScopeDefinitions.ComputeApiScopes)
         {
             CreateScopePolicy(options, authority, scope);
         }

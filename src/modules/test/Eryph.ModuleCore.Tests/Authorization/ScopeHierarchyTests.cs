@@ -6,6 +6,34 @@ namespace Eryph.ModuleCore.Tests.Authorization;
 
 public class ScopeHierarchyTests
 {
+    // Test-only scope lists including parent scopes that are only used for hierarchy testing
+    private static readonly string[] AllComputeScopes =
+    [
+        EryphConstants.Authorization.Scopes.ComputeRead,
+        EryphConstants.Authorization.Scopes.ComputeWrite,
+        EryphConstants.Authorization.Scopes.CatletsRead,
+        EryphConstants.Authorization.Scopes.CatletsWrite,
+        EryphConstants.Authorization.Scopes.CatletsControl,
+        EryphConstants.Authorization.Scopes.GenesRead,
+        EryphConstants.Authorization.Scopes.GenesWrite,
+        EryphConstants.Authorization.Scopes.ProjectsRead,
+        EryphConstants.Authorization.Scopes.ProjectsWrite
+    ];
+
+    private static readonly string[] AllIdentityScopes =
+    [
+        EryphConstants.Authorization.Scopes.IdentityRead,
+        EryphConstants.Authorization.Scopes.IdentityWrite,
+        EryphConstants.Authorization.Scopes.IdentityClientsRead,
+        EryphConstants.Authorization.Scopes.IdentityClientsWrite
+    ];
+
+    private static readonly string[] AllScopes =
+    [
+        .. AllComputeScopes,
+        .. AllIdentityScopes
+    ];
+
     [Fact]
     public void GetImpliedScopes_WithNullScope_ReturnsEmpty()
     {
@@ -52,10 +80,24 @@ public class ScopeHierarchyTests
     }
 
     [Fact]
+    public void GetImpliedScopes_WithCatletsControl_ReturnsCatletsRead()
+    {
+        // Act
+        var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.CatletsControl);
+
+        // Assert
+        result.Should().Contain([
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.CatletsRead
+        ]);
+        result.Should().HaveCount(2);
+    }
+
+    [Fact]
     public void GetImpliedScopes_WithComputeWrite_ReturnsAllComputeScopes()
     {
         // Act
-        var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.ComputeWrite).ToArray();
+        var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.ComputeWrite);
 
         // Assert
         result.Should().Contain(EryphConstants.Authorization.Scopes.ComputeWrite);
@@ -73,7 +115,7 @@ public class ScopeHierarchyTests
     public void GetImpliedScopes_WithIdentityWrite_ReturnsAllIdentityScopes()
     {
         // Act
-        var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.IdentityWrite).ToArray();
+        var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.IdentityWrite);
 
         // Assert
         result.Should().Contain(EryphConstants.Authorization.Scopes.IdentityWrite);
@@ -174,6 +216,19 @@ public class ScopeHierarchyTests
 
         // Assert
         result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsScopeAllowed_WithCatletsControl_AllowsCatletsRead()
+    {
+        // Arrange - User has catlets:control scope
+        var grantedScopes = new[] { EryphConstants.Authorization.Scopes.CatletsControl };
+
+        // Act - Request catlets:read scope
+        var result = ScopeHierarchy.IsScopeAllowed(EryphConstants.Authorization.Scopes.CatletsRead, grantedScopes);
+
+        // Assert
+        result.Should().BeTrue("CatletsControl should grant CatletsRead access");
     }
 
     [Fact]
@@ -298,6 +353,7 @@ public class ScopeHierarchyTests
 
     [Theory]
     [InlineData("compute:catlets:write", "compute:catlets:read")]
+    [InlineData("compute:catlets:control", "compute:catlets:read")]
     [InlineData("compute:genes:write", "compute:genes:read")]
     [InlineData("compute:projects:write", "compute:projects:read")]
     [InlineData("identity:clients:write", "identity:clients:read")]
@@ -314,37 +370,116 @@ public class ScopeHierarchyTests
     }
 
     [Fact]
-    public void ScopeHierarchy_ShouldBeConsistent_WithEryphConstants()
+    public void GetGrantingScopes_WithNullScope_ReturnsEmpty()
     {
-        // This test ensures our hierarchy is consistent with the defined scopes in EryphConstants
+        // Act
+        var result = ScopeHierarchy.GetGrantingScopes(null!);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetGrantingScopes_WithEmptyScope_ReturnsEmpty()
+    {
+        // Act
+        var result = ScopeHierarchy.GetGrantingScopes("");
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetGrantingScopes_WithBasicScope_ReturnsOnlyItself()
+    {
+        // Act
+        var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.ComputeWrite);
+
+        // Assert
+        result.Should().ContainSingle()
+            .Which.Should().Be(EryphConstants.Authorization.Scopes.ComputeWrite);
+    }
+
+    [Fact]
+    public void GetGrantingScopes_WithCatletsRead_ReturnsAllGrantingScopes()
+    {
+        // Act
+        var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.CatletsRead);
+
+        // Assert
+        result.Should().Contain([
+            EryphConstants.Authorization.Scopes.CatletsRead,      // The scope itself
+            EryphConstants.Authorization.Scopes.CatletsWrite,     // Direct parent
+            EryphConstants.Authorization.Scopes.CatletsControl,   // Another parent  
+            EryphConstants.Authorization.Scopes.ComputeWrite,     // Higher level parent
+            EryphConstants.Authorization.Scopes.ComputeRead       // Higher level parent
+        ]);
+    }
+
+    [Fact]
+    public void GetGrantingScopes_WithIdentityClientsRead_ReturnsAllGrantingScopes()
+    {
+        // Act
+        var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.IdentityClientsRead);
+
+        // Assert
+        result.Should().Contain([
+            EryphConstants.Authorization.Scopes.IdentityClientsRead,   // The scope itself
+            EryphConstants.Authorization.Scopes.IdentityClientsWrite,  // Direct parent
+            EryphConstants.Authorization.Scopes.IdentityRead,          // Higher level parent
+            EryphConstants.Authorization.Scopes.IdentityWrite          // Highest level parent
+        ]);
+    }
+
+    [Fact]
+    public void ScopeHierarchy_ShouldBeConsistent_WithScopeDefinitions()
+    {
+        // This test ensures our hierarchy is consistent with the centralized scope definitions
         
-        // Test that all compute scopes are properly defined
-        var computeScopes = new[]
-        {
-            EryphConstants.Authorization.Scopes.ComputeRead,
-            EryphConstants.Authorization.Scopes.ComputeWrite,
-            EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsWrite,
-            EryphConstants.Authorization.Scopes.CatletsControl,
-            EryphConstants.Authorization.Scopes.GenesRead,
-            EryphConstants.Authorization.Scopes.GenesWrite,
-            EryphConstants.Authorization.Scopes.ProjectsRead,
-            EryphConstants.Authorization.Scopes.ProjectsWrite
-        };
-
-        // Test that all identity scopes are properly defined
-        var identityScopes = new[]
-        {
-            EryphConstants.Authorization.Scopes.IdentityRead,
-            EryphConstants.Authorization.Scopes.IdentityWrite,
-            EryphConstants.Authorization.Scopes.IdentityClientsRead,
-            EryphConstants.Authorization.Scopes.IdentityClientsWrite
-        };
-
-        // Act & Assert - All scopes should be defined
-        foreach (var scope in computeScopes.Concat(identityScopes))
+        // Act & Assert - All scopes should be defined and not null/empty
+        foreach (var scope in AllScopes)
         {
             scope.Should().NotBeNullOrWhiteSpace($"Scope {scope} should be defined");
+        }
+
+        // Verify that scope definitions contain expected counts
+        ScopeDefinitions.ComputeApiScopes.Should().HaveCount(7, "ComputeApiScopes should have 7 scopes");
+        ScopeDefinitions.IdentityApiScopes.Should().HaveCount(2, "IdentityApiScopes should have 2 scopes");
+        AllComputeScopes.Should().HaveCount(9, "AllComputeScopes should have 9 scopes");
+        AllIdentityScopes.Should().HaveCount(4, "AllIdentityScopes should have 4 scopes");
+        AllScopes.Should().HaveCount(13, "AllScopes should have 13 total scopes");
+    }
+
+    [Fact]
+    public void ScopeDefinitions_ShouldHaveNoDuplicates()
+    {
+        // Act & Assert - All scope collections should have no duplicates
+        ScopeDefinitions.ComputeApiScopes.Should().OnlyHaveUniqueItems("ComputeApiScopes should have no duplicates");
+        ScopeDefinitions.IdentityApiScopes.Should().OnlyHaveUniqueItems("IdentityApiScopes should have no duplicates");
+        AllComputeScopes.Should().OnlyHaveUniqueItems("AllComputeScopes should have no duplicates");
+        AllIdentityScopes.Should().OnlyHaveUniqueItems("AllIdentityScopes should have no duplicates");
+        AllScopes.Should().OnlyHaveUniqueItems("AllScopes should have no duplicates");
+    }
+
+    [Fact]
+    public void ScopeDefinitions_ComputeApiScopes_ShouldBeSubsetOfAllComputeScopes()
+    {
+        // Act & Assert - ComputeApiScopes should be a subset of AllComputeScopes
+        foreach (var scope in ScopeDefinitions.ComputeApiScopes)
+        {
+            AllComputeScopes.Should().Contain(scope, 
+                $"ComputeApiScope '{scope}' should be included in AllComputeScopes");
+        }
+    }
+
+    [Fact]
+    public void ScopeDefinitions_IdentityApiScopes_ShouldBeSubsetOfAllIdentityScopes()
+    {
+        // Act & Assert - IdentityApiScopes should be a subset of AllIdentityScopes
+        foreach (var scope in ScopeDefinitions.IdentityApiScopes)
+        {
+            AllIdentityScopes.Should().Contain(scope, 
+                $"IdentityApiScope '{scope}' should be included in AllIdentityScopes");
         }
     }
     

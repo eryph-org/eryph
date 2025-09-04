@@ -66,8 +66,8 @@ public static class ScopeHierarchy
     /// Gets all scopes that are implied by the given scope, including the scope itself.
     /// </summary>
     /// <param name="scope">The scope to expand</param>
-    /// <returns>A list of all implied scopes (scope itself first, then implied scopes)</returns>
-    public static IReadOnlyList<string> GetImpliedScopes(string? scope)
+    /// <returns>An array of all implied scopes (scope itself first, then implied scopes)</returns>
+    public static string[] GetImpliedScopes(string? scope)
     {
         if (string.IsNullOrEmpty(scope))
             return [];
@@ -80,7 +80,7 @@ public static class ScopeHierarchy
             result.AddRange(impliedScopes);
         }
 
-        return result;
+        return result.ToArray();
     }
 
     /// <summary>
@@ -122,8 +122,8 @@ public static class ScopeHierarchy
     /// This method performs the inverse operation of GetImpliedScopes().
     /// </summary>
     /// <param name="scope">The scope to find granting scopes for</param>
-    /// <returns>A list of all scopes that grant access to the specified scope</returns>
-    public static IReadOnlyList<string> GetGrantingScopes(string scope)
+    /// <returns>An array of all scopes that grant access to the specified scope</returns>
+    public static string[] GetGrantingScopes(string scope)
     {
         if (string.IsNullOrEmpty(scope))
             return [];
@@ -140,6 +140,6 @@ public static class ScopeHierarchy
             }
         }
 
-        return grantingScopes;
+        return grantingScopes.ToArray();
     }
 }
