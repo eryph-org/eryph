@@ -32,6 +32,10 @@ public static class ScopeHierarchy
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl
         ],
+        [EryphConstants.Authorization.Scopes.CatletsControl] =
+        [
+            EryphConstants.Authorization.Scopes.CatletsRead
+        ],
         [EryphConstants.Authorization.Scopes.GenesWrite] =
         [
             EryphConstants.Authorization.Scopes.GenesRead
@@ -62,38 +66,36 @@ public static class ScopeHierarchy
     /// Gets all scopes that are implied by the given scope, including the scope itself.
     /// </summary>
     /// <param name="scope">The scope to expand</param>
-    /// <returns>A collection of all implied scopes</returns>
-    public static IEnumerable<string> GetImpliedScopes(string? scope)
+    /// <returns>A list of all implied scopes (scope itself first, then implied scopes)</returns>
+    public static IReadOnlyList<string> GetImpliedScopes(string? scope)
     {
         if (string.IsNullOrEmpty(scope))
-            yield break;
+            return [];
 
-        // Always include the scope itself
-        yield return scope;
+        var result = new List<string> { scope };
 
         // Add any implied scopes
         if (ScopeHierarchyList.TryGetValue(scope, out var impliedScopes))
         {
-            foreach (var impliedScope in impliedScopes)
-            {
-                yield return impliedScope;
-            }
+            result.AddRange(impliedScopes);
         }
+
+        return result;
     }
 
     /// <summary>
     /// Expands a collection of scopes to include all implied scopes.
     /// </summary>
     /// <param name="scopes">The scopes to expand</param>
-    /// <returns>A distinct collection of all scopes including implied ones</returns>
-    public static IEnumerable<string> ExpandScopes(IEnumerable<string>? scopes)
+    /// <returns>A set of all scopes including implied ones (no duplicates)</returns>
+    public static ISet<string> ExpandScopes(IEnumerable<string>? scopes)
     {
         if (scopes == null)
-            return [];
+            return new HashSet<string>(StringComparer.Ordinal);
 
         return scopes
             .SelectMany(GetImpliedScopes)
-            .Distinct(StringComparer.Ordinal);
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -111,31 +113,33 @@ public static class ScopeHierarchy
         var expandedGrantedScopes = ExpandScopes(grantedScopes);
 
         // Check if the requested scope is in the expanded granted scopes
-        return expandedGrantedScopes.Contains(requestedScope, StringComparer.Ordinal);
+        return expandedGrantedScopes.Contains(requestedScope);
     }
 
     /// <summary>
-    /// Validates that all requested scopes are allowed given the granted scopes.
+    /// Gets all scopes that grant access to the specified scope.
+    /// This includes the scope itself and any higher-level scopes that include it.
+    /// This method performs the inverse operation of GetImpliedScopes().
     /// </summary>
-    /// <param name="requestedScopes">The scopes being requested</param>
-    /// <param name="grantedScopes">The scopes that have been granted to the client</param>
-    /// <returns>True if all requested scopes are allowed, false otherwise</returns>
-    public static bool AreAllScopesAllowed(IEnumerable<string>? requestedScopes, IEnumerable<string>? grantedScopes)
+    /// <param name="scope">The scope to find granting scopes for</param>
+    /// <returns>A list of all scopes that grant access to the specified scope</returns>
+    public static IReadOnlyList<string> GetGrantingScopes(string scope)
     {
-        if (requestedScopes == null)
-            return true;
+        if (string.IsNullOrEmpty(scope))
+            return [];
 
-        return grantedScopes != null && requestedScopes.All(scope => IsScopeAllowed(scope, grantedScopes));
-    }
+        // Start with the scope itself
+        var grantingScopes = new List<string> { scope };
 
-    /// <summary>
-    /// Gets all scopes that should be granted when a specific scope is assigned to a client.
-    /// This includes the scope itself and all scopes it implies.
-    /// </summary>
-    /// <param name="assignedScopes">The scopes assigned to the client</param>
-    /// <returns>All scopes that should be available, including implied ones</returns>
-    public static IEnumerable<string> GetAvailableScopes(IEnumerable<string> assignedScopes)
-    {
-        return ExpandScopes(assignedScopes);
+        // Find all scopes in the hierarchy that grant the given scope
+        foreach (var (parentScope, impliedScopes) in ScopeHierarchyList)
+        {
+            if (impliedScopes.Contains(scope) && !grantingScopes.Contains(parentScope))
+            {
+                grantingScopes.Add(parentScope);
+            }
+        }
+
+        return grantingScopes;
     }
 }

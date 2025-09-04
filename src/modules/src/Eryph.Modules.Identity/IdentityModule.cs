@@ -197,38 +197,11 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     private static void CreateIdentityScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
     {
         // Get all scopes that can satisfy this requirement (including higher-level scopes)
-        var allowedScopes = GetIdentityScopesThatAllowAccess(requiredScope);
+        var allowedScopes = ScopeHierarchy.GetGrantingScopes(requiredScope);
 
         options.AddPolicy(requiredScope,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
-                allowedScopes.ToArray())));
-    }
-
-    private static string[] GetIdentityScopesThatAllowAccess(string requiredScope)
-    {
-        // Start with the scope itself
-        var allowedScopes = new List<string> { requiredScope };
-
-        // Add any scopes that imply this scope through hierarchy
-        var allIdentityScopes = new[]
-        {
-            EryphConstants.Authorization.Scopes.IdentityRead,
-            EryphConstants.Authorization.Scopes.IdentityWrite,
-            EryphConstants.Authorization.Scopes.IdentityClientsRead,
-            EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-        };
-
-        // Find scopes that include the required scope in their implied scopes
-        foreach (var scope in allIdentityScopes)
-        {
-            var impliedScopes = ScopeHierarchy.GetImpliedScopes(scope);
-            if (impliedScopes.Contains(requiredScope) && !allowedScopes.Contains(scope))
-            {
-                allowedScopes.Add(scope);
-            }
-        }
-
-        return allowedScopes.ToArray();
+                allowedScopes)));
     }
 }

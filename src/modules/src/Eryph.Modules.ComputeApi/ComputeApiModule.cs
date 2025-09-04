@@ -80,43 +80,11 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
     private static void CreateScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
     {
         // Get all scopes that can satisfy this requirement (including higher-level scopes)
-        var allowedScopes = GetScopesThatAllowAccess(requiredScope);
+        var allowedScopes = ScopeHierarchy.GetGrantingScopes(requiredScope);
         
         options.AddPolicy(requiredScope,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
-                allowedScopes.ToArray())));
-    }
-
-    private static string[] GetScopesThatAllowAccess(string requiredScope)
-    {
-        // Start with the scope itself
-        var allowedScopes = new List<string> { requiredScope };
-
-        // Add any scopes that imply this scope through hierarchy
-        var allScopes = new[]
-        {
-            EryphConstants.Authorization.Scopes.ComputeRead,
-            EryphConstants.Authorization.Scopes.ComputeWrite,
-            EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsWrite,
-            EryphConstants.Authorization.Scopes.CatletsControl,
-            EryphConstants.Authorization.Scopes.GenesRead,
-            EryphConstants.Authorization.Scopes.GenesWrite,
-            EryphConstants.Authorization.Scopes.ProjectsRead,
-            EryphConstants.Authorization.Scopes.ProjectsWrite,
-        };
-
-        // Find scopes that include the required scope in their implied scopes
-        foreach (var scope in allScopes)
-        {
-            var impliedScopesSet = ScopeHierarchy.GetImpliedScopes(scope).ToHashSet();
-            if (impliedScopesSet.Contains(requiredScope) && !allowedScopes.Contains(scope))
-            {
-                allowedScopes.Add(scope);
-            }
-        }
-
-        return allowedScopes.ToArray();
+                allowedScopes)));
     }
 }

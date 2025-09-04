@@ -103,7 +103,7 @@ public class ScopeHierarchyTests
         };
 
         // Act
-        var result = ScopeHierarchy.ExpandScopes(scopes).ToArray();
+        var result = ScopeHierarchy.ExpandScopes(scopes);
 
         // Assert
         result.Should().Contain(EryphConstants.Authorization.Scopes.CatletsWrite);
@@ -220,7 +220,7 @@ public class ScopeHierarchyTests
         var grantedScopes = new[] { EryphConstants.Authorization.Scopes.CatletsWrite };
 
         // Act
-        var result = ScopeHierarchy.AreAllScopesAllowed(null, grantedScopes);
+        var result = AreAllScopesAllowed(null, grantedScopes);
 
         // Assert
         result.Should().BeTrue();
@@ -233,7 +233,7 @@ public class ScopeHierarchyTests
         var requestedScopes = new[] { EryphConstants.Authorization.Scopes.CatletsRead };
 
         // Act
-        var result = ScopeHierarchy.AreAllScopesAllowed(requestedScopes, null);
+        var result = AreAllScopesAllowed(requestedScopes, null);
 
         // Assert
         result.Should().BeFalse();
@@ -251,7 +251,7 @@ public class ScopeHierarchyTests
         };
 
         // Act
-        var result = ScopeHierarchy.AreAllScopesAllowed(requestedScopes, grantedScopes);
+        var result = AreAllScopesAllowed(requestedScopes, grantedScopes);
 
         // Assert
         result.Should().BeTrue();
@@ -269,14 +269,14 @@ public class ScopeHierarchyTests
         };
 
         // Act
-        var result = ScopeHierarchy.AreAllScopesAllowed(requestedScopes, grantedScopes);
+        var result = AreAllScopesAllowed(requestedScopes, grantedScopes);
 
         // Assert
         result.Should().BeFalse();
     }
 
     [Fact]
-    public void GetAvailableScopes_WithMultipleGrantedScopes_ReturnsAllImpliedScopes()
+    public void ExpandScopes_WithMultipleGrantedScopes_ReturnsAllImpliedScopes()
     {
         // Arrange
         var assignedScopes = new[]
@@ -286,7 +286,7 @@ public class ScopeHierarchyTests
         };
 
         // Act
-        var result = ScopeHierarchy.GetAvailableScopes(assignedScopes).ToArray();
+        var result = ScopeHierarchy.ExpandScopes(assignedScopes);
 
         // Assert
         result.Should().Contain(EryphConstants.Authorization.Scopes.CatletsWrite);
@@ -346,5 +346,20 @@ public class ScopeHierarchyTests
         {
             scope.Should().NotBeNullOrWhiteSpace($"Scope {scope} should be defined");
         }
+    }
+    
+    /// <summary>
+    /// Helper method for testing scope validation.
+    /// Validates that all requested scopes are allowed given the granted scopes.
+    /// </summary>
+    /// <param name="requestedScopes">The scopes being requested</param>
+    /// <param name="grantedScopes">The scopes that have been granted to the client</param>
+    /// <returns>True if all requested scopes are allowed, false otherwise</returns>
+    private static bool AreAllScopesAllowed(IEnumerable<string>? requestedScopes, IEnumerable<string>? grantedScopes)
+    {
+        if (requestedScopes == null)
+            return true;
+
+        return grantedScopes != null && requestedScopes.All(scope => ScopeHierarchy.IsScopeAllowed(scope, grantedScopes));
     }
 }
