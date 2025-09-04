@@ -24,7 +24,10 @@ namespace Eryph.StateDb.Specifications
                 switch (expandedField)
                 {
                     case "logs":
-                        query.Include(x => x.LogEntries.Where(l => l.Timestamp > requestLogTimestamp));
+                        if (requestLogTimestamp == null)
+                            query.Include(x => x.LogEntries);
+                        else
+                            query.Include(x => x.LogEntries.Where(l => l.Timestamp > requestLogTimestamp));
                         break;
                     case "tasks":
                         query.Include(x => x.Tasks)
