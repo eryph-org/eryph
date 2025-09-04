@@ -7,6 +7,15 @@ namespace Eryph.ModuleCore.Authorization;
 
 public static class ScopeHierarchy
 {
+    /// <summary>
+    /// WARNING: This scope hierarchy is FLATTENED, not transitive.
+    /// Each parent scope must explicitly list ALL child scopes it grants access to.
+    /// The system does NOT automatically resolve multiple levels of hierarchy.
+    /// 
+    /// For example, if you want ComputeWrite to grant access to CatletsRead,
+    /// you must explicitly list CatletsRead in ComputeWrite's scope list.
+    /// Do NOT rely on transitive relationships like ComputeWrite -> ComputeRead -> CatletsRead.
+    /// </summary>
     private static readonly Dictionary<string, HashSet<string>> ScopeHierarchyList = new()
     {
         // Compute API hierarchies
