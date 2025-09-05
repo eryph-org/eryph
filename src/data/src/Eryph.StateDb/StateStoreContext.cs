@@ -278,6 +278,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<CatletMetadata>()
+            .Ignore(m => m.Metadata);
+
+        modelBuilder.Entity<CatletMetadata>()
+            .Property(m => m.MetadataJson);
+
+        modelBuilder.Entity<CatletMetadata>()
             .Navigation(m => m.Genes)
             .AutoInclude();
 

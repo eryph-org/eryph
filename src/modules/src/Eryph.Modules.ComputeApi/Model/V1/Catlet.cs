@@ -19,6 +19,13 @@ public class Catlet
 
     public required CatletStatus Status { get; set; }
 
+    /// <summary>
+    /// Indicates that the catlet has been created with an old
+    /// version of eryph and is missing some metadata. Hence,
+    /// it cannot be edited and its configuration cannot be inspected.
+    /// </summary>
+    public required bool IsDeprecated { get; set; }
+
     public IReadOnlyList<CatletNetwork>? Networks { get; set; }
 
     public IReadOnlyList<CatletNetworkAdapter>? NetworkAdapters { get; set; }

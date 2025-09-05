@@ -14,10 +14,10 @@ namespace Eryph.Modules.Controller.Inventory;
 [UsedImplicitly]
 internal class UpdateVMInventoryCommandHandler(
     IInventoryLockManager lockManager,
-    IVirtualMachineMetadataService metadataService,
+    ICatletMetadataService metadataService,
     IOperationDispatcher dispatcher,
     IMessageContext messageContext,
-    IVirtualMachineDataService vmDataService,
+    ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
     ILogger logger)
@@ -37,6 +37,6 @@ internal class UpdateVMInventoryCommandHandler(
         if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
             return;
         
-        await UpdateVMs(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
+        await UpdateVms(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
     }
 }

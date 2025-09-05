@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dbosoft.Functional.Validations;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
@@ -19,18 +20,10 @@ namespace Eryph.Modules.AspNetCore;
 /// Provides extensions for converting <see cref="ValidationIssue"/>s
 /// for use in REST API responses.
 /// </summary>
-/// <remarks>
-/// This class converts paths, which consist of C# property names, into
-/// proper JSON paths. This implementation can only handle basic JSON
-/// paths which are used to describe the location of a validation issue.
-/// </remarks>
 public static partial class ValidationIssueExtensions
 {
     [GeneratedRegex(@"^\$")]
     private static partial Regex RootRegex();
-
-    [GeneratedRegex(@"\w[\d\w]*")]
-    private static partial Regex NameRegex();
 
     /// <summary>
     /// <para>
@@ -57,7 +50,7 @@ public static partial class ValidationIssueExtensions
                 var modelState = new ModelStateDictionary();
                 var jsonPathPrefix = Optional(pathPrefix)
                     .Filter(notEmpty)
-                    .Map(p => ToJsonPath(p, ApiJsonSerializerOptions.Options.PropertyNamingPolicy));
+                    .Map(p => p.ToJsonPath(ApiJsonSerializerOptions.Options.PropertyNamingPolicy));
 
                 foreach (var error in errors)
                 {
@@ -66,24 +59,6 @@ public static partial class ValidationIssueExtensions
 
                 return modelState;
             });
-
-    public static Validation<ValidationIssue, T> ToJsonPath<T>(
-        this Validation<ValidationIssue, T> validation,
-        Option<JsonNamingPolicy> namingPolicy) =>
-        validation.MapFail(vi => vi.ToJsonPath(namingPolicy));
-
-    public static ValidationIssue ToJsonPath(
-        this ValidationIssue issue,
-        Option<JsonNamingPolicy> namingPolicy) =>
-        new(ToJsonPath(issue.Member, namingPolicy), issue.Message);
-
-    private static string ToJsonPath(
-        string path,
-        Option<JsonNamingPolicy> namingPolicy) =>
-        namingPolicy.Match(
-                Some: p => NameRegex().Replace(path, m => p.ConvertName(m.Value)),
-                None: () => path)
-            .Apply(p => p.StartsWith("$.", StringComparison.Ordinal) ? p : $"$.{p}");
 
     private static string AddPrefix(string path, Option<string> prefix) =>
         prefix.Match(

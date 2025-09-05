@@ -9,15 +9,11 @@ public class CreateCatletCommand : IHasCorrelationId, ICommandWithName
 {
     public Guid TenantId { get; set; }
 
-    public CatletConfig Config { get; set; }
+    public string Name { get; set; }
+
+    public string ConfigYaml { get; set; }
 
     public Guid CorrelationId { get; set; }
 
-    public string GetCommandName()
-    {
-        var catletName = string.IsNullOrWhiteSpace(Config.Name)
-            ? EryphConstants.DefaultCatletName
-            : Config.Name;
-        return $"Create catlet {catletName}";
-    }
+    public string GetCommandName() => $"Create catlet {Name}";
 }

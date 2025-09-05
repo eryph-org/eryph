@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Eryph.Core
@@ -18,14 +19,14 @@ namespace Eryph.Core
             return Directory.Exists(path);
         }
 
-        public Task<string> ReadAllTextAsync(string path)
+        public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken)
         {
-            return File.ReadAllTextAsync(path);
+            return File.ReadAllTextAsync(path, cancellationToken);
         }
 
-        public Task WriteAllTextAsync(string path, string text)
+        public Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken)
         {
-            return File.WriteAllTextAsync(path, text);
+            return File.WriteAllTextAsync(path, text, cancellationToken);
         }
 
         public void FileDelete(string filePath)
