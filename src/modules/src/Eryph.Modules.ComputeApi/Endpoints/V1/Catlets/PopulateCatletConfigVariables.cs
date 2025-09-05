@@ -64,15 +64,9 @@ public class PopulateCatletConfigVariables(
 
         var config = validation.ToOption().ValueUnsafe();
 
-        var tenantId = userRightsProvider.GetUserTenantId();
-
         var projectName = Optional(config.Project).Filter(notEmpty).Match(
-        Some: n => ProjectName.New(n),
-            None: () => ProjectName.New("default"));
-
-        var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
-            Some: n => EnvironmentName.New(n),
-            None: () => EnvironmentName.New("default"));
+            Some: n => ProjectName.New(n),
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
 
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)

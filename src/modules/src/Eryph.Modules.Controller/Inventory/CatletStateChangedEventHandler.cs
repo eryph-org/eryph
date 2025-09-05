@@ -52,7 +52,6 @@ internal class CatletStateChangedEventHandler(
         if (metadata is null || metadata.SecretDataHidden || metadata.IsDeprecated || metadata.Metadata is null)
             return;
 
-        // TODO is this still correct? How and where do we store the secrets?
         var anySensitive = metadata.Metadata.BuiltConfig.Fodder.ToSeq().Exists(
                                f => f.Secret.GetValueOrDefault()
                                     || f.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault()))

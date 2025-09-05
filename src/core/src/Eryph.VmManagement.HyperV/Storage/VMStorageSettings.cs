@@ -50,7 +50,7 @@ namespace Eryph.VmManagement.Storage
             VmHostAgentConfiguration vmHostAgentConfig) =>
             from resolvedPath in names.ResolveVmStorageBasePath(vmHostAgentConfig)
             from importVhdPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
-            from storageSettings in ComparePath(resolvedPath, vmPath, storageIdentifier)
+            from _ in ComparePath(resolvedPath, vmPath, storageIdentifier)
             select new VMStorageSettings
             {
                 StorageNames = names,

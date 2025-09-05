@@ -145,7 +145,7 @@ internal sealed class GeneRequestRegistry(
 
             _pendingTasks.Remove((uniqueGeneId, geneHash));
 
-            foreach (var gene in _queue.ToList().Skip(1))
+            foreach (var gene in _queue.Skip(1))
             {
                 _pendingTasks.TryGetValue(gene, out geneTasks);
                 tasksToUpdate.Add(geneTasks?.ToList() ?? []);

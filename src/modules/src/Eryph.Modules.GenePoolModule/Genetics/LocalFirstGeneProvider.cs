@@ -144,9 +144,6 @@ internal class LocalFirstGeneProvider(
             })
         from hasMergedGene in localGenePool.GetGeneSize(uniqueGeneId, geneHash).Map(o => o.IsSome)
         let isDownloadComplete = !localGeneParts.IsEmpty && localGeneParts.Values.ToSeq().All(s => s.IsSome)
-        let existingGeneParts = localGeneParts.ToSeq()
-            .Map(kvp => kvp.Value.Map(s => (kvp.Key, s)))
-            .Somes()
         from _2 in hasMergedGene || isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
             : use(
@@ -205,7 +202,7 @@ internal class LocalFirstGeneProvider(
     private Aff<CancelRt, Option<R>> IterateGenePools<R>(
         IGenePoolFactory genePoolFactory,
         Func<IGenePool, Aff<CancelRt, Option<R>>> action) =>
-        genePoolFactory.RemotePools.ToSeq()
+        genePoolFactory.GetRemotePools().ToSeq()
             .Fold(
                 SuccessAff<CancelRt, Option<R>>(None),
                 (state, poolName) => state.BiBind(
