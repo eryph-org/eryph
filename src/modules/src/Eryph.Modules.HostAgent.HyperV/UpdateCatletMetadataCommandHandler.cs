@@ -18,8 +18,8 @@ namespace Eryph.Modules.HostAgent
         protected override EitherAsync<Error, Unit> HandleCommand(
             UpdateCatletMetadataCommand command) =>
             from vmInfo in VmQueries.GetVmInfo(Engine, command.VmId)
-            from currentMetadata in EnsureMetadata(vmInfo, command.CurrentMetadataId)
-            from _ in SetMetadataId(vmInfo, command.NewMetadataId)
+            from _1 in EnsureMetadata(vmInfo, command.CurrentMetadataId)
+            from _2 in SetMetadataId(vmInfo, command.NewMetadataId)
             select Unit.Default;
     }
 }

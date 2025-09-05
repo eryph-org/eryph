@@ -11,7 +11,7 @@ internal class GenePoolFactory(Container container) : IGenePoolFactory
     private readonly Dictionary<string, InstanceProducer<IGenePool>> _producers =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<string> RemotePools => _producers.Keys.ToList();
+    public IReadOnlyList<string> GetRemotePools() => _producers.Keys.ToList();
 
     IGenePool IGenePoolFactory.CreateNew(string name)
     {

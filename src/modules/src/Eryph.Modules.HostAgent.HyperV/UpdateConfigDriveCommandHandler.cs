@@ -33,7 +33,7 @@ internal class UpdateConfigDriveCommandHandler(
         from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
         let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
-        from metadata in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
+        from _ in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVm(vmHostAgentConfig, vmInfo).WriteTrace()
         let fedConfig = command.Config
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)

@@ -28,7 +28,6 @@ internal class PopulateCatletConfigVariablesSaga(
     protected override async Task Initiated(PopulateCatletConfigVariablesCommand message)
     {
         Data.Data.Config = message.Config;
-        // TODO should we resolve the agent differently?
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
@@ -47,7 +46,6 @@ internal class PopulateCatletConfigVariablesSaga(
             {
                 Config = Data.Data.Config!.CloneWith(c =>
                 {
-                    // TODO Normalize to remove system variables
                     c.Variables = response.BuiltConfig.Variables;
                 }),
             });

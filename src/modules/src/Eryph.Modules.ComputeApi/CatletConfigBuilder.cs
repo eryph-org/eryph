@@ -43,7 +43,6 @@ public static class CatletConfigBuilder
             Capabilities = BuildCapabilityConfigs(catlet).ToArray(),
             Networks = networkPorts.ToSeq()
                 .Map(np => BuildNetworkConfig(np, adaptersMap))
-                .Somes()
                 .ToArray(),
             NetworkAdapters = catlet.NetworkAdapters.ToSeq()
                 .Map(BuildNetworkAdapterConfig)
@@ -152,18 +151,17 @@ public static class CatletConfigBuilder
             MacAddress = networkAdapter.MacAddress,
         };
 
-    private static Option<CatletNetworkConfig> BuildNetworkConfig(
+    private static CatletNetworkConfig BuildNetworkConfig(
         CatletNetworkPort networkPort,
         HashMap<string, CatletNetworkAdapter> adaptersMap) =>
-        from ipAssignment in networkPort.IpAssignments.ToSeq()
-            .OfType<IpPoolAssignment>()
-            .HeadOrNone()
-        let adapterName = adaptersMap.Find(networkPort.MacAddress).Map(a => a.Name)
-        select new CatletNetworkConfig
+        new()
         {
             Name = networkPort.Network.Name,
             SubnetV4 = BuildSubnetConfig(networkPort).IfNoneUnsafe((CatletSubnetConfig?)null),
-            AdapterName = adapterName.IfNoneUnsafe((string?)null),
+            AdapterName = adaptersMap
+                .Find(networkPort.MacAddress)
+                .Map(a => a.Name)
+                .IfNoneUnsafe((string?)null),
         };
 
     private static Option<CatletSubnetConfig> BuildSubnetConfig(

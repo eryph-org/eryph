@@ -1,13 +1,11 @@
-﻿using Eryph.ConfigModel;
+﻿using System.Threading;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Core.Genetics;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-using System.Linq;
-using System.Threading;
 
 using static LanguageExt.Prelude;
 
@@ -26,23 +24,23 @@ public static class CatletSpecificationBuilder
         CancellationToken cancellation) =>
         from _1 in RightAsync<Error, Unit>(unit)
         let configWithEarlyDefaults = CatletConfigDefaults.ApplyDefaultNetwork(catletConfig)
-        from normalizedConfig in CatletConfigNormalizer.Normalize(configWithEarlyDefaults)
+        from resolveResult in ResolveConfig(configWithEarlyDefaults, genePoolReader, cancellation)
+        let resolvedGeneSets = resolveResult.ResolvedGeneSets
+        let parentConfigs = resolveResult.ResolvedCatlets
+        from breedingResult in CatletPedigree.Breed(configWithEarlyDefaults, resolvedGeneSets, parentConfigs)
+            .MapLeft(e => Error.New("Could not breed the catlet.", e))
+            .ToAsync()
+        from normalizedConfig in CatletConfigNormalizer.Normalize(breedingResult.Config)
             .ToEither()
             .MapLeft(errors => Error.New("Could not normalize the catlet config.", Error.Many(errors)))
             .ToAsync()
-        from resolveResult in ResolveConfig(normalizedConfig, genePoolReader, cancellation)
-        let resolvedGeneSets = resolveResult.ResolvedGeneSets
-        let parentConfigs = resolveResult.ResolvedCatlets
-        from breedingResult in CatletPedigree.Breed(normalizedConfig, resolvedGeneSets, parentConfigs)
-            .MapLeft(e => Error.New("Could not breed the catlet.", e))
-            .ToAsync()
-        let bredConfigWithDefaults = CatletConfigDefaults.ApplyDefaults(breedingResult.Config)
-        from genes in CatletGeneCollecting.CollectGenes(bredConfigWithDefaults)
+        let normalizedWithDefaults = CatletConfigDefaults.ApplyDefaults(normalizedConfig)
+        from genes in CatletGeneCollecting.CollectGenes(normalizedWithDefaults)
             .ToEither().ToAsync()
             .MapLeft(errors => Error.New("The catlet config contains invalid genes.", Error.Many(errors)))
         from resolvedGenes in ResolveGenes(genes, architecture, genePoolReader, cancellation)
         from expandedConfig in CatletFeeding.Feed(
-            bredConfigWithDefaults,
+            normalizedWithDefaults,
             resolvedGenes,
             genePoolReader)
             .MapLeft(e => Error.New("Could not feed the catlet.", e))
