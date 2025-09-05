@@ -5,6 +5,7 @@ using Eryph.ConfigModel.Variables;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static Eryph.ConfigModel.Validations;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -15,14 +16,15 @@ public static class CatletConfigNormalizer
 {
     public static Validation<Error, CatletConfig> Normalize(
         CatletConfig config) =>
-        from name in Optional(config.Name).Filter(notEmpty).Match(
-            Some: CatletName.NewValidation,
-            None: () => CatletName.New(EryphConstants.DefaultCatletName))
+        from name in Optional(config.Name)
+            .Filter(notEmpty)
+            .Map(CatletName.NewValidation)
+            .Sequence()
         from parent in Optional(config.Parent)
             .Filter(notEmpty)
             .Map(GeneSetIdentifier.NewValidation)
             .Sequence()
-        let hostName = Optional(config.Hostname).Filter(notEmpty).IfNone(name.Value)
+        let hostName = Optional(config.Hostname).Filter(notEmpty) | name.Map(n => n.Value)
         from projectName in Optional(config.Project).Filter(notEmpty).Match(
             Some: ProjectName.NewValidation,
             None: () => ProjectName.New(EryphConstants.DefaultProjectName))
@@ -37,22 +39,28 @@ public static class CatletConfigNormalizer
             .Map(StorageIdentifier.NewValidation)
             .Sequence()
         from drives in config.Drives.ToSeq().Map(Normalize).Sequence()
-        from networks in config.Networks.ToSeq().Map(Normalize).Sequence()
+        from networks in config.Networks.ToSeq().Map(Normalize).ToSeq().Sequence()
+        from _ in ValidateDistinct(
+                networks,
+                n => CatletNetworkAdapterName.NewValidation(n.AdapterName),
+                "network adapter")
+            .MapFail(e => Error.New("The network adapter names of the networks are not unique.", e))
         from networkAdapters in config.NetworkAdapters.ToSeq().Map(Normalize).Sequence()
+        from allNetworkAdapters in AddMissingAdapters(networkAdapters, networks)
         from fodder in config.Fodder.ToSeq().Map(Normalize).Sequence()
         from variables in config.Variables.ToSeq().Map(Normalize).Sequence()
         select config.CloneWith(c =>
         {
-            c.Name = name.Value;
+            c.Name = name.Map(n => n.Value).IfNoneUnsafe((string?)null);
             c.Parent = parent.Map(p => p.Value).IfNoneUnsafe((string?)null);
-            c.Hostname = hostName;
+            c.Hostname = hostName.IfNoneUnsafe((string?)null);
             c.Project = projectName.Value;
             c.Environment = environmentName.Value;
             c.Store = dataStoreName.Value;
             c.Location = storageIdentifier.Map(s => s.Value).IfNoneUnsafe((string?)null);
             c.Drives = drives.ToArray();
             c.Networks = networks.ToArray();
-            c.NetworkAdapters = networkAdapters.ToArray();
+            c.NetworkAdapters = allNetworkAdapters.ToArray();
             c.Fodder = fodder.ToArray();
             c.Variables = variables.ToArray();
         });
@@ -109,6 +117,7 @@ public static class CatletConfigNormalizer
         });
 
     private static Validation<Error, CatletNetworkConfig> Normalize(
+        int index,
         CatletNetworkConfig config) =>
         from name in EryphNetworkName.NewValidation(config.Name)
         from adapterName in Optional(config.AdapterName)
@@ -124,7 +133,7 @@ public static class CatletConfigNormalizer
         select config.CloneWith(c =>
         {
             c.Name = name.Value;
-            c.AdapterName = adapterName.Map(n => n.Value).IfNoneUnsafe((string?)null);
+            c.AdapterName = adapterName.Map(n => n.Value).IfNone($"eth{index}");
             c.SubnetV4 = subnetV4.IfNoneUnsafe((CatletSubnetConfig?)null);
             c.SubnetV6 = subnetV6.IfNoneUnsafe((CatletSubnetConfig?)null);
         });
@@ -154,6 +163,19 @@ public static class CatletConfigNormalizer
             c.Name = name.Value;
             c.MacAddress = macAddress.Map(m => m.Value).IfNoneUnsafe((string?)null);
         });
+
+    private static Validation<Error, Seq<CatletNetworkAdapterConfig>> AddMissingAdapters(
+        Seq<CatletNetworkAdapterConfig> networkAdapters,
+        Seq<CatletNetworkConfig> networks) =>
+        from _ in Success<Error, Unit>(unit)
+        let adaptersByName = networkAdapters.Map(a => (a.Name, a)).ToHashMap()
+        let adaptersForNetworks = networks
+            .Map(n => adaptersByName.Find(n.AdapterName).Match(
+                Some: identity,
+                None: () => new CatletNetworkAdapterConfig { Name = n.AdapterName }))
+        let missingAdapters = networkAdapters
+            .Filter(a => !adaptersForNetworks.Any(afn => a.Name == afn.Name))
+        select adaptersForNetworks.Concat(missingAdapters);
 
     /// <summary>
     /// Minimizes the given <paramref name="config"/>.
