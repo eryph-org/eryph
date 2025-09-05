@@ -40,22 +40,9 @@ public static class CatletConfigDefaults
             c.Name = Optional(c.Name)
                 .Filter(notEmpty)
                 .IfNone(EryphConstants.DefaultCatletName);
+            c.Hostname = Optional(c.Hostname).Filter(notEmpty).IfNone(c.Name);
             c.Cpu = ApplyCpuDefaults(c.Cpu);
             c.Memory = ApplyMemoryDefaults(c.Memory);
-
-            var networks = c.Networks.ToSeq().Map(ApplyNetworkDefaults).ToSeq();
-            var additionalAdapters = networks
-                .Map(n => n.AdapterName)
-                .Except(c.NetworkAdapters.ToSeq().Map(a => a.Name))
-                .Map(name => new CatletNetworkAdapterConfig()
-                {
-                    Name = name,
-                });
-
-            c.Networks = c.Networks.ToSeq().Map(ApplyNetworkDefaults).ToArray();
-            c.NetworkAdapters = c.NetworkAdapters.ToSeq()
-                .Concat(additionalAdapters)
-                .ToArray();
         });
 
     private static CatletCpuConfig ApplyCpuDefaults(
@@ -75,14 +62,4 @@ public static class CatletConfigDefaults
             {
                 Startup = EryphConstants.DefaultCatletMemoryMb,
             });
-
-    private static CatletNetworkConfig ApplyNetworkDefaults(
-        int index,
-        CatletNetworkConfig config) =>
-        config.CloneWith(c =>
-        {
-            c.AdapterName = Optional(c.AdapterName)
-                .Filter(notEmpty)
-                .IfNone($"eth{index}");
-        });
 }

@@ -72,7 +72,8 @@ public class CatletConfigDefaultsTests
         var result = CatletConfigDefaults.ApplyDefaults(config);
 
         result.Name.Should().Be(EryphConstants.DefaultCatletName);
-        
+        result.Hostname.Should().Be(EryphConstants.DefaultCatletName);
+
         result.Cpu.Should().NotBeNull();
         result.Cpu!.Count.Should().Be(EryphConstants.DefaultCatletCpuCount);
 
@@ -80,20 +81,6 @@ public class CatletConfigDefaultsTests
         result.Memory!.Startup.Should().Be(EryphConstants.DefaultCatletMemoryMb);
         result.Memory!.Minimum.Should().BeNull();
         result.Memory!.Maximum.Should().BeNull();
-
-        result.Networks.Should().SatisfyRespectively(
-            network =>
-            {
-                network.Name.Should().Be("network1");
-                network.AdapterName.Should().Be("eth0");
-            },
-            network =>
-            {
-                network.Name.Should().Be("network2");
-                network.AdapterName.Should().Be("eth1");
-            });
-
-
     }
 
     [Fact]
@@ -102,6 +89,7 @@ public class CatletConfigDefaultsTests
         var config = new CatletConfig()
         {
             Name = "test-catlet",
+            Hostname = "TESTCATLET",
             Cpu = new CatletCpuConfig
             {
                 Count = 2,
@@ -110,18 +98,11 @@ public class CatletConfigDefaultsTests
             {
                 Startup = 4096,
             },
-            Networks =
-            [
-                new CatletNetworkConfig
-                {
-                    Name = "test-network",
-                    AdapterName = "eth1000",
-                },
-            ],
         };
 
         var result = CatletConfigDefaults.ApplyDefaults(config);
         result.Name.Should().Be("test-catlet");
+        result.Hostname.Should().Be("TESTCATLET");
 
         result.Cpu.Should().NotBeNull();
         result.Cpu!.Count.Should().Be(2);
@@ -130,14 +111,5 @@ public class CatletConfigDefaultsTests
         result.Memory!.Startup.Should().Be(4096);
         result.Memory!.Minimum.Should().BeNull();
         result.Memory!.Maximum.Should().BeNull();
-
-        result.Networks.Should().SatisfyRespectively(
-            n =>
-            {
-                n.Name.Should().Be("test-network");
-                n.AdapterName.Should().Be("eth1000");
-                n.SubnetV4.Should().BeNull();
-                n.SubnetV6.Should().BeNull();
-            });
     }
 }
