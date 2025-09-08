@@ -180,8 +180,7 @@ public class ScopeHierarchyTests
         var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.ComputeWrite);
 
         // Assert
-        result.Should().ContainSingle()
-            .Which.Should().Be(EryphConstants.Authorization.Scopes.ComputeWrite);
+        result.Should().BeEquivalentTo(EryphConstants.Authorization.Scopes.ComputeWrite);
     }
 
     [Fact]
@@ -192,12 +191,11 @@ public class ScopeHierarchyTests
 
         // Assert
         result.Should().BeEquivalentTo(
-            EryphConstants.Authorization.Scopes.CatletsRead,      // The scope itself
-            EryphConstants.Authorization.Scopes.CatletsWrite,     // Direct parent
-            EryphConstants.Authorization.Scopes.CatletsControl,   // Another parent  
-            EryphConstants.Authorization.Scopes.ComputeWrite,     // Higher level parent
-            EryphConstants.Authorization.Scopes.ComputeRead       // Higher level parent
-        );
+            EryphConstants.Authorization.Scopes.CatletsRead,
+            EryphConstants.Authorization.Scopes.CatletsWrite,
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.ComputeWrite,
+            EryphConstants.Authorization.Scopes.ComputeRead);
     }
 
     [Fact]
@@ -208,10 +206,9 @@ public class ScopeHierarchyTests
 
         // Assert
         result.Should().BeEquivalentTo(
-            EryphConstants.Authorization.Scopes.IdentityClientsRead,   // The scope itself
-            EryphConstants.Authorization.Scopes.IdentityClientsWrite,  // Direct parent
-            EryphConstants.Authorization.Scopes.IdentityRead,          // Higher level parent
-            EryphConstants.Authorization.Scopes.IdentityWrite          // Highest level parent
-        );
+            EryphConstants.Authorization.Scopes.IdentityClientsRead,
+            EryphConstants.Authorization.Scopes.IdentityClientsWrite,
+            EryphConstants.Authorization.Scopes.IdentityRead,
+            EryphConstants.Authorization.Scopes.IdentityWrite);
     }
 }
