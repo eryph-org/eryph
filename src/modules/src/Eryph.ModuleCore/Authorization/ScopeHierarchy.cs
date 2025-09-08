@@ -72,40 +72,23 @@ public static class ScopeHierarchy
     };
 
     /// <summary>
-    /// Gets all scopes that are implied by the given scope, including the scope itself.
+    /// Gets all scopes that are implied by the given <paramref name="scope"/>,
+    /// including the <paramref name="scope"/> itself.
     /// </summary>
     /// <param name="scope">The scope to expand</param>
-    /// <returns>An array of all implied scopes (scope itself first, then implied scopes)</returns>
-    public static string[] GetImpliedScopes(string? scope)
-    {
-        if (string.IsNullOrEmpty(scope))
-            return [];
-
-        var result = new List<string> { scope };
-
-        // Add any implied scopes
-        if (ScopeHierarchyList.TryGetValue(scope, out var impliedScopes))
-        {
-            result.AddRange(impliedScopes);
-        }
-
-        return result.ToArray();
-    }
+    /// <returns>A set of all implied scopes (including the <paramref name="scope"/> itself)</returns>
+    public static ISet<string> GetImpliedScopes(string? scope) =>
+        string.IsNullOrEmpty(scope) || !ScopeHierarchyList.TryGetValue(scope, out var impliedScopes)
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : new HashSet<string>(impliedScopes, StringComparer.Ordinal);
 
     /// <summary>
     /// Expands a collection of scopes to include all implied scopes.
     /// </summary>
     /// <param name="scopes">The scopes to expand</param>
     /// <returns>A set of all scopes including implied ones (no duplicates)</returns>
-    public static ISet<string> ExpandScopes(IEnumerable<string>? scopes)
-    {
-        if (scopes == null)
-            return new HashSet<string>(StringComparer.Ordinal);
-
-        return scopes
-            .SelectMany(GetImpliedScopes)
-            .ToHashSet(StringComparer.Ordinal);
-    }
+    public static ISet<string> ExpandScopes(IEnumerable<string> scopes) =>
+        scopes.SelectMany(GetImpliedScopes).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
     /// Checks if a requested scope is allowed given the granted scopes, considering scope hierarchy.
@@ -126,9 +109,9 @@ public static class ScopeHierarchy
     }
 
     /// <summary>
-    /// Gets all scopes that grant access to the specified scope.
+    /// Gets all scopes that grant access to the given <paramref name="scope"/>.
     /// This includes the scope itself and any higher-level scopes that include it.
-    /// This method performs the inverse operation of GetImpliedScopes().
+    /// This method performs the inverse operation of <see cref="GetImpliedScopes"/>.
     /// </summary>
     /// <param name="scope">The scope to find granting scopes for</param>
     /// <returns>An array of all scopes that grant access to the specified scope</returns>
