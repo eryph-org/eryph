@@ -110,29 +110,7 @@ public class ScopeHierarchyTests
     }
 
     [Fact]
-    public void ExpandScopes_WithMultipleScopes_ReturnsDistinctExpandedScopes()
-    {
-        // Arrange
-        var scopes = new[]
-        {
-            EryphConstants.Authorization.Scopes.CatletsWrite,
-            EryphConstants.Authorization.Scopes.GenesRead
-        };
-
-        // Act
-        var result = ScopeHierarchy.ExpandScopes(scopes);
-
-        // Assert
-        result.Should().BeEquivalentTo(
-            EryphConstants.Authorization.Scopes.CatletsWrite,
-            EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsControl,
-            EryphConstants.Authorization.Scopes.GenesRead
-        );
-    }
-
-    [Fact]
-    public void ExpandScopes_WithMultipleGrantedScopes_ReturnsAllImpliedScopes()
+    public void ExpandScopes_WithMultipleScopes_ReturnsAllImpliedScopes()
     {
         // Arrange
         var assignedScopes = new[]
@@ -174,7 +152,7 @@ public class ScopeHierarchyTests
     }
 
     [Fact]
-    public void GetGrantingScopes_WithBasicScope_ReturnsOnlyItself()
+    public void GetGrantingScopes_WithComputeWrite_ReturnsOnlyItself()
     {
         // Act
         var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.ComputeWrite);

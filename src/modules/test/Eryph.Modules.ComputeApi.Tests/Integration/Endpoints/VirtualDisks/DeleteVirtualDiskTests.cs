@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.TestBase;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using FluentAssertions;

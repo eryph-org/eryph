@@ -177,7 +177,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
     }
 
-    private static void ConfigureIdentityScopes(AuthorizationOptions options, string authority)
+    public static void ConfigureIdentityScopes(AuthorizationOptions options, string authority)
     {
         // Create policies for each scope using hierarchy-aware scope resolution
         foreach (var scope in ScopeDefinitions.IdentityApiScopes)

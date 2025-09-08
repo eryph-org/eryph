@@ -1,23 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.AspNetCore.TestBase;
 using Eryph.StateDb.Model;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.Gene;
-using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 

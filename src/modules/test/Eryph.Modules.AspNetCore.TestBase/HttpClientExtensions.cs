@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.Core;
 
-namespace Eryph.Modules.ComputeApi.Tests.Integration;
+namespace Eryph.Modules.AspNetCore.TestBase;
 
 public static class HttpClientExtensions
 {

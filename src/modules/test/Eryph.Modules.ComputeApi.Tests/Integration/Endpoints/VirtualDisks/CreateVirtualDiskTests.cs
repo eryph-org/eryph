@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.TestBase;
 using Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 using Eryph.StateDb.Model;
 using FluentAssertions;
