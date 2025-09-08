@@ -147,7 +147,6 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
         container.Register<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped);
         container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
         container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);
-        
 
         container.ConfigureRebus(configurer =>
         {

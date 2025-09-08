@@ -1,28 +1,18 @@
-﻿using Ardalis.Specification;
-using Eryph.ConfigModel.Catlets;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Ardalis.Specification;
 using Eryph.ConfigModel.Json;
-using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
-using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+
 using Catlet = Eryph.StateDb.Model.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
@@ -79,13 +69,10 @@ internal class GetCatletConfigurationHandler(
         config.Fodder = metadata.Metadata.BuiltConfig.Fodder;
 
         var sanitizedConfig = CatletConfigRedactor.RedactSecrets(config);
-        //var minimizedConfig = CatletConfigNormalizer.Minimize(sanitizedConfig);
 
         var result = new CatletConfiguration
         {
             Configuration = CatletConfigJsonSerializer.SerializeToElement(sanitizedConfig),
-            DeployedConfig = CatletConfigJsonSerializer.SerializeToElement(metadata.Metadata.BuiltConfig),
-            ConfigYaml =  metadata.Metadata.ConfigYaml
         };
 
         return result;

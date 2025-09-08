@@ -134,7 +134,7 @@ public class GetOperationTest : InMemoryStateDbTestBase,
     }
 
     [Fact]
-    public async Task Get_Returns_Existing_Operation_With_ExpandCatletConfigCommandResponse()
+    public async Task Get_Returns_Existing_Operation_With_PopulateCatletConfigVariablesCommandResponse()
     {
         var operationId = Guid.NewGuid();
         await using (var scope = CreateScope())
@@ -145,9 +145,9 @@ public class GetOperationTest : InMemoryStateDbTestBase,
             {
                 Id = operationId,
                 TenantId = TenantId,
-                ResultType = typeof(ExpandCatletConfigCommandResponse).AssemblyQualifiedName,
+                ResultType = typeof(PopulateCatletConfigVariablesCommandResponse).AssemblyQualifiedName,
                 ResultData = JsonSerializer.Serialize(
-                    new ExpandCatletConfigCommandResponse
+                    new PopulateCatletConfigVariablesCommandResponse
                     {
                         Config = new CatletConfig
                         {

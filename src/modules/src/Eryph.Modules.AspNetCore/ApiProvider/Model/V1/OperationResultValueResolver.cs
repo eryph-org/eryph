@@ -50,10 +50,6 @@ public class OperationResultValueResolver(
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),
             },
-            ExpandCatletConfigCommandResponse expandResponse => new CatletConfigOperationResult
-            {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),
-            },
             PopulateCatletConfigVariablesCommandResponse populateResponse => new CatletConfigOperationResult
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(populateResponse.Config),
