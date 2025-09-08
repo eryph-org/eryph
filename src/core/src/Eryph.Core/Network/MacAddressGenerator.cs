@@ -1,20 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using Eryph.ConfigModel;
 
-namespace Eryph.Modules.Controller;
+namespace Eryph.Core.Network;
 
 public static class MacAddressGenerator
 {
     private const string Prefix = "D2AB";
 
-    public static EryphMacAddress Generate(string source)
+    /// <summary>
+    /// Generates a new MAC address based on the given <paramref name="seed"/>.
+    /// The same <paramref name="seed"/> will always produce the same MAC address.s
+    /// </summary>
+    public static EryphMacAddress Generate(string seed)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(source));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
         return EryphMacAddress.New($"{Prefix}{Convert.ToHexString(bytes)[..8]}");
     }
 

@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
+using Eryph.Core.Network;
 
-namespace Eryph.Modules.Controller.Tests;
+namespace Eryph.Core.Tests.Network;
 
 public class MacAddressGeneratorTests
 {
     [Fact]
-    public void Generate_WithSource_ReturnsValidMacAddress()
+    public void Generate_WithSeed_ReturnsSameValidMacAddress()
     {
         var macAddress = MacAddressGenerator.Generate("test");
 

@@ -8,9 +8,9 @@ using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.Controller.Compute;
 
-internal class ResolveCatletSpecificationSagaData
+internal class BuildCatletSpecificationSagaData
 {
-    public ResolveCatletSpecificationSagaState State { get; set; }
+    public BuildCatletSpecificationSagaState State { get; set; }
 
     public string ConfigYaml { get; set; }
 

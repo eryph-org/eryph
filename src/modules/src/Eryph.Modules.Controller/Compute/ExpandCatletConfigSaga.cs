@@ -19,7 +19,7 @@ internal class ExpandCatletConfigSaga(
     ICatletDataService vmDataService,
     ICatletMetadataService metadataService)
     : OperationTaskWorkflowSaga<ExpandCatletConfigCommand, EryphSagaData<ExpandCatletConfigSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>
+        IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
 {
     protected override async Task Initiated(ExpandCatletConfigCommand message)
     {
@@ -58,7 +58,7 @@ internal class ExpandCatletConfigSaga(
 
         Data.Data.Architecture = metadata.Metadata.Architecture;
 
-        await StartNewTask(new ResolveCatletSpecificationCommand
+        await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
             Architecture = Data.Data.Architecture,
@@ -66,9 +66,9 @@ internal class ExpandCatletConfigSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<ResolveCatletSpecificationCommand> message)
+    public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
     {
-        return FailOrRun(message, async (ResolveCatletSpecificationCommandResponse response) =>
+        return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
             // TODO merge with existing config
 
@@ -87,7 +87,7 @@ internal class ExpandCatletConfigSaga(
     {
         base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>(
+        config.Correlate<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 }

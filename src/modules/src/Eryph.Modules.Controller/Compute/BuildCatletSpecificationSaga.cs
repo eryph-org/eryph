@@ -1,47 +1,42 @@
-﻿using Dbosoft.Functional;
+﻿using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
-using Eryph.Core.Genetics;
+using Eryph.Core;
+using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
+using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-using LanguageExt.Pipes;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Json;
-using Eryph.Core;
-using Eryph.Messages.Resources.CatletSpecifications;
 using Rebus.Sagas;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
-
 
 /// <summary>
 /// This saga is responsible for resolving and expanding a
 /// catlet specification.
 /// </summary>
-internal class ResolveCatletSpecificationSaga(
+[UsedImplicitly]
+internal class BuildCatletSpecificationSaga(
     IBus bus,
-    IWorkflow workflow,
-    IStorageManagementAgentLocator agentLocator)
-    : OperationTaskWorkflowSaga<ResolveCatletSpecificationCommand, EryphSagaData<ResolveCatletSpecificationSagaData>>(workflow),
+    IWorkflow workflow)
+    : OperationTaskWorkflowSaga<BuildCatletSpecificationCommand, EryphSagaData<BuildCatletSpecificationSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationGenePoolCommand>>
 {
-    protected override async Task Initiated(ResolveCatletSpecificationCommand message)
+    protected override async Task Initiated(BuildCatletSpecificationCommand message)
     {
-        Data.Data.State = ResolveCatletSpecificationSagaState.Initiated;
+        Data.Data.State = BuildCatletSpecificationSagaState.Initiated;
         Data.Data.ConfigYaml = message.ConfigYaml;
         Data.Data.Architecture = message.Architecture;
         Data.Data.AgentName = message.AgentName;
@@ -65,12 +60,12 @@ internal class ResolveCatletSpecificationSaga(
 
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationGenePoolCommand> message)
     {
-        if (Data.Data.State >= ResolveCatletSpecificationSagaState.ConfigBuilt)
+        if (Data.Data.State >= BuildCatletSpecificationSagaState.ConfigBuilt)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (BuildCatletSpecificationGenePoolCommandResponse response) =>
         {
-            Data.Data.State = ResolveCatletSpecificationSagaState.ConfigBuilt;
+            Data.Data.State = BuildCatletSpecificationSagaState.ConfigBuilt;
 
             await bus.SendLocal(new UpdateGenesInventoryCommand
             {
@@ -82,7 +77,7 @@ internal class ResolveCatletSpecificationSaga(
             Data.Data.ResolvedGenes = response.ResolvedGenes;
             Data.Data.BuiltConfig = response.BuiltConfig;
 
-            await Complete(new ResolveCatletSpecificationCommandResponse
+            await Complete(new BuildCatletSpecificationCommandResponse
             {
                 BuiltConfig = response.BuiltConfig,
                 ResolvedGenes = response.ResolvedGenes,
@@ -91,7 +86,7 @@ internal class ResolveCatletSpecificationSaga(
     }
 
     protected override void CorrelateMessages(
-        ICorrelationConfig<EryphSagaData<ResolveCatletSpecificationSagaData>> config)
+        ICorrelationConfig<EryphSagaData<BuildCatletSpecificationSagaData>> config)
     {
         base.CorrelateMessages(config);
 

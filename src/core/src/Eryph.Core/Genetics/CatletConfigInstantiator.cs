@@ -1,10 +1,10 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-
+using Eryph.Core.Network;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Controller;
+namespace Eryph.Core.Genetics;
 
 public static class CatletConfigInstantiator
 {

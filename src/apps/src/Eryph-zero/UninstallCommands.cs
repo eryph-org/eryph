@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.Json;
 using Eryph.Core;
-using Eryph.Modules.Controller.Serializers;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Configuration;
 using Eryph.Modules.HostAgent.Networks;
-using Eryph.Resources.Machines;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Security.Cryptography;
 using Eryph.VmManagement;
@@ -19,6 +14,7 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Sys.IO;
+
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
 
@@ -137,10 +133,13 @@ internal class UninstallCommands
         from metadataJson in readAllText(path)
         from vmId in use(
             Eff(() => JsonDocument.Parse(metadataJson)),
+            // We use JsonDocument instead the proper deserializer to be more
+            // robust against corrupted metadata. JsonDocument is case-sensitive.
+            // Hence, we look for both current and old capitalization of "VmId".
             metadata => from p in Eff(() => metadata.RootElement.GetProperty("VMId"))
                                   | Eff(() => metadata.RootElement.GetProperty("VmId"))
                                   | @catch(Error.New($"The metadata '{path}' does not contain a VM ID."))
-                        from vmId in Eff(() => p.GetGuid())
+                        from vmId in Eff(p.GetGuid)
                                      | @catch(Error.New($"The metadata '{path}' contains an invalid VM ID."))
                         select vmId)
         select vmId;

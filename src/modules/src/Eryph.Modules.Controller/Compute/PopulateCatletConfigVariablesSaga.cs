@@ -23,7 +23,7 @@ internal class PopulateCatletConfigVariablesSaga(
     IBus bus,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<PopulateCatletConfigVariablesCommand, EryphSagaData<PopulateCatletConfigVariablesSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>
+        IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
 {
     protected override async Task Initiated(PopulateCatletConfigVariablesCommand message)
     {
@@ -31,7 +31,7 @@ internal class PopulateCatletConfigVariablesSaga(
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
-        await StartNewTask(new ResolveCatletSpecificationCommand
+        await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
             ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
@@ -39,8 +39,8 @@ internal class PopulateCatletConfigVariablesSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<ResolveCatletSpecificationCommand> message) =>
-        FailOrRun(message, async (ResolveCatletSpecificationCommandResponse response) =>
+    public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message) =>
+        FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
             await Complete(new PopulateCatletConfigVariablesCommandResponse
             {
@@ -56,7 +56,7 @@ internal class PopulateCatletConfigVariablesSaga(
     {
         base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>(
+        config.Correlate<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 }

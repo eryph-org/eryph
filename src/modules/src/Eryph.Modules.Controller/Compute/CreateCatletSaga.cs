@@ -28,7 +28,7 @@ internal class CreateCatletSaga(
     IStateStore stateStore,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DeployCatletCommand>>
 {
@@ -40,7 +40,7 @@ internal class CreateCatletSaga(
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
         Data.Data.ConfigYaml = message.ConfigYaml;
 
-        await StartNewTask(new ResolveCatletSpecificationCommand
+        await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
             ConfigYaml = message.ConfigYaml,
@@ -48,12 +48,12 @@ internal class CreateCatletSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<ResolveCatletSpecificationCommand> message)
+    public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
     {
         if (Data.Data.State >= CreateCatletSagaState.SpecificationBuilt)
             return Task.CompletedTask;
 
-        return FailOrRun(message, async (ResolveCatletSpecificationCommandResponse response) =>
+        return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
             Data.Data.State = CreateCatletSagaState.SpecificationBuilt;
 
@@ -121,7 +121,7 @@ internal class CreateCatletSaga(
     {
         base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>(
+        config.Correlate<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);

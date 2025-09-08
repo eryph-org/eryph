@@ -1,6 +1,6 @@
 ﻿namespace Eryph.Modules.Controller.Compute;
 
-internal enum ResolveCatletSpecificationSagaState
+internal enum BuildCatletSpecificationSagaState
 {
     Initiated = 0,
     ConfigBuilt = 10,

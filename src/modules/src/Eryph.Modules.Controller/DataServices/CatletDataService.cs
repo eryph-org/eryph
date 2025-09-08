@@ -11,7 +11,8 @@ namespace Eryph.Modules.Controller.DataServices;
 internal class CatletDataService(
     IStateStoreRepository<Catlet> repository,
     ICatletMetadataService metadataService,
-    IStateStore stateStore) : ICatletDataService
+    IStateStore stateStore)
+    : ICatletDataService
 {
     public async Task<Catlet?> GetByVmId(Guid id)
     {
@@ -58,9 +59,9 @@ internal class CatletDataService(
         await metadataService.RemoveMetadata(entity.MetadataId);
     }
 
-    public async Task<IReadOnlyList<Guid>> GetAllVmIds(string agent)
+    public async Task<IReadOnlyList<Guid>> GetAllVmIds(string agentName)
     {
         return await stateStore.Read<Catlet>().ListAsync(
-            new CatletSpecs.GetAllVmIds(agent));
+            new CatletSpecs.GetAllVmIds(agentName));
     }
 }

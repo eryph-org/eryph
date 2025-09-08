@@ -141,6 +141,13 @@ public class CatletConfigNormalizerTests
             Environment = "Test-Environment",
             Store = "Test-Store",
             Location = "Test-Location",
+            Capabilities =
+            [
+                new CatletCapabilityConfig
+                {
+                    Name = "Test_Capability",
+                },
+            ],
             Drives =
             [
                 new CatletDriveConfig
@@ -210,6 +217,9 @@ public class CatletConfigNormalizerTests
         normalizedConfig.Environment.Should().Be("test-environment");
         normalizedConfig.Store.Should().Be("test-store");
         normalizedConfig.Location.Should().Be("test-location");
+
+        normalizedConfig.Capabilities.Should().SatisfyRespectively(
+            capability => capability.Name.Should().Be("test_capability"));
 
         normalizedConfig.Drives.Should().SatisfyRespectively(
             drive =>

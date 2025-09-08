@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
-public class ResolveCatletSpecificationCommandResponse
+public class BuildCatletSpecificationCommandResponse
 {
     public CatletConfig BuiltConfig { get; set; }
 

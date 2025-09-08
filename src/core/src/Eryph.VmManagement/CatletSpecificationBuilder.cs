@@ -30,6 +30,9 @@ public static class CatletSpecificationBuilder
         from breedingResult in CatletPedigree.Breed(configWithEarlyDefaults, resolvedGeneSets, parentConfigs)
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
             .ToAsync()
+        // Normalize after the breeding as the normalization adds default values.
+        // These default values could confuse the breeding as it cannot differentiate
+        // between user-provided values and default values.
         from normalizedConfig in CatletConfigNormalizer.Normalize(breedingResult.Config)
             .ToEither()
             .MapLeft(errors => Error.New("Could not normalize the catlet config.", Error.Many(errors)))

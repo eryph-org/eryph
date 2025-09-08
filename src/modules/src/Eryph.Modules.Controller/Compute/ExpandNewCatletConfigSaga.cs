@@ -17,7 +17,7 @@ namespace Eryph.Modules.Controller.Compute;
 internal class ExpandNewCatletConfigSaga(
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<ExpandNewCatletConfigCommand, EryphSagaData<ExpandNewCatletConfigSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>
+        IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
 {
     protected override async Task Initiated(ExpandNewCatletConfigCommand message)
     {
@@ -28,7 +28,7 @@ internal class ExpandNewCatletConfigSaga(
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
-        await StartNewTask(new ResolveCatletSpecificationCommand
+        await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
             ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
@@ -36,9 +36,9 @@ internal class ExpandNewCatletConfigSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<ResolveCatletSpecificationCommand> message)
+    public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
     {
-        return FailOrRun(message, async (ResolveCatletSpecificationCommandResponse response) =>
+        return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
             var redactedConfig = Data.Data.ShowSecrets
                 ? response.BuiltConfig
@@ -55,7 +55,7 @@ internal class ExpandNewCatletConfigSaga(
     {
         base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<ResolveCatletSpecificationCommand>>(
+        config.Correlate<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 }

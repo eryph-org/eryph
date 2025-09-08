@@ -5,6 +5,7 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.StateDb.Model;
 using LanguageExt;
+using LanguageExt.ClassInstances;
 using LanguageExt.Common;
 
 using static Dbosoft.Functional.Validations.ComplexValidations;
@@ -25,15 +26,69 @@ public static class CatletUpdateValidator
         | ValidatePropertyValue<CatletConfig, StorageIdentifier>(updateConfig, c => c.Location, catlet.StorageIdentifier)
         | ValidatePropertyValue<CatletConfig, GeneSetIdentifier>(updateConfig, c => c.Parent, originalConfig.Parent)
         | ValidateProperty(updateConfig, c => c.Hostname, v => ValidateHostname(v, originalConfig.Hostname), required: true)
-        | ValidateProperty(updateConfig, c => c.Fodder, _ => Fail<Error, Unit>(Error.New("The value is not allowed.")))
-        | ValidateProperty(updateConfig, c => c.Variables, _ => Fail<Error, Unit>(Error.New("The value is not allowed.")));
-
-    // TODO Validate no new gene pool drives added
+        | ValidateDrives(updateConfig, originalConfig)
+        | ValidateProperty(updateConfig, c => c.Fodder,
+            _ => Fail<Error, Unit>(Error.New("Fodder is not supported when updating an existing catlet.")))
+        | ValidateProperty(updateConfig, c => c.Variables,
+            _ => Fail<Error, Unit>(Error.New("Variables are not supported when updating an existing catlet.")));
 
     private static Validation<Error, Unit> ValidateConfigType(CatletConfigType configType) =>
         guard(configType is CatletConfigType.Instance,
                 Error.New("The configuration must be an instance configuration."))
             .ToValidation();
+
+    private static Validation<ValidationIssue, Unit> ValidateDrives(
+        CatletConfig updateConfig,
+        CatletConfig originalConfig) =>
+        from _1 in Success<ValidationIssue, Unit>(unit)
+        from originalGeneDrives in originalConfig.Drives.ToSeq()
+            .Filter(d => Optional(d.Source).Map(s => s.StartsWith("gene:")).IfNone(false))
+            .Map(d => from n in CatletDriveName.NewValidation(d.Name)
+                      select (n, d))
+            .Sequence()
+            .Map(s => s.ToHashMap())
+            .MapFail(e => new ValidationIssue("", $"BUG! The original config contains an invalid drive name: {e.Message}."))
+        from _2 in ValidateList(updateConfig, c => c.Drives,
+            (d,p) => ValidateDrive(d, originalGeneDrives, p))
+        select unit;
+
+    private static Validation<ValidationIssue, Unit> ValidateDrive(
+        CatletDriveConfig updateConfig,
+        HashMap<CatletDriveName, CatletDriveConfig> originalGeneDrives,
+        string path = "") =>
+        from _1 in ValidateProperty(updateConfig, d => d.Name, CatletDriveName.NewValidation, path, required: true)
+        let name = CatletDriveName.New(updateConfig.Name)
+        from _2 in originalGeneDrives.Find(name).Match(
+            Some: originalConfig => ValidateDrive(updateConfig, originalConfig, path),
+            None: () => ValidateDrive(updateConfig, path))
+        select unit;
+
+    private static Validation<ValidationIssue, Unit> ValidateDrive(
+        CatletDriveConfig updateConfig,
+        CatletDriveConfig originalConfig,
+        string path = "") =>
+        ValidateProperty<CatletDriveConfig, CatletDriveType, Unit>(
+            updateConfig,
+            d => d.Type,
+            t => guard(
+                    t == CatletDriveType.Vhd,
+                    Error.New("The drive type of a gene pool drive cannot be changed when updating an existing catlet."))
+                .ToValidation(),
+            path)
+        | ValidatePropertyValue<CatletDriveConfig, GeneIdentifier>(updateConfig, d => d.Source, originalConfig.Source,
+            path);
+
+    private static Validation<ValidationIssue, Unit> ValidateDrive(
+        CatletDriveConfig updateConfig,
+        string path = "") =>
+        ValidateProperty(
+            updateConfig,
+            d => d.Source,
+            s => guard(
+                    s.StartsWith("gene:"),
+                    Error.New("Cannot add new gene pool drives when updating an existing catlet."))
+                .ToValidation(),
+            path);
 
     private static Validation<ValidationIssue, Unit> ValidatePropertyValue<T, TValue>(
         T toValidate,
@@ -56,12 +111,11 @@ public static class CatletUpdateValidator
             .ToValidation()
         select actualValue;
 
-
     private static Validation<Error, string?> ValidateHostname(
         string? actualValue,
         string? expectedValue) =>
         from _ in guard(actualValue == expectedValue,
-                Error.New("The hostname value cannot be changed when updating an existing catlet."))
+                Error.New("The hostname cannot be changed when updating an existing catlet."))
             .ToValidation()
         select actualValue;
 }

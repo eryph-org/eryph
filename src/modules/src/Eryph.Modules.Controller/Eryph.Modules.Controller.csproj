@@ -8,6 +8,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.CatletManagement\Eryph.CatletManagement.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.DistributedLock\Eryph.DistributedLock.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
