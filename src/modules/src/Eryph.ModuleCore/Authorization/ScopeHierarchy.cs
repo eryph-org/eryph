@@ -77,10 +77,15 @@ public static class ScopeHierarchy
     /// </summary>
     /// <param name="scope">The scope to expand</param>
     /// <returns>A set of all implied scopes (including the <paramref name="scope"/> itself)</returns>
-    public static ISet<string> GetImpliedScopes(string? scope) =>
-        string.IsNullOrEmpty(scope) || !ScopeHierarchyList.TryGetValue(scope, out var impliedScopes)
-            ? new HashSet<string>(StringComparer.Ordinal)
-            : new HashSet<string>(impliedScopes, StringComparer.Ordinal);
+    public static ISet<string> GetImpliedScopes(string? scope)
+    {
+        if (string.IsNullOrEmpty(scope))
+            return new HashSet<string>(StringComparer.Ordinal);
+
+        return ScopeHierarchyList.TryGetValue(scope, out var impliedScopes)
+            ? new HashSet<string>([scope, ..impliedScopes], StringComparer.Ordinal)
+            : new HashSet<string>([scope], StringComparer.Ordinal);
+    }
 
     /// <summary>
     /// Expands a collection of scopes to include all implied scopes.
@@ -89,24 +94,6 @@ public static class ScopeHierarchy
     /// <returns>A set of all scopes including implied ones (no duplicates)</returns>
     public static ISet<string> ExpandScopes(IEnumerable<string> scopes) =>
         scopes.SelectMany(GetImpliedScopes).ToHashSet(StringComparer.Ordinal);
-
-    /// <summary>
-    /// Checks if a requested scope is allowed given the granted scopes, considering scope hierarchy.
-    /// </summary>
-    /// <param name="requestedScope">The scope being requested</param>
-    /// <param name="grantedScopes">The scopes that have been granted to the client</param>
-    /// <returns>True if the requested scope is allowed, false otherwise</returns>
-    public static bool IsScopeAllowed(string? requestedScope, IEnumerable<string>? grantedScopes)
-    {
-        if (string.IsNullOrEmpty(requestedScope))
-            return false;
-
-        // Expand all granted scopes to include their implied scopes
-        var expandedGrantedScopes = ExpandScopes(grantedScopes);
-
-        // Check if the requested scope is in the expanded granted scopes
-        return expandedGrantedScopes.Contains(requestedScope);
-    }
 
     /// <summary>
     /// Gets all scopes that grant access to the given <paramref name="scope"/>.
