@@ -9,8 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="2.0.0" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="2.0.0" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.1-PullRequest0105.5" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.1-PullRequest0105.5" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.1-PullRequest0105.7" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.1-PullRequest0105.7" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
