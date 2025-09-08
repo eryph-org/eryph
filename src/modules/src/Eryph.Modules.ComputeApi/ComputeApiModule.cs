@@ -5,6 +5,7 @@ using System.Net;
 using Eryph.Core;
 using Eryph.ModuleCore.Authorization;
 using Eryph.Modules.AspNetCore;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Handlers;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
+
 using IEndpointResolver = Eryph.ModuleCore.IEndpointResolver;
 
 namespace Eryph.Modules.ComputeApi;
@@ -67,6 +69,10 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
 
     private static void CreateScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
     {
+        options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUserOrSwaggerEndpoint()
+            .Build();
+
         // Get all scopes that can satisfy this requirement (including higher-level scopes)
         var allowedScopes = ScopeHierarchy.GetGrantingScopes(requiredScope);
         

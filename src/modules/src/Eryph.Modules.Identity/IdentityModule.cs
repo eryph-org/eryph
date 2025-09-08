@@ -188,6 +188,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 
     private static void CreateIdentityScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
     {
+        options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUserOrSwaggerEndpoint()
+            .Build();
+
         // Get all scopes that can satisfy this requirement (including higher-level scopes)
         var allowedScopes = ScopeHierarchy.GetGrantingScopes(requiredScope);
 
