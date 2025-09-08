@@ -97,9 +97,7 @@ public sealed class ValidateScopePermissionsHandler(
     private static bool IsRequestedScopeAllowed(string requestedScope, ISet<string> expandedApplicationScopes)
     {
         // Handle built-in OpenIddict scopes
-        return requestedScope is OpenIddictConstants.Scopes.OpenId 
-                   or OpenIddictConstants.Scopes.OfflineAccess ||
-
-               expandedApplicationScopes.Contains(requestedScope);
+        return requestedScope is OpenIddictConstants.Scopes.OpenId or OpenIddictConstants.Scopes.OfflineAccess
+               || expandedApplicationScopes.Contains(requestedScope);
     }
 }
