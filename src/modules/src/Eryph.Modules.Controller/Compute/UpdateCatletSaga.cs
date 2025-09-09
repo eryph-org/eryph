@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.CatletManagement;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;

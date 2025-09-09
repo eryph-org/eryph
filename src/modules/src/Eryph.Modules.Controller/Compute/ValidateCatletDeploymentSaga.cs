@@ -26,8 +26,7 @@ public class ValidateCatletDeploymentSaga(
     IBus bus,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<ValidateCatletDeploymentCommand, EryphSagaData<ValidateCatletDeploymentSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ValidateCatletNetworksCommand>>
+        IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>
 {
     protected override async Task Initiated(
         ValidateCatletDeploymentCommand message)
@@ -45,7 +44,7 @@ public class ValidateCatletDeploymentSaga(
 
         if (Data.Data.PendingGenes.Count == 0)
         {
-            await StartValidateNetwork();
+            await Complete();
             return;
         }
 
@@ -82,19 +81,8 @@ public class ValidateCatletDeploymentSaga(
             if (Data.Data.PendingGenes.Count > 0)
                 return;
 
-            await StartValidateNetwork();
-        });
-    }
-
-    public Task Handle(OperationTaskStatusEvent<ValidateCatletNetworksCommand> message)
-    {
-        if (Data.Data.State >= ValidateCatletDeploymentSagaState.NetworkValidated)
-            return Task.CompletedTask;
-
-        return FailOrRun(message, () =>
-        {
-            Data.Data.State = ValidateCatletDeploymentSagaState.NetworkValidated;
-            return Complete();
+            Data.Data.State = ValidateCatletDeploymentSagaState.GenesPrepared;
+            await Complete();
         });
     }
 
@@ -104,18 +92,5 @@ public class ValidateCatletDeploymentSaga(
 
         config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<ValidateCatletNetworksCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-    }
-
-    private async Task StartValidateNetwork()
-    {
-        Data.Data.State = ValidateCatletDeploymentSagaState.GenesPrepared;
-
-        await StartNewTask(new ValidateCatletNetworksCommand
-        {
-            TenantId = Data.Data.TenantId,
-            Config = Data.Data.Config,
-        });
     }
 }

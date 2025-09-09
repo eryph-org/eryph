@@ -1,17 +1,15 @@
-﻿using System;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.StateDb.Model;
 using LanguageExt;
-using LanguageExt.ClassInstances;
 using LanguageExt.Common;
 
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Controller;
+namespace Eryph.CatletManagement;
 
 public static class CatletUpdateValidator
 {
