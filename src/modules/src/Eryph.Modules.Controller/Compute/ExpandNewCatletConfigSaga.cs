@@ -46,7 +46,7 @@ internal class ExpandNewCatletConfigSaga(
 
             await Complete(new ExpandNewCatletConfigCommandResponse
             {
-                Config = CatletConfigNormalizer.Minimize(redactedConfig),
+                Config = CatletConfigNormalizer.Trim(redactedConfig),
             });
         });
     }

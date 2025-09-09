@@ -111,7 +111,7 @@ public static class CatletConfigGenerator
         from _ in catlet.Features.Find(f => f == CatletFeature.Tpm)
         select new CatletCapabilityConfig
         {
-            Name = EryphConstants.Capabilities.SecureBoot,
+            Name = EryphConstants.Capabilities.Tpm,
         };
     
     private static CatletDriveConfig BuildDriveConfig(

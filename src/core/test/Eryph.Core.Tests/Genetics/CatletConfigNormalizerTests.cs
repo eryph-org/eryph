@@ -12,7 +12,7 @@ namespace Eryph.Core.Tests.Genetics;
 public class CatletConfigNormalizerTests
 {
     [Fact]
-    public void Minimize_WithEmptyValues_RemovesEmptyValues()
+    public void Trim_WithEmptyValues_RemovesEmptyValues()
     {
         var config = new CatletConfig
         {
@@ -26,7 +26,7 @@ public class CatletConfigNormalizerTests
             Variables = [],
         };
 
-        var result = CatletConfigNormalizer.Minimize(config);
+        var result = CatletConfigNormalizer.Trim(config);
 
         result.Cpu.Should().BeNull();
         result.Memory.Should().BeNull();
@@ -39,7 +39,7 @@ public class CatletConfigNormalizerTests
     }
 
     [Fact]
-    public void Minimize_WithEmptyVariablesInFodder_RemovesEmptyVariables()
+    public void Trim_WithEmptyVariablesInFodder_RemovesEmptyVariables()
     {
         var config = new CatletConfig
         {
@@ -52,24 +52,10 @@ public class CatletConfigNormalizerTests
             ],
         };
 
-        var result = CatletConfigNormalizer.Minimize(config);
+        var result = CatletConfigNormalizer.Trim(config);
 
         result.Fodder.Should().SatisfyRespectively(
             fodder => fodder.Variables.Should().BeNull());
-    }
-
-    [Fact]
-    public void Minimize_NameAndHostnameAreIdentical_RemovesHostname()
-    {
-        var config = new CatletConfig
-        {
-            Name = "test-catlet",
-            Hostname = "test-catlet",
-        };
-
-        var result = CatletConfigNormalizer.Minimize(config);
-
-        result.Hostname.Should().BeNull();
     }
 
     [Fact]

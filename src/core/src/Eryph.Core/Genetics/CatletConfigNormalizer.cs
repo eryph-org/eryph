@@ -188,50 +188,44 @@ public static class CatletConfigNormalizer
         select adaptersForNetworks.Concat(missingAdapters);
 
     /// <summary>
-    /// Minimizes the given <paramref name="config"/>.
+    /// Trims meaningless data from the given <paramref name="config"/>.
+    /// This includes empty lists or config sections without any data.
     /// </summary>
-    /// <remarks>
-    /// This method removes values which do not contain any
-    /// meaningful information (e.g. empty lists). Additionally,
-    /// some values are removed when they are identical to other
-    /// values.
-    /// </remarks>
-    public static CatletConfig Minimize(CatletConfig config) =>
+    public static CatletConfig Trim(CatletConfig config) =>
         config.CloneWith(c =>
         {
-            c.Hostname = c.Hostname != c.Name ? c.Hostname : null;
-            c.Cpu = Minimize(c.Cpu);
-            c.Memory = Minimize(c.Memory);
-            c.Capabilities = Minimize(Seq(c.Capabilities));
-            c.Drives = Minimize(Seq(c.Drives));
-            c.NetworkAdapters = Minimize(Seq(c.NetworkAdapters));
-            c.Networks = Minimize(Seq(c.Networks));
-            c.Variables = Minimize(Seq(c.Variables));
-            c.Fodder = Minimize(Seq(c.Fodder));
+            c.Cpu = Trim(c.Cpu);
+            c.Memory = Trim(c.Memory);
+            c.Capabilities = Trim(Seq(c.Capabilities));
+            c.Drives = Trim(Seq(c.Drives));
+            c.NetworkAdapters = Trim(Seq(c.NetworkAdapters));
+            c.Networks = Trim(Seq(c.Networks));
+            c.Variables = Trim(Seq(c.Variables));
+            c.Fodder = Trim(Seq(c.Fodder));
         });
 
-    private static CatletCpuConfig? Minimize(
+    private static CatletCpuConfig? Trim(
         Option<CatletCpuConfig> config) =>
         config.Filter(c => c.Count.HasValue)
             .Map(c => c.Clone())
             .IfNoneUnsafe((CatletCpuConfig?)null);
 
-    private static CatletMemoryConfig? Minimize(
+    private static CatletMemoryConfig? Trim(
         Option<CatletMemoryConfig> config) =>
         config.Filter(c => c.Startup.HasValue || c.Minimum.HasValue || c.Maximum.HasValue)
             .Map(c => c.Clone())
             .IfNoneUnsafe((CatletMemoryConfig?)null);
 
-    private static FodderConfig[]? Minimize(
+    private static FodderConfig[]? Trim(
         Seq<FodderConfig> configs) =>
         configs.Match(
             Empty: () => null!,
-            Seq: s => s.Map(Minimize).ToArray());
+            Seq: s => s.Map(Trim).ToArray());
 
-    private static FodderConfig Minimize(FodderConfig config) =>
-        config.CloneWith(c => { c.Variables = Minimize(Seq(c.Variables)); });
+    private static FodderConfig Trim(FodderConfig config) =>
+        config.CloneWith(c => { c.Variables = Trim(Seq(c.Variables)); });
 
-    private static T[]? Minimize<T>(
+    private static T[]? Trim<T>(
         Seq<T> configs)
         where T : ICloneableConfig<T> =>
         configs.Match(

@@ -69,10 +69,11 @@ internal class GetCatletConfigurationHandler(
         config.Fodder = metadata.Metadata.BuiltConfig.Fodder;
 
         var sanitizedConfig = CatletConfigRedactor.RedactSecrets(config);
+        var trimmedConfig = CatletConfigNormalizer.Trim(sanitizedConfig);
 
         var result = new CatletConfiguration
         {
-            Configuration = CatletConfigJsonSerializer.SerializeToElement(sanitizedConfig),
+            Configuration = CatletConfigJsonSerializer.SerializeToElement(trimmedConfig),
         };
 
         return result;
