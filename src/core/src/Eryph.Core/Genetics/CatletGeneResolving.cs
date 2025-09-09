@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
 using LanguageExt.Common;
@@ -13,12 +8,13 @@ using static LanguageExt.Prelude;
 namespace Eryph.Core.Genetics;
 
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
+using ResolvedGenes = HashMap<UniqueGeneIdentifier, GeneHash>;
 
 public static class CatletGeneResolving
 {
     public static Either<Error, CatletConfig> ResolveGeneSetIdentifiers(
-    CatletConfig catletConfig,
-    GeneSetMap resolvedGeneSets) =>
+        CatletConfig catletConfig,
+        GeneSetMap resolvedGeneSets) =>
         from resolvedParent in Optional(catletConfig.Parent)
             .Filter(notEmpty)
             .Map(p => GeneSetIdentifier.NewEither(p)
@@ -77,4 +73,54 @@ public static class CatletGeneResolving
         GeneSetMap resolvedGeneSets) =>
         resolvedGeneSets.Find(geneSetId)
             .ToEither(Error.New($"The gene set '{geneSetId}' could not be resolved."));
+
+    public static Either<Error, ResolvedGenes> ResolveGenes(
+        Seq<GeneIdentifierWithType> genes,
+        Architecture catletArchitecture,
+        ResolvedGenes cachedGenes) =>
+        from result in genes
+            .Distinct()
+            .Map(g => ResolveGene(g, catletArchitecture, cachedGenes))
+            .Sequence()
+            .ToEither()
+            .Map(r => r.ToHashMap())
+            .MapLeft(errors => Error.New("Could not resolve some genes.", Error.Many(errors)))
+        select result;
+
+    private static Validation<Error, (UniqueGeneIdentifier, GeneHash)> ResolveGene(
+        GeneIdentifierWithType geneIdWithType,
+        Architecture catletArchitecture,
+        HashMap<UniqueGeneIdentifier, GeneHash> cachedGenes) =>
+        from resolvedId in ResolveGene(geneIdWithType, catletArchitecture, cachedGenes.Keys.ToSeq())
+        from geneHash in cachedGenes.Find(resolvedId).ToValidation(
+            Error.New($"BUG! Cannot find resolved gene {resolvedId}."))
+        select (resolvedId, geneHash);
+
+    private static Validation<Error, UniqueGeneIdentifier> ResolveGene(
+        GeneIdentifierWithType geneIdWithType,
+        Architecture catletArchitecture,
+        Seq<UniqueGeneIdentifier> cachedGenes) =>
+        from _1 in Success<Error, Unit>(unit)
+        let filteredGenes = cachedGenes
+            .Filter(i => i.GeneType == geneIdWithType.GeneType && i.Id == geneIdWithType.GeneIdentifier)
+        from _2 in guard(filteredGenes.Count > 0, Error.New($"The gene {geneIdWithType} does not exist."))
+        let hypervisorCompatibleGenes = filteredGenes
+            .Filter(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
+                         || g.Architecture.Hypervisor.IsAny)
+        from _3 in guard(
+            hypervisorCompatibleGenes.Count > 0,
+            Error.New($"The gene {geneIdWithType} is not compatible with the hypervisor {catletArchitecture.Hypervisor}."))
+        let processorCompatibleGenes = hypervisorCompatibleGenes
+            .Filter(g => g.Architecture.ProcessorArchitecture == catletArchitecture.ProcessorArchitecture
+                         || g.Architecture.ProcessorArchitecture.IsAny)
+        from _4 in guard(
+            processorCompatibleGenes.Count > 0,
+            Error.New($"The gene {geneIdWithType} is not compatible with the processor architecture {catletArchitecture.ProcessorArchitecture}."))
+        let bestMatch = processorCompatibleGenes.Find(g => g.Architecture == catletArchitecture)
+                        | processorCompatibleGenes.Find(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
+                                                             && g.Architecture.ProcessorArchitecture.IsAny)
+                        | processorCompatibleGenes.Find(g => g.Architecture.IsAny)
+        from result in bestMatch.ToValidation(
+            Error.New($"BUG! Could not find best match for gene '{geneIdWithType}'."))
+        select result;
 }

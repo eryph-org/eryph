@@ -7,9 +7,9 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.CatletManagement;
 
-public static class CatletConfigBuilder
+public static class CatletConfigGenerator
 {
-    public static Eff<CatletConfig> BuildConfig(
+    public static Eff<CatletConfig> Generate(
         Catlet catlet,
         Seq<CatletNetworkPort> networkPorts,
         CatletConfig originalConfig) =>

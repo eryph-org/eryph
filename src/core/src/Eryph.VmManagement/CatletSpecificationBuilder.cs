@@ -17,7 +17,7 @@ using ResolvedGenes = HashMap<UniqueGeneIdentifier, GeneHash>;
 
 public static class CatletSpecificationBuilder
 {
-    public static EitherAsync<Error, (CatletConfig ExpandedConfig, ResolvedGenes ResolvedGenes)> Build(
+    public static EitherAsync<Error, (CatletConfig Config, ResolvedGenes ResolvedGenes)> Build(
         CatletConfig catletConfig,
         Architecture architecture,
         IGenePoolReader genePoolReader,
@@ -27,13 +27,13 @@ public static class CatletSpecificationBuilder
         from resolveResult in ResolveConfig(configWithEarlyDefaults, genePoolReader, cancellation)
         let resolvedGeneSets = resolveResult.ResolvedGeneSets
         let parentConfigs = resolveResult.ResolvedCatlets
-        from breedingResult in CatletPedigree.Breed(configWithEarlyDefaults, resolvedGeneSets, parentConfigs)
+        from bredConfig in CatletPedigree.Breed(configWithEarlyDefaults, resolvedGeneSets, parentConfigs)
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
             .ToAsync()
         // Normalize after the breeding as the normalization adds default values.
         // These default values could confuse the breeding as it cannot differentiate
         // between user-provided values and default values.
-        from normalizedConfig in CatletConfigNormalizer.Normalize(breedingResult.Config)
+        from normalizedConfig in CatletConfigNormalizer.Normalize(bredConfig)
             .ToEither()
             .MapLeft(errors => Error.New("Could not normalize the catlet config.", Error.Many(errors)))
             .ToAsync()
@@ -43,13 +43,17 @@ public static class CatletSpecificationBuilder
             .MapLeft(errors => Error.New("The catlet config contains invalid genes.", Error.Many(errors)))
         from resolvedGenes in ResolveGenes(genes, architecture, genePoolReader, cancellation)
         from expandedConfig in CatletFeeding.Feed(
-            normalizedWithDefaults,
-            resolvedGenes,
-            genePoolReader)
+                normalizedWithDefaults,
+                resolvedGenes,
+                genePoolReader)
             .MapLeft(e => Error.New("Could not feed the catlet.", e))
-        select (expandedConfig, resolvedGenes);
+        let resultConfig = expandedConfig.CloneWith(c =>
+        {
+            c.ConfigType = CatletConfigType.Specification;
+        })
+        select (resultConfig, resolvedGenes);
 
-    public static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveConfig(
+    internal static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveConfig(
         CatletConfig catletConfig,
         IGenePoolReader genePoolReader,
         CancellationToken cancellationToken) =>
@@ -227,7 +231,6 @@ public static class CatletSpecificationBuilder
                         + "."),
             innerError);
 
-
     public static EitherAsync<Error, HashMap<UniqueGeneIdentifier, GeneHash>> ResolveGenes(
         Seq<GeneIdentifierWithType> genes,
         Architecture catletArchitecture,
@@ -239,49 +242,7 @@ public static class CatletSpecificationBuilder
             .Map(geneSetId => genePoolReader.GetGenes(geneSetId, cancellationToken))
             .SequenceSerial()
             .Map(r => r.Map(m => m.ToSeq()).Flatten().ToHashMap())
-        from result in genes
-            .Distinct()
-            .Map(g => ResolveGene(g, catletArchitecture, cachedGenes))
-            .Sequence()
-            .ToEither().ToAsync()
-            .Map(r => r.ToHashMap())
-            .MapLeft(errors => Error.New("Could not resolve some genes.", Error.Many(errors)))
-        select result;
-
-    public static Validation<Error, (UniqueGeneIdentifier, GeneHash)> ResolveGene(
-        GeneIdentifierWithType geneIdWithType,
-        Architecture catletArchitecture,
-        HashMap<UniqueGeneIdentifier, GeneHash> cachedGenes) =>
-        from resolvedId in ResolveGene(geneIdWithType, catletArchitecture, cachedGenes.Keys.ToSeq())
-        from geneHash in cachedGenes.Find(resolvedId).ToValidation(
-            Error.New($"BUG! Cannot find resolved gene {resolvedId}."))
-        select (resolvedId, geneHash);
-
-    private static Validation<Error, UniqueGeneIdentifier> ResolveGene(
-        GeneIdentifierWithType geneIdWithType,
-        Architecture catletArchitecture,
-        Seq<UniqueGeneIdentifier> cachedGenes) =>
-        from _1 in Success<Error, Unit>(unit)
-        let filteredGenes = cachedGenes
-            .Filter(i => i.GeneType == geneIdWithType.GeneType && i.Id == geneIdWithType.GeneIdentifier)
-        from _2 in guard(filteredGenes.Count > 0, Error.New($"The gene {geneIdWithType} does not exist."))
-        let hypervisorCompatibleGenes = filteredGenes
-            .Filter(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
-                         || g.Architecture.Hypervisor.IsAny)
-        from _3 in guard(
-            hypervisorCompatibleGenes.Count > 0,
-            Error.New($"The gene {geneIdWithType} is not compatible with the hypervisor {catletArchitecture.Hypervisor}."))
-        let processorCompatibleGenes = hypervisorCompatibleGenes
-            .Filter(g => g.Architecture.ProcessorArchitecture == catletArchitecture.ProcessorArchitecture
-                         || g.Architecture.ProcessorArchitecture.IsAny)
-        from _4 in guard(
-            processorCompatibleGenes.Count > 0,
-            Error.New($"The gene {geneIdWithType} is not compatible with the processor architecture {catletArchitecture.ProcessorArchitecture}."))
-        let bestMatch = processorCompatibleGenes.Find(g => g.Architecture == catletArchitecture)
-                        | processorCompatibleGenes.Find(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
-                                                             && g.Architecture.ProcessorArchitecture.IsAny)
-                        | processorCompatibleGenes.Find(g => g.Architecture.IsAny)
-        from result in bestMatch.ToValidation(
-            Error.New($"BUG! Could not find best match for gene '{geneIdWithType}'."))
+        from result in CatletGeneResolving.ResolveGenes(genes, catletArchitecture, cachedGenes)
+            .ToAsync()
         select result;
 }

@@ -9,7 +9,6 @@ using Eryph.GenePool;
 using Eryph.GenePool.Client;
 using Eryph.GenePool.Model;
 using Eryph.Messages.Genes.Commands;
-using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -146,39 +145,7 @@ internal class LocalFirstGeneProvider(
         let isDownloadComplete = !localGeneParts.IsEmpty && localGeneParts.Values.ToSeq().All(s => s.IsSome)
         from _2 in hasMergedGene || isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
-            : use(
-                SuccessAff<CancelRt, GenePartsState>(new GenePartsState()),
-                partsState =>
-                    from _ in localGeneParts.ToSeq()
-                        .Map(kvp => kvp.Value.Map(s => (Part: kvp.Key, Size: s)))
-                        .Somes()
-                        .Map(pi => partsState.AddPart(pi.Part, pi.Size))
-                        .SequenceSerial()
-                    from tempGenePath in localGenePool.GetTempGenePath(uniqueGeneId, geneHash)
-                    from result in retry(
-                        Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(5),
-                        IterateGenePools(
-                            genepoolFactory,
-                            genePool => genePool.DownloadGene(
-                                uniqueGeneId,
-                                geneHash,
-                                partsState,
-                                tempGenePath,
-                                async (long processedBytes, long totalBytes) =>
-                                {
-                                    var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
-                                    var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
-                                    var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
-
-                                    var overallPercent = Convert.ToInt32(processedPercent * 50d);
-
-                                    var progressMessage = $"Downloading parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
-                                    log.LogTrace("Downloading parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
-                                        uniqueGeneId, totalReadMb, totalMb, processedPercent);
-                                    await reportProgress(progressMessage, overallPercent);
-                                })))
-                    from _2 in result.ToAff(Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available on any remote gene pool."))
-                    select unit)
+            : PullGeneParts(uniqueGeneId, geneHash, localGeneParts, reportProgress)
         from _4 in hasMergedGene && !isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
             : localGenePool.MergeGene(
@@ -198,6 +165,44 @@ internal class LocalFirstGeneProvider(
                     await reportProgress(progressMessage, overallPercent);
                 })
         select unit;
+
+    private Aff<CancelRt, Unit> PullGeneParts(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        HashMap<GenePartHash, Option<long>> existingParts,
+        Func<string, int, Task> reportProgress) =>
+        use(SuccessAff<CancelRt, GenePartsState>(new GenePartsState()), partsState =>
+            from _ in existingParts.ToSeq()
+                .Map(kvp => kvp.Value.Map(s => (Part: kvp.Key, Size: s)))
+                .Somes()
+                .Map(pi => partsState.AddPart(pi.Part, pi.Size))
+                .SequenceSerial()
+            from tempGenePath in localGenePool.GetTempGenePath(uniqueGeneId, geneHash)
+            from result in retry(
+                Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(5),
+                IterateGenePools(
+                    genepoolFactory,
+                    genePool => genePool.DownloadGene(
+                        uniqueGeneId,
+                        geneHash,
+                        partsState,
+                        tempGenePath,
+                        async (long processedBytes, long totalBytes) =>
+                        {
+                            var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
+                            var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
+                            var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
+
+                            var overallPercent = Convert.ToInt32(processedPercent * 50d);
+
+                            var progressMessage = $"Downloading parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
+                            log.LogTrace("Downloading parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
+                                uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                            await reportProgress(progressMessage, overallPercent);
+                        })))
+            from _2 in result.ToAff(
+                Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available on any remote gene pool."))
+            select unit);
 
     private Aff<CancelRt, Option<R>> IterateGenePools<R>(
         IGenePoolFactory genePoolFactory,

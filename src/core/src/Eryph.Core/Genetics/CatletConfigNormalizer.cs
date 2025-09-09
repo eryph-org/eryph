@@ -38,6 +38,7 @@ public static class CatletConfigNormalizer
             .Filter(notEmpty)
             .Map(StorageIdentifier.NewValidation)
             .Sequence()
+        from capabilities in config.Capabilities.ToSeq().Map(Normalize).Sequence()
         from drives in config.Drives.ToSeq().Map(Normalize).Sequence()
         from networks in config.Networks.ToSeq().Map(Normalize).ToSeq().Sequence()
         from _ in ValidateDistinct(
@@ -58,11 +59,20 @@ public static class CatletConfigNormalizer
             c.Environment = environmentName.Value;
             c.Store = dataStoreName.Value;
             c.Location = storageIdentifier.Map(s => s.Value).IfNoneUnsafe((string?)null);
+            c.Capabilities = capabilities.ToArray();
             c.Drives = drives.ToArray();
             c.Networks = networks.ToArray();
             c.NetworkAdapters = allNetworkAdapters.ToArray();
             c.Fodder = fodder.ToArray();
             c.Variables = variables.ToArray();
+        });
+
+    private static Validation<Error, CatletCapabilityConfig> Normalize(
+        CatletCapabilityConfig config) =>
+        from name in CatletCapabilityName.NewValidation(config.Name)
+        select config.CloneWith(c =>
+        {
+            c.Name = name.Value;
         });
 
     private static Validation<Error, CatletDriveConfig> Normalize(

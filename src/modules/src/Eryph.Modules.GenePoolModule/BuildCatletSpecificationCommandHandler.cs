@@ -38,7 +38,7 @@ internal class BuildCatletSpecificationCommandHandler(
         from geneData in InventorizeGenes(result.ResolvedGenes.Keys.ToSeq())
         select new BuildCatletSpecificationGenePoolCommandResponse
         {
-            BuiltConfig = result.ExpandedConfig,
+            BuiltConfig = result.Config,
             ResolvedGenes = result.ResolvedGenes.ToDictionary(),
             Inventory = geneData.ToList(),
             Timestamp = timestamp,

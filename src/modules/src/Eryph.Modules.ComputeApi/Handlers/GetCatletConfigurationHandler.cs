@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
+using Eryph.CatletManagement;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore;
@@ -60,7 +61,7 @@ internal class GetCatletConfigurationHandler(
             throw new InvalidOperationException(
                 $"The metadata for catlet {catletIdResult.Id} is missing or incomplete.");
 
-        var config = CatletConfigBuilder.BuildConfig(catlet, networkPorts.ToSeq().Strict(), metadata.Metadata.BuiltConfig)
+        var config = CatletConfigGenerator.Generate(catlet, networkPorts.ToSeq().Strict(), metadata.Metadata.BuiltConfig)
             .Run().ThrowIfFail();
 
         // Variables and fodder cannot change after the first deployment. Hence, we

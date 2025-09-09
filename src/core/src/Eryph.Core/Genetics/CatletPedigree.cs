@@ -18,7 +18,7 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 
 public static class CatletPedigree
 {
-    public static Either<Error, (CatletConfig Config, Option<CatletConfig> ParentConfig)> Breed(
+    public static Either<Error, CatletConfig> Breed(
         CatletConfig config,
         GeneSetMap geneSetMap,
         CatletMap ancestors) =>
@@ -29,7 +29,8 @@ public static class CatletPedigree
             Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
                 .MapLeft(e => Error.New("Could not breed the catlet with its parent.", e)),
             None: () => resolvedConfig)
-        select (bredConfig, parentConfig);
+        let resultConfig = Mutate(bredConfig)
+        select resultConfig;
 
     private static Either<Error, Option<CatletConfig>> BreedRecursively(
         Option<string> id,
@@ -70,6 +71,26 @@ public static class CatletPedigree
                 .MapLeft(e => CreateError(updatedVisitedAncestors, e)),
             None: () => resolvedConfig)
         select bredConfig;
+
+    private static CatletConfig Mutate(CatletConfig config) =>
+        config.CloneWith(c =>
+        {
+            c.Capabilities = c.Capabilities.ToSeq()
+                .Filter(cap => cap.Mutation != MutationType.Remove)
+                .ToArray();
+            c.Drives = c.Drives.ToSeq()
+                .Filter(d => d.Mutation != MutationType.Remove)
+                .ToArray();
+            c.Networks = c.Networks.ToSeq()
+                .Filter(n => n.Mutation != MutationType.Remove)
+                .ToArray();
+            c.NetworkAdapters = c.NetworkAdapters.ToSeq()
+                .Filter(n => n.Mutation != MutationType.Remove)
+                .ToArray();
+            c.Fodder = c.Fodder.ToSeq()
+                .Filter(f => f.Remove != true)
+                .ToArray();
+        });
 
     public static Either<Error, Unit> ValidateAncestorChain(
         Seq<AncestorInfo> visitedAncestors) =>

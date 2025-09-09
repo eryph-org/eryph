@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -83,5 +84,62 @@ public class CatletPedigreeTests
             + "-> (acme/acme-parent/latest -> acme/acme-parent/1.0).");
         error.Inner.Should().BeSome().Which.Message
             .Should().Be("The pedigree contains a circle.");
+    }
+
+    [Fact]
+    public void Breed_LeftoverRemoveMutations_ReturnsConfigWithoutRemoveMutations()
+    {
+        var config = new CatletConfig
+        {
+            Capabilities =
+            [
+                new CatletCapabilityConfig
+                {
+                    Name = "test_capability",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Name = "sda",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            Networks =
+            [
+                new CatletNetworkConfig
+                {
+                    Name = "test-network",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            NetworkAdapters =
+            [
+                new CatletNetworkAdapterConfig
+                {
+                    Name = "eth0",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            Fodder = 
+            [
+                new FodderConfig
+                {
+                    Name = "test-fodder",
+                    Remove = true,
+                }
+            ]
+        };
+
+        var result = CatletPedigree.Breed(config, Empty, Empty);
+
+        var resultConfig = result.Should().BeRight().Subject;
+        resultConfig.Capabilities.Should().BeEmpty();
+        resultConfig.Drives.Should().BeEmpty();
+        resultConfig.Networks.Should().BeEmpty();
+        resultConfig.NetworkAdapters.Should().BeEmpty();
+        resultConfig.Fodder.Should().BeEmpty();
     }
 }
