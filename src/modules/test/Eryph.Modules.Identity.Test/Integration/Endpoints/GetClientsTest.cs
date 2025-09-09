@@ -2,7 +2,9 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.TestBase;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using FluentAssertions;
@@ -22,8 +24,7 @@ public class GetClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
         WebModuleFactory<IdentityModule> factory,
         TokenCertificateFixture tokenCertificates)
     {
-        _factory = factory.WithIdentityHost(tokenCertificates)
-            .WithoutAuthorization();
+        _factory = factory.WithIdentityHost(tokenCertificates);
     }
 
     private WebModuleFactory<IdentityModule> SetupClients()
@@ -37,6 +38,7 @@ public class GetClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
                 var clientService = scope.GetRequiredService<IClientService>();
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
+                    TenantId = EryphConstants.DefaultTenantId,
                     ClientId = "test2",
                     DisplayName = "Test Client 2",
                     Scopes = { "compute:write" }
@@ -53,6 +55,7 @@ public class GetClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
         var factory = SetupClients();
 
         var response = await factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "identity:read", false)
             .GetAsync("v1/clients/test2");
 
         response.Should().HaveStatusCode(System.Net.HttpStatusCode.OK);

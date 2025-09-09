@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.IdentityDb.Entities;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
@@ -26,6 +27,7 @@ namespace Eryph.Modules.Identity.Endpoints
             _scopeManager = scopeManager;
         }
 
+        [AllowAnonymous]
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpPost("~/connect/token"), IgnoreAntiforgeryToken, Produces("application/json")]
         public async Task<IActionResult> Exchange(CancellationToken cancellationToken)

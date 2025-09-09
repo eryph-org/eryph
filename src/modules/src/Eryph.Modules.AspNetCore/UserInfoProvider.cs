@@ -17,41 +17,55 @@ public class UserInfoProvider : IUserInfoProvider
 
     public string GetUserId()
     {
-        var claims = _contextAccessor.HttpContext?.User.Claims.ToArray() ?? Array.Empty<Claim>();
-        var nameClaim = claims.FirstOrDefault(x => x.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
-        return nameClaim?.Value ?? "";
+        var principal = GetClaimsPrincipal();
+        
+        var userId = principal.FindFirstValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        if (string.IsNullOrEmpty(userId))
+            throw new InvalidOperationException("The authenticated principal does not contain a user ID.");
+
+        return userId;
     }
 
     public Guid GetUserTenantId()
     {
-        var tenantId = Guid.Empty;
-        var claims = _contextAccessor.HttpContext?.User.Claims.ToArray() ?? Array.Empty<Claim>();
-        var tenantClaim = claims.FirstOrDefault(x => x.Type == "tid") ??
-                          claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/identity/claims/tenantid");
-        if (tenantClaim != null) _ = Guid.TryParse(tenantClaim.Value, out tenantId);
+        var principal = GetClaimsPrincipal();
 
-        return tenantId;
+        var tenantId = principal.FindFirstValue("tid")
+                       ?? principal.FindFirstValue("http://schemas.microsoft.com/identity/claims/tenantid");
+
+        if (!Guid.TryParse(tenantId, out var validTenantId))
+            throw new InvalidOperationException("The authenticated principal does not contain a tenant ID.");
+
+        return validTenantId;
     }
 
     public Guid[] GetUserRoles()
     {
-        //we expect multiple claims for each role 
-        var rolesClaims = _contextAccessor.HttpContext?.User.FindAll(x => x.Type == ClaimTypes.Role)
-                          ?? Array.Empty<Claim>();
+        var principal = GetClaimsPrincipal();
+        
+        // we expect multiple claims for each role 
+        var rolesClaims = principal.FindAll(ClaimTypes.Role);
 
         var roles = rolesClaims
-            .Select(x => (Guid.TryParse(x.Value, out var guid), guid))
-            .Where(x => x.Item1)
-            .Select(x => x.guid).ToArray();
+            .Select(c => Guid.TryParse(c.Value, out var guid) ? (Guid?) guid : null)
+            .Where(r => r.HasValue)
+            .Select(r => r!.Value)
+            .ToArray();
 
         return roles;
     }
 
     public AuthContext GetAuthContext()
     {
-        return new AuthContext(GetUserTenantId(), new []
-        {
-            GetUserId()
-        }, GetUserRoles());
+        return new AuthContext(GetUserTenantId(), [GetUserId()], GetUserRoles());
+    }
+
+    private ClaimsPrincipal GetClaimsPrincipal()
+    {
+        if (_contextAccessor.HttpContext is null)
+            throw new InvalidOperationException("The HttpContext is missing.");
+        
+        return _contextAccessor.HttpContext.User;
+        
     }
 }

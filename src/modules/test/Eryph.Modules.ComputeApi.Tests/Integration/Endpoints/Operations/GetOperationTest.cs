@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -10,6 +9,7 @@ using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.TestBase;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -17,6 +17,7 @@ using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+
 using ApiCatletConfigOperationResult = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.CatletConfigOperationResult;
 using ApiOperation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
