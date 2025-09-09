@@ -3,6 +3,7 @@ using System.Linq;
 using Asp.Versioning;
 using Dbosoft.Hosuto.Modules;
 using Eryph.Core;
+using Eryph.ModuleCore.Authorization;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
@@ -13,6 +14,7 @@ using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +33,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     public override string Path => endpointResolver.GetEndpoint("identity").ToString();
 
 #pragma warning disable S2325
+    // ReSharper disable once UnusedMember.Global
     public void AddSimpleInjector(SimpleInjectorAddOptions options)
 #pragma warning restore S2325
     {
@@ -39,6 +42,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     }
 
 #pragma warning disable S2325
+    // ReSharper disable once UnusedMember.Global
     public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
 #pragma warning restore S2325
         IHostEnvironment env)
@@ -78,18 +82,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(EryphConstants.Authorization.Scopes.IdentityClientsRead,
-                policy => policy.Requirements.Add(new HasScopeRequirement(
-                    authority,
-                    EryphConstants.Authorization.Scopes.IdentityClientsRead,
-                    EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-                    EryphConstants.Authorization.Scopes.IdentityRead,
-                    EryphConstants.Authorization.Scopes.IdentityWrite)));
-            options.AddPolicy(EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-                policy => policy.Requirements.Add(new HasScopeRequirement(
-                    authority,
-                    EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-                    EryphConstants.Authorization.Scopes.IdentityWrite)));
+            ConfigureIdentityScopes(options, authority);
         });
 
         services.AddOpenIddict()
@@ -101,7 +94,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                 // Note: call ReplaceDefaultEntities() to replace the default OpenIddict entities.
                 options.UseEntityFrameworkCore()
                     .UseDbContext<IdentityDbContext>()
-                    .ReplaceDefaultEntities<ApplicationEntity, 
+                    .ReplaceDefaultEntities<ApplicationEntity,
                         AuthorizationEntity,
                         OpenIddictEntityFrameworkCoreScope, TokenEntity, string>();
 
@@ -149,6 +142,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                 options.AddEventHandler(ValidateClientCredentialsEvents.BuildInValidateClientAssertionParameters.Descriptor);
                 options.AddEventHandler(ValidateClientCredentialsEvents.ValidateClientAssertionParameters.Descriptor);
 
+                // replace built-in scope permission validation with hierarchy-aware validation
+                options.RemoveEventHandler(ValidateScopePermissions.Descriptor);
+                options.AddEventHandler(ValidateScopePermissionsHandler.Descriptor);
+
             })
 
             // Register the OpenIddict validation components.
@@ -178,5 +175,29 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
+    }
+
+    public static void ConfigureIdentityScopes(AuthorizationOptions options, string authority)
+    {
+        // Create policies for each scope using hierarchy-aware scope resolution
+        foreach (var scope in ScopeDefinitions.IdentityApiScopes)
+        {
+            CreateIdentityScopePolicy(options, authority, scope);
+        }
+    }
+
+    private static void CreateIdentityScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
+    {
+        options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUserOrSwaggerEndpoint()
+            .Build();
+
+        // Get all scopes that can satisfy this requirement (including higher-level scopes)
+        var allowedScopes = ScopeHierarchy.GetGrantingScopes(requiredScope);
+
+        options.AddPolicy(requiredScope,
+            policy => policy.Requirements.Add(new HasScopeRequirement(
+                authority,
+                allowedScopes)));
     }
 }

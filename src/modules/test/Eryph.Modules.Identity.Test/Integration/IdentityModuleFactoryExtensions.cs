@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
+using WebMotions.Fake.Authentication.JwtBearer;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Identity.Test.Integration;
@@ -56,16 +57,9 @@ public static class IdentityModuleFactoryExtensions
                         options.UseAspNetCore().DisableTransportSecurityRequirement();
                     });
                 });
-            });
-        });
 
-    public static WebModuleFactory<IdentityModule> WithoutAuthorization(
-        this WebModuleFactory<IdentityModule> factory) =>
-        factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton<IAuthorizationHandler, AllowAnonymous>();
+                services.AddAuthentication(FakeJwtBearerDefaults.AuthenticationScheme).AddFakeJwtBearer();
+                services.AddAuthorization(opts => IdentityModule.ConfigureIdentityScopes(opts, "fake"));
             });
         });
 
@@ -80,16 +74,5 @@ public static class IdentityModuleFactoryExtensions
                 services.AddLogging(loggingBuilder => loggingBuilder.AddXUnit(testOutputHelper));
             });
         });
-    }
-
-    private class AllowAnonymous : IAuthorizationHandler
-    {
-        public Task HandleAsync(AuthorizationHandlerContext context)
-        {
-            foreach (var requirement in context.PendingRequirements.ToList())
-                context.Succeed(requirement); //Simply pass all requirements
-
-            return Task.CompletedTask;
-        }
     }
 }

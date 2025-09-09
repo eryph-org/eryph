@@ -1,20 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.AspNetCore.TestBase;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
+using System.Net;
+using System.Net.Http.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Eryph.Modules.Identity.Test.Integration.Endpoints;
@@ -28,8 +26,7 @@ public class QueryClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
         WebModuleFactory<IdentityModule> factory,
         TokenCertificateFixture tokenCertificates)
     {
-        _factory = factory.WithIdentityHost(tokenCertificates)
-            .WithoutAuthorization();
+        _factory = factory.WithIdentityHost(tokenCertificates);
     }
 
     private WebModuleFactory<IdentityModule> SetupClients()
@@ -43,12 +40,14 @@ public class QueryClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
                 var clientService = scope.GetRequiredService<IClientService>();
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
+                    TenantId = EryphConstants.DefaultTenantId,
                     ClientId = "test1",
                     DisplayName = "Test Client 1",
                     Scopes = { EryphConstants.Authorization.Scopes.ComputeWrite }
                 }, false, CancellationToken.None).GetAwaiter().GetResult();
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
+                    TenantId = EryphConstants.DefaultTenantId,
                     ClientId = "test2",
                     DisplayName = "Test Client 2",
                     Scopes = { EryphConstants.Authorization.Scopes.ComputeRead }
@@ -64,7 +63,9 @@ public class QueryClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
     {
         var factory = SetupClients();
 
-        var response = await factory.CreateDefaultClient().GetAsync("v1/clients");
+        var response = await factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "identity:read", false)
+            .GetAsync("v1/clients");
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var clients = await response.Content.ReadFromJsonAsync<ListResponse<Client>>(

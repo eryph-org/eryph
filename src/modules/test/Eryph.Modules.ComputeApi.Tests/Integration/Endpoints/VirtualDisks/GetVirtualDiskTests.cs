@@ -3,9 +3,11 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+
 using ApiVirtualDisk = Eryph.Modules.ComputeApi.Model.V1.VirtualDisk;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;

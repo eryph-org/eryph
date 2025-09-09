@@ -1,16 +1,13 @@
-﻿using Dbosoft.Hosuto.Modules.Testing;
-using Eryph.StateDb.TestBase;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Net;
 using System.Threading.Tasks;
-using Eryph.StateDb;
-using Xunit;
+using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
-using FluentAssertions;
-using System.Net;
 using Eryph.Messages.Genes.Commands;
+using Eryph.Modules.AspNetCore.TestBase;
+using Eryph.StateDb;
+using Eryph.StateDb.TestBase;
+using FluentAssertions;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;

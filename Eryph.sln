@@ -119,6 +119,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement.Test", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement.HyperV.TestBase", "src\core\test\Eryph.VmManagement.HyperV.TestBase\Eryph.VmManagement.HyperV.TestBase.csproj", "{88711EDC-1C6E-46FF-976E-EB8D18055EF0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.AspNetCore.TestBase", "src\modules\test\Eryph.Modules.AspNetCore.TestBase\Eryph.Modules.AspNetCore.TestBase.csproj", "{878B2A51-F931-4D53-8ADD-658674C3C63D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -321,6 +323,10 @@ Global
 		{88711EDC-1C6E-46FF-976E-EB8D18055EF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{88711EDC-1C6E-46FF-976E-EB8D18055EF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{88711EDC-1C6E-46FF-976E-EB8D18055EF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{878B2A51-F931-4D53-8ADD-658674C3C63D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{878B2A51-F931-4D53-8ADD-658674C3C63D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{878B2A51-F931-4D53-8ADD-658674C3C63D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{878B2A51-F931-4D53-8ADD-658674C3C63D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -375,6 +381,7 @@ Global
 		{40C860B5-CC55-BD57-8965-0F08ABB38B25} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{88711EDC-1C6E-46FF-976E-EB8D18055EF0} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{878B2A51-F931-4D53-8ADD-658674C3C63D} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}
