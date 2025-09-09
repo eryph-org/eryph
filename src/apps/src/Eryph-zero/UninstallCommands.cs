@@ -135,7 +135,7 @@ internal class UninstallCommands
             Eff(() => JsonDocument.Parse(metadataJson)),
             // We use JsonDocument instead the proper deserializer to be more
             // robust against corrupted metadata. JsonDocument is case-sensitive.
-            // Hence, we look for both current and old capitalization of "VmId".
+            // Hence, we look for both the current and the old capitalization of "VmId".
             metadata => from p in Eff(() => metadata.RootElement.GetProperty("VMId"))
                                   | Eff(() => metadata.RootElement.GetProperty("VmId"))
                                   | @catch(Error.New($"The metadata '{path}' does not contain a VM ID."))

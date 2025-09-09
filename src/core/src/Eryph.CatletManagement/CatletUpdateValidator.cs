@@ -94,11 +94,15 @@ public static class CatletUpdateValidator
         string? expectedValue,
         string path = "")
         where TValue : EryphName<TValue> =>
-        ValidateProperty(toValidate, getProperty, v => ValidateValue<TValue>(v, expectedValue), path, required: true);
+        Optional(expectedValue).Filter(notEmpty).Match(
+            Some: ev => ValidateProperty(toValidate, getProperty,
+                v => ValidateValue<TValue>(v, ev), path, required: true),
+            None: () => ValidateProperty(toValidate, getProperty,
+                _ => Fail<Error, Unit>(Error.New("The value cannot be changed when updating an existing catlet.")), path));
     
     private static Validation<Error, string> ValidateValue<TValue>(
         string actualValue,
-        string? expectedValue)
+        string expectedValue)
         where TValue : EryphName<TValue> =>
         from validExpectedValue in EryphName<TValue>.NewValidation(expectedValue)
             // Nested errors cannot be used here as we convert to ValidationIssue laters

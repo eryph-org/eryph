@@ -9,16 +9,21 @@ namespace Eryph.CatletManagement;
 
 public static class CatletConfigGenerator
 {
-    public static Eff<CatletConfig> Generate(
+    /// <summary>
+    /// Generates a <see cref="CatletConfig"/> based on the current state
+    /// of given <paramref name="catlet"/>.
+    /// </summary>
+    public static CatletConfig Generate(
         Catlet catlet,
         Seq<CatletNetworkPort> networkPorts,
-        CatletConfig originalConfig) =>
-        from _ in SuccessEff(unit)
-        let adaptersMap = catlet.NetworkAdapters.ToSeq()
+        CatletConfig originalConfig)
+    {
+        var adaptersMap = catlet.NetworkAdapters.ToSeq()
             .Filter(a => notEmpty(a.MacAddress))
             .Map(a => (a.MacAddress!, a))
-            .ToHashMap()
-        select new CatletConfig
+            .ToHashMap();
+
+        return new CatletConfig
         {
             ConfigType = CatletConfigType.Instance,
             Name = catlet.Name,
@@ -45,6 +50,7 @@ public static class CatletConfigGenerator
                 .Map(BuildNetworkAdapterConfig)
                 .ToArray()
         };
+    }
 
     private static CatletMemoryConfig BuildMemoryConfig(
         Catlet catlet) =>
@@ -52,15 +58,17 @@ public static class CatletConfigGenerator
         {
             Startup = ToMiB(catlet.StartupMemory),
             Minimum = Optional(catlet.MinimumMemory)
-                .Filter(m => m > 0)
+                // Hyper-V applies default values for minimum and maximum memory
+                // even when dynamic memory is disabled.
+                .Filter(m => m > 0 && catlet.Features.Contains(CatletFeature.DynamicMemory))
                 .Map(ToMiB)
                 .ToNullable(),
             Maximum = Optional(catlet.MaximumMemory)
-                .Filter(m => m > 0)
+                .Filter(m => m > 0 && catlet.Features.Contains(CatletFeature.DynamicMemory))
                 .Map(ToMiB)
                 .ToNullable(),
         };
-
+    
     private static Seq<CatletCapabilityConfig> BuildCapabilityConfigs(
         Catlet catlet) =>
         Seq(BuildDynamicMemoryCapabilityConfig(catlet),
@@ -173,11 +181,9 @@ public static class CatletConfigGenerator
             IpPool = ipAssignment.Pool.Name,
         };
 
-    private static string ToDriveName(int position) =>
-        $"sda{(char)('a' + position % 26)}";
+    private static string ToDriveName(int position) => $"sda{(char)('a' + position % 26)}";
 
     private static int ToMiB(long bytes) => (int)Math.Ceiling(bytes / 1024d / 1024);
 
     private static int ToGiB(long bytes) => (int)Math.Ceiling(bytes / 1024d / 1024 / 1024);
-
 }

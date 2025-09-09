@@ -72,9 +72,11 @@ namespace Eryph.Core
 
             /// <summary>
             /// The maximum size of a gene that can be downloaded directly (into memory).
+            /// </summary>
+            /// <remarks>
             /// The gene pool limits the size of YAML sources to 2 MiB. Hence, 5 MiB
             /// should provide us with enough headroom to download any catlet or fodder gene.
-            /// </summary>
+            /// </remarks>
             public static readonly int MaxGeneSizeDirectDownload = 5 * 1024 * 1024;
         }
 
