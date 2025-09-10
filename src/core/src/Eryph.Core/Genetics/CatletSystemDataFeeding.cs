@@ -17,7 +17,7 @@ public static class CatletSystemDataFeeding
         Guid vmId) =>
         FeedSystemVariables(config, catletId.ToString(), vmId.ToString());
 
-    private static CatletConfig FeedSystemVariables(
+    public static CatletConfig FeedSystemVariables(
         CatletConfig config,
         string catletId,
         string vmId) =>

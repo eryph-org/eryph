@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using JetBrains.Annotations;
+using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -40,9 +44,23 @@ internal class ExpandNewCatletConfigSaga(
     {
         return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
+            var configWithSystemVariables = CatletSystemDataFeeding.FeedSystemVariables(
+                response.BuiltConfig, "#catletId", "#vmId");
+
+            var substitutionResult = CatletConfigVariableSubstitutions
+                .SubstituteVariables(configWithSystemVariables)
+                .ToEitherWithJsonPath(
+                    "The variables in the catlet config cannot be substituted.",
+                    CatletConfigJsonSerializer.Options.PropertyNamingPolicy);
+            if (substitutionResult.IsLeft)
+            {
+                await Fail(Error.Many(substitutionResult.LeftToSeq()).Print());
+                return;
+            }
+
             var redactedConfig = Data.Data.ShowSecrets
-                ? response.BuiltConfig
-                : CatletConfigRedactor.RedactSecrets(response.BuiltConfig);
+                ? substitutionResult.ValueUnsafe()
+                : CatletConfigRedactor.RedactSecrets(substitutionResult.ValueUnsafe());
 
             await Complete(new ExpandNewCatletConfigCommandResponse
             {

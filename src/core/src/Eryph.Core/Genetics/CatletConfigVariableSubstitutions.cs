@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
@@ -12,7 +8,7 @@ using LanguageExt;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement;
+namespace Eryph.Core.Genetics;
 
 public static partial class CatletConfigVariableSubstitutions
 {

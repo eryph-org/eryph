@@ -1,12 +1,9 @@
-﻿using Dbosoft.Functional.Validations;
-using LanguageExt;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Dbosoft.Functional.Validations;
+using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.Core;
 
@@ -23,6 +20,20 @@ public static partial class ValidationIssueExtensions
 {
     [GeneratedRegex(@"\w[\d\w]*")]
     private static partial Regex NameRegex();
+
+    /// <summary>
+    /// Converts the given <paramref name="validation"/> to an <see cref="Either{Error, T}"/>.
+    /// As part of the conversion, the property names in the <see cref="ValidationIssue"/>s
+    /// are converted to proper JSON paths.
+    /// </summary>
+    public static Either<Error, T> ToEitherWithJsonPath<T>(
+        this Validation<ValidationIssue, T> validation,
+        string message,
+        Option<JsonNamingPolicy> namingPolicy) =>
+        validation.MapFail(i => i.ToJsonPath(namingPolicy))
+            .MapFail(i => i.ToError())
+            .ToEither()
+            .MapLeft(errors => Error.New(message, Error.Many(errors)));
 
     public static Validation<ValidationIssue, T> ToJsonPath<T>(
         this Validation<ValidationIssue, T> validation,

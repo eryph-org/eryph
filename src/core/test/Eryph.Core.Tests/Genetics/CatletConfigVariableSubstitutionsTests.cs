@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
-using FluentAssertions;
-using FluentAssertions.LanguageExt;
-using Xunit;
+using Eryph.Core.Genetics;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.Core.Tests.Genetics;
 
 public class CatletConfigVariableSubstitutionsTests
 {

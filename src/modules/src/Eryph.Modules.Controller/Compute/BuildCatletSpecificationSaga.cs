@@ -101,9 +101,8 @@ internal class BuildCatletSpecificationSaga(
             // The YAML serializer does not expose a readily usable naming policy. Hence,
             // we use the naming policy of the JSON serializer. The two should match anyway
             // as the underlying schema is the same.
-            .MapFail(i => i.ToJsonPath(CatletConfigJsonSerializer.Options.PropertyNamingPolicy))
-            .MapFail(i => i.ToError())
-            .ToEither()
-            .MapLeft(errors => Error.New("The catlet configuration is invalid.", Error.Many(errors)))
+            .ToEitherWithJsonPath(
+                "The catlet configuration is invalid.",
+                CatletConfigJsonSerializer.Options.PropertyNamingPolicy)
         select parsedConfig;
 }

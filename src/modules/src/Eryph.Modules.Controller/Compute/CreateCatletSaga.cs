@@ -1,6 +1,5 @@
 ﻿using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -8,17 +7,11 @@ using Eryph.ModuleCore;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using IdGen;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using System;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
-using LanguageExt;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 

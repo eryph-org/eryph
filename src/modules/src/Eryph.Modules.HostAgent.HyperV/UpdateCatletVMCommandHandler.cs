@@ -2,6 +2,7 @@
 using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
