@@ -14,7 +14,7 @@ public static class CatletConfigInstantiator
     /// can be used to deploy an instance of the catlet.
     /// </summary>
     /// <remarks>
-    /// The <paramref name="location"/> must be a unique value as it used to create
+    /// The <paramref name="location"/> must be a unique value as it is used to create
     /// a unique storage path for the catlet instance.
     /// </remarks>
     public static CatletConfig Instantiate(CatletConfig config, string location) =>

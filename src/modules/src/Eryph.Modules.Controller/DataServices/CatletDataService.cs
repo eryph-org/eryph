@@ -16,7 +16,7 @@ internal class CatletDataService(
 {
     public async Task<Catlet?> GetByVmId(Guid id)
     {
-        return await repository.GetBySpecAsync(new CatletSpecs.GetByVMId(id));
+        return await repository.GetBySpecAsync(new CatletSpecs.GetByVmId(id));
     }
 
     public async Task<Catlet?> Get(Guid id)

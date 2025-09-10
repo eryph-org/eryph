@@ -1,4 +1,8 @@
-﻿using Dbosoft.Rebus.Operations;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -13,16 +17,9 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Rebus.Pipeline;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Threading.Tasks;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Inventory
@@ -127,7 +124,7 @@ namespace Eryph.Modules.Controller.Inventory
             CatletMetadata existingMetadata)
         {
             // This VM is a copy/import of another VM. We assign
-            // new IDs and track it as separate catlet.
+            // new IDs and track it as a separate catlet.
             var catletId = Guid.NewGuid();
             var metadataId = Guid.NewGuid();
 

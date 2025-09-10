@@ -21,9 +21,9 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
-        public sealed class GetByVMId : Specification<Catlet>, ISingleResultSpecification
+        public sealed class GetByVmId : Specification<Catlet>, ISingleResultSpecification
         {
-            public GetByVMId(Guid vmId)
+            public GetByVmId(Guid vmId)
             {
                 Query.Where(x => x.VmId == vmId)
                     .Include(x => x.Project);

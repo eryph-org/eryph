@@ -16,7 +16,7 @@ public class MacAddressGeneratorTests
     [Fact]
     public void Generate_WithoutSource_ReturnsValidMacAddress()
     {
-        var act = () => MacAddressGenerator.Generate();
-        act.Should().NotThrow();
+        var macAddress = MacAddressGenerator.Generate();
+        macAddress.Value.Should().StartWith("d2:ab:");
     }
 }
