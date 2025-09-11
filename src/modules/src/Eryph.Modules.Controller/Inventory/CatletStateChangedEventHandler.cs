@@ -49,7 +49,14 @@ internal class CatletStateChangedEventHandler(
             return;
 
         var metadata = await metadataService.GetMetadata(catlet.MetadataId);
-        if (metadata is null || metadata.SecretDataHidden || metadata.IsDeprecated || metadata.Metadata is null)
+        if (metadata is null || metadata.IsDeprecated || metadata.Metadata is null)
+        {
+            logger.LogDebug("Skipping state update for catlet {CatletId}. The catlet's metadata is deprecated or unusable.",
+                catlet.Id);
+            return;
+        }
+
+        if (metadata.SecretDataHidden)
             return;
 
         var anySensitive = metadata.Metadata.Config.Fodder.ToSeq().Exists(

@@ -84,7 +84,7 @@ namespace Eryph.Modules.Controller.Inventory
             VirtualMachineData vmInfo,
             CatletFarm host)
         {
-            // Get known metadata for VM, if metadata is unknown skip this VM as it is not in Eryph management
+            // Get known metadata for VM, if metadata is unknown skip this VM as it is not managed by eryph
             var metadata = await _metadataService.GetMetadata(vmInfo.MetadataId);
             if (metadata is null)
             {

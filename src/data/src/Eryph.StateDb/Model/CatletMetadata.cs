@@ -26,8 +26,5 @@ public class CatletMetadata
 
     public CatletMetadataContent? Metadata { get; set; }
 
-    /// <summary>
-    /// 
-    /// </summary>
     public IList<CatletMetadataGene> Genes { get; set; } = null!;
 }

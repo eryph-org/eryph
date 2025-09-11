@@ -3,7 +3,6 @@
 public enum UpdateCatletSagaState
 {
     Initiated = 0,
-    SpecificationBuilt = 10,
-    DeploymentValidated = 20,
-    Deployed = 30
+    DeploymentValidated = 10,
+    Deployed = 20
 }

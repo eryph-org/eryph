@@ -1,4 +1,6 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System.Linq;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
@@ -7,21 +9,20 @@ using Eryph.ModuleCore;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.Modules.Controller.Compute;
 
 /// <summary>
 /// This saga is responsible for validating that the catlet
-/// can be deployed to the selected host agent. This includes
-/// checking the architecture, the configured networks and
-/// ensuring that all disk genes are available and that the
-/// datastore and environment exist.
+/// can be deployed to the selected host agent. Currently,
+/// this only includes the preparation of disk genes.
 /// </summary>
+/// <remarks>
+/// In the future, this saga can perform additional validation
+/// to ensure that the catlet can be deployed to the selected
+/// host agent. For example, it can check for the presence
+/// of data stores and networks.
+/// </remarks>
 public class ValidateCatletDeploymentSaga(
     IBus bus,
     IWorkflow workflow)

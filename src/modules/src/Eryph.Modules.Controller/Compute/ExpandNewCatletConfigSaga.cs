@@ -42,8 +42,13 @@ internal class ExpandNewCatletConfigSaga(
 
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
     {
+        if (Data.Data.State >= ExpandNewCatletConfigSagaState.SpecificationBuilt)
+            return Task.CompletedTask;
+
         return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
+            Data.Data.State = ExpandNewCatletConfigSagaState.SpecificationBuilt;
+
             var configWithSystemVariables = CatletSystemDataFeeding.FeedSystemVariables(
                 response.BuiltConfig, "#catletId", "#vmId");
 

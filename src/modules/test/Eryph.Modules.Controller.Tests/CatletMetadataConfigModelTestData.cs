@@ -26,7 +26,7 @@ internal static class CatletMetadataConfigModelTestData
               "fodder::gene:acme/acme-tools/1.0:test-food[hyperv/amd64]": "sha256:cb476d331140e6e28442a79f26d3a1120faf2d110659508a4415ae5ce138bbf1"
             },
             "config_yaml": "name: test-catlet\nparent: acme/acme-os/1.0\n",
-            "built_config": {
+            "config": {
               "name": "test-catlet",
               "parent": "acme/acme-os/1.0"
             }

@@ -70,6 +70,8 @@ internal class UpdateVMHostInventoryCommandHandler(
 
         await UpdateVms(message.Timestamp, message.VMInventory, vmHost);
 
+        // The inventory by the host agent should contain all VMs that are present on the host.
+        // Hence, we can mark all VMs that are not in the inventory as missing.
         foreach (var missingVmId in knownVmIds.Except(message.VMInventory.Select(vm => vm.VmId)))
         {
             var catlet = await _vmDataService.GetByVmId(missingVmId);
