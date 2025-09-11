@@ -58,7 +58,6 @@ internal class CatletMetadataSeeder : SeederBase
         await _metadataRepository.SaveChangesAsync(cancellationToken);
     }
 
-
     private async Task SeedV1Metadata(
         JsonDocument document,
         CancellationToken cancellationToken)
@@ -73,7 +72,6 @@ internal class CatletMetadataSeeder : SeederBase
 
         if (!root.TryGetProperty("VmId", out var vmId) && !root.TryGetProperty("VMId", out vmId))
             throw new JsonException("The catlet metadata JSON does not contain a VM ID.");
-
 
         var metadata = new CatletMetadata
         {

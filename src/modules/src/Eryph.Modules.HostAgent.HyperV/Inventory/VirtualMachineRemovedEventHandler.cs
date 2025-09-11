@@ -28,7 +28,7 @@ internal class VirtualMachineRemovedEventHandler(
     {
         var result = await Handle(message.VmId).Run();
 
-        result.IfFail(e => { logger.LogError(e, "Failed to verify removal VM {VmId}", message.VmId); });
+        result.IfFail(e => { logger.LogError(e, "Failed to verify removal of VM {VmId}", message.VmId); });
         if (result.IsFail)
             return;
 

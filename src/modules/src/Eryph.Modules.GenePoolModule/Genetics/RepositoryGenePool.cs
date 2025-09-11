@@ -106,7 +106,7 @@ internal class RepositoryGenePool(
         GeneHash geneHash) =>
         from _1 in guard(
                 uniqueGeneId.GeneType is GeneType.Catlet or GeneType.Fodder,
-                Error.New($"The content of the gene {uniqueGeneId} cannot be downloaded directly."))
+                Error.New($"The content of the gene {uniqueGeneId} ({geneHash}) cannot be downloaded directly."))
             .ToAff()
         from geneInfo in FetchGene(uniqueGeneId, geneHash)
         from contentInfo in geneInfo
@@ -134,9 +134,9 @@ internal class RepositoryGenePool(
         from genePartHash in geneParts.Match(
             Empty: () => FailEff<GenePartHash>(Error.New($"No gene part information is available for gene {uniqueGeneId} ({geneHash}).")),
             Head: SuccessEff,
-            Tail: _ => FailEff<GenePartHash>(Error.New($"The gene {uniqueGeneId} has multiple parts. Only genes with a single part can be downloaded directly.")))
+            Tail: _ => FailEff<GenePartHash>(Error.New($"The gene {uniqueGeneId} ({geneHash}) has multiple parts. Only genes with a single part can be downloaded directly.")))
         from genePartUri in geneInfo.DownloadUris.Find(genePartHash)
-            .ToEff(Error.New($"The download information for the gene {uniqueGeneId} is incomplete."))
+            .ToEff(Error.New($"The download information for the gene {uniqueGeneId} ({geneHash}) is incomplete."))
         from content in Aff<CancelRt, byte[]>(async rt =>
         {
             await using var memoryStream = new MemoryStream();
@@ -212,62 +212,60 @@ internal class RepositoryGenePool(
         from downloadedParts in partsState.GetExistingParts()
         let downloadedBytes = downloadedParts.Values.ToSeq().Sum()
         from size in Aff<CancelRt, long>(async rt =>
+        {
+            try
             {
-                try
-                {
-                    log.LogTrace("Downloading gene part {GenePart} from {Url}", genePartHash, url);
-                    await using var fileStream = fileSystem.OpenWrite(path);
-                    // Even with a large buffer (1 MiB), read operations from the HTTP response stream
-                    // only return small chunks (16 KiB). We use a BufferedStream to make sure
-                    // that we write to the file system in larger chunks.
-                    await using var bufferStream = new BufferedStream(fileStream, BufferSize);
-                    await using var progressStream = new ProgressStream(
-                        bufferStream,
-                        TimeSpan.FromSeconds(10),
-                        async (progress, _) => await reportProgress(downloadedBytes + progress, totalBytes));
-                    await FetchGenePart(progressStream, url, genePartHash, rt.CancellationToken);
-                    return fileSystem.GetFileSize(path);
-                }
-                catch (Exception ex)
-                {
-                    log.LogInformation(ex, "Failed to download gene part {GenePart} from {Url}", genePartHash, url);
-                    fileSystem.FileDelete(path);
-                    throw;
-                }
-            })
+                log.LogTrace("Downloading gene part {GenePart} from {Url}", genePartHash, url);
+                await using var fileStream = fileSystem.OpenWrite(path);
+                // Even with a large buffer (1 MiB), read operations from the HTTP response stream
+                // only return small chunks (16 KiB). We use a BufferedStream to make sure
+                // that we write to the file system in larger chunks.
+                await using var bufferStream = new BufferedStream(fileStream, BufferSize);
+                await using var progressStream = new ProgressStream(
+                    bufferStream,
+                    TimeSpan.FromSeconds(10),
+                    async (progress, _) => await reportProgress(downloadedBytes + progress, totalBytes));
+                await FetchGenePart(progressStream, url, genePartHash, rt.CancellationToken);
+                return fileSystem.GetFileSize(path);
+            }
+            catch (Exception ex)
+            {
+                log.LogInformation(ex, "Failed to download gene part {GenePart} from {Url}", genePartHash, url);
+                fileSystem.FileDelete(path);
+                throw;
+            }
+        })
         from _2 in partsState.AddPart(genePartHash, size)
         select unit;
 
     private Aff<CancelRt, Option<RepositoryGeneInfo>> FetchGene(
-    UniqueGeneIdentifier uniqueGeneId,
-    GeneHash geneHash) =>
-    from genePoolClient in CreateClient()
-    from response in Aff<CancelRt, GetGeneResponse>(async rt =>
-    {
-        try
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash) =>
+        from genePoolClient in CreateClient()
+        from response in Aff<CancelRt, GetGeneResponse>(async rt =>
         {
-            var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet, geneHash.ToGene());
-            var response = await geneClient.GetAsync(cancellationToken: rt.CancellationToken);
-            if (response is null)
-                throw Error.New("The response from the gene pool API is empty.");
+            try
+            {
+                var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet, geneHash.ToGene());
+                var response = await geneClient.GetAsync(cancellationToken: rt.CancellationToken);
+                if (response is null)
+                    throw Error.New("The response from the gene pool API is empty.");
 
-            log.LogDebug("Found gene {GeneId} ({GeneHash}) on gene pool '{GenePool}'",
-                    uniqueGeneId, geneHash, PoolName);
-            return response;
-        }
-        catch (Exception ex)
-        {
-            log.LogInformation(ex, "Failed to lookup gene {GeneId} ({GeneHash}) on gene pool '{GenePool}'",
-                    uniqueGeneId, geneHash, PoolName);
-            throw;
-        }
-    })
-        .Map(Some)
-        .Catch(e => IsNotFoundError(e), SuccessAff<Option<GetGeneResponse>>(None))
-    from result in response
-        .Map(r => CreateRepositoryGeneInfo(geneHash, r))
-        .Sequence()
-    select result;
+                log.LogDebug("Found gene {GeneId} ({GeneHash}) on gene pool '{GenePool}'",
+                        uniqueGeneId, geneHash, PoolName);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                log.LogInformation(ex, "Failed to lookup gene {GeneId} ({GeneHash}) on gene pool '{GenePool}'",
+                        uniqueGeneId, geneHash, PoolName);
+                throw;
+            }
+        }).Map(Some).Catch(e => IsNotFoundError(e), SuccessAff<Option<GetGeneResponse>>(None))
+        from result in response
+            .Map(r => CreateRepositoryGeneInfo(geneHash, r))
+            .Sequence()
+        select result;
 
     private static Eff<RepositoryGeneInfo> CreateRepositoryGeneInfo(
         GeneHash geneHash,

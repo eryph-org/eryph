@@ -52,10 +52,10 @@ internal class CatletStateChangedEventHandler(
         if (metadata is null || metadata.SecretDataHidden || metadata.IsDeprecated || metadata.Metadata is null)
             return;
 
-        var anySensitive = metadata.Metadata.BuiltConfig.Fodder.ToSeq().Exists(
+        var anySensitive = metadata.Metadata.Config.Fodder.ToSeq().Exists(
                                f => f.Secret.GetValueOrDefault()
                                     || f.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault()))
-                           || metadata.Metadata.BuiltConfig.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
+                           || metadata.Metadata.Config.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
         if (!anySensitive)
             return;
         

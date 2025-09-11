@@ -4,11 +4,6 @@ using Eryph.Configuration.Model;
 using Eryph.Core.Genetics;
 using Eryph.Resources.Machines;
 using Eryph.Serializers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.Modules.Controller.Tests;
 
@@ -42,7 +37,7 @@ internal static class CatletMetadataConfigModelTestData
     internal static readonly CatletMetadataContent Content = new()
     {
         Architecture = Architecture.New("hyperv/amd64"),
-        BuiltConfig = new CatletConfig()
+        Config = new CatletConfig()
         {
             Name = "test-catlet",
             Parent = "acme/acme-os/1.0",

@@ -20,6 +20,7 @@ public static class GeneSetTagManifestUtils
         from fodderGenes in GetGenes(geneSetId, GeneType.Fodder, manifest.FodderGenes.ToSeq())
             .MapLeft(e => Error.New($"The fodder genes in the manifest of the gene set '{manifest.Geneset}' are invalid.", e))
         from volumeGenes in GetGenes(geneSetId, GeneType.Volume, manifest.VolumeGenes.ToSeq())
+            .MapLeft(e => Error.New($"The volume genes in the manifest of the gene set '{manifest.Geneset}' are invalid.", e))
         select catletGenes + fodderGenes + volumeGenes;
 
     private static Either<Error, HashMap<UniqueGeneIdentifier, GeneHash>> GetCatletGene(

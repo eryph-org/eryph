@@ -116,15 +116,15 @@ internal class LocalGenePoolSource(
         from result in geneParts.Fold(
             SuccessAff<CancelRt, HashMap<GenePartHash, Option<long>>>(Empty),
             (state, part) => from partInfos in state
-                from partInfo in GetDownloadedGenePart(uniqueGeneId, geneHash, part)
-                let result = partInfos.Add(part, partInfo)
-                let availableBytes = result.Values.Somes().Sum()
-                from _ in Aff<CancelRt, Unit>(async _ =>
-                {
-                    await reportProgress(availableBytes, totalBytes);
-                    return unit;
-                })
-                select result)
+                             from partInfo in GetDownloadedGenePart(uniqueGeneId, geneHash, part)
+                             let result = partInfos.Add(part, partInfo)
+                             let availableBytes = result.Values.Somes().Sum()
+                             from _ in Aff<CancelRt, Unit>(async _ =>
+                             {
+                                 await reportProgress(availableBytes, totalBytes);
+                                 return unit;
+                             })
+                             select result)
         select result;
 
     private Aff<CancelRt, Option<long>> GetDownloadedGenePart(
@@ -166,7 +166,7 @@ internal class LocalGenePoolSource(
         from genePoolPath in _genePoolPathMemo
         from _ in use(AcquireGeneLock(uniqueGeneId), _ =>
             // We are going to re(write) the gene on the disk. Remove it from the merged genes
-            // until merge has been completed successfully.
+            // until the merge has been completed successfully.
             from _1 in RemoveMergedGene(uniqueGeneId, geneHash)
             from optionalManifest in ReadTempGeneManifest(uniqueGeneId, geneHash)
             from manifest in optionalManifest.ToAff(
@@ -240,8 +240,8 @@ internal class LocalGenePoolSource(
         // number of requests to the remote gene pool.
         let contentMap = geneSetInfo.GeneDownloadInfo.ToSeq()
             .Map(dr => from hash in Gene.NewOption(dr.Gene)
-                from content in Optional(dr.Content).Filter(notEmpty)
-                select (hash, content))
+                       from content in Optional(dr.Content).Filter(notEmpty)
+                       select (hash, content))
             .Somes()
             .ToHashMap()
         from _ in genes.ToSeq()
@@ -265,7 +265,7 @@ internal class LocalGenePoolSource(
         string content) =>
         from genePoolPath in _genePoolPathMemo
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
-        // This logic is only triggered when the gene was included when a downloaded
+        // This logic is only triggered when the gene was included when downloading
         // gene set tag manifest. The manifest is cached and must be downloaded before
         // any genes are downloaded. Hence, the gene can only exist if the user modified
         // the local gene pool.
@@ -374,8 +374,7 @@ internal class LocalGenePoolSource(
         let actualGeneHash = manifest.Map(GeneManifestUtils.ComputeHash)
         from _2 in guard(
             actualGeneHash.IsNone || actualGeneHash == geneHash,
-            Error.New(
-                $"The manifest of the gene {uniqueGeneId} ({geneHash.Hash}) in the local gene pool is corrupted."))
+            Error.New($"The manifest of the gene {uniqueGeneId} ({geneHash.Hash}) in the local gene pool is corrupted."))
         select manifest;
 
     private Aff<CancelRt, Seq<GeneHash>> GetMergedGenes(

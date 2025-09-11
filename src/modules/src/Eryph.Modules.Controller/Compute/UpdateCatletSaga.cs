@@ -72,7 +72,7 @@ internal class UpdateCatletSaga(
         Data.Data.Architecture = metadata.Metadata.Architecture;
         Data.Data.ResolvedGenes = metadata.Metadata.PinnedGenes;
 
-        var validationResult = ValidateConfig(message.Config, metadata.Metadata.BuiltConfig, catlet);
+        var validationResult = ValidateConfig(message.Config, metadata.Metadata.Config, catlet);
         if (validationResult.IsLeft)
         {
             await Fail(Error.Many(validationResult.LeftToSeq()).Print());

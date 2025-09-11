@@ -61,12 +61,12 @@ internal class GetCatletConfigurationHandler(
             throw new InvalidOperationException(
                 $"The metadata for catlet {catletIdResult.Id} is missing or incomplete.");
 
-        var config = CatletConfigGenerator.Generate(catlet, networkPorts.ToSeq().Strict(), metadata.Metadata.BuiltConfig);
+        var config = CatletConfigGenerator.Generate(catlet, networkPorts.ToSeq().Strict(), metadata.Metadata.Config);
 
         // Variables and fodder cannot change after the first deployment. Hence, we
         // take them from metadata.
-        config.Variables = metadata.Metadata.BuiltConfig.Variables;
-        config.Fodder = metadata.Metadata.BuiltConfig.Fodder;
+        config.Variables = metadata.Metadata.Config.Variables;
+        config.Fodder = metadata.Metadata.Config.Fodder;
 
         var sanitizedConfig = CatletConfigRedactor.RedactSecrets(config);
         var trimmedConfig = CatletConfigNormalizer.Trim(sanitizedConfig);

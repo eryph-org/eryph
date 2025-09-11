@@ -107,7 +107,7 @@ internal class DeployCatletSaga(
 
             var catletMetadata = new CatletMetadataContent
             {
-                BuiltConfig = Data.Data.Config,
+                Config = Data.Data.Config,
                 Architecture = Data.Data.Architecture,
                 PinnedGenes = Data.Data.ResolvedGenes,
                 ConfigYaml = Data.Data.ConfigYaml.ReplaceLineEndings("\n"),

@@ -19,5 +19,9 @@ public sealed class CatletMetadataContent
     /// </remarks>
     public string ConfigYaml { get; set; }
 
-    public CatletConfig BuiltConfig { get; set; }
+    /// <summary>
+    /// The <see cref="CatletConfigType.Instance"/> configuration which
+    /// was used to create this catlet.
+    /// </summary>
+    public CatletConfig Config { get; set; }
 }

@@ -42,7 +42,7 @@ public abstract class CatletMetadataChangeTrackingTests(
     private readonly CatletMetadataContent _expectedMetadataContent = new()
     {
         Architecture = Architecture.New("hyperv/amd64"),
-        BuiltConfig = new CatletConfig
+        Config = new CatletConfig
         {
             Parent = "acme-org/acme-linux/starter",
         },
@@ -57,7 +57,7 @@ public abstract class CatletMetadataChangeTrackingTests(
         var newMetadataContent = new CatletMetadataContent()
         {
             Architecture = Architecture.New("hyperv/amd64"),
-            BuiltConfig = new CatletConfig
+            Config = new CatletConfig
             {
                 Parent = "acme-org/acme-unix/legacy",
             },

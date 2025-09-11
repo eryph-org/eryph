@@ -1,22 +1,14 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Core.Sys;
 using LanguageExt;
-using LanguageExt.Common;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
 internal interface IGenePool
 {
-    /// <summary>
-    /// Fetches the gene set 
-    /// </summary>
-    /// <param name="geneSetId"></param>
-    /// <returns></returns>
     Aff<CancelRt, Option<GeneSetInfo>> GetGeneSet(
         GeneSetIdentifier geneSetId);
 

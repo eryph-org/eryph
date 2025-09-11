@@ -43,7 +43,7 @@ internal class UpdateConfigDriveSaga(
         await StartNewTask(new UpdateCatletConfigDriveCommand
         {
             Config = CatletSystemDataFeeding.FeedSystemVariables(
-                metadata.Metadata.BuiltConfig, catlet.Id, catlet.VmId),
+                metadata.Metadata.Config, catlet.Id, catlet.VmId),
             VmId = catlet.VmId,
             CatletId = catlet.Id,
             MetadataId = catlet.MetadataId,

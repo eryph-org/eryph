@@ -29,7 +29,7 @@ internal class LocalFirstGeneProvider(
         from pulledGeneSet in cachedManifest.Match(
                 Some: cm => notEmpty(cm.Reference)
                     // Gene set references should always be checked online, but we ignore
-                    // any network errors. We have a cached version if the gene set reference,
+                    // any network errors. We have a cached version of the gene set reference,
                     // and it should be possible to proceed when the gene pool is not reachable.
                     // We also return the cached version when the gene set does not exist on
                     // any remote gene pool. This is useful for local development when the gene
@@ -136,9 +136,9 @@ internal class LocalFirstGeneProvider(
 
                 var overallPercent = Convert.ToInt32(processedPercent * 50d);
 
-                var progressMessage = $"Verifying downloaded parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
-                log.LogTrace("Verifying downloaded parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
-                    uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                var progressMessage = $"Verifying downloaded parts of {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
+                log.LogTrace("Verifying downloaded parts of {GeneId} ({GeneHash}): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
+                    uniqueGeneId, geneHash, totalReadMb, totalMb, processedPercent);
                 await reportProgress(progressMessage, overallPercent);
             })
         from hasMergedGene in localGenePool.GetGeneSize(uniqueGeneId, geneHash).Map(o => o.IsSome)
@@ -146,6 +146,8 @@ internal class LocalFirstGeneProvider(
         from _2 in hasMergedGene || isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
             : PullGeneParts(uniqueGeneId, geneHash, localGeneParts, reportProgress)
+        // When all gene parts are present, we merge them even when the merged gene already exists.
+        // This should only happen when the user copied a packed gene into the local gene pool by hand.
         from _4 in hasMergedGene && !isDownloadComplete
             ? SuccessAff<CancelRt, Unit>(unit)
             : localGenePool.MergeGene(
@@ -159,9 +161,9 @@ internal class LocalFirstGeneProvider(
                     
                     var overallPercent = Convert.ToInt32(processedPercent * 50d + 50d);
                     
-                    var progressMessage = $"Extracting {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
-                    log.LogTrace("Extracting {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
-                        uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                    var progressMessage = $"Extracting {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
+                    log.LogTrace("Extracting {GeneId} ({GeneHash}0): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
+                        uniqueGeneId, geneHash, totalReadMb, totalMb, processedPercent);
                     await reportProgress(progressMessage, overallPercent);
                 })
         select unit;
@@ -187,7 +189,7 @@ internal class LocalFirstGeneProvider(
                         geneHash,
                         partsState,
                         tempGenePath,
-                        async (long processedBytes, long totalBytes) =>
+                        async (processedBytes, totalBytes) =>
                         {
                             var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
                             var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
@@ -195,9 +197,9 @@ internal class LocalFirstGeneProvider(
 
                             var overallPercent = Convert.ToInt32(processedPercent * 50d);
 
-                            var progressMessage = $"Downloading parts of {uniqueGeneId} ({totalReadMb:F} MiB / {totalMb:F} MiB) => {processedPercent:P1} completed";
-                            log.LogTrace("Downloading parts of {GeneId} ({TotalReadMiB} MiB / {TotalMiB} MiB) => {Percent:P1} completed",
-                                uniqueGeneId, totalReadMb, totalMb, processedPercent);
+                            var progressMessage = $"Downloading parts of {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
+                            log.LogTrace("Downloading parts of {GeneId} ({GeneHash}): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
+                                uniqueGeneId, geneHash, totalReadMb, totalMb, processedPercent);
                             await reportProgress(progressMessage, overallPercent);
                         })))
             from _2 in result.ToAff(
@@ -221,11 +223,11 @@ internal class LocalFirstGeneProvider(
                         // authentication errors are always propagated to the caller.
                         ? FailAff<CancelRt, Option<R>>(e)
                         : from o in action(genePoolFactory.CreateNew(poolName))
-                        // When an error occurred, we still try the next pool. When the next pool
-                        // does not contain the gene, we return the last error. This way, one error
-                        // is propagated to the caller.
-                        from r in o.ToAff(e)
-                        select Some(r)))
+                          // When an error occurred, we still try the next pool. When the next pool
+                          // does not contain the gene, we return the last error. This way, one error
+                          // is propagated to the caller.
+                          from r in o.ToAff(e)
+                          select Some(r)))
             .MapFail(e => IsUnexpectedHttpClientError(e)
                 ? Error.New("Failed to query remote gene pools. Check that any configured API keys are valid.", e)
                 : e);
