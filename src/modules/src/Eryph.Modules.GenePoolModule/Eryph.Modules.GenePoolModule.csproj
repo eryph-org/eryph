@@ -15,9 +15,9 @@
     <PackageReference Include="DistributedLock.Core" Version="1.0.8" />
     <PackageReference Include="DistributedLock.FileSystem" Version="1.0.3" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.1-ci.3" />
-    <PackageReference Include="Eryph.GenePool.Client" Version="0.5.1-PullRequest0030.4" />
-    <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.5.1-PullRequest0030.4" />
-    <PackageReference Include="Eryph.GenePool.Compression" Version="0.5.1-PullRequest0030.4" />
+    <PackageReference Include="Eryph.GenePool.Client" Version="0.5.1-PullRequest0030.7" />
+    <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.5.1-PullRequest0030.7" />
+    <PackageReference Include="Eryph.GenePool.Compression" Version="0.5.1-PullRequest0030.7" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
