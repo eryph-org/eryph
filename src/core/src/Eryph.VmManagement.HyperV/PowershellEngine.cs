@@ -88,11 +88,9 @@ public sealed class PowershellEngine(
         from _ in TryAsync(async () =>
         {
             logger.LogWarning("Executing Powershell command '{Command}' out of process...",
-                builder.ToChain().ToOption()
-                    .OfType<PsCommandBuilder.CommandPart>()
-                    .ToOption()
+                builder.ToChain().OfType<PsCommandBuilder.CommandPart>().ToSeq()
                     .Map(cp => $"{cp.Command} ...")
-                    .IfNone("?"));
+                    .Match(Empty: () => "?", Seq: cps => string.Join(' ', cps)));
             
             if (!withoutLock)
                 await engineLock.AcquireLockAsync(cancellationToken);

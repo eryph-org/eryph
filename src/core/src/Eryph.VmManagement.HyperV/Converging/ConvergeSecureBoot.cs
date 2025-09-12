@@ -55,6 +55,25 @@ public class ConvergeSecureBoot(
             .AddParameter("EnableSecureBoot", enableSecureBoot ? OnOffState.On : OnOffState.Off)
             .AddParameter("SecureBootTemplate", secureBootTemplate)
         from _3 in Context.Engine.RunAsync(command)
+            // The configuration of secure boot sometimes fails because the
+            // secure boot template cannot be found. In this case, we execute
+            // the command out of process.
+            // See https://github.com/eryph-org/eryph/issues/356.
+            .BindLeft(_ => ConfigureSecureBootOutOfProcess(vmInfo.Value.Id, enableSecureBoot, secureBootTemplate))
+        select unit;
+
+    private EitherAsync<Error, Unit> ConfigureSecureBootOutOfProcess(
+        Guid vmId,
+        bool enableSecureBoot,
+        string secureBootTemplate) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VM")
+            .AddParameter("Id", vmId)
+            .AddCommand("Set-VMFirmware")
+            .AddParameter("EnableSecureBoot", enableSecureBoot ? OnOffState.On : OnOffState.Off)
+            .AddParameter("SecureBootTemplate", secureBootTemplate)
+        from _2 in Context.Engine.RunOutOfProcessAsync(command)
         select unit;
 
     private EitherAsync<Error, VMFirmwareInfo> GetFirmwareInfo(
