@@ -25,6 +25,12 @@ public interface IPowershellEngine
         Func<int, Task> reportProgress = null,
         bool withoutLock = false,
         CancellationToken cancellationToken = default);
+
+    EitherAsync<Error, Unit> RunOutOfProcessAsync(
+        PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellation = default);
     
     ITypedPsObjectMapping ObjectMapping { get; }
 }

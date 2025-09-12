@@ -589,6 +589,111 @@ public sealed class PowershellEngineTests : IDisposable
         progress.Should().Equal(25, 50, 75);
     }
 
+    [Fact]
+    public async Task RunOutOfProcessAsync_ItemsExist_ReturnsUnit()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A");
+
+        var result = await _engine.RunOutOfProcessAsync(command);
+        result.Should().BeRight();
+    }
+
+    [Fact]
+    public async Task RunOutOfProcessAsync_ItemDoesNotExist_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_MISSING");
+
+        var result = await _engine.RunOutOfProcessAsync(command);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Category.Should().Be(PowershellErrorCategory.ObjectNotFound);
+    }
+
+    [Fact]
+    public async Task RunOutOfProcessAsync_ItemDoesNotExistAndMissingCommand_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
+            .AddCommand("Test-Missing");
+
+        var result = await _engine.RunOutOfProcessAsync(command);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("Test-Missing");
+        error.Category.Should().Be(PowershellErrorCategory.CommandNotFound);
+    }
+
+    [Fact]
+    public async Task RunOutOfProcessAsync_ScriptError_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .Script("throw 'test-error'");
+
+        var result = await _engine.RunOutOfProcessAsync(command);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("test-error");
+        error.Category.Should().Be(PowershellErrorCategory.OperationStopped);
+    }
+
+    [Fact]
+    public async Task RunOutOfProcessAsync_IsCancelled_AbortsEarly()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Start-Sleep")
+            .AddParameter("Second", 60);
+
+        var start = DateTimeOffset.UtcNow;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var result = await _engine.RunOutOfProcessAsync(command, cancellationToken: cts.Token);
+
+        start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Be("The pipeline has been stopped.");
+        error.Category.Should().Be(PowershellErrorCategory.PipelineStopped);
+    }
+
+    [Fact]
+    public async Task RunOutOfProcessAsync_LockNotAcquired_AbortsEarly()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A");
+
+        await _engineLock.AcquireLockAsync();
+
+        var start = DateTimeOffset.UtcNow;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var result = await _engine.RunOutOfProcessAsync(command, cancellationToken: cts.Token);
+
+        start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Be("The operation has been cancelled before the global lock could be acquired.");
+        error.Category.Should().Be(PowershellErrorCategory.PipelineStopped);
+    }
+
+    [Fact]
+    public async Task RunOutOfProcessAsync_WithProgress_ReportsProgress()
+    {
+        var command = PsCommandBuilder.Create()
+            .Script("""
+                    Write-Progress -Activity Testing -PercentComplete 25
+                    Write-Progress -Activity Testing -PercentComplete 50
+                    Write-Progress -Activity Testing -PercentComplete 75
+                    """);
+
+        var progress = new List<int>();
+
+        var result = await _engine.RunOutOfProcessAsync(
+            command,
+            p => { progress.Add(p); return Task.CompletedTask; });
+
+        result.Should().BeRight();
+        progress.Should().Equal(25, 50, 75);
+    }
+
     public void Dispose()
     {
         _engine.Dispose();

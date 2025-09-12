@@ -80,6 +80,51 @@ public sealed class PowershellEngine(
             return unit;
         }).ToEither().MapLeft(ToPowershellError);
 
+    public EitherAsync<Error, Unit> RunOutOfProcessAsync(
+        PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default) =>
+        from _ in TryAsync(async () =>
+        {
+            logger.LogWarning("Executing Powershell command '{Command}' out of process...",
+                builder.ToChain().ToOption()
+                    .OfType<PsCommandBuilder.CommandPart>()
+                    .ToOption()
+                    .Map(cp => $"{cp.Command} ...")
+                    .IfNone("?"));
+            
+            if (!withoutLock)
+                await engineLock.AcquireLockAsync(cancellationToken);
+
+            try
+            {
+                using var powerShellProcessInstance = new PowerShellProcessInstance(
+                    new Version(5, 1), null, null, false);
+                using var processRunSpace = RunspaceFactory.CreateOutOfProcessRunspace(
+                    new TypeTable([]), powerShellProcessInstance);
+                // The OpenAsync() method of Runspace does not block until the runspace
+                // is opened. Hence, we use the synchronous Open() inside Task.Run().
+                await Task.Run(() => processRunSpace.Open(), cancellationToken);
+
+                using var powerShell = PowerShell.Create();
+                powerShell.Runspace = processRunSpace;
+
+                var outputs = await ExecuteAsync(powerShell, builder, reportProgress, cancellationToken);
+                foreach (var output in outputs)
+                {
+                    output.DisposeObject();
+                }
+
+                return unit;
+            }
+            finally
+            {
+                engineLock.ReleaseLock();
+            }
+        }).ToEither().MapLeft(ToPowershellError)
+        select unit;
+
     public void AddPsObject(PSObject psObject)
     {
         _createdObjects.Add(psObject);
@@ -87,9 +132,9 @@ public sealed class PowershellEngine(
 
     private async Task<IList<PSObject>> ExecuteAsync(
         PsCommandBuilder builder,
-        [CanBeNull] Func<int, Task> reportProgress,
-        bool withoutLock,
-        CancellationToken cancellationToken)
+        Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default)
     {
         if (!withoutLock)
             await engineLock.AcquireLockAsync(cancellationToken);
@@ -97,70 +142,79 @@ public sealed class PowershellEngine(
         try
         {
             using var powerShell = await CreatePowerShell();
-            using var _ = InitializeProgressReporting(powerShell, reportProgress);
-
-            var inputs = builder.Build(powerShell);
-            using var inputData = new PSDataCollection<PSObject>(
-                inputs.Map(input => input is PSObject pso ? pso : new PSObject(input)));
-
-            var invocationSettings = new PSInvocationSettings()
-            {
-                ErrorActionPreference = ActionPreference.Stop,
-            };
-
-            List<PSObject> outputs;
-            List<ErrorRecord> errors;
-            try
-            {
-                var task = powerShell.InvokeAsync(inputData, invocationSettings, null, null);
-
-                await ((Task)task.WaitAsync(cancellationToken))
-                    .ConfigureAwait(options: ConfigureAwaitOptions.SuppressThrowing);
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    await powerShell.StopAsync(null, null);
-                }
-
-                // The 'await task' will throw a PipelineStoppedException when the pipeline
-                // has been stopped with StopAsync.
-                using var outputData = await task;
-
-                outputs = outputData.ToList();
-                errors = powerShell.Streams.Error.ToList();
-            }
-            catch (RuntimeException rex) when (rex is not PipelineStoppedException)
-            {
-                logger.LogDebug(rex, "Powershell command '{Command}' failed: {Error}",
-                    rex.ErrorRecord.InvocationInfo?.MyCommand, rex.ErrorRecord.ToString());
-                throw;
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException or PipelineStoppedException)
-            {
-                logger.LogDebug(ex, "Powershell failed with exception.");
-                throw;
-            }
-
-            foreach (var error in errors)
-            {
-                logger.LogDebug(error.Exception, "Powershell command '{Command}' failed: {Error}",
-                    error.InvocationInfo?.MyCommand, error.ToString());
-            }
-
-            if (errors.Count == 0)
-                return outputs;
-
-            foreach (var output in outputs)
-            {
-                output.DisposeObject();
-            }
-
-            throw new PsErrorException(errors);
+            return await ExecuteAsync(powerShell, builder, reportProgress, cancellationToken);
         }
         finally
         {
             if (!withoutLock)
                 engineLock.ReleaseLock();
         }
+    }
+
+    private async Task<IList<PSObject>> ExecuteAsync(
+        PowerShell powerShell,
+        PsCommandBuilder builder,
+        [CanBeNull] Func<int, Task> reportProgress,
+        CancellationToken cancellationToken)
+    {
+        using var _ = InitializeProgressReporting(powerShell, reportProgress);
+
+        var inputs = builder.Build(powerShell);
+        using var inputData = new PSDataCollection<PSObject>(
+            inputs.Map(input => input is PSObject pso ? pso : new PSObject(input)));
+
+        var invocationSettings = new PSInvocationSettings()
+        {
+            ErrorActionPreference = ActionPreference.Stop,
+        };
+
+        List<PSObject> outputs;
+        List<ErrorRecord> errors;
+        try
+        {
+            var task = powerShell.InvokeAsync(inputData, invocationSettings, null, null);
+
+            await ((Task)task.WaitAsync(cancellationToken))
+                .ConfigureAwait(options: ConfigureAwaitOptions.SuppressThrowing);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                await powerShell.StopAsync(null, null);
+            }
+
+            // The 'await task' will throw a PipelineStoppedException when the pipeline
+            // has been stopped with StopAsync.
+            using var outputData = await task;
+
+            outputs = outputData.ToList();
+            errors = powerShell.Streams.Error.ToList();
+        }
+        catch (RuntimeException rex) when (rex is not PipelineStoppedException)
+        {
+            logger.LogDebug(rex, "Powershell command '{Command}' failed: {Error}",
+                rex.ErrorRecord.InvocationInfo?.MyCommand, rex.ErrorRecord.ToString());
+            throw;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException or PipelineStoppedException)
+        {
+            logger.LogDebug(ex, "Powershell failed with exception.");
+            throw;
+        }
+
+        foreach (var error in errors)
+        {
+            logger.LogDebug(error.Exception, "Powershell command '{Command}' failed: {Error}",
+                error.InvocationInfo?.MyCommand, error.ToString());
+        }
+
+        if (errors.Count == 0)
+            return outputs;
+
+        foreach (var output in outputs)
+        {
+            output.DisposeObject();
+        }
+
+        throw new PsErrorException(errors);
     }
 
     private async Task<PowerShell> CreatePowerShell()
@@ -254,6 +308,7 @@ public sealed class PowershellEngine(
         {
             { Exception.Case: PsErrorException pee } =>
                 Error.Many(pee.ErrorRecords.ToSeq().Map<Error>(PowershellError.New)),
+            { Exception.Case: RemoteException rex } => PowershellError.New(rex.ErrorRecord),
             { Exception.Case: RuntimeException rex } => PowershellError.New(rex),
             { Exception.Case: OperationCanceledException oce } => new PowershellError(
                 "The operation has been cancelled before the global lock could be acquired.",
