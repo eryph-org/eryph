@@ -12,15 +12,16 @@ internal class BuildCatletSpecificationSagaData
 {
     public BuildCatletSpecificationSagaState State { get; set; }
 
-    public string ConfigYaml { get; set; }
+    public string? ConfigYaml { get; set; }
 
-    public Architecture Architecture { get; set; }
+    public Architecture? Architecture { get; set; }
 
     public CatletConfig? Config { get; set; }
 
     public CatletConfig? BuiltConfig { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } =
+        new Dictionary<UniqueGeneIdentifier, GeneHash>();
 
     // The agent which is hosting the gene pool
     public string? AgentName { get; set; }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
@@ -6,7 +7,6 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.CatletManagement;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
-using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -22,12 +22,14 @@ using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class UpdateCatletSaga(
     IWorkflow workflow,
-    IReadonlyStateStoreRepository<Catlet> catletRepository,
+    IStateStore stateStore,
     ICatletMetadataService metadataService)
     : OperationTaskWorkflowSaga<UpdateCatletCommand, EryphSagaData<UpdateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
@@ -44,7 +46,7 @@ internal class UpdateCatletSaga(
             return;
         }
 
-        var catlet = await catletRepository.GetBySpecAsync(
+        var catlet = await stateStore.Read<Catlet>().GetBySpecAsync(
             new CatletSpecs.GetForConfig(Data.Data.CatletId));
         if (catlet is null)
         {
@@ -52,7 +54,6 @@ internal class UpdateCatletSaga(
             return;
         }
 
-        Data.Data.TenantId = catlet.Project.TenantId;
         Data.Data.ProjectId = catlet.ProjectId;
         Data.Data.AgentName = catlet.AgentName;
 
@@ -72,7 +73,10 @@ internal class UpdateCatletSaga(
         Data.Data.Architecture = metadata.Metadata.Architecture;
         Data.Data.ResolvedGenes = metadata.Metadata.PinnedGenes;
 
-        var validationResult = ValidateConfig(message.Config, metadata.Metadata.Config, catlet);
+        var networkPorts = await stateStore.Read<CatletNetworkPort>().ListAsync(
+            new CatletNetworkPortSpecs.GetByCatletMetadataId(catlet.MetadataId));
+
+        var validationResult = PrepareConfig(message.Config, metadata.Metadata.Config, catlet, networkPorts);
         if (validationResult.IsLeft)
         {
             await Fail(Error.Many(validationResult.LeftToSeq()).Print());
@@ -83,7 +87,6 @@ internal class UpdateCatletSaga(
 
         await StartNewTask(new ValidateCatletDeploymentCommand
         {
-            TenantId = Data.Data.TenantId,
             ProjectId = Data.Data.ProjectId,
             AgentName = Data.Data.AgentName,
             Architecture = Data.Data.Architecture,
@@ -103,7 +106,6 @@ internal class UpdateCatletSaga(
 
             await StartNewTask(new DeployCatletCommand
             {
-                TenantId = Data.Data.TenantId,
                 ProjectId = Data.Data.ProjectId,
                 CatletId = Data.Data.CatletId,
                 AgentName = Data.Data.AgentName,
@@ -136,21 +138,22 @@ internal class UpdateCatletSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
-    private Either<Error, CatletConfig> ValidateConfig(
+    private Either<Error, CatletConfig> PrepareConfig(
         CatletConfig updateConfig,
         CatletConfig originalConfig,
-        Catlet catlet) =>
-        from _ in CatletUpdateValidator.Validate(updateConfig, originalConfig, catlet)
-            .MapFail(i => i.ToJsonPath(CatletConfigJsonSerializer.Options.PropertyNamingPolicy))
-            .MapFail(i => i.ToError())
-            .ToEither()
-            .MapLeft(errors => Error.New(
+        Catlet catlet,
+        IList<CatletNetworkPort> networkPorts) =>
+        from _ in Right<Error, Unit>(unit)
+        let currentConfig = CatletConfigGenerator.Generate(catlet, networkPorts.ToSeq().Strict(), originalConfig)
+        from _2 in CatletUpdateValidator.Validate(updateConfig, currentConfig)
+            .ToEitherWithJsonPath(
                 $"The updated configuration for the catlet {catlet.Id} is invalid.",
-                Error.Many(errors)))
+                CatletConfigJsonSerializer.Options.PropertyNamingPolicy)
         from normalizedConfig in CatletConfigNormalizer.Normalize(updateConfig)
             .ToEither()
             .MapLeft(errors => Error.New(
                 $"The updated configuration for the catlet {catlet.Id} cannot be normalized.",
                 Error.Many(errors)))
-        select normalizedConfig;
+        let instantiatedConfig = CatletConfigInstantiator.InstantiateUpdate(normalizedConfig)
+        select instantiatedConfig;
 }

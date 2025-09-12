@@ -11,7 +11,7 @@ public static class CatletConfigGenerator
 {
     /// <summary>
     /// Generates a <see cref="CatletConfig"/> based on the current state
-    /// of given <paramref name="catlet"/>.
+    /// of the given <paramref name="catlet"/>.
     /// </summary>
     public static CatletConfig Generate(
         Catlet catlet,
@@ -181,7 +181,7 @@ public static class CatletConfigGenerator
             IpPool = ipAssignment.Pool.Name,
         };
 
-    private static string ToDriveName(int position) => $"sda{(char)('a' + position % 26)}";
+    private static string ToDriveName(int position) => $"sd{(char)('a' + position % 26)}";
 
     private static int ToMiB(long bytes) => (int)Math.Ceiling(bytes / 1024d / 1024);
 

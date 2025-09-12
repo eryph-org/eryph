@@ -67,10 +67,10 @@ internal class CatletMetadataSeeder : SeederBase
         if (!root.TryGetProperty("Id", out var id))
             throw new JsonException("The catlet metadata JSON does not contain an ID.");
 
-        if (!root.TryGetProperty("CatletId", out var catletId) && !root.TryGetProperty("MachineId", out catletId))
+        if (!root.TryGetProperty("MachineId", out var catletId))
             throw new JsonException("The catlet metadata JSON does not contain a catlet ID.");
 
-        if (!root.TryGetProperty("VmId", out var vmId) && !root.TryGetProperty("VMId", out vmId))
+        if (!root.TryGetProperty("VMId", out var vmId))
             throw new JsonException("The catlet metadata JSON does not contain a VM ID.");
 
         var metadata = new CatletMetadata

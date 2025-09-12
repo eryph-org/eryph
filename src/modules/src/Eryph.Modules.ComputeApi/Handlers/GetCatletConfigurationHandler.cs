@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Ardalis.Specification;
+﻿using Ardalis.Specification;
 using Eryph.CatletManagement;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
@@ -13,7 +10,9 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Catlet = Eryph.StateDb.Model.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
@@ -48,7 +47,7 @@ internal class GetCatletConfigurationHandler(
         {
             return resultFactory.Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                detail: "The catlet is deprecated and cannot be managed.");
+                detail: $"The catlet cannot be managed because it has been created with an old version of eryph.");
         }
 
         var networkPorts = await stateStore.Read<CatletNetworkPort>().ListAsync(

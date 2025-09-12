@@ -18,8 +18,6 @@ public class UpdateCatletSagaData
     public string? AgentName { get; set; }
         
     public Guid ProjectId { get; set; }
-        
-    public Guid TenantId { get; set; }
 
     public Architecture? Architecture { get; set; }
 }

@@ -46,7 +46,6 @@ internal class DeployCatletSaga(
     protected override async Task Initiated(DeployCatletCommand message)
     {
         Data.Data.State = DeployCatletSagaState.Initiated;
-        Data.Data.TenantId = message.TenantId;
         Data.Data.ProjectId = message.ProjectId;
         Data.Data.AgentName = message.AgentName;
         Data.Data.Architecture = message.Architecture;

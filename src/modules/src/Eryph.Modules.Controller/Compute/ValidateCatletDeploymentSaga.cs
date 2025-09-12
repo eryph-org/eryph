@@ -32,7 +32,6 @@ public class ValidateCatletDeploymentSaga(
     protected override async Task Initiated(
         ValidateCatletDeploymentCommand message)
     {
-        Data.Data.TenantId = message.TenantId;
         Data.Data.AgentName = message.AgentName;
         Data.Data.Config = message.Config;
         Data.Data.State = ValidateCatletDeploymentSagaState.Initiated;

@@ -4,6 +4,9 @@ namespace Eryph.StateDb.Model;
 
 public class CatletNetworkAdapter
 {
+    /// <summary>
+    /// The Hyper-V ID of the network adapter.
+    /// </summary>
     public required string Id { get; set; }
 
     public Guid CatletId { get; set; }
