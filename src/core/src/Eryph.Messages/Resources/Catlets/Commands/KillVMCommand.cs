@@ -12,7 +12,7 @@ public class KillVMCommand : IVMCommand, IHasResource
 {
     public Guid CatletId { get; set; }
 
-    public Guid VMId { get; set; }
+    public Guid VmId { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

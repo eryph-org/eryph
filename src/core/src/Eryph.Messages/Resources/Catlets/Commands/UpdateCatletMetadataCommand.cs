@@ -9,7 +9,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     {
         public Guid NewMetadataId { get; set; }
         public Guid CurrentMetadataId { get; set; }
-        public Guid VMId { get; set; }
+        public Guid VmId { get; set; }
 
         [PrivateIdentifier]
         public string AgentName { get; set; }

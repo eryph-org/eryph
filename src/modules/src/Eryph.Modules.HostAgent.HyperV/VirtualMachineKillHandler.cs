@@ -37,9 +37,9 @@ internal class VirtualMachineKillHandler(
     protected Aff<AgentRuntime, CatletStateResponse> HandleCommand(KillVMCommand command) =>
         // Unfortunately, the Get-VM Cmdlet does not expose the process ID
         // of the VM's worker process. Hence, we query Hyper-V via WMI.
-        from optionalProcessId in WmiQueries<AgentRuntime>.getVmProcessId(command.VMId)
+        from optionalProcessId in WmiQueries<AgentRuntime>.getVmProcessId(command.VmId)
         from processId in optionalProcessId.ToAff(Error.New(
-            $"The VM with ID {command.VMId} has no worker process."))
+            $"The VM with ID {command.VmId} has no worker process."))
         from powershell in default(AgentRuntime).Powershell
         from _ in timeout(
             EryphConstants.OperationTimeout,
@@ -54,16 +54,16 @@ internal class VirtualMachineKillHandler(
             // VM into a valid off state.
             from _2 in retry(
                 Schedule.spaced(TimeSpan.FromSeconds(5)),
-                from vmInfo in getVmInfo(command.VMId)
+                from vmInfo in getVmInfo(command.VmId)
                 from _1 in stopVm(vmInfo)
-                from reloadedVmInfo in getVmInfo(command.VMId)
+                from reloadedVmInfo in getVmInfo(command.VmId)
                 from _2 in guard(
                     VmStateUtils.toVmStatus(reloadedVmInfo.Value.State) == VmStatus.Stopped,
-                    Error.New($"The VM {command.VMId} is still in status '{reloadedVmInfo.Value.State}'."))
+                    Error.New($"The VM {command.VmId} is still in status '{reloadedVmInfo.Value.State}'."))
                 select unit)
             select unit)
         let timestamp = DateTimeOffset.UtcNow
-        from reloadedVmInfo in getVmInfo(command.VMId)
+        from reloadedVmInfo in getVmInfo(command.VmId)
         select new CatletStateResponse
         {
             Status = VmStateUtils.toVmStatus(reloadedVmInfo.Value.State),

@@ -14,11 +14,11 @@ public class UpdateCatletConfigDriveCommand : IVMCommand, IHasResource
 
     public Guid CatletId { get; set; }
 
-    public Guid VMId { get; set; }
+    public Guid MetadataId { get; set; }
 
-    public CatletMetadata MachineMetadata { get; set; }
+    public Guid VmId { get; set; }
 
-    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
+    public bool SecretDataHidden { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

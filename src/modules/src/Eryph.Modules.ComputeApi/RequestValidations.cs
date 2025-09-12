@@ -8,6 +8,7 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore;
 using LanguageExt;
 

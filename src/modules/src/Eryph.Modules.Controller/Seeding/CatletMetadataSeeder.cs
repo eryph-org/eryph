@@ -1,31 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO.Abstractions;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Modules.Controller.Serializers;
+using Eryph.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Seeding;
 
 internal class CatletMetadataSeeder : SeederBase
 {
     private readonly IStateStoreRepository<CatletMetadata> _metadataRepository;
-    private readonly IVirtualMachineMetadataService _metadataService;
+    private readonly ICatletMetadataService _metadataService;
 
     public CatletMetadataSeeder(
         ChangeTrackingConfig config,
         IFileSystem fileSystem,
         IStateStoreRepository<CatletMetadata> metadataRepository,
-        IVirtualMachineMetadataService metadataService)
+        ICatletMetadataService metadataService)
         : base(fileSystem, config.VirtualMachinesConfigPath)
     {
         _metadataRepository = metadataRepository;
@@ -38,16 +35,74 @@ internal class CatletMetadataSeeder : SeederBase
         CancellationToken cancellationToken = default)
     {
         bool exists = await _metadataRepository.AnyAsync(
-            new CatletMetadataSpecs.GetById(entityId),
+            new CatletMetadataSpecs.GetByIdReadonly(entityId),
             cancellationToken);
         if (exists)
             return;
 
-        var metadata = JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(json);
-        if (metadata is null)
-            throw new SeederException($"The catlet metadata {entityId} is invalid");
+        var document = JsonDocument.Parse(json);
+        var version = CatletMetadataConfigModelJsonSerializer.GetVersion(document);
+        if (version == 1)
+        {
+            await SeedV1Metadata(document, cancellationToken);
+        }
+        else if (version == 2)
+        {
+            await SeedMetadata(document, cancellationToken);
+        }
+        else
+        {
+            throw new SeederException($"The catlet metadata {entityId} has the unsupported version {version}.");
+        }
 
-        await _metadataService.SaveMetadata(metadata, cancellationToken);
         await _metadataRepository.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SeedV1Metadata(
+        JsonDocument document,
+        CancellationToken cancellationToken)
+    {
+        var root = document.RootElement;
+
+        if (!root.TryGetProperty("Id", out var id))
+            throw new JsonException("The catlet metadata JSON does not contain an ID.");
+
+        if (!root.TryGetProperty("MachineId", out var catletId))
+            throw new JsonException("The catlet metadata JSON does not contain a catlet ID.");
+
+        if (!root.TryGetProperty("VMId", out var vmId))
+            throw new JsonException("The catlet metadata JSON does not contain a VM ID.");
+
+        var metadata = new CatletMetadata
+        {
+            Id = id.GetGuid(),
+            CatletId = catletId.GetGuid(),
+            VmId = vmId.GetGuid(),
+            IsDeprecated = true,
+            SecretDataHidden = root.TryGetProperty("SecureDataHidden", out var secretDataHidden)
+                               && secretDataHidden.GetBoolean(),
+        };
+            
+        await _metadataService.AddMetadata(metadata, cancellationToken);
+    }
+
+    private async Task SeedMetadata(
+        JsonDocument document,
+        CancellationToken cancellationToken)
+    {
+        var metadataConfig = CatletMetadataConfigModelJsonSerializer.Deserialize(document);
+        var metadata = new CatletMetadata
+        {
+            Id = metadataConfig.Id,
+            CatletId = metadataConfig.CatletId,
+            VmId = metadataConfig.VmId,
+            IsDeprecated = metadataConfig.IsDeprecated,
+            SecretDataHidden = metadataConfig.SecretDataHidden,
+            Metadata = metadataConfig.Metadata.HasValue
+                ? CatletMetadataContentJsonSerializer.Deserialize(metadataConfig.Metadata.Value)
+                : null,
+        };
+
+        await _metadataService.AddMetadata(metadata, cancellationToken);
     }
 }

@@ -112,8 +112,8 @@ namespace Eryph.Modules.Controller
             container.RegisterConditional<IOperationMessaging, EryphRebusOperationMessaging>(Lifestyle.Scoped, _ => true);
             container.AddRebusOperationsHandlers<OperationManager, OperationTaskManager>();
 
-            container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
-            container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
+            container.Register<ICatletDataService, CatletDataService>(Lifestyle.Scoped);
+            container.Register<ICatletMetadataService, CatletMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
             container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
 
@@ -127,6 +127,7 @@ namespace Eryph.Modules.Controller
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
+            container.RegisterSingleton<IStorageIdentifierGenerator, StorageIdentifierGenerator>();
 
             //use placement calculator of Host
             container.RegisterInstance(serviceProvider.GetRequiredService<IPlacementCalculator>());

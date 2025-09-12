@@ -200,9 +200,9 @@ public class ConvergeDriveTests
     }
 
     [Theory]
-    [InlineData(CatletDriveType.VHD, ".vhdx")]
-    [InlineData(CatletDriveType.SharedVHD, ".vhdx")]
-    [InlineData(CatletDriveType.VHDSet, ".vhds")]
+    [InlineData(CatletDriveType.Vhd, ".vhdx")]
+    [InlineData(CatletDriveType.SharedVhd, ".vhdx")]
+    [InlineData(CatletDriveType.VhdSet, ".vhds")]
     public async Task Converges_new_disk(
         CatletDriveType driveType,
         string extension)
@@ -307,7 +307,7 @@ public class ConvergeDriveTests
             .ShouldBeParam("VM", vmData.PsObject)
             .ShouldBeParam("Path", $@"x:\disks\abc\sdb{extension}");
 
-        if (driveType is CatletDriveType.SharedVHD)
+        if (driveType is CatletDriveType.SharedVhd)
         {
             attachCommand!.ToString().Should().Contain("SupportPersistentReservations");
         }
@@ -434,27 +434,27 @@ public class ConvergeDriveTests
 
     [Theory]
     [InlineData(
-        CatletDriveType.SharedVHD,
+        CatletDriveType.SharedVhd,
         "any",
         @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")]
     [InlineData(
-        CatletDriveType.SharedVHD,
+        CatletDriveType.SharedVhd,
         "hyperv/any",
         @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\sda.vhdx")]
     [InlineData(
-        CatletDriveType.SharedVHD,
+        CatletDriveType.SharedVhd,
         "hyperv/amd64",
         @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\amd64\sda.vhdx")]
     [InlineData(
-        CatletDriveType.VHDSet,
+        CatletDriveType.VhdSet,
         "any",
         @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")]
     [InlineData(
-        CatletDriveType.VHDSet,
+        CatletDriveType.VhdSet,
         "hyperv/any",
         @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\sda.vhdx")]
     [InlineData(
-        CatletDriveType.VHDSet,
+        CatletDriveType.VhdSet,
         "hyperv/amd64",
         @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\amd64\sda.vhdx")]
     public async Task Converges_new_set_or_shared_disk_with_genepool_parent(
@@ -495,7 +495,7 @@ public class ConvergeDriveTests
         AssertCommand? setVhdCommand = null;
         AssertCommand? copyCommand = null;
         AssertCommand? attachCommand = null;
-        var diskName = driveType == CatletDriveType.SharedVHD ? "sda.vhdx" : "sda.vhds";
+        var diskName = driveType == CatletDriveType.SharedVhd ? "sda.vhdx" : "sda.vhds";
 
         _fixture.Engine.RunCallback = command =>
         {
@@ -569,7 +569,7 @@ public class ConvergeDriveTests
             .ShouldBeFlag("ResetDiskIdentifier")
             .ShouldBeFlag("Force");
 
-        if (driveType == CatletDriveType.SharedVHD)
+        if (driveType == CatletDriveType.SharedVhd)
         {
             convertVhdCommand.Should().BeNull();
         }
@@ -583,7 +583,7 @@ public class ConvergeDriveTests
 
         attachCommand.Should().NotBeNull();
 
-        if (driveType == CatletDriveType.SharedVHD)
+        if (driveType == CatletDriveType.SharedVhd)
         {
             attachCommand!.ShouldBeCommand("Add-VMHardDiskDrive")
                 .ShouldBeParam("VM", vmData.PsObject)

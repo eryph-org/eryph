@@ -54,22 +54,22 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                 },
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.DVD,
+                    Type = CatletDriveType.Dvd,
                     Source = @"x:\dvds\disk1.iso",
                 },
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sdb",
                 },
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.DVD,
+                    Type = CatletDriveType.Dvd,
                     Source = @"x:\dvds\disk2.iso",
                 }
             ],
@@ -117,9 +117,9 @@ public class VMDriveStorageSettingsTests
     }
 
     [Theory]
-    [InlineData(CatletDriveType.VHD, ".vhdx")]
-    [InlineData(CatletDriveType.SharedVHD, ".vhdx")]
-    [InlineData(CatletDriveType.VHDSet, ".vhds")]
+    [InlineData(CatletDriveType.Vhd, ".vhdx")]
+    [InlineData(CatletDriveType.SharedVhd, ".vhdx")]
+    [InlineData(CatletDriveType.VhdSet, ".vhds")]
     public async Task PlanDriveStorageSettings_UsesCorrectExtensionForVhdType(
         CatletDriveType driveType,
         string expectedExtension)
@@ -172,7 +172,7 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                     Source = "gene:testorg/testset/testtag:sda",
                 }
@@ -205,7 +205,7 @@ public class VMDriveStorageSettingsTests
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
             {
-                dss.Type.Should().Be(CatletDriveType.VHD);
+                dss.Type.Should().Be(CatletDriveType.Vhd);
                 dss.ControllerNumber.Should().Be(0);
                 dss.ControllerLocation.Should().Be(0);
                 
@@ -227,7 +227,7 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                 }
             ],
@@ -245,7 +245,7 @@ public class VMDriveStorageSettingsTests
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
             {
-                dss.Type.Should().Be(CatletDriveType.VHD);
+                dss.Type.Should().Be(CatletDriveType.Vhd);
                 dss.ControllerNumber.Should().Be(0);
                 dss.ControllerLocation.Should().Be(0);
 
@@ -267,7 +267,7 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                     Size = 42,
                 }
@@ -286,7 +286,7 @@ public class VMDriveStorageSettingsTests
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
             {
-                dss.Type.Should().Be(CatletDriveType.VHD);
+                dss.Type.Should().Be(CatletDriveType.Vhd);
                 dss.ControllerNumber.Should().Be(0);
                 dss.ControllerLocation.Should().Be(0);
 
@@ -313,7 +313,7 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
@@ -347,7 +347,7 @@ public class VMDriveStorageSettingsTests
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
             {
-                dss.Type.Should().Be(CatletDriveType.VHD);
+                dss.Type.Should().Be(CatletDriveType.Vhd);
                 dss.ControllerNumber.Should().Be(0);
                 dss.ControllerLocation.Should().Be(0);
 
@@ -369,7 +369,7 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
@@ -414,7 +414,7 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                     Size = 42,
                 }
@@ -447,7 +447,7 @@ public class VMDriveStorageSettingsTests
             [
                 new CatletDriveConfig
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Name = "sda",
                     Size = 42,
                 }
@@ -471,7 +471,7 @@ public class VMDriveStorageSettingsTests
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
             {
-                dss.Type.Should().Be(CatletDriveType.VHD);
+                dss.Type.Should().Be(CatletDriveType.Vhd);
                 dss.ControllerNumber.Should().Be(0);
                 dss.ControllerLocation.Should().Be(0);
 

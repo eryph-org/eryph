@@ -154,8 +154,7 @@ public class NetworkConfigRealizer(
                     Name = "provider",
                     SubnetName = providerSubnet,
                     PoolName = providerIpPool,
-                    MacAddress = MacAddresses.FormatMacAddress(
-                        MacAddresses.GenerateMacAddress(Guid.NewGuid().ToString())),
+                    MacAddress = MacAddressGenerator.Generate().Value,
                     ProviderName = providerName,
                     IpAssignments = [],
                 };
@@ -212,15 +211,14 @@ public class NetworkConfigRealizer(
             {
                 routerPort = new NetworkRouterPort
                 {
-                    MacAddress = MacAddresses.FormatMacAddress(
-                        MacAddresses.GenerateMacAddress(Guid.NewGuid().ToString())),
-                    IpAssignments = new List<IpAssignment>(new[]
-                    {
+                    MacAddress = MacAddressGenerator.Generate().Value,
+                    IpAssignments =
+                    [
                         new IpAssignment
                         {
                             IpAddress = networkAddress.FirstUsable.ToString(),
-                        }
-                    }),
+                        },
+                    ],
                     Name = "default",
                     RoutedNetworkId = savedNetwork.Id,
                     NetworkId = savedNetwork.Id,

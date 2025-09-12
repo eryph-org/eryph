@@ -5,7 +5,7 @@ namespace Eryph.Resources.Machines
 {
     public class VirtualMachineData : MachineData
     {
-        public Guid VMId { get; set; }
+        public Guid VmId { get; set; }
 
         public Guid MetadataId { get; set; }
 

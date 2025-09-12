@@ -14,5 +14,5 @@ public class GeneData
 
     public required long Size { get; set; }
 
-    public required string Hash { get; set; }
+    public required GeneHash Hash { get; set; }
 }
