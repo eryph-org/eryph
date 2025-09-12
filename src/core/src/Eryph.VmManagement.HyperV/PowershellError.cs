@@ -61,7 +61,9 @@ public record PowershellError : Error
                 .IfNone(runtimeException.Message),
             runtimeException.HResult,
             Optional(runtimeException.ErrorRecord.CategoryInfo.Activity).Filter(notEmpty),
-            ToPowershellErrorCategory(runtimeException.ErrorRecord.CategoryInfo.Category, runtimeException),
+            ToPowershellErrorCategory(
+                runtimeException.ErrorRecord.CategoryInfo.Category,
+                runtimeException.ErrorRecord.FullyQualifiedErrorId),
             Optional(runtimeException.ErrorRecord.CategoryInfo.Reason).Filter(notEmpty),
             Optional(runtimeException.ErrorRecord.CategoryInfo.TargetName).Filter(notEmpty),
             Optional(runtimeException.ErrorRecord.CategoryInfo.TargetType).Filter(notEmpty));
@@ -73,17 +75,17 @@ public record PowershellError : Error
                 .IfNone(errorRecord.Exception.Message),
             errorRecord.Exception.HResult,
             Optional(errorRecord.CategoryInfo.Activity).Filter(notEmpty),
-            ToPowershellErrorCategory(errorRecord.CategoryInfo.Category, errorRecord.Exception),
+            ToPowershellErrorCategory(errorRecord.CategoryInfo.Category, errorRecord.FullyQualifiedErrorId),
             Optional(errorRecord.CategoryInfo.Reason).Filter(notEmpty),
             Optional(errorRecord.CategoryInfo.TargetName).Filter(notEmpty),
             Optional(errorRecord.CategoryInfo.TargetType).Filter(notEmpty));
 
     private static PowershellErrorCategory ToPowershellErrorCategory(
-        ErrorCategory category, Exception exception) =>
-        exception switch
+        ErrorCategory category, string fullyQualifiedErrorId) =>
+        fullyQualifiedErrorId switch
         {
-            CommandNotFoundException => PowershellErrorCategory.CommandNotFound,
-            PipelineStoppedException => PowershellErrorCategory.PipelineStopped,
+            "CommandNotFoundException" => PowershellErrorCategory.CommandNotFound,
+            "PipelineStopped" => PowershellErrorCategory.PipelineStopped,
             _ => category.ToPowershellErrorCategory()
         };
 }

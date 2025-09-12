@@ -14,6 +14,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
 
     public Func<Type,AssertCommand, Either<Error,Seq<TypedPsObject<object>>>>? GetObjectCallback;
     public Func<AssertCommand, Either<Error, Unit>>? RunCallback;
+    public Func<AssertCommand, Either<Error, Unit>>? RunOutOfProcessCallback;
     public Func<Type, AssertCommand, Either<Error, Seq<object>>>? GetValuesCallback;
 
     public TypedPsObject<T> ToPsObject<T>(T obj)
@@ -69,6 +70,20 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
             throw new InvalidOperationException("RunCallback is not set");
         
         var result = RunCallback(AssertCommand.Parse(commandInput));
+        return result.ToAsync();
+    }
+
+    public EitherAsync<Error, Unit> RunOutOfProcessAsync(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellation = default)
+    {
+        var commandInput = builder.ToDictionary();
+        if (RunOutOfProcessCallback is null)
+            throw new InvalidOperationException("RunOutOfProcessCallback is not set");
+
+        var result = RunOutOfProcessCallback(AssertCommand.Parse(commandInput));
         return result.ToAsync();
     }
 
