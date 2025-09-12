@@ -146,7 +146,7 @@ public class CatletConfigGeneratorTests
                 drive.Store.Should().Be("test-disk-store");
                 drive.Location.Should().Be("test-disk-location");
                 // The drive size should not be populated when the size of the disk
-                // and the size of the gene pool disk.
+                // matches the size of the gene pool disk.
                 drive.Size.Should().BeNull();
             },
             drive =>

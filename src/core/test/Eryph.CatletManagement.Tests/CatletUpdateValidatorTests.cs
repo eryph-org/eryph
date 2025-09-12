@@ -19,6 +19,14 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
+            Cpu = new CatletCpuConfig
+            {
+                Count = 2,
+            },
+            Memory = new CatletMemoryConfig
+            {
+                Startup = 1024,
+            },
             Drives = 
             [
                 new CatletDriveConfig
@@ -41,6 +49,14 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
+            Cpu = new CatletCpuConfig
+            {
+                Count = 3,
+            },
+            Memory = new CatletMemoryConfig
+            {
+                Startup = 2048,
+            },
             Drives = 
             [
                 new CatletDriveConfig
@@ -60,7 +76,7 @@ public class CatletUpdateValidatorTests
     }
 
     [Fact]
-    public void Validate_PropertiesChanged_ReturnsMultipleErrors()
+    public void Validate_PropertiesChanged_ReturnsFail()
     {
         var currentConfig = new CatletConfig
         {
@@ -125,7 +141,7 @@ public class CatletUpdateValidatorTests
     }
 
     [Fact]
-    public void Validate_FodderAndVariablesSpecified_ReturnsErrors()
+    public void Validate_FodderAndVariablesSpecified_ReturnsFail()
     {
         var currentConfig = new CatletConfig
         {

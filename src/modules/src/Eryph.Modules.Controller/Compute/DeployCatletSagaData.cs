@@ -18,13 +18,13 @@ public class DeployCatletSagaData : TaskWorkflowSagaData
 
     public Guid VmId { get; set; }
 
-    public string AgentName { get; set; }
+    public string? AgentName { get; set; }
 
-    public CatletConfig Config { get; set; }
+    public CatletConfig? Config { get; set; }
 
-    public string ConfigYaml { get; set; }
+    public string? ConfigYaml { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
 
-    public Architecture Architecture { get; set; }
+    public Architecture? Architecture { get; set; }
 }

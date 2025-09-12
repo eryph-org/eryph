@@ -109,7 +109,7 @@ internal class DeployCatletSaga(
                 Config = Data.Data.Config,
                 Architecture = Data.Data.Architecture,
                 PinnedGenes = Data.Data.ResolvedGenes,
-                ConfigYaml = Data.Data.ConfigYaml.ReplaceLineEndings("\n"),
+                ConfigYaml = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
             };
 
             await metadataService.AddMetadata(
