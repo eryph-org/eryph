@@ -626,7 +626,7 @@ internal static class Program
                                 if(dataBackupCreated)
                                 {
                                     Log.Information("Restoring backup data files");
-                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                                     await SaveDirectoryMove(backupDataDir, dataDir, cancelSourceCopy.Token);
                                 }
 
