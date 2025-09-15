@@ -7,6 +7,7 @@ using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
+using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
@@ -55,6 +56,12 @@ public class ConvergeSecureBoot(
             .AddParameter("EnableSecureBoot", enableSecureBoot ? OnOffState.On : OnOffState.Off)
             .AddParameter("SecureBootTemplate", secureBootTemplate)
         from _3 in Context.Engine.RunAsync(command)
+            .MapLeft(e =>
+            {
+                var logger = Context.LoggerFactory.CreateLogger<ConvergeSecureBoot>();
+                logger.LogWarning(e, "Failed to configure secure boot settings for VM {VmId}.", vmInfo.Value.Id);
+                return e;
+            })
             // The configuration of secure boot sometimes fails because the
             // secure boot template cannot be found. In this case, we execute
             // the command out of process.

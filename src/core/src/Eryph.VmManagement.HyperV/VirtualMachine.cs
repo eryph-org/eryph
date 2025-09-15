@@ -25,6 +25,7 @@ using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
+using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 
@@ -142,11 +143,13 @@ public static class VirtualMachine
         CatletMetadata metadata,
         MachineNetworkSettings[] networkSetting,
         VMStorageSettings storageSettings,
-        Seq<UniqueGeneIdentifier> resolvedGenes) =>
+        Seq<UniqueGeneIdentifier> resolvedGenes,
+        ILoggerFactory loggerFactory) =>
         from _1 in RightAsync<Error, Unit>(unit)
         let convergeContext = new ConvergeContext(
             vmHostAgentConfig, engine, portManager, reportProgress, machineConfig, 
-            metadata, storageSettings, networkSetting, hostInfo, resolvedGenes)
+            metadata, storageSettings, networkSetting, hostInfo, resolvedGenes,
+            loggerFactory)
         let convergeTasks = Seq<ConvergeTaskBase>(
             new ConvergeSecureBoot(convergeContext),
             new ConvergeTpm(convergeContext),
@@ -173,13 +176,14 @@ public static class VirtualMachine
         TypedPsObject<VirtualMachineInfo> vmInfo,
         CatletConfig machineConfig,
         CatletMetadata metadata,
-        VMStorageSettings storageSettings) =>
+        VMStorageSettings storageSettings,
+        ILoggerFactory loggerFactory) =>
         from _1 in RightAsync<Error, Unit>(unit)
         // Pass empty MachineNetworkSettings as converging the cloud init disk
         // does not require them.
         let convergeContext = new ConvergeContext(
             vmHostAgentConfig, engine, portManager, reportProgress, machineConfig,
-            metadata, storageSettings, [], hostInfo, Empty)
+            metadata, storageSettings, [], hostInfo, Empty, loggerFactory)
         let convergeTasks = Seq1<ConvergeTaskBase>(
             new ConvergeCloudInitDisk(convergeContext))
         let vmId = vmInfo.Value.Id

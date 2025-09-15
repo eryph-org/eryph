@@ -87,7 +87,7 @@ public sealed class PowershellEngine(
         CancellationToken cancellationToken = default) =>
         from _ in TryAsync(async () =>
         {
-            logger.LogWarning("Executing Powershell command '{Command}' out of process...",
+            logger.LogInformation("Executing Powershell command '{Command}' out of process...",
                 builder.ToChain().OfType<PsCommandBuilder.CommandPart>().ToSeq()
                     .Map(cp => $"{cp.Command} ...")
                     .Match(Empty: () => "?", Seq: cps => string.Join(' ', cps)));
