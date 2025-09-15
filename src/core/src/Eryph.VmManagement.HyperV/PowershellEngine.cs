@@ -130,7 +130,7 @@ public sealed class PowershellEngine(
 
     private async Task<IList<PSObject>> ExecuteAsync(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress,
+        [CanBeNull] Func<int, Task> reportProgress,
         bool withoutLock,
         CancellationToken cancellationToken)
     {

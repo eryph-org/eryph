@@ -665,7 +665,7 @@ public sealed class PowershellEngineTests : IDisposable
         await _engineLock.AcquireLockAsync();
 
         var start = DateTimeOffset.UtcNow;
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.RunOutOfProcessAsync(command, cancellationToken: cts.Token);
 
         start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
