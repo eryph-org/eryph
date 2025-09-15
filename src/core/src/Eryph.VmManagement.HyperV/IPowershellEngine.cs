@@ -30,7 +30,7 @@ public interface IPowershellEngine
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         bool withoutLock = false,
-        CancellationToken cancellation = default);
+        CancellationToken cancellationToken = default);
     
     ITypedPsObjectMapping ObjectMapping { get; }
 }
