@@ -130,9 +130,9 @@ public sealed class PowershellEngine(
 
     private async Task<IList<PSObject>> ExecuteAsync(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null,
-        bool withoutLock = false,
-        CancellationToken cancellationToken = default)
+        Func<int, Task> reportProgress,
+        bool withoutLock,
+        CancellationToken cancellationToken)
     {
         if (!withoutLock)
             await engineLock.AcquireLockAsync(cancellationToken);
