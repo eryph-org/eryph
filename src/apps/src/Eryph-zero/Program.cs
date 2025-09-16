@@ -113,6 +113,13 @@ internal static class Program
             name: "--no-current-config-check",
             description: "Do not check if host state is valid for current config. ");
 
+        var jsonOption = new System.CommandLine.Option<bool>(
+            name: "--json",
+            description: "Input and output use the JSON format. This implies non-interactive.");
+
+        var dryRunOption = new System.CommandLine.Option<bool>(
+            name: "--dry-run",
+            description: "Outputs the expected changes without applying them.");
 
         var runCommand = new Command("run");
         runCommand.AddOption(warmupOption);
@@ -149,15 +156,17 @@ internal static class Program
 
         var getAgentSettingsCommand = new Command("get");
         getAgentSettingsCommand.AddOption(outFileOption);
-        getAgentSettingsCommand.SetHandler(GetAgentSettings, outFileOption);
+        getAgentSettingsCommand.AddOption(jsonOption);
+        getAgentSettingsCommand.SetHandler(GetAgentSettings, outFileOption, jsonOption);
         agentSettingsCommand.AddCommand(getAgentSettingsCommand);
 
         var importAgentSettingsCommand = new Command("import");
         importAgentSettingsCommand.AddOption(inFileOption);
+        importAgentSettingsCommand.AddOption(jsonOption);
         importAgentSettingsCommand.AddOption(nonInteractiveOption);
         importAgentSettingsCommand.AddOption(noCurrentConfigCheckOption);
         importAgentSettingsCommand.SetHandler(ImportAgentSettings, inFileOption,
-            nonInteractiveOption, noCurrentConfigCheckOption);
+            jsonOption, nonInteractiveOption, noCurrentConfigCheckOption);
         agentSettingsCommand.AddCommand(importAgentSettingsCommand);
 
         var genePoolCommand = new Command("genepool");
@@ -181,15 +190,17 @@ internal static class Program
 
         var getNetworksCommand = new Command("get");
         getNetworksCommand.AddOption(outFileOption);
-        getNetworksCommand.SetHandler(GetNetworks, outFileOption);
+        getNetworksCommand.AddOption(jsonOption);
+        getNetworksCommand.SetHandler(GetNetworks, outFileOption, jsonOption);
         networksCommand.AddCommand(getNetworksCommand);
 
         var importNetworksCommand = new Command("import");
         importNetworksCommand.AddOption(inFileOption);
+        importNetworksCommand.AddOption(jsonOption);
         importNetworksCommand.AddOption(nonInteractiveOption);
         importNetworksCommand.AddOption(noCurrentConfigCheckOption);
         importNetworksCommand.SetHandler(ImportNetworkConfig, inFileOption,
-            nonInteractiveOption, noCurrentConfigCheckOption);
+            jsonOption, nonInteractiveOption, noCurrentConfigCheckOption);
         networksCommand.AddCommand(importNetworksCommand);
 
         var syncNetworkConfigCommand = new Command("sync");
@@ -227,7 +238,18 @@ internal static class Program
 
         commandLineBuilder.UseDefaults();
         var parser = commandLineBuilder.Build();
-        return await parser.InvokeAsync(args);
+        if (args.Length > 0)
+            return await parser.InvokeAsync(args);
+
+        while (true)
+        {
+            Console.Write("eryph-zero> ");
+            var input = Console.ReadLine();
+            if (!string.IsNullOrEmpty(input))
+            {
+                await parser.InvokeAsync(input);
+            }
+        }
 
     }
 
@@ -1015,7 +1037,7 @@ internal static class Program
         Directory.Move(source, target);
     }
 
-    private static Task<int> GetAgentSettings(FileSystemInfo? outFile) =>
+    private static Task<int> GetAgentSettings(FileSystemInfo? outFile, bool json) =>
         RunAsAdmin(
             from hostSettings in HostSettingsProvider<SimpleConsoleRuntime>.getHostSettings()
             from yaml in VmHostAgentConfiguration<SimpleConsoleRuntime>.getConfigYaml(
@@ -1027,6 +1049,7 @@ internal static class Program
 
     private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
+        bool json,
         bool nonInteractive,
         bool noCurrentConfigCheck) =>
         RunAsAdmin(
@@ -1091,14 +1114,17 @@ internal static class Program
             new DriverCommandsRuntime(new(new CancellationTokenSource(), loggerFactory, psEngine)));
     }
 
-    private static Task<int> GetNetworks(FileSystemInfo? outFile) =>
-        Run(
+    private static Task<int> GetNetworks(FileSystemInfo? outFile, bool json) =>
+        RunAsAdmin(
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
             from _ in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
+    private static async Task<int> ImportNetworkConfig(
+        FileSystemInfo? inFile,
+        bool json,
+        bool nonInteractive,
         bool noCurrentConfigCheck)
     {
         using var nullLoggerFactory = new NullLoggerFactory();
