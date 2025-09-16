@@ -115,8 +115,8 @@ jobs:
       addSpnToEnvironment: true
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build\bin'
       inlineScript: |
-        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2023" -v eryph-zero.exe
-        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2023" -v eryph-uninstaller.exe
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2025" -v eryph-zero.exe
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2025" -v eryph-uninstaller.exe
 
   - task: CopyFiles@2
     displayName: copy ovs package to zero build
