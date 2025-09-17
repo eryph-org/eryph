@@ -276,6 +276,33 @@ internal static class Program
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                
+                if (warmupMode)
+                {
+                    // Warmup mode only performs minimal validation
+                    var warmupHost = Host.CreateDefaultBuilder(args).Build();
+                    try
+                    {
+                        await warmupHost.StartAsync();
+                        await Task.Delay(3000);
+                        logger.Information("Warmup completed. Stopping.");
+                        using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                        await warmupHost.StopAsync(cancelSource.Token);
+                        return 0;
+                    }
+                    finally
+                    {
+                        if (warmupHost is IAsyncDisposable asyncDisposable)
+                        {
+                            await asyncDisposable.DisposeAsync();
+                        }
+                        else
+                        {
+                            warmupHost.Dispose();
+                        }
+                    }
+                }
+
                 container.Bootstrap();
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
@@ -332,34 +359,9 @@ internal static class Program
                     .UseSerilog(logger: logger, dispose: false)
                     .Build();
 
-                if (warmupMode)
-                {
-                    try
-                    {
-                        await host.StartAsync();
-                        await Task.Delay(1000);
-                        logger.Information("Warmup completed. Stopping.");
-                        using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));    
-                        await host.StopAsync(cancelSource.Token);
-                        return 0;
-                    }
-                    finally
-                    {
-                        if (host is IAsyncDisposable asyncDisposable)
-                        {
-                            await asyncDisposable.DisposeAsync();
-                        }
-                        else
-                        {
-                            host.Dispose();
-                        }
-                    }
-                }
-                else
-                {
-                    await host.RunAsync();
-                    return 0;
-                }
+                await host.RunAsync();
+                return 0;
+                
             }
             catch (Exception ex)
             {
