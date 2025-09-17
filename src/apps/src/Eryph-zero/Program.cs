@@ -5,6 +5,7 @@ using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -14,9 +15,16 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.Windows;
-using Eryph.App;
 using Eryph.AnsiConsole.Sys;
+using Eryph.App;
+using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Startup;
+using Eryph.Modules.Controller;
+using Eryph.Modules.Controller.ChangeTracking;
+using Eryph.Modules.Controller.Seeding;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Configuration;
 using Eryph.Modules.HostAgent.Networks.OVS;
@@ -24,6 +32,7 @@ using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Startup;
+using Eryph.StateDb.Sqlite;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
@@ -55,7 +64,6 @@ using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
-using Eryph.Modules.GenePool.Genetics;
 
 namespace Eryph.Runtime.Zero;
 
@@ -254,6 +262,76 @@ internal static class Program
 
                 await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
+                // We need to ensure this early that the configuration directories exist
+                // as the identity module tries to write files during bootstrapping.
+                ZeroConfig.EnsureConfiguration();
+
+                var container = new Container();
+                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                
+                if (warmupMode)
+                {
+                    container.UseSqlLite();
+                    container.RegisterInstance<IEryphOvsPathProvider>(new EryphOvsPathProvider());
+
+                    container.RegisterSingleton<System.IO.Abstractions.IFileSystem, FileSystem>();
+                    container.Register<IHostSettingsProvider, HostSettingsProvider>();
+                    container.Register<INetworkProviderManager, NetworkProviderManager>();
+                    container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
+
+                    container.AddStateDbDataServices();
+
+                    // Warmup mode only performs minimal validation
+                    var warmupHost = Host.CreateDefaultBuilder(args)
+                        .ConfigureEryphAppConfiguration(args)
+                        .ConfigureAppConfiguration((_, config) =>
+                        {
+                            config.AddInMemoryCollection(new Dictionary<string, string>
+                            {
+                                ["warmupMode"] = bool.TrueString,
+                            });
+                        })
+                        .ConfigureChangeTracking()
+                        .ConfigureServices((context, services )=>
+                        {
+                            var changeTrackingConfig = new ChangeTrackingConfig();
+                            context.Configuration.GetSection("ChangeTracking").Bind(changeTrackingConfig);
+                            services.AddSimpleInjector(container, options =>
+                            {
+                                options.AddLogging();
+                                
+                                options.RegisterSqliteStateStore();
+
+                                options.AddStartupHandler<EnsureHyperVAndOvsStartupHandler>();
+                                options.AddStartupHandler<EnsureConfigurationStartupHandler>();
+                                options.AddStartupHandler<DatabaseResetHandler>();
+
+                                container.RegisterInstance(changeTrackingConfig);
+                                options.AddSeeding(changeTrackingConfig);
+                                if (changeTrackingConfig.TrackChanges)
+                                    options.AddChangeTracking();
+                            });
+                        })
+                        // The logger must not be disposed here as it is used for error reporting
+                        // after the host has stopped.
+                        .UseSerilog(logger: logger, dispose: false)
+                        .Build()
+                        .UseSimpleInjector(container);
+                    try
+                    {
+                        await warmupHost.StartAsync();
+                        await Task.Delay(1000);
+                        logger.Information("Warmup completed. Stopping.");
+                        using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                        await warmupHost.StopAsync(cancelSource.Token);
+                        return 0;
+                    }
+                    finally
+                    {
+                        await ((IAsyncDisposable)warmupHost).DisposeAsync();
+                    }
+                }
+
                 var basePathUrl = ConfigureUrl(basePath);
 
                 var endpoints = new Dictionary<string, string>
@@ -269,39 +347,6 @@ internal static class Program
                         "endpoints", endpoints
                     }
                 });
-
-                // We need to ensure this early that the configuration directories exist
-                // as the identity module tries to write files during bootstrapping.
-                ZeroConfig.EnsureConfiguration();
-
-                var container = new Container();
-                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-                
-                if (warmupMode)
-                {
-                    // Warmup mode only performs minimal validation
-                    var warmupHost = Host.CreateDefaultBuilder(args).Build();
-                    try
-                    {
-                        await warmupHost.StartAsync();
-                        await Task.Delay(3000);
-                        logger.Information("Warmup completed. Stopping.");
-                        using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                        await warmupHost.StopAsync(cancelSource.Token);
-                        return 0;
-                    }
-                    finally
-                    {
-                        if (warmupHost is IAsyncDisposable asyncDisposable)
-                        {
-                            await asyncDisposable.DisposeAsync();
-                        }
-                        else
-                        {
-                            warmupHost.Dispose();
-                        }
-                    }
-                }
 
                 container.Bootstrap();
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
@@ -327,23 +372,12 @@ internal static class Program
                     {
                         config.AddInMemoryCollection(new Dictionary<string, string>
                         {
-                            { "warmupMode", warmupMode.ToString() },
-                            { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                             { "bus:type", "inmemory" },
                             { "databus:type", "inmemory" },
                             { "store:type", "inmemory" },
                         });
-                        config.AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                            ["changeTracking:trackChanges"] = bool.TrueString,
-                            ["changeTracking:seedDatabase"] = bool.TrueString,
-                            ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
-                            ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
-                            ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
-                            ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
-                            ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
-                        });
                     })
+                    .ConfigureChangeTracking()
                     .HostModule<ZeroStartupModule>()
                     .AddVmHostAgentModule()
                     .AddGenePoolModule()
@@ -412,6 +446,25 @@ internal static class Program
             {
                 config.AddCommandLine(args);
             }
+        });
+
+        return hostBuilder;
+    }
+
+    private static T ConfigureChangeTracking<T>(this T hostBuilder) where T : IHostBuilder
+    {
+        hostBuilder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["changeTracking:trackChanges"] = bool.TrueString,
+                ["changeTracking:seedDatabase"] = bool.TrueString,
+                ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
+                ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
+                ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
+                ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
+                ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
+            });
         });
 
         return hostBuilder;

@@ -112,18 +112,9 @@ namespace Eryph.Modules.Controller
             container.RegisterConditional<IOperationMessaging, EryphRebusOperationMessaging>(Lifestyle.Scoped, _ => true);
             container.AddRebusOperationsHandlers<OperationManager, OperationTaskManager>();
 
-            container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
-            container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
-            container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
-            container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
+            container.AddStateDbDataServices();
 
-            container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
-            container.Register<IProviderIpManager, ProviderIpManager>(Lifestyle.Scoped);
-            container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
-            container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
-            container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
-            container.Register<IDefaultNetworkConfigRealizer, DefaultNetworkConfigRealizer>(Lifestyle.Scoped);
-            container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
+            container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
