@@ -1,24 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ModuleCore;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
 public abstract class OperationRequestHandlerBase(
+    IApiResultFactory resultFactory,
     IEndpointResolver endpointResolver,
     IHttpContextAccessor httpContextAccessor,
     IMapper mapper,
-    ProblemDetailsFactory problemDetailsFactory,
     IOperationDispatcher operationDispatcher,
     IUserRightsProvider userRightsProvider)
 {
@@ -28,18 +23,7 @@ public abstract class OperationRequestHandlerBase(
     /// </summary>
     protected ObjectResult Problem(int statusCode, string detail)
     {
-        var httpContext = httpContextAccessor.HttpContext
-                          ?? throw new InvalidOperationException("HttpContext is not available.");
-
-        var problemDetails = problemDetailsFactory.CreateProblemDetails(
-            httpContext,
-            statusCode: statusCode,
-            detail: detail);
-
-        return new ObjectResult(problemDetails)
-        {
-            StatusCode = problemDetails.Status,
-        };
+        return resultFactory.Problem(statusCode, detail);
     }
 
     protected async Task<ActionResult> StartOperation(object command)

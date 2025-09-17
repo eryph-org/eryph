@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
+using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
 using Eryph.StateDb.Model;
@@ -94,7 +95,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
             var metadata = await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
             {
                 Id = CatletMetadataId,
-                Metadata = "test-catlet-metadata",
+                Metadata = new CatletMetadataContent(),
             });
 
             await stateStore.For<Catlet>().AddAsync(new Catlet

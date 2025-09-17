@@ -28,7 +28,7 @@ internal class DestroyCatletSaga(
     IWorkflow workflow,
     IStateStoreRepository<Catlet> catletRepository,
     IInventoryLockManager lockManager,
-    IVirtualMachineDataService vmDataService) :
+    ICatletDataService vmDataService) :
     OperationTaskWorkflowSaga<DestroyCatletCommand, EryphSagaData<DestroyCatletSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<RemoveCatletVMCommand>>,
     IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
@@ -37,20 +37,19 @@ internal class DestroyCatletSaga(
     {
         Data.Data.MachineId = message.Resource.Id;
         Data.Data.DestroyedResources = [new Resource(ResourceType.Catlet, message.Resource.Id)];
-        var catletResult = await vmDataService.GetVM(Data.Data.MachineId);
-        if (catletResult.IsNone)
+        var catlet = await vmDataService.Get(Data.Data.MachineId);
+        if (catlet is null)
         {
             await Complete();
             return;
         }
 
-        var catlet = catletResult.ValueUnsafe();
-        Data.Data.VmId = catlet.VMId;
+        Data.Data.VmId = catlet.VmId;
 
         await StartNewTask(new RemoveCatletVMCommand
         {
             CatletId = Data.Data.MachineId,
-            VMId = catlet.VMId
+            VmId = catlet.VmId
         });
     }
 
@@ -82,7 +81,7 @@ internal class DestroyCatletSaga(
                 .Append(disksToDetach)
                 .ToList();
 
-            await vmDataService.RemoveVM(Data.Data.MachineId);
+            await vmDataService.Remove(Data.Data.MachineId);
 
             await StartNewTask(new DestroyResourcesCommand
             {

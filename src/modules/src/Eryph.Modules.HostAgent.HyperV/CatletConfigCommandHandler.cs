@@ -19,7 +19,6 @@ namespace Eryph.Modules.HostAgent
     internal abstract class CatletConfigCommandHandler<TMessage, TResult>: IHandleMessages<OperationTask<TMessage>> 
         where TMessage : class, new()
     {
-        public const string DefaultDigits = "0123456789abcdefghijklmnopqrstuvwxyz";
         protected readonly ITaskMessaging _messaging;
         protected readonly ILogger Log;
         protected readonly IPowershellEngine Engine;
@@ -50,29 +49,6 @@ namespace Eryph.Modules.HostAgent
         }
 
         protected abstract EitherAsync<Error, TResult> HandleCommand(TMessage command);
-
-
-        public static string LongToString(BigInteger subject, int @base = 36, string digits = DefaultDigits)
-        {
-            if (@base < 2) throw new ArgumentException("Base must not be less than 2", nameof(@base));
-            if (digits.Length < @base) throw new ArgumentException("Not enough Digits for the base", nameof(digits));
-
-
-            var result = new StringBuilder();
-            var sign = 1;
-
-            if (subject < 0) subject *= sign = -1;
-
-            do
-            {
-                result.Insert(0, digits[(int) (subject % @base)]);
-                subject /= @base;
-            } while (subject > 0);
-
-            if (sign == -1) result.Insert(0, '-');
-
-            return result.ToString();
-        }
 
         protected EitherAsync<Error, Unit> EnsureMetadata(
             TypedPsObject<VirtualMachineInfo> vmInfo,

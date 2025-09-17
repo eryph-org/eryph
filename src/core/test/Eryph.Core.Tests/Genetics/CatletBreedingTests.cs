@@ -66,7 +66,7 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sda",
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Source = "gene:acme/acme-images/1.0:sda",
                     Store = "parent-lair",
                     Size = 100
@@ -126,7 +126,7 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sdb",
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Source = "gene:acme/acme-images/1.0:sdb",
                     Store = "child-lair",
                     Size = 200
@@ -257,7 +257,7 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sda",
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Source = "gene:dbosoft/test/1.0:sda",
                 },
             ]
@@ -282,7 +282,7 @@ public class CatletBreedingTests
             .Should().SatisfyRespectively(
                 drive =>
                 {
-                    drive.Type.Should().Be(CatletDriveType.VHD);
+                    drive.Type.Should().Be(CatletDriveType.Vhd);
                     drive.Store.Should().Be("test-store");
                     drive.Location.Should().Be("test-location");
                     drive.Source.Should().Be("gene:dbosoft/test/1.0:sda");
@@ -300,7 +300,7 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sda",
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Source = "gene:dbosoft/test/1.0:sda",
                 },
             ]
@@ -316,7 +316,7 @@ public class CatletBreedingTests
                 {
                     Mutation = MutationType.Overwrite,
                     Name = "sda",
-                    Type = CatletDriveType.PHD,
+                    Type = CatletDriveType.Phd,
                     Store = "test-store",
                     Location = "test-location"
                 },
@@ -327,7 +327,7 @@ public class CatletBreedingTests
             .Should().SatisfyRespectively(
                 drive =>
                 {
-                    drive.Type.Should().Be(CatletDriveType.PHD);
+                    drive.Type.Should().Be(CatletDriveType.Phd);
                     drive.Store.Should().Be("test-store");
                     drive.Location.Should().Be("test-location");
                     drive.Source.Should().BeNull();
@@ -345,7 +345,7 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sda",
-                    Type = CatletDriveType.VHD,
+                    Type = CatletDriveType.Vhd,
                     Source = "gene:dbosoft/test/1.0:sda",
                 }
             ]
@@ -360,7 +360,7 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sda",
-                    Type = CatletDriveType.PHD,
+                    Type = CatletDriveType.Phd,
                     Store = "test-store",
                     Location = "test-location"
                 }

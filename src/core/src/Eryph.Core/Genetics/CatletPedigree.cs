@@ -18,7 +18,7 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 
 public static class CatletPedigree
 {
-    public static Either<Error, (CatletConfig Config, Option<CatletConfig> ParentConfig)> Breed(
+    public static Either<Error, CatletConfig> Breed(
         CatletConfig config,
         GeneSetMap geneSetMap,
         CatletMap ancestors) =>
@@ -29,7 +29,8 @@ public static class CatletPedigree
             Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
                 .MapLeft(e => Error.New("Could not breed the catlet with its parent.", e)),
             None: () => resolvedConfig)
-        select (bredConfig, parentConfig);
+        let resultConfig = Mutate(bredConfig)
+        select resultConfig;
 
     private static Either<Error, Option<CatletConfig>> BreedRecursively(
         Option<string> id,
@@ -64,15 +65,32 @@ public static class CatletPedigree
         from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(config, geneSets)
             .MapLeft(e => Error.New($"Could not resolve genes in catlet '{resolvedId}'.", e))
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
-        from normalizedConfig in NormalizeGenePoolSources(resolvedId, resolvedConfig)
-            .MapLeft(e => Error.New("Could not normalize genepool sources.", e))
-            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from bredConfig in parentConfig.Match(
-            Some: pCfg => CatletBreeding.Breed(pCfg, normalizedConfig)
+            Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
                 .MapLeft(e => Error.New($"Could not breed catlet '{resolvedId}' with its parent.", e))
                 .MapLeft(e => CreateError(updatedVisitedAncestors, e)),
-            None: () => normalizedConfig)
+            None: () => resolvedConfig)
         select bredConfig;
+
+    private static CatletConfig Mutate(CatletConfig config) =>
+        config.CloneWith(c =>
+        {
+            c.Capabilities = c.Capabilities.ToSeq()
+                .Filter(cap => cap.Mutation != MutationType.Remove)
+                .ToArray();
+            c.Drives = c.Drives.ToSeq()
+                .Filter(d => d.Mutation != MutationType.Remove)
+                .ToArray();
+            c.Networks = c.Networks.ToSeq()
+                .Filter(n => n.Mutation != MutationType.Remove)
+                .ToArray();
+            c.NetworkAdapters = c.NetworkAdapters.ToSeq()
+                .Filter(n => n.Mutation != MutationType.Remove)
+                .ToArray();
+            c.Fodder = c.Fodder.ToSeq()
+                .Filter(f => f.Remove != true)
+                .ToArray();
+        });
 
     public static Either<Error, Unit> ValidateAncestorChain(
         Seq<AncestorInfo> visitedAncestors) =>
@@ -85,43 +103,6 @@ public static class CatletPedigree
         from __ in guardnot(visitedAncestors.Count >= maxAncestors,
             Error.New($"The pedigree has too many ancestors (up to {maxAncestors} are allowed)."))
         select unit;
-
-    private static Either<Error, CatletConfig> NormalizeGenePoolSources(
-        GeneSetIdentifier id,
-        CatletConfig config) =>
-        from disks in config.Drives.ToSeq()
-            .Map(d => NormalizeGenePoolSources(id, d))
-            .Sequence()
-        let fodder = config.Fodder.ToSeq()
-            .Map(f => NormalizeGenePoolSources(id, f))
-        select config.CloneWith(c =>
-        {
-            c.Drives = disks.ToArray();
-            c.Fodder = fodder.ToArray();
-        });
-    
-    private static FodderConfig NormalizeGenePoolSources(
-        GeneSetIdentifier id,
-        FodderConfig config) =>
-        config.CloneWith(c =>
-        {
-            c.Source = Optional(c.Source).Filter(notEmpty)
-                .IfNone(() => new GeneIdentifier(id, GeneName.New("catlet")).Value);
-        });
-
-    private static Either<Error, CatletDriveConfig> NormalizeGenePoolSources(
-        GeneSetIdentifier id,
-        CatletDriveConfig config) =>
-        (config.Type ?? CatletDriveType.VHD) == CatletDriveType.VHD && !notEmpty(config.Source)
-            ? from geneName in GeneName.NewEither(config.Name)
-                  .MapLeft(e => Error.New(
-                      $"Could not construct volume source for the disk name '{config.Name}'.", e))
-              let source = new GeneIdentifier(id, geneName)
-              select config.CloneWith(c =>
-              {
-                  c.Source = source.Value;
-              })
-            : config;
 
     private static Error CreateError(
         Seq<AncestorInfo> visitedAncestors,

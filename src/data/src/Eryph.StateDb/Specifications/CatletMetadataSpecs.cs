@@ -10,11 +10,12 @@ namespace Eryph.StateDb.Specifications;
 
 public static class CatletMetadataSpecs
 {
-    public sealed class GetById : Specification<CatletMetadata>, ISingleResultSpecification
+    public sealed class GetByIdReadonly : Specification<CatletMetadata>, ISingleResultSpecification
     {
-        public GetById(Guid id)
+        public GetByIdReadonly(Guid id)
         {
-            Query.Where(x => x.Id == id);
+            Query.Where(x => x.Id == id)
+                .AsNoTracking();
         }
     }
 }

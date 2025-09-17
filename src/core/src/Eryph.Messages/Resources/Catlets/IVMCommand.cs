@@ -6,7 +6,7 @@ namespace Eryph.Messages.Resources.Catlets
     public interface IVMCommand
     {
         Guid CatletId { get; set; }
-        Guid VMId { get; set; }
+        Guid VmId { get; set; }
 
     }
 }

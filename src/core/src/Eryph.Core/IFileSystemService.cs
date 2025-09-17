@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Eryph.Core
@@ -9,9 +10,9 @@ namespace Eryph.Core
         bool FileExists(string filePath);
         bool DirectoryExists(string path);
 
-        Task<string> ReadAllTextAsync(string path);
+        Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken);
 
-        Task WriteAllTextAsync(string path, string text);
+        Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken);
 
         void FileDelete(string filePath);
 

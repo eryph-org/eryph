@@ -82,6 +82,7 @@ namespace Eryph.Modules.HostAgent
             // Remove this hosted service to avoid triggering the inventory
             // based on WMI events.
             options.AddHostedService<VmChangeWatcherService>();
+            options.AddHostedService<VmRemovalWatcherService>();
             options.AddHostedService<VmStateChangeWatcherService>();
             options.AddHostedService<DiskStoresChangeWatcherService>();
             options.AddLogging();

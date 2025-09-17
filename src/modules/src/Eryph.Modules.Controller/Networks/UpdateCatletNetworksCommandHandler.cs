@@ -198,9 +198,12 @@ public class UpdateCatletNetworksCommandHandler(
         Option<string> fixedMacAddress) =>
         from _ in RightAsync<Error, Unit>(unit)
         let portName = GetPortName(catletId, adapterName)
-        let macAddress = fixedMacAddress
+        from optionalMacAddress in fixedMacAddress
             .Filter(notEmpty)
-            .IfNone(() => MacAddresses.GenerateMacAddress(portName))
+            .Map(EryphMacAddress.NewEither)
+            .Sequence()
+            .ToAsync()
+        let macAddress = optionalMacAddress.IfNone(() => MacAddressGenerator.Generate(portName))
         from existingPort in stateStore.For<CatletNetworkPort>().IO.GetBySpecAsync(
             new CatletNetworkPortSpecs.GetByCatletMetadataIdAndName(catletMetadataId, portName))
         from updatedPort in existingPort.Match(
@@ -209,7 +212,7 @@ public class UpdateCatletNetworksCommandHandler(
                 let __ =  fun(() =>
                 {
                     p.AddressName = addressName;
-                    p.MacAddress = MacAddresses.FormatMacAddress(macAddress);
+                    p.MacAddress = macAddress.Value;
                     p.Network = network;
                 })()
                 select p,
@@ -220,7 +223,7 @@ public class UpdateCatletNetworksCommandHandler(
                     Id = Guid.NewGuid(),
                     CatletMetadataId = catletMetadataId,
                     Name = portName,
-                    MacAddress = MacAddresses.FormatMacAddress(macAddress),
+                    MacAddress = macAddress.Value,
                     Network = network,
                     AddressName = addressName,
                     IpAssignments = [],
@@ -254,7 +257,7 @@ public class UpdateCatletNetworksCommandHandler(
                     ProviderName = providerName,
                     SubnetName = providerSubnetName,
                     PoolName = providerPoolName,
-                    MacAddress = MacAddresses.FormatMacAddress(MacAddresses.GenerateMacAddress(Guid.NewGuid().ToString()))
+                    MacAddress = MacAddressGenerator.Generate().Value,
                 }
                 from __ in stateStore.For<FloatingNetworkPort>().IO.AddAsync(fp)
                 let ___ = fun(() => adapterPort.FloatingPort = fp)()
