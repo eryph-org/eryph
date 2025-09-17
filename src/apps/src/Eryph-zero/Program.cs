@@ -682,32 +682,45 @@ internal static class Program
         }
 
 
-        EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
+        EitherAsync<Error, Unit> RunWarmup(string eryphBinPath) => TryAsync(async () =>
         {
-            var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            return TryAsync(async () =>
-                        {
-                var process = new Process
+            var process = new Process
+            {
+                StartInfo =
                 {
-                    StartInfo =
-                    {
-                        FileName = eryphBinPath,
-                        Arguments = "run --warmup",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = false,
-                        RedirectStandardError = false,
-                        CreateNoWindow = true,
-                        WorkingDirectory = Environment.SystemDirectory
-                    },
-                    EnableRaisingEvents = true
-                };
-                process.Start();
+                    FileName = eryphBinPath,
+                    Arguments = "run --warmup",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Environment.SystemDirectory
+                },
+                EnableRaisingEvents = true
+            };
+            process.Start();
+
+            try
+            {
+                using var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
                 await process.WaitForExitAsync(cancelTokenSource.Token);
-
-
-                return Unit.Default;
-            }).ToEither();
-        }
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill();
+                // Kill() is asynchronous. Hence, we wait again. No cancellation token
+                // is provided as the process blocks the rollback. If we get stuck here,
+                // the user needs to intervene anyway.
+                await process.WaitForExitAsync();
+                throw Error.New("Warmup did not complete within the allotted time.");
+            }
+            
+            if (process.ExitCode != 0)
+                throw Error.New($"Warmup failed with exit code {process.ExitCode}.");
+            
+            return Unit.Default;
+        }).ToEither();
+        
     }
 
     private static async Task<int> SelfUnInstall(FileSystemInfo? outFile, bool deleteOutFile, bool deleteAppData, bool deleteCatlets)
