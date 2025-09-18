@@ -281,7 +281,8 @@ internal static class Program
 
                     container.AddStateDbDataServices();
 
-                    // Warmup mode only performs minimal validation
+                    // The warmup uses a minimal host which only checks system state and migrates and seeds
+                    // the database. The database seeding logic requires a proper host.
                     var warmupHost = Host.CreateDefaultBuilder(args)
                         .ConfigureEryphAppConfiguration(args)
                         .ConfigureAppConfiguration((_, config) =>
@@ -674,14 +675,14 @@ internal static class Program
                                 if (backupCreated)
                                 {
                                     Log.Information("Restoring backup files");
-                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                                    using var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                                     await SaveDirectoryMove(backupDir, targetDir, cancelSourceCopy.Token);
                                 }
 
-                                if(dataBackupCreated)
+                                if (dataBackupCreated)
                                 {
                                     Log.Information("Restoring backup data files");
-                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                                    using var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                                     await SaveDirectoryMove(backupDataDir, dataDir, cancelSourceCopy.Token);
                                 }
 
@@ -751,23 +752,31 @@ internal static class Program
                     CreateNoWindow = true,
                     WorkingDirectory = Environment.SystemDirectory
                 },
-                EnableRaisingEvents = true
             };
             process.Start();
 
             try
             {
-                using var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-                await process.WaitForExitAsync(cancelTokenSource.Token);
+                using var exitCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                await process.WaitForExitAsync(exitCts.Token);
             }
             catch (OperationCanceledException)
             {
-                process.Kill();
-                // Kill() is asynchronous. Hence, we wait again. No cancellation token
-                // is provided as the process blocks the rollback. If we get stuck here,
-                // the user needs to intervene anyway.
-                await process.WaitForExitAsync();
-                throw Error.New("Warmup did not complete within the allotted time.");
+                // Kill the process tree as the warmup might start additional processes
+                // (e.g. when checking if the OVS driver is installed).
+                process.Kill(entireProcessTree: true);
+                try
+                {
+                    // Kill() is asynchronous. Hence, we call WaitForExitAsync again.
+                    using var killCts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                    await process.WaitForExitAsync(killCts.Token);
+                    throw Error.New("Warmup did not complete within the allotted time.");
+                }
+                catch (OperationCanceledException)
+                {
+                    // At this point, the process did not terminate after the kill command.
+                    throw Error.New("Warmup got stuck and cannot be aborted. Please reboot the machine and attempt a manual reinstallation.");
+                }
             }
             
             if (process.ExitCode != 0)
