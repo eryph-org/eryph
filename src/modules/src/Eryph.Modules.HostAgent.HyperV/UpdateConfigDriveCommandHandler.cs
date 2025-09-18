@@ -29,6 +29,7 @@ internal class UpdateConfigDriveCommandHandler(
     IHyperVOvsPortManager portManager,
     ITaskMessaging messaging,
     ILogger log,
+    ILoggerFactory loggerFactory,
     IFileSystemService fileSystem,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
@@ -57,7 +58,7 @@ internal class UpdateConfigDriveCommandHandler(
             .ToAsync()
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfo,
-                substitutedConfig, command.MachineMetadata, currentStorageSettings)
+                substitutedConfig, command.MachineMetadata, currentStorageSettings, loggerFactory)
             .WriteTrace()
         select Unit.Default;
 }

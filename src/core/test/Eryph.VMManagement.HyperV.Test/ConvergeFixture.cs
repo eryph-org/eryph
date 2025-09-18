@@ -5,6 +5,7 @@ using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Eryph.VmManagement.HyperV.Test;
@@ -53,7 +54,7 @@ public class ConvergeFixture
     public ConvergeContext Context =>
         new(VmHostAgentConfiguration, Engine, PortManager, ReportProgressCallBack,
             Config, Metadata, StorageSettings, NetworkSettings, HostInfo,
-            ResolvedGenes.ToSeq());
+            ResolvedGenes.ToSeq(), NullLoggerFactory.Instance);
 
     private static Task ReportProgressCallBack(string _) => Task.CompletedTask;
 
