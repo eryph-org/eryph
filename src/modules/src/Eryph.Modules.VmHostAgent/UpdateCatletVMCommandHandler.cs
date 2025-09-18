@@ -23,6 +23,7 @@ internal class UpdateCatletVMCommandHandler(
     IFileSystemService fileSystem,
     ITaskMessaging messaging,
     ILogger log,
+    ILoggerFactory loggerFactory,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
@@ -54,7 +55,7 @@ internal class UpdateCatletVMCommandHandler(
         from vmInfoConverged in VirtualMachine.Converge(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfoConsistent,
                 substitutedConfig, command.MachineMetadata, command.MachineNetworkSettings,
-                plannedStorageSettings, command.ResolvedGenes.ToSeq())
+                plannedStorageSettings, command.ResolvedGenes.ToSeq(), loggerFactory)
             .WriteTrace()
         let timestamp = DateTimeOffset.UtcNow
         from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, hostInfoProvider).WriteTrace()

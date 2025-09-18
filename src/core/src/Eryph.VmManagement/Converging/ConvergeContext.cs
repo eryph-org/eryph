@@ -9,6 +9,7 @@ using Eryph.Resources.Machines;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.VmManagement.Converging
 {
@@ -24,7 +25,7 @@ namespace Eryph.VmManagement.Converging
         public readonly CatletMetadata Metadata;
         public readonly MachineNetworkSettings[] NetworkSettings;
         public readonly Seq<UniqueGeneIdentifier> ResolvedGenes;
-
+        public readonly ILoggerFactory LoggerFactory;
 
         public ConvergeContext(
             VmHostAgentConfiguration vmHostAgentConfig,
@@ -36,7 +37,8 @@ namespace Eryph.VmManagement.Converging
             VMStorageSettings storageSettings, 
             MachineNetworkSettings[] networkSettings,
             VMHostMachineData hostInfo,
-            Seq<UniqueGeneIdentifier> resolvedGenes)
+            Seq<UniqueGeneIdentifier> resolvedGenes,
+            ILoggerFactory loggerFactory)
         {
             VmHostAgentConfig = vmHostAgentConfig;
             Engine = engine;
@@ -48,6 +50,7 @@ namespace Eryph.VmManagement.Converging
             NetworkSettings = networkSettings;
             HostInfo = hostInfo;
             ResolvedGenes = resolvedGenes;
+            LoggerFactory = loggerFactory;
         }
 
         public EitherAsync<Error, Unit> ReportProgressAsync(string message)
