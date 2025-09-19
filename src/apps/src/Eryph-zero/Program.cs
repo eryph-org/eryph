@@ -50,7 +50,6 @@ using Microsoft.Win32;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
-using Serilog.Sinks.SystemConsole.Themes;
 using Serilog.Templates;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -239,11 +238,13 @@ internal static class Program
             string? basePath;
             Serilog.Core.Logger logger;
 
+            var warmupMode = args.Contains("--warmup");
+
             try
             {
                 var startupConfig = ReadConfiguration(args);
                 basePath = startupConfig["basePath"];
-                logger = ZeroLogging.CreateLogger(startupConfig);
+                logger = warmupMode ? ZeroLogging.CreateWarmupLogger(startupConfig) : ZeroLogging.CreateLogger(startupConfig);
             }
             catch (Exception ex)
             {
@@ -251,14 +252,18 @@ internal static class Program
                 return -1;
             }
 
-            var warmupMode = args.Contains("--warmup");
-
             try
             {
-                logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
-
                 if (warmupMode)
-                    logger.Information("Running in warmup mode. Process will be stopped after start is completed.");
+                {
+                    logger.ForWarmupProgress().Information(
+                        "Starting eryph-zero {Version} in warmup mode. Process will be stopped after warmup has been completed.",
+                        new ZeroApplicationInfoProvider().ProductVersion);
+                }
+                else
+                {
+                    logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
+                }
 
                 await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
@@ -322,9 +327,10 @@ internal static class Program
                     {
                         await warmupHost.StartAsync();
                         await Task.Delay(1000);
-                        logger.Information("Warmup completed. Stopping.");
+                        logger.ForWarmupProgress().Information("Warmup complete. Stopping...");
                         using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
                         await warmupHost.StopAsync(cancelSource.Token);
+                        logger.ForWarmupProgress().Information("Warmup has been successfully completed.");
                         return 0;
                     }
                     finally
@@ -400,7 +406,7 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                logger.Fatal(ex, "eryph-zero failure");
+                logger.ForWarmupProgress().Fatal(ex, "eryph-zero failed.");
                 return ex is ErrorException { Code: < 0 } eex ? eex.Code : -1;
             }
             finally
@@ -491,17 +497,11 @@ internal static class Program
             outWriter = File.CreateText(outFile.FullName);
             Console.SetOut(outWriter);
             Console.SetError(outWriter);
-
         }
 
         try
         {
-
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .Enrich.FromLogContext()
-                .WriteTo.Console(theme: ConsoleTheme.None)
-                .CreateLogger();
+            Log.Logger = ZeroLogging.CreateInstallLogger();
 
             return await AdminGuard.CommandIsElevated(async () =>
             {
@@ -653,8 +653,7 @@ internal static class Program
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Installation failed. Error: {message}", ex.Message );
-                    Log.Debug(ex, "Error Details");
+                    Log.Fatal(ex, "Installation failed.");
 
                     //undo operation
 
@@ -697,27 +696,15 @@ internal static class Program
                                 : Unit.Default
                             select Unit.Default;
 
-                        _ = await rollback.IfLeft(l =>
-                        {
-                            Log.Error("Rollback failed. Error: {message}", l.Message);
-                            Log.Debug("Error Details: {@error}", l);
-
-                        });
-
+                        _ = await rollback.IfLeft(l => l.Throw());
                     }
                     catch (Exception rollBackEx)
                     {
-                        Log.Error("Rollback failed. Error: {message}", rollBackEx.Message);
-                        Log.Debug(rollBackEx, "Error Details");
-
+                        Log.Fatal(rollBackEx, "Rollback failed.");
                     }
 
                     return -1;
                 }
-
-
-
-
             });
         }
         finally
@@ -732,7 +719,6 @@ internal static class Program
                 {
                     Task.Delay(2000).GetAwaiter().GetResult();
                     File.Delete(outFile.FullName);
-
                 }
             }
         }
@@ -747,7 +733,7 @@ internal static class Program
                     FileName = eryphBinPath,
                     Arguments = "run --warmup",
                     UseShellExecute = false,
-                    RedirectStandardOutput = false,
+                    RedirectStandardOutput = true,
                     RedirectStandardError = false,
                     CreateNoWindow = true,
                     WorkingDirectory = Environment.SystemDirectory
@@ -758,6 +744,13 @@ internal static class Program
             try
             {
                 using var exitCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                while (true)
+                {
+                    var line = await process.StandardOutput.ReadLineAsync(exitCts.Token);
+                    if (line is null)
+                        break;
+                    Console.WriteLine(line);
+                }
                 await process.WaitForExitAsync(exitCts.Token);
             }
             catch (OperationCanceledException)
@@ -778,9 +771,11 @@ internal static class Program
                     throw Error.New("Warmup got stuck and cannot be aborted. Please reboot the machine and attempt a manual reinstallation.");
                 }
             }
-            
+
             if (process.ExitCode != 0)
-                throw Error.New($"Warmup failed with exit code {process.ExitCode}.");
+            {
+                throw Error.New("The warmup failed.");
+            }
             
             return Unit.Default;
         }).ToEither();
