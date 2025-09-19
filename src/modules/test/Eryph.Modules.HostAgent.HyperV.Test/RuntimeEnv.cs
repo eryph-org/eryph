@@ -8,6 +8,8 @@ using LanguageExt.Sys;
 using LanguageExt.Sys.Test;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Spectre.Console;
+using Spectre.Console.Testing;
 
 namespace Eryph.Modules.HostAgent.HyperV.Test;
 
@@ -18,6 +20,7 @@ public class RuntimeEnv<RT>(
     MemoryFS fileSystem,
     TestTimeSpec? timeSpec,
     MemorySystemEnvironment sysEnv,
+    IAnsiConsole ansiConsole,
     IOVSControl ovsControl,
     ISyncClient syncClient,
     IHostNetworkCommands<RT> hostNetworkCommands,
@@ -37,6 +40,7 @@ public class RuntimeEnv<RT>(
             new MemoryFS(),
             TestTimeSpec.RunningFromNow(),
             MemorySystemEnvironment.InitFromSystem(),
+            new TestConsole(),
             ovsControl,
             syncClient,
             hostNetworkCommands,
@@ -56,6 +60,8 @@ public class RuntimeEnv<RT>(
     public TestTimeSpec TimeSpec { get; } = timeSpec ?? TestTimeSpec.RunningFromNow();
     
     public MemorySystemEnvironment SysEnv { get; } = sysEnv;
+
+    public IAnsiConsole AnsiConsole { get; } = ansiConsole;
 
     public IOVSControl OVSControl { get; init; } = ovsControl;
 

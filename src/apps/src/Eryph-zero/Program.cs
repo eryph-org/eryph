@@ -63,6 +63,7 @@ using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
+using Eryph.Modules.HostAgent.Networks;
 
 namespace Eryph.Runtime.Zero;
 
@@ -184,6 +185,14 @@ internal static class Program
         genePoolCommand.AddCommand(logoutCommand);
         logoutCommand.SetHandler(() => Logout(_genepoolSettings));
 
+        var hostStateCommand = new Command("hoststate");
+        rootCommand.AddCommand(hostStateCommand);
+
+        var getHostStateCommand = new Command("get");
+        getHostStateCommand.AddOption(outFileOption);
+        getHostStateCommand.AddOption(jsonOption);
+        getHostStateCommand.SetHandler(GetHostState, outFileOption, jsonOption);
+        hostStateCommand.AddCommand(getHostStateCommand);
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -1114,12 +1123,32 @@ internal static class Program
             new DriverCommandsRuntime(new(new CancellationTokenSource(), loggerFactory, psEngine)));
     }
 
+    private static async Task<int> GetHostState(FileSystemInfo? outFile, bool json)
+    {
+        using var nullLoggerFactory = new NullLoggerFactory();
+        using var psEngineLock = new PowershellEngineLock();
+        using var psEngine = new PowershellEngine(
+            nullLoggerFactory.CreateLogger(""),
+            psEngineLock);
+        var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
+        var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
+
+        return await RunAsAdmin(
+            from hostState in getHostStateWithProgress()
+            from _ in checkHostInterfacesWithProgress()
+            select unit,
+            new ConsoleRuntime(new ConsoleRuntimeEnv(
+                nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
+    }
+
     private static Task<int> GetNetworks(FileSystemInfo? outFile, bool json) =>
         RunAsAdmin(
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
             from _ in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New());
+
+
 
     private static async Task<int> ImportNetworkConfig(
         FileSystemInfo? inFile,

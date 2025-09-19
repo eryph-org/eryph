@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
+using Eryph.AnsiConsole.Sys;
 using Eryph.Core.Network;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Sys;
@@ -17,6 +18,7 @@ namespace Eryph.Modules.HostAgent.Networks;
 
 public static class ProviderNetworkUpdateInConsole<RT>
     where RT : struct,
+    HasAnsiConsole<RT>,
     HasConsole<RT>,
     HasCancel<RT>,
     HasOVSControl<RT>,
@@ -27,20 +29,17 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
 {
     public static Aff<RT, Unit> checkHostInterfacesWithProgress() =>
-        from _1 in Console<RT>.write("Checking status of host interfaces => ")
-        from hostState in HostStateProvider<RT>.checkHostInterfaces(
-            () => Console<RT>.write("."))
-            | @catch(e => Console<RT>.writeEmptyLine.Bind(_ => FailEff<Unit>(e)))
-        from _2 in Console<RT>.writeEmptyLine
+        from stopSpinner in AnsiConsole<RT>.startSpinner("Checking status of host interfaces...")
+        from hostState in HostStateProvider<RT>.checkHostInterfaces(() => SuccessEff(unit)) 
+                   | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Unit>(e)))
+        from _ in stopSpinner
         select hostState;
 
     public static Aff<RT, HostState> getHostStateWithProgress() =>
-        from _ in Console<RT>.write("Analyzing host network settings => ")
-        // collect network state of host
-        from hostState in HostStateProvider<RT>.getHostState(
-            () => Console<RT>.write("."))
-            | @catch(e => Console<RT>.writeEmptyLine.Bind(_ => FailEff<HostState>(e)))
-        from __ in Console<RT>.writeEmptyLine
+        from stopSpinner in AnsiConsole<RT>.startSpinner("Analyzing host network settings...")
+        from hostState in HostStateProvider<RT>.getHostState(() => SuccessEff(unit))
+                          | @catch(e => stopSpinner.Bind(_ => FailAff<RT, HostState>(e)))
+        from _ in stopSpinner
         select hostState;
 
     private static Aff<RT, Unit> rollbackToCurrentConfig(

@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
@@ -9,6 +10,7 @@ using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
+using Spectre.Console.Testing;
 using Traits = LanguageExt.Sys.Traits;
 
 using static LanguageExt.Prelude;
@@ -16,6 +18,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.HostAgent.HyperV.Test;
 
 public readonly struct TestRuntime :
+    HasAnsiConsole<TestRuntime>,
     HasCancel<TestRuntime>,
     HasConsole<TestRuntime>,
     HasFile<TestRuntime>,
@@ -67,6 +70,7 @@ public readonly struct TestRuntime :
             Env.FileSystem,
             Env.TimeSpec,
             Env.SysEnv,
+            Env.AnsiConsole,
             Env.OVSControl,
             Env.SyncClient,
             Env.HostNetworkCommands,
@@ -148,6 +152,9 @@ public readonly struct TestRuntime :
     public Eff<TestRuntime, INetworkProviderManager> NetworkProviderManager =>
         Eff<TestRuntime, INetworkProviderManager>(
             rt => rt.Env.NetworkProviderManager);
+
+    public Eff<TestRuntime, AnsiConsoleIO> AnsiConsoleEff =>
+        Eff<TestRuntime, AnsiConsoleIO>(rt => new TestAnsiConsoleIO(rt.Env.AnsiConsole));
 
     public Eff<TestRuntime, ILogger> Logger(string category) =>
         Eff<TestRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));

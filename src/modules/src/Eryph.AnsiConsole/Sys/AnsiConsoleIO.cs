@@ -13,3 +13,8 @@ public readonly struct LiveAnsiConsoleIO : AnsiConsoleIO
 
     public IAnsiConsole AnsiConsole => Spectre.Console.AnsiConsole.Console;
 }
+
+public readonly struct TestAnsiConsoleIO(IAnsiConsole console) : AnsiConsoleIO
+{
+    public IAnsiConsole AnsiConsole => console;
+}
