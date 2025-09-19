@@ -335,7 +335,14 @@ internal static class Program
                     }
                     finally
                     {
-                        await ((IAsyncDisposable)warmupHost).DisposeAsync();
+                        if (warmupHost is IAsyncDisposable asyncDisposable)
+                        {
+                            await asyncDisposable.DisposeAsync();
+                        }
+                        else
+                        {
+                            warmupHost.Dispose();
+                        }
                     }
                 }
 
