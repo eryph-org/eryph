@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ModuleCore.Logging;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
@@ -20,7 +17,8 @@ namespace Eryph.Runtime.Zero.Startup;
 internal class EnsureHyperVAndOvsStartupHandler(
     IConfiguration configuration,
     IEryphOvsPathProvider ovsPathProvider,
-    ILoggerFactory loggerFactory)
+    ILoggerFactory loggerFactory,
+    ILogger<EnsureHyperVAndOvsStartupHandler> logger)
     : IStartupHandler
 {
     public async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -29,6 +27,8 @@ internal class EnsureHyperVAndOvsStartupHandler(
         var isWindowsService = WindowsServiceHelpers.IsWindowsService();
         var ovsPackageDirectory = configuration.GetValue<string?>("ovsPackagePath");
 
+        using var _ = logger.BeginWarmupProgressScope();
+        
         var result = await DriverCommands.Run(
             EnsureHyperVAndOvs(isWindowsService, isWarmupMode, ovsPackageDirectory),
             loggerFactory);

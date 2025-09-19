@@ -11,7 +11,7 @@ using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.Modules.Controller.Seeding
 {
-    internal static class SeedingContainerExtensions
+    public static class SeedingContainerExtensions
     {
         public static void AddSeeding(
             this SimpleInjectorAddOptions options,

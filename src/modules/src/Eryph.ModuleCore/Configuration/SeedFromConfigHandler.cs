@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
+using Eryph.ModuleCore.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
@@ -37,8 +38,11 @@ public class SeedFromConfigHandler<TModule> : IHostedService where TModule : cla
         {
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
             var logger = scope.GetInstance<ILogger<SeedFromConfigHandler<TModule>>>();
-            logger.LogInformation("Executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
-
+            using (_ = logger.BeginWarmupProgressScope())
+            {
+                logger.LogInformation("Executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
+            }
+            
             await configSeeder.GetInstance().Execute(cancellationToken);
         }
     }

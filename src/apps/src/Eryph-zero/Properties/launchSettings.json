@@ -80,6 +80,15 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": false
+    },
+    "warmup": {
+      "commandName": "Project",
+      "commandLineArgs": "run --warmup",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "ERYPH_GENEPOOL_AUTHORITY": "staging_off"
+      },
+      "remoteDebugEnabled": true
     }
   }
 }
