@@ -25,18 +25,17 @@ public static class HostStateProvider<RT>
     HasLogger<RT>
 {
     public static Aff<RT, Unit> checkHostInterfaces() =>
-        checkHostInterfaces(() => unitEff);
+        checkHostInterfaces(_ => unitEff);
 
     public static Aff<RT, Unit> checkHostInterfaces(
-        Func<Eff<RT, Unit>> progressCallback) =>
+        Func<double, Eff<Unit>> progressCallback) =>
         from ovsTool in default(RT).OVS
-        from _1 in progressCallback()
         from ovsInterfaces in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from i in ovsTool.GetInterfaces(ct).ToAff(e => e)
             select i)
-        from _2 in progressCallback()
+        from _2 in progressCallback(1d)
         from _3 in ovsInterfaces
             .Map(createInterfaceInfo)
             .Filter(interfaceInfo => interfaceInfo.HostInterfaceId.IsSome)
@@ -48,33 +47,33 @@ public static class HostStateProvider<RT>
         select unit;
 
     public static Aff<RT, HostState> getHostState() =>
-        getHostState(() => unitEff);
+        getHostState(_ => unitEff);
 
     public static Aff<RT, HostState> getHostState(
-        Func<Eff<RT, Unit>> progressCallback) =>
+        Func<double, Eff<Unit>> progressCallback) =>
         from ovsTool in default(RT).OVS
         from hostCommands in default(RT).HostNetworkCommands
-        from _1 in progressCallback()
+        from _1 in progressCallback(1/7d)
         from vmSwitchExtensions in hostCommands.GetSwitchExtensions()
-        from _2 in progressCallback()
+        from _2 in progressCallback(2/7d)
         from vmSwitches in hostCommands.GetSwitches()
-        from _3 in progressCallback()
+        from _3 in progressCallback(3/7d)
         from hostAdapters in hostCommands.GetHostAdapters()
-        from _4 in progressCallback()
+        from _4 in progressCallback(4/7d)
         from netNat in hostCommands.GetNetNat()
-        from _5 in progressCallback()
+        from _5 in progressCallback(5/7d)
         from ovsBridges in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from b in ovsTool.GetBridges(ct).ToAff(e => e)
             select b)
-        from _6 in progressCallback()
+        from _6 in progressCallback(6/7d)
         from ovsBridgePorts in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from p in ovsTool.GetPorts(ct).ToAff(e => e)
             select p)
-        from _7 in progressCallback()
+        from _7 in progressCallback(1d)
         from ovsInterfaces in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()

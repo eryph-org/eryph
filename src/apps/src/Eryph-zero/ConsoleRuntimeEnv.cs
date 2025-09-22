@@ -7,15 +7,19 @@ using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Eryph.VmManagement;
 using Microsoft.Extensions.Logging;
+using Spectre.Console;
 
 namespace Eryph.Runtime.Zero;
 
 public class ConsoleRuntimeEnv(
+    IAnsiConsole ansiConsole,
     ILoggerFactory loggerFactory,
     IPowershellEngine powershellEngine,
     ISystemEnvironment systemEnvironment,
     CancellationTokenSource tokenSource)
 {
+    public IAnsiConsole AnsiConsole => ansiConsole;
+
     public ILoggerFactory LoggerFactory => loggerFactory;
 
     public IPowershellEngine PowershellEngine => powershellEngine;

@@ -47,7 +47,10 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
             new HostNetworkCommands<ConsoleRuntime>());
 
     public ConsoleRuntime LocalCancel => new(new ConsoleRuntimeEnv(
-        Env.LoggerFactory, Env.PowershellEngine, Env.SystemEnvironment,
+        Env.AnsiConsole,
+        Env.LoggerFactory,
+        Env.PowershellEngine,
+        Env.SystemEnvironment,
         new CancellationTokenSource()));
 
     public CancellationToken CancellationToken => Env.Token;
@@ -79,5 +82,6 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
 
     public Eff<ConsoleRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
 
-    public Eff<ConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff => SuccessEff(LiveAnsiConsoleIO.Default);
+    public Eff<ConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff =>
+        Eff<ConsoleRuntime, AnsiConsoleIO>(rt => new LiveAnsiConsoleIO(rt.Env.AnsiConsole));
 }

@@ -19,5 +19,6 @@
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
+    <ProjectReference Include="..\Eryph.AnsiConsole\Eryph.AnsiConsole.csproj" />
   </ItemGroup>
 </Project>

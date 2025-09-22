@@ -15,6 +15,7 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.Windows;
+using Eryph.AnsiConsole.JsonLines;
 using Eryph.AnsiConsole.Sys;
 using Eryph.App;
 using Eryph.Core;
@@ -1138,6 +1139,7 @@ internal static class Program
             from _ in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
                 nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
@@ -1147,8 +1149,6 @@ internal static class Program
             from _ in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New());
-
-
 
     private static async Task<int> ImportNetworkConfig(
         FileSystemInfo? inFile,
@@ -1193,6 +1193,7 @@ internal static class Program
             from _8 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
+                Spectre.Console.AnsiConsole.Console,
                 nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
@@ -1219,7 +1220,11 @@ internal static class Program
             from _6 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
-                nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
+                Spectre.Console.AnsiConsole.Console,
+                nullLoggerFactory,
+                psEngine,
+                sysEnv,
+                new CancellationTokenSource())));
     }
 
     private static Aff<string> ReadInput(FileSystemInfo? inFile) => AffMaybe(async () =>
@@ -1259,6 +1264,21 @@ internal static class Program
             .Map(r => r.Match(
                 Succ: _ => 0,
                 Fail: error => error.Code != 0 ? error.Code : -1));
+
+    //private static Task<int> Run<RT, TResult>(
+    //    Aff<RT, TResult> action,
+    //    RT runtime,
+    //    JsonSerializerOptions serializerOptions)
+    //    where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
+
+
+    //private static Aff<RT, Unit> Run<RT, TResult>(
+    //    Aff<RT, TResult> action,
+    //    JsonSerializerOptions serializerOptions)
+    //    where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
+    //    from result in action
+    //    from json in Eff(() => JsonSerializer.Serialize(result, serializerOptions))
+    //    from _ in AnsiConsole<RT>.writeLine(json)
 
     private static Task<int> RunAsAdmin<RT>(Aff<RT, Unit> action, RT runtime)
         where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>

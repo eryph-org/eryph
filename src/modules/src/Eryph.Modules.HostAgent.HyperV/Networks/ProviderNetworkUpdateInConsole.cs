@@ -29,17 +29,15 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
 {
     public static Aff<RT, Unit> checkHostInterfacesWithProgress() =>
-        from stopSpinner in AnsiConsole<RT>.startSpinner("Checking status of host interfaces...")
-        from hostState in HostStateProvider<RT>.checkHostInterfaces(() => SuccessEff(unit)) 
-                   | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Unit>(e)))
-        from _ in stopSpinner
-        select hostState;
+        from _ in AnsiConsole<RT>.withProgress(
+            "Checking status of host interfaces...",
+                HostStateProvider<RT>.checkHostInterfaces)
+        select unit;
 
     public static Aff<RT, HostState> getHostStateWithProgress() =>
-        from stopSpinner in AnsiConsole<RT>.startSpinner("Analyzing host network settings...")
-        from hostState in HostStateProvider<RT>.getHostState(() => SuccessEff(unit))
-                          | @catch(e => stopSpinner.Bind(_ => FailAff<RT, HostState>(e)))
-        from _ in stopSpinner
+        from hostState in AnsiConsole<RT>.withProgress(
+            "Analyzing host network settings...", 
+            HostStateProvider<RT>.getHostState)
         select hostState;
 
     private static Aff<RT, Unit> rollbackToCurrentConfig(
