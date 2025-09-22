@@ -1048,12 +1048,12 @@ internal static class Program
     }
 
     private static Task<int> GetAgentSettings(FileSystemInfo? outFile, bool json) =>
-        RunAsAdmin(
+        Run(from _1 in AdminGuard.ensureElevated()
             from hostSettings in HostSettingsProvider<SimpleConsoleRuntime>.getHostSettings()
             from yaml in VmHostAgentConfiguration<SimpleConsoleRuntime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            from _ in WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
+            from _2 in WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New());
 
@@ -1062,11 +1062,11 @@ internal static class Program
         bool json,
         bool nonInteractive,
         bool noCurrentConfigCheck) =>
-        RunAsAdmin(
+        Run(from _1 in AdminGuard.ensureElevated()
             from configString in ReadInput(inFile)
             from hostSettings in HostSettingsProvider<SimpleConsoleRuntime>.getHostSettings()
-            from _1 in AnsiConsole<SimpleConsoleRuntime>.writeLine("Updating agent settings...")
-            from _2 in VmHostAgentConfigurationUpdate<SimpleConsoleRuntime>.updateConfig(
+            from _2 in AnsiConsole<SimpleConsoleRuntime>.writeLine("Updating agent settings...")
+            from _3 in VmHostAgentConfigurationUpdate<SimpleConsoleRuntime>.updateConfig(
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
@@ -1077,7 +1077,7 @@ internal static class Program
                 cts => default(SimpleConsoleRuntime).SyncClientEff
                     .Bind(sc => sc.CheckRunning(cts.Token))
                     .IfFail(_ => false))
-            from _3 in canConnect
+            from _4 in canConnect
                 ? from _1 in AnsiConsole<SimpleConsoleRuntime>.writeLine(
                     "eryph is running. Syncing agent settings...")
                   from _2 in default(SimpleConsoleRuntime).SyncClientEff.Bind(
@@ -1088,26 +1088,23 @@ internal static class Program
             SimpleConsoleRuntime.New());
 
     private static Task<int> Login(GenePoolSettings genepoolSettings) =>
-        RunAsAdmin(
-            from _ in unitEff
+        Run(from _1 in AdminGuard.ensureElevated()
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<SimpleConsoleRuntime>.login(genePoolApiStore, genepoolSettings)
+            from _2 in GenePoolCli<SimpleConsoleRuntime>.login(genePoolApiStore, genepoolSettings)
             select unit,
             SimpleConsoleRuntime.New());
 
     private static Task<int> GetGenePoolInfo(GenePoolSettings genepoolSettings) =>
-        RunAsAdmin(
-            from _ in unitEff
+        Run(from _1 in AdminGuard.ensureElevated()
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore, genepoolSettings)
+            from _2 in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore, genepoolSettings)
             select unit,
             SimpleConsoleRuntime.New());
 
     private static Task<int> Logout(GenePoolSettings genepoolSettings) =>
-        RunAsAdmin(
-            from _ in unitEff
+        Run(from _1 in AdminGuard.ensureElevated()
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<SimpleConsoleRuntime>.logout(genePoolApiStore, genepoolSettings)
+            from _2 in GenePoolCli<SimpleConsoleRuntime>.logout(genePoolApiStore, genepoolSettings)
             select unit,
             SimpleConsoleRuntime.New());
 
@@ -1119,8 +1116,10 @@ internal static class Program
             loggerFactory.CreateLogger<PowershellEngine>(),
              psEngineLock);
 
-        return await RunAsAdmin(
-            DriverCommands.GetDriverStatus(),
+        return await Run(
+            from _1 in AdminGuard.ensureElevated()
+            from _2 in DriverCommands.GetDriverStatus()
+            select unit,
             new DriverCommandsRuntime(new(new CancellationTokenSource(), loggerFactory, psEngine)));
     }
 
@@ -1134,9 +1133,10 @@ internal static class Program
         var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
         var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
-        return await RunAsAdmin(
+        return await Run(
+            from _1 in AdminGuard.ensureElevated()
             from hostState in getHostStateWithProgress()
-            from _ in checkHostInterfacesWithProgress()
+            from _2 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
                 json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
@@ -1144,9 +1144,9 @@ internal static class Program
     }
 
     private static Task<int> GetNetworks(FileSystemInfo? outFile, bool json) =>
-        RunAsAdmin(
+        Run(from _1 in AdminGuard.ensureElevated()
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
-            from _ in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
+            from _2 in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New());
 
@@ -1164,10 +1164,11 @@ internal static class Program
         var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
         var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
-        return await RunAsAdmin(
+        return await Run(
+            from _1 in AdminGuard.ensureElevated()
             from configString in ReadInput(inFile)
-            from _1 in ensureDriver(ovsRunDir, true, false)
-            from _2 in isAgentRunning()
+            from _2 in ensureDriver(ovsRunDir, true, false)
+            from _3 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from defaults in getDefaults()
@@ -1184,13 +1185,13 @@ internal static class Program
                     select (r.IsValid, HostState: s)
             }
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
-            from _3 in validateNetworkImpact(newConfig, currentConfig, defaults)
-            from _4 in applyChangesInConsole(currentConfig, newConfigChanges,
+            from _4 in validateNetworkImpact(newConfig, currentConfig, defaults)
+            from _5 in applyChangesInConsole(currentConfig, newConfigChanges,
                 getHostStateWithProgress, nonInteractive, syncResult.IsValid)
-            from _5 in saveConfigurationYaml(configString)
-            from _6 in syncNetworks()
-            from _7 in writeLine("New Network configuration was imported.")
-            from _8 in checkHostInterfacesWithProgress()
+            from _6 in saveConfigurationYaml(configString)
+            from _7 in syncNetworks()
+            from _8 in writeLine("New Network configuration was imported.")
+            from _9 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
                 Spectre.Console.AnsiConsole.Console,
@@ -1207,17 +1208,19 @@ internal static class Program
         var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
         var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
-        return await RunAsAdmin(
-            from _1 in writeLine("Going to sync network state with the current configuration...")
-            from _2 in ensureDriver(ovsRunDir, true, false)
-            from _3 in isAgentRunning()
+        return await Run(
+            from _1 in AdminGuard.ensureElevated()
+            from _2 in AnsiConsole<ConsoleRuntime>.writeLine(
+                "Going to sync network state with the current configuration...")
+            from _3 in ensureDriver(ovsRunDir, true, false)
+            from _4 in isAgentRunning()
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
             from pendingChanges in generateChanges(hostState, currentConfig, true)
-            from _4 in applyChangesInConsole(currentConfig, pendingChanges,
+            from _5 in applyChangesInConsole(currentConfig, pendingChanges,
                 getHostStateWithProgress, nonInteractive, false)
-            from _5 in syncNetworks()
-            from _6 in checkHostInterfacesWithProgress()
+            from _6 in syncNetworks()
+            from _7 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
                 Spectre.Console.AnsiConsole.Console,
@@ -1279,10 +1282,6 @@ internal static class Program
     //    from result in action
     //    from json in Eff(() => JsonSerializer.Serialize(result, serializerOptions))
     //    from _ in AnsiConsole<RT>.writeLine(json)
-
-    private static Task<int> RunAsAdmin<RT>(Aff<RT, Unit> action, RT runtime)
-        where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
-        AdminGuard.CommandIsElevated(() => Run(action, runtime));
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {

@@ -11,9 +11,9 @@ namespace Eryph.ModuleCore;
 
 public static class AdminGuard
 {
-    public static Eff<Unit> ensureAdmin() =>
+    public static Eff<Unit> ensureElevated() =>
         from isElevated in Eff(() => IsElevated)
-        from _ in guard(isElevated, Error.New("This operation requires administrative privileges."))
+        from _ in guard(isElevated, Error.New(-10, "This operation requires administrative privileges."))
         select unit;
 
     public static bool IsElevated => IsElevatedProcess();
