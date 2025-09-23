@@ -115,7 +115,7 @@ namespace Eryph.Modules.HostAgent
                 container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
             }
 
-            container.RegisterSingleton<IPowershellEngineLock, PowershellEngineLock>();
+            container.RegisterSingleton<IPowershellEngineLock>(() => new PowershellEngineLock(disposeSemaphore: false));
             container.Register<IPowershellEngine, PowershellEngine>(Lifestyle.Scoped);
 
             container.RegisterInstance(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>());
