@@ -27,7 +27,15 @@ public sealed class DiskStoresChangeWatcherService(
     : IHostedService, IDisposable
 {
     private IDisposable? _subscription;
+
+    // The semaphore is not disposed as it can block waiting tasks forever
+    // and block the application shutdown. As this service is a singleton,
+    // the disposal is not required for resource cleanup.
+    // See https://github.com/dotnet/runtime/issues/59639.
+#pragma warning disable CA2213 // Disposable fields should be disposed
     private readonly SemaphoreSlim _semaphore = new(1, 1);
+#pragma warning restore CA2213 // Disposable fields should be disposed
+    
     private bool _stopping;
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -111,7 +119,6 @@ public sealed class DiskStoresChangeWatcherService(
     public void Dispose()
     {
         _subscription?.Dispose();
-        _semaphore.Dispose();
     }
 
     /// <summary>

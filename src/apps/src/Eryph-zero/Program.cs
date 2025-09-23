@@ -5,6 +5,7 @@ using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -14,9 +15,15 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.Windows;
-using Eryph.App;
 using Eryph.AnsiConsole.Sys;
+using Eryph.App;
+using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Startup;
+using Eryph.Modules.Controller;
+using Eryph.Modules.Controller.ChangeTracking;
+using Eryph.Modules.Controller.Seeding;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
 using Eryph.Modules.VmHostAgent.Genetics;
@@ -25,6 +32,7 @@ using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Startup;
+using Eryph.StateDb.Sqlite;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
@@ -42,7 +50,6 @@ using Microsoft.Win32;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
-using Serilog.Sinks.SystemConsole.Themes;
 using Serilog.Templates;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -231,11 +238,13 @@ internal static class Program
             string? basePath;
             Serilog.Core.Logger logger;
 
+            var warmupMode = args.Contains("--warmup");
+
             try
             {
                 var startupConfig = ReadConfiguration(args);
                 basePath = startupConfig["basePath"];
-                logger = ZeroLogging.CreateLogger(startupConfig);
+                logger = warmupMode ? ZeroLogging.CreateWarmupLogger(startupConfig) : ZeroLogging.CreateLogger(startupConfig);
             }
             catch (Exception ex)
             {
@@ -243,16 +252,99 @@ internal static class Program
                 return -1;
             }
 
-            var warmupMode = args.Contains("--warmup");
-
             try
             {
-                logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
-
                 if (warmupMode)
-                    logger.Information("Running in warmup mode. Process will be stopped after start is completed.");
+                {
+                    logger.ForWarmupProgress().Information(
+                        "Starting eryph-zero {Version} in warmup mode. Process will be stopped after warmup has been completed.",
+                        new ZeroApplicationInfoProvider().ProductVersion);
+                }
+                else
+                {
+                    logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
+                }
 
                 await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
+
+                // We need to ensure this early that the configuration directories exist
+                // as the identity module tries to write files during bootstrapping.
+                ZeroConfig.EnsureConfiguration();
+
+                var container = new Container();
+                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                
+                if (warmupMode)
+                {
+                    container.UseSqlLite();
+                    container.RegisterInstance<IEryphOvsPathProvider>(new EryphOvsPathProvider());
+
+                    container.RegisterSingleton<System.IO.Abstractions.IFileSystem, FileSystem>();
+                    container.Register<IHostSettingsProvider, HostSettingsProvider>();
+                    container.Register<INetworkProviderManager, NetworkProviderManager>();
+                    container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
+
+                    container.AddStateDbDataServices();
+
+                    // The warmup uses a minimal host which only checks system state and migrates and seeds
+                    // the database. The database seeding logic requires a proper host.
+                    var warmupHost = Host.CreateDefaultBuilder(args)
+                        .ConfigureEryphAppConfiguration(args)
+                        .ConfigureAppConfiguration((_, config) =>
+                        {
+                            config.AddInMemoryCollection(new Dictionary<string, string>
+                            {
+                                ["warmupMode"] = bool.TrueString,
+                            });
+                        })
+                        .ConfigureChangeTracking()
+                        .ConfigureServices((context, services )=>
+                        {
+                            var changeTrackingConfig = new ChangeTrackingConfig();
+                            context.Configuration.GetSection("ChangeTracking").Bind(changeTrackingConfig);
+                            services.AddSimpleInjector(container, options =>
+                            {
+                                options.AddLogging();
+                                
+                                options.RegisterSqliteStateStore();
+
+                                options.AddStartupHandler<EnsureHyperVAndOvsStartupHandler>();
+                                options.AddStartupHandler<EnsureConfigurationStartupHandler>();
+                                options.AddStartupHandler<DatabaseResetHandler>();
+
+                                container.RegisterInstance(changeTrackingConfig);
+                                options.AddSeeding(changeTrackingConfig);
+                                if (changeTrackingConfig.TrackChanges)
+                                    options.AddChangeTracking();
+                            });
+                        })
+                        // The logger must not be disposed here as it is used for error reporting
+                        // after the host has stopped.
+                        .UseSerilog(logger: logger, dispose: false)
+                        .Build()
+                        .UseSimpleInjector(container);
+                    try
+                    {
+                        await warmupHost.StartAsync();
+                        await Task.Delay(1000);
+                        logger.ForWarmupProgress().Information("Warmup complete. Stopping...");
+                        using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                        await warmupHost.StopAsync(cancelSource.Token);
+                        logger.ForWarmupProgress().Information("Warmup has been successfully completed.");
+                        return 0;
+                    }
+                    finally
+                    {
+                        if (warmupHost is IAsyncDisposable asyncDisposable)
+                        {
+                            await asyncDisposable.DisposeAsync();
+                        }
+                        else
+                        {
+                            warmupHost.Dispose();
+                        }
+                    }
+                }
 
                 var basePathUrl = ConfigureUrl(basePath);
 
@@ -270,12 +362,6 @@ internal static class Program
                     }
                 });
 
-                // We need to ensure this early that the configuration directories exist
-                // as the identity module tries to write files during bootstrapping.
-                ZeroConfig.EnsureConfiguration();
-
-                var container = new Container();
-                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
                 container.Bootstrap();
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
@@ -300,23 +386,12 @@ internal static class Program
                     {
                         config.AddInMemoryCollection(new Dictionary<string, string>
                         {
-                            { "warmupMode", warmupMode.ToString() },
-                            { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                             { "bus:type", "inmemory" },
                             { "databus:type", "inmemory" },
                             { "store:type", "inmemory" },
                         });
-                        config.AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                            ["changeTracking:trackChanges"] = bool.TrueString,
-                            ["changeTracking:seedDatabase"] = bool.TrueString,
-                            ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
-                            ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
-                            ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
-                            ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
-                            ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
-                        });
                     })
+                    .ConfigureChangeTracking()
                     .HostModule<ZeroStartupModule>()
                     .AddVmHostAgentModule()
                     .AddNetworkModule()
@@ -331,38 +406,13 @@ internal static class Program
                     .UseSerilog(logger: logger, dispose: false)
                     .Build();
 
-                if (warmupMode)
-                {
-                    try
-                    {
-                        await host.StartAsync();
-                        await Task.Delay(1000);
-                        logger.Information("Warmup completed. Stopping.");
-                        using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));    
-                        await host.StopAsync(cancelSource.Token);
-                        return 0;
-                    }
-                    finally
-                    {
-                        if (host is IAsyncDisposable asyncDisposable)
-                        {
-                            await asyncDisposable.DisposeAsync();
-                        }
-                        else
-                        {
-                            host.Dispose();
-                        }
-                    }
-                }
-                else
-                {
-                    await host.RunAsync();
-                    return 0;
-                }
+                await host.RunAsync();
+                return 0;
+                
             }
             catch (Exception ex)
             {
-                logger.Fatal(ex, "eryph-zero failure");
+                logger.ForWarmupProgress().Fatal(ex, "eryph-zero failed.");
                 return ex is ErrorException { Code: < 0 } eex ? eex.Code : -1;
             }
             finally
@@ -414,6 +464,25 @@ internal static class Program
         return hostBuilder;
     }
 
+    private static T ConfigureChangeTracking<T>(this T hostBuilder) where T : IHostBuilder
+    {
+        hostBuilder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["changeTracking:trackChanges"] = bool.TrueString,
+                ["changeTracking:seedDatabase"] = bool.TrueString,
+                ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
+                ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
+                ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
+                ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
+                ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
+            });
+        });
+
+        return hostBuilder;
+    }
+
     private static readonly IPEndPoint DefaultLoopbackEndpoint = new(IPAddress.Loopback, port: 0);
 
     private static int GetAvailablePort()
@@ -434,17 +503,11 @@ internal static class Program
             outWriter = File.CreateText(outFile.FullName);
             Console.SetOut(outWriter);
             Console.SetError(outWriter);
-
         }
 
         try
         {
-
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .Enrich.FromLogContext()
-                .WriteTo.Console(theme: ConsoleTheme.None)
-                .CreateLogger();
+            Log.Logger = ZeroLogging.CreateInstallLogger();
 
             return await AdminGuard.CommandIsElevated(async () =>
             {
@@ -596,8 +659,7 @@ internal static class Program
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Installation failed. Error: {message}", ex.Message );
-                    Log.Debug(ex, "Error Details");
+                    Log.Fatal(ex, "Installation failed.");
 
                     //undo operation
 
@@ -618,14 +680,14 @@ internal static class Program
                                 if (backupCreated)
                                 {
                                     Log.Information("Restoring backup files");
-                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                                    using var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                                     await SaveDirectoryMove(backupDir, targetDir, cancelSourceCopy.Token);
                                 }
 
-                                if(dataBackupCreated)
+                                if (dataBackupCreated)
                                 {
                                     Log.Information("Restoring backup data files");
-                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                                    using var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                                     await SaveDirectoryMove(backupDataDir, dataDir, cancelSourceCopy.Token);
                                 }
 
@@ -640,27 +702,15 @@ internal static class Program
                                 : Unit.Default
                             select Unit.Default;
 
-                        _ = await rollback.IfLeft(l =>
-                        {
-                            Log.Error("Rollback failed. Error: {message}", l.Message);
-                            Log.Debug("Error Details: {@error}", l);
-
-                        });
-
+                        _ = await rollback.IfLeft(l => l.Throw());
                     }
                     catch (Exception rollBackEx)
                     {
-                        Log.Error("Rollback failed. Error: {message}", rollBackEx.Message);
-                        Log.Debug(rollBackEx, "Error Details");
-
+                        Log.Fatal(rollBackEx, "Rollback failed.");
                     }
 
                     return -1;
                 }
-
-
-
-
             });
         }
         finally
@@ -675,38 +725,67 @@ internal static class Program
                 {
                     Task.Delay(2000).GetAwaiter().GetResult();
                     File.Delete(outFile.FullName);
-
                 }
             }
         }
 
 
-        EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
+        EitherAsync<Error, Unit> RunWarmup(string eryphBinPath) => TryAsync(async () =>
         {
-            var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            return TryAsync(async () =>
-                        {
-                var process = new Process
+            var process = new Process
+            {
+                StartInfo =
                 {
-                    StartInfo =
-                    {
-                        FileName = eryphBinPath,
-                        Arguments = "run --warmup",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = false,
-                        RedirectStandardError = false,
-                        CreateNoWindow = true,
-                        WorkingDirectory = Environment.SystemDirectory
-                    },
-                    EnableRaisingEvents = true
-                };
-                process.Start();
-                await process.WaitForExitAsync(cancelTokenSource.Token);
+                    FileName = eryphBinPath,
+                    Arguments = "run --warmup",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Environment.SystemDirectory
+                },
+            };
+            process.Start();
 
+            try
+            {
+                using var exitCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                while (true)
+                {
+                    var line = await process.StandardOutput.ReadLineAsync(exitCts.Token);
+                    if (line is null)
+                        break;
+                    Console.WriteLine(line);
+                }
+                await process.WaitForExitAsync(exitCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Kill the process tree as the warmup might start additional processes
+                // (e.g. when checking if the OVS driver is installed).
+                process.Kill(entireProcessTree: true);
+                try
+                {
+                    // Kill() is asynchronous. Hence, we call WaitForExitAsync again.
+                    using var killCts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                    await process.WaitForExitAsync(killCts.Token);
+                    throw Error.New("Warmup did not complete within the allotted time.");
+                }
+                catch (OperationCanceledException)
+                {
+                    // At this point, the process did not terminate after the kill command.
+                    throw Error.New("Warmup got stuck and cannot be aborted. Please reboot the machine and attempt a manual reinstallation.");
+                }
+            }
 
-                return Unit.Default;
-            }).ToEither();
-        }
+            if (process.ExitCode != 0)
+            {
+                throw Error.New("The warmup failed.");
+            }
+            
+            return Unit.Default;
+        }).ToEither();
+        
     }
 
     private static async Task<int> SelfUnInstall(FileSystemInfo? outFile, bool deleteOutFile, bool deleteAppData, bool deleteCatlets)
