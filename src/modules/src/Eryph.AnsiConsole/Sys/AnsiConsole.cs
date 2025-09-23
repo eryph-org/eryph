@@ -91,4 +91,16 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
             });
         })
         select result;
+
+    public static Aff<RT, T> withSpinner<T>(
+        string text, 
+        Aff<RT, T> aff) =>
+        from ansiConsole in default(RT).AnsiConsoleEff
+        from result in AffMaybe<RT, T>(async rt =>
+        {
+            return await ansiConsole.AnsiConsole.Status().StartAsync(
+                text,
+                async ctx => await aff.Run(rt));
+        })
+        select result;
 }
