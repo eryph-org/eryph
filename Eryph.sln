@@ -121,6 +121,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement.HyperV.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.AspNetCore.TestBase", "src\modules\test\Eryph.Modules.AspNetCore.TestBase\Eryph.Modules.AspNetCore.TestBase.csproj", "{878B2A51-F931-4D53-8ADD-658674C3C63D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.CatletManagement", "src\core\src\Eryph.CatletManagement\Eryph.CatletManagement.csproj", "{BAAC08F9-C32F-44E4-9F37-DCA07FB57C86}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.CatletManagement.Tests", "src\core\test\Eryph.CatletManagement.Tests\Eryph.CatletManagement.Tests.csproj", "{E61772A9-C697-4CCE-9FD8-496D0DBADF03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -327,6 +331,14 @@ Global
 		{878B2A51-F931-4D53-8ADD-658674C3C63D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{878B2A51-F931-4D53-8ADD-658674C3C63D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{878B2A51-F931-4D53-8ADD-658674C3C63D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BAAC08F9-C32F-44E4-9F37-DCA07FB57C86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAAC08F9-C32F-44E4-9F37-DCA07FB57C86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAAC08F9-C32F-44E4-9F37-DCA07FB57C86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAAC08F9-C32F-44E4-9F37-DCA07FB57C86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E61772A9-C697-4CCE-9FD8-496D0DBADF03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E61772A9-C697-4CCE-9FD8-496D0DBADF03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E61772A9-C697-4CCE-9FD8-496D0DBADF03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E61772A9-C697-4CCE-9FD8-496D0DBADF03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -382,6 +394,8 @@ Global
 		{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{88711EDC-1C6E-46FF-976E-EB8D18055EF0} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{878B2A51-F931-4D53-8ADD-658674C3C63D} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{BAAC08F9-C32F-44E4-9F37-DCA07FB57C86} = {07B818A5-B186-4D09-A766-9E4963F3C07E}
+		{E61772A9-C697-4CCE-9FD8-496D0DBADF03} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

@@ -31,7 +31,7 @@ public class Catlet : Resource
 
     public TimeSpan UpTime { get; set; }
 
-    public Guid VMId { get; set; }
+    public Guid VmId { get; set; }
 
     public Guid MetadataId { get; set; }
 
@@ -42,6 +42,13 @@ public class Catlet : Resource
     public required string DataStore { get; set; }
 
     public bool Frozen { get; set; }
+
+    /// <summary>
+    /// The catlet has been created with an old version of eryph and
+    /// is missing important metadata. Hence, it cannot be edited
+    /// and its configuration cannot be inspected.
+    /// </summary>
+    public bool IsDeprecated { get; set; }
 
     public Guid? HostId { get; set; }
 

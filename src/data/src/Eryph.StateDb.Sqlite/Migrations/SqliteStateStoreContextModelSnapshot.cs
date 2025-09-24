@@ -46,8 +46,20 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Metadata")
+                    b.Property<Guid>("CatletId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MetadataJson")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SecretDataHidden")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("VmId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -91,7 +103,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MacAddress")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -670,6 +681,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid?>("HostId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
@@ -703,7 +717,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<TimeSpan>("UpTime")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("VMId")
+                    b.Property<Guid>("VmId")
                         .HasColumnType("TEXT");
 
                     b.HasIndex("HostId");

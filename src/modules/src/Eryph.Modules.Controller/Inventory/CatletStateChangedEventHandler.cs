@@ -9,7 +9,6 @@ using Eryph.Modules.Controller.DataServices;
 using Eryph.Rebus;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
-using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Pipeline;
@@ -20,8 +19,8 @@ namespace Eryph.Modules.Controller.Inventory;
 internal class CatletStateChangedEventHandler(
     IInventoryLockManager lockManager,
     IOperationDispatcher opDispatcher,
-    IVirtualMachineMetadataService metadataService,
-    IVirtualMachineDataService vmDataService,
+    ICatletMetadataService metadataService,
+    ICatletDataService vmDataService,
     IMessageContext messageContext,
     ILogger logger)
     : IHandleMessages<CatletStateChangedEvent>
@@ -30,11 +29,10 @@ internal class CatletStateChangedEventHandler(
     {
         await lockManager.AcquireVmLock(message.VmId);
 
-        var catletResult = await vmDataService.GetByVMId(message.VmId);
-        if (catletResult.IsNone)
+        var catlet = await vmDataService.GetByVmId(message.VmId);
+        if (catlet is null)
             return;
 
-        var catlet = catletResult.ValueUnsafe();
         if (catlet.LastSeenState < message.Timestamp)
         {
             catlet.UpTime = message.Status is VmStatus.Stopped ? TimeSpan.Zero : message.UpTime;
@@ -50,24 +48,25 @@ internal class CatletStateChangedEventHandler(
         if (message.UpTime.TotalMinutes < 15)
             return;
 
-        var metadataResult = await metadataService.GetMetadata(catlet.MetadataId);
-        if (metadataResult.IsNone)
+        var metadata = await metadataService.GetMetadata(catlet.MetadataId);
+        if (metadata is null || metadata.IsDeprecated || metadata.Metadata is null)
+        {
+            logger.LogDebug("Skipping state update for catlet {CatletId}. The catlet's metadata is deprecated or unusable.",
+                catlet.Id);
+            return;
+        }
+
+        if (metadata.SecretDataHidden)
             return;
 
-        var metadata = metadataResult.ValueUnsafe();
-        
-        if (metadata.SecureDataHidden)
-            return;
-
-        var anySensitive = metadata.Fodder.ToSeq().Exists(
+        var anySensitive = metadata.Metadata.Config.Fodder.ToSeq().Exists(
                                f => f.Secret.GetValueOrDefault()
                                     || f.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault()))
-                           || metadata.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
+                           || metadata.Metadata.Config.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
         if (!anySensitive)
             return;
         
-        metadata.SecureDataHidden = true;
-        await metadataService.SaveMetadata(metadata);
+        await metadataService.MarkSecretDataHidden(catlet.MetadataId);
 
         await opDispatcher.StartNew(
             catlet.Project.Id,

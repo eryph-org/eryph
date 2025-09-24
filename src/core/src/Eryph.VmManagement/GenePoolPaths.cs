@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using LanguageExt;
@@ -34,41 +30,69 @@ public static class GenePoolPaths
         GeneSetIdentifier geneSetId) =>
         Path.Combine(GetGeneSetPath(genePoolPath, geneSetId), GeneSetManifestFileName);
 
-    public static string GetGenePath(
+    public static string GetGeneSetLockPath(
         string genePoolPath,
-        UniqueGeneIdentifier uniqueGeneId) =>
-        GetGenePath(genePoolPath, uniqueGeneId.GeneType, uniqueGeneId.Architecture, uniqueGeneId.Id);
+        GeneSetIdentifier geneSetId) =>
+        Path.Combine(GetGeneSetPath(genePoolPath, geneSetId), "geneset-tag.lock");
+
+    public static string GetTempGenePath(
+        string genePoolPath,
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash) =>
+        Path.Combine(GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet), geneHash.Hash);
+
+    public static string GetTempGeneManifestPath(
+        string geneDownloadPath) =>
+        Path.Combine(geneDownloadPath, "gene.json");
+
+    public static string GetTempGenePartPath(
+        string geneDownloadPath,
+        GenePartHash genePartHash) =>
+        Path.Combine(geneDownloadPath, $"{genePartHash.Hash}.part");
 
     public static string GetGenePath(
         string genePoolPath,
-        GeneType geneType,
-        Architecture architecture,
-        GeneIdentifier geneId)
+        UniqueGeneIdentifier uniqueGeneId)
     {
-        var geneFolder = geneType switch
-        {
-            GeneType.Catlet => "",
-            GeneType.Volume => "volumes",
-            GeneType.Fodder => "fodder",
-            _ => throw new ArgumentException($"The gene type '{geneType}' is not supported",
-                nameof(geneType)),
-        };
-
-        var extension = geneType switch
+        var extension = uniqueGeneId.GeneType switch
         {
             GeneType.Catlet => "json",
             GeneType.Volume => "vhdx",
             GeneType.Fodder => "json",
-            _ => throw new ArgumentException($"The gene type '{geneType}' is not supported",
-                nameof(geneType)),
+            _ => throw new ArgumentException(
+                $"The gene type '{uniqueGeneId.GeneType}' is not supported",
+                nameof(uniqueGeneId)),
         };
 
         return Path.Combine(
-            GetGeneSetPath(genePoolPath, geneId.GeneSet),
+            GetGeneFolderPath(genePoolPath, uniqueGeneId),
+            $"{uniqueGeneId.Id.GeneName}.{extension}");
+    }
+
+    public static string GetGeneLockPath(
+        string genePoolPath,
+        UniqueGeneIdentifier uniqueGeneId) =>
+        Path.Combine(GetGeneFolderPath(genePoolPath, uniqueGeneId), $"{uniqueGeneId.Id.GeneName}.lock");
+
+    private static string GetGeneFolderPath(
+        string genePoolPath,
+        UniqueGeneIdentifier uniqueGeneId)
+    {
+        var geneFolder = uniqueGeneId.GeneType switch
+        {
+            GeneType.Catlet => "",
+            GeneType.Volume => "volumes",
+            GeneType.Fodder => "fodder",
+            _ => throw new ArgumentException(
+                $"The gene type '{uniqueGeneId.GeneType}' is not supported",
+                nameof(uniqueGeneId)),
+        };
+
+        return Path.Combine(
+            GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet),
             geneFolder,
-            architecture.Hypervisor.IsAny ? "" : architecture.Hypervisor.Value,
-            architecture.ProcessorArchitecture.IsAny ? "" : architecture.ProcessorArchitecture.Value,
-            $"{geneId.GeneName}.{extension}");
+            uniqueGeneId.Architecture.Hypervisor.IsAny ? "" : uniqueGeneId.Architecture.Hypervisor.Value,
+            uniqueGeneId.Architecture.ProcessorArchitecture.IsAny ? "" : uniqueGeneId.Architecture.ProcessorArchitecture.Value);
     }
 
     public static Either<Error, GeneSetIdentifier> GetGeneSetIdFromPath(

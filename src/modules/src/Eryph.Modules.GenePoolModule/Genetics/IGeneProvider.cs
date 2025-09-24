@@ -1,22 +1,25 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Core.Sys;
+using Eryph.GenePool.Model;
 using Eryph.Messages.Genes.Commands;
 using LanguageExt;
-using LanguageExt.Common;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
 public interface IGeneProvider
 {
-    EitherAsync<Error, PrepareGeneResponse> ProvideGene(
+    Aff<CancelRt, string> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
-        Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancel);
+        GeneHash geneHash);
+    
+    Aff<CancelRt, GenesetTagManifestData> GetGeneSetManifest(
+        GeneSetIdentifier geneSetId);
 
-    EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
-        GeneSetIdentifier genesetIdentifier,
-        CancellationToken cancellationToken);
+    Aff<CancelRt, PrepareGeneResponse> ProvideGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        Func<string, int, Task> reportProgress);
 }

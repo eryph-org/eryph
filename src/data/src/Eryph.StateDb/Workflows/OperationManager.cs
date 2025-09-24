@@ -8,15 +8,14 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages;
 using Eryph.StateDb.Model;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
+
 using ErrorData = Dbosoft.Rebus.Operations.ErrorData;
 using OperationStatus = Eryph.StateDb.Model.OperationStatus;
 
 namespace Eryph.StateDb.Workflows;
 
 public class OperationManager(
-    StateStoreContext db, 
-    IBus bus,
+    StateStoreContext db,
     WorkflowOptions workflowOptions,
     ILogger<OperationManager> log)
     : OperationManagerBase

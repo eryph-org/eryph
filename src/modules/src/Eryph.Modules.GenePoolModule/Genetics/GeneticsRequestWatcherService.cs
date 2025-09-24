@@ -1,49 +1,57 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
+using Eryph.Core.Genetics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
-internal class GeneticsRequestWatcherService : BackgroundService
+internal class GeneticsRequestWatcherService(
+    Container container,
+    IGeneRequestRegistry geneRequestRegistry,
+    ILogger logger) : BackgroundService
 {
-    private readonly ILogger _log;
-    private readonly IGeneRequestBackgroundQueue _backgroundQueue;
-
-    public GeneticsRequestWatcherService(ILogger log, IGeneRequestBackgroundQueue backgroundQueue)
-    {
-        _log = log;
-        _backgroundQueue = backgroundQueue;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        await BackgroundProcessing(stoppingToken);
-    }
-
-    private async Task BackgroundProcessing(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var workItem =
-                await _backgroundQueue.DequeueAsync(stoppingToken);
-
+            var (geneId, geneHash) = await geneRequestRegistry.DequeueGeneRequest(stoppingToken);
             try
             {
-                await workItem(stoppingToken);
+                await ProcessRequest(geneId, geneHash, stoppingToken);
             }
             catch (Exception ex)
             {
-                _log.LogError(ex,
-                    "Error occurred executing {WorkItem}.", nameof(workItem));
+                // Any exceptions should already have been handled. This is
+                // just a safety net as an unhandled exception would stop
+                // the background service and prevent further processing.
+                logger.LogError(ex, "Failed to process request for gene {GeneId} ({GeneHash})",
+                    geneId, geneHash);
             }
         }
     }
 
-    public override async Task StopAsync(CancellationToken stoppingToken)
+    private async Task ProcessRequest(
+        UniqueGeneIdentifier geneId,
+        GeneHash geneHash,
+        CancellationToken cancellationToken)
     {
-
-        await base.StopAsync(stoppingToken);
+        await using var scope = AsyncScopedLifestyle.BeginScope(container);
+        var geneProvider = scope.GetInstance<IGeneProvider>();
+        await geneRequestRegistry.ReportProgress(geneId, geneHash, $"Processing {geneId} ({geneHash})", 0);
+        
+        var result = await geneProvider.ProvideGene(
+            geneId,
+            geneHash,
+            async (message, progress) => await geneRequestRegistry.ReportProgress(geneId, geneHash, message, progress))
+            .RunWithCancel(cancellationToken);
+        
+        await geneRequestRegistry.CompleteRequest(geneId, geneHash, result);
     }
 }

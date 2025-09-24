@@ -8,8 +8,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     {
         public Guid VmId { get; set; }
 
-        public Guid MetadataId { get; set; }
-
         public VirtualMachineData Inventory { get; set; }
 
         public DateTimeOffset Timestamp { get; set; }

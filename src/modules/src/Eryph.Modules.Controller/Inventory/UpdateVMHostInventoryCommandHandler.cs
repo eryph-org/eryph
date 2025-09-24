@@ -17,10 +17,10 @@ namespace Eryph.Modules.Controller.Inventory;
 [UsedImplicitly]
 internal class UpdateVMHostInventoryCommandHandler(
     IInventoryLockManager lockManager,
-    IVirtualMachineMetadataService metadataService,
+    ICatletMetadataService metadataService,
     IOperationDispatcher dispatcher,
     IMessageContext messageContext,
-    IVirtualMachineDataService vmDataService,
+    ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
     ILogger logger)
@@ -35,6 +35,7 @@ internal class UpdateVMHostInventoryCommandHandler(
         IHandleMessages<UpdateVMHostInventoryCommand>
 {
     private readonly IInventoryLockManager _lockManager = lockManager;
+    private readonly ICatletDataService _vmDataService = vmDataService;
 
     public async Task Handle(UpdateVMHostInventoryCommand message)
     {
@@ -50,6 +51,12 @@ internal class UpdateVMHostInventoryCommandHandler(
         if (IsUpdateOutdated(vmHost, message.Timestamp))
             return;
 
+        var knownVmIds = await _vmDataService.GetAllVmIds(message.HostInventory.Name);
+        foreach (var vmId in knownVmIds)
+        {
+            await _lockManager.AcquireVmLock(vmId);
+        }
+
         var diskIdentifiers = CollectDiskIdentifiers(message.DiskInventory.ToSeq());
         foreach (var diskIdentifier in diskIdentifiers)
         {
@@ -61,7 +68,20 @@ internal class UpdateVMHostInventoryCommandHandler(
             await AddOrUpdateDisk(vmHost.Name, message.Timestamp, diskInfo);
         }
 
-        await UpdateVMs(message.Timestamp, message.VMInventory, vmHost);
+        await UpdateVms(message.Timestamp, message.VMInventory, vmHost);
+
+        // The inventory by the host agent should contain all VMs that are present on the host.
+        // Hence, we can mark all VMs that are not in the inventory as missing.
+        foreach (var missingVmId in knownVmIds.Except(message.VMInventory.Select(vm => vm.VmId)))
+        {
+            var catlet = await _vmDataService.GetByVmId(missingVmId);
+            if (catlet is null || catlet.LastSeenState > message.Timestamp)
+                continue;
+
+            catlet.Status = CatletStatus.Missing;
+            catlet.LastSeenState = message.Timestamp;
+            catlet.UpTime = TimeSpan.Zero;
+        }
 
         await CheckDisks(message.Timestamp, vmHost.Name);
 

@@ -4,8 +4,7 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 internal interface IGenePoolFactory
 {
-    IEnumerable<string> RemotePools { get; }
+    IReadOnlyList<string> GetRemotePools();
+    
     IGenePool CreateNew(string name);
-    ILocalGenePool CreateLocal(string genePoolPath);
-
 }

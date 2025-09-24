@@ -48,17 +48,14 @@ namespace Eryph.Modules.HostAgent
             CreateCatletVMCommand command) =>
             from hostSettings in _hostSettingsProvider.GetHostSettings()
             from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-            from plannedStorageSettings in VMStorageSettings.Plan(
-                vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
+            from plannedStorageSettings in VMStorageSettings.FromCatletConfig(command.Config, vmHostAgentConfig)
             from createdVM in CreateVM(plannedStorageSettings, Engine, command.Config)
-            let metadataId = Guid.NewGuid()
-            from _ in SetMetadataId(createdVM, metadataId)
+            from _ in SetMetadataId(createdVM, command.MetadataId)
             let timestamp = DateTimeOffset.UtcNow
             from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
             select new ConvergeCatletResult
             {
                 VmId = createdVM.Value.Id,
-                MetadataId = metadataId,
                 Inventory = inventory,
                 Timestamp = timestamp,
             };

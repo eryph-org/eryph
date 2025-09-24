@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,74 +19,6 @@ public class CatletPedigreeTests
     private static readonly GeneSetIdentifier ParentRefId = new("acme/acme-parent/latest");
     private static readonly GeneSetIdentifier GrandParentId = new("acme/acme-grand-parent/1.0");
     private static readonly GeneSetIdentifier GrandParentRefId = new("acme/acme-grand-parent/latest");
-
-    public static readonly IEnumerable<GeneSetIdentifier> ParentSources =
-    [
-        ParentId, ParentRefId,
-    ];
-
-    [Theory, CombinatorialData]
-    public void Breed_ChildUsesDriveGeneFromParent_ResolvedDriveSourceIsIncluded(
-        [CombinatorialMemberData(nameof(ParentSources))] GeneSetIdentifier parentId)
-    {
-        var parentConfig = new CatletConfig
-        {
-            Name = "parent",
-            Drives =
-            [
-                new CatletDriveConfig
-                {
-                    Name = "sda",
-                }
-            ]
-        };
-
-        var config = new CatletConfig
-        {
-            Name = "child",
-            Parent = parentId.Value,
-        };
-
-        var geneSetMap = HashMap((parentId, ParentId));
-        var ancestors = HashMap((ParentId, parentConfig));
-
-        var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
-
-        result.Should().BeRight().Which.Config.Drives.Should().SatisfyRespectively(
-            drive => drive.Source.Should().Be("gene:acme/acme-parent/1.0:sda"));
-    }
-
-    [Theory, CombinatorialData]
-    public void Breed_ChildUsesFodderFromParent_ResolvedFodderSourceIsIncluded(
-        [CombinatorialMemberData(nameof(ParentSources))] GeneSetIdentifier parentId)
-    {
-        var parentConfig = new CatletConfig
-        {
-            Name = "parent",
-            Fodder =
-            [
-                new FodderConfig()
-                {
-                    Name = "parent-fodder",
-                    Content = "parent fodder content",
-                }
-            ]
-        };
-
-        var config = new CatletConfig
-        {
-            Name = "test",
-            Parent = parentId.Value,
-        };
-
-        var geneSetMap = HashMap((parentId, ParentId));
-        var ancestors = HashMap((ParentId, parentConfig));
-
-        var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
-
-        result.Should().BeRight().Which.Config.Fodder.Should().SatisfyRespectively(
-            drive => drive.Source.Should().Be("gene:acme/acme-parent/1.0:catlet"));
-    }
 
     [Fact]
     public void Breed_PedigreeContainsCircle_ReturnsFail()
@@ -151,5 +84,62 @@ public class CatletPedigreeTests
             + "-> (acme/acme-parent/latest -> acme/acme-parent/1.0).");
         error.Inner.Should().BeSome().Which.Message
             .Should().Be("The pedigree contains a circle.");
+    }
+
+    [Fact]
+    public void Breed_LeftoverRemoveMutations_ReturnsConfigWithoutRemoveMutations()
+    {
+        var config = new CatletConfig
+        {
+            Capabilities =
+            [
+                new CatletCapabilityConfig
+                {
+                    Name = "test_capability",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Name = "sda",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            Networks =
+            [
+                new CatletNetworkConfig
+                {
+                    Name = "test-network",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            NetworkAdapters =
+            [
+                new CatletNetworkAdapterConfig
+                {
+                    Name = "eth0",
+                    Mutation = MutationType.Remove,
+                }
+            ],
+            Fodder = 
+            [
+                new FodderConfig
+                {
+                    Name = "test-fodder",
+                    Remove = true,
+                }
+            ]
+        };
+
+        var result = CatletPedigree.Breed(config, Empty, Empty);
+
+        var resultConfig = result.Should().BeRight().Subject;
+        resultConfig.Capabilities.Should().BeEmpty();
+        resultConfig.Drives.Should().BeEmpty();
+        resultConfig.Networks.Should().BeEmpty();
+        resultConfig.NetworkAdapters.Should().BeEmpty();
+        resultConfig.Fodder.Should().BeEmpty();
     }
 }

@@ -8,6 +8,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.CatletManagement\Eryph.CatletManagement.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.DistributedLock\Eryph.DistributedLock.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
@@ -15,9 +16,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.18" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.0" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.0" />
-    <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.9.0" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.1-ci.3" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.1-ci.3" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.9.1-ci.3" />
+    <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.9.1-ci.3" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

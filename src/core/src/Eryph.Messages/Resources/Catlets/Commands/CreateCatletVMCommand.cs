@@ -2,18 +2,17 @@
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 
-namespace Eryph.Messages.Resources.Catlets.Commands
+namespace Eryph.Messages.Resources.Catlets.Commands;
+
+[SendMessageTo(MessageRecipient.VMHostAgent)]
+public class CreateCatletVMCommand : IHostAgentCommand
 {
-    [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class CreateCatletVMCommand : IHostAgentCommand
-    {
-        public CatletConfig Config { get; set; }
+    public CatletConfig Config { get; set; }
 
-        public Guid NewMachineId { get; set; }
+    public Guid CatletId { get; set; }
 
-        [PrivateIdentifier]
-        public string AgentName { get; set; }
+    public Guid MetadataId { get; set; }
 
-        public long StorageId { get; set; }
-    }
+    [PrivateIdentifier]
+    public string AgentName { get; set; }
 }
