@@ -27,7 +27,6 @@ using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Seeding;
 using Eryph.Modules.GenePool.Genetics;
-using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Configuration;
 using Eryph.Modules.HostAgent.Networks.OVS;
@@ -65,8 +64,6 @@ using static Eryph.Modules.HostAgent.Networks.OvsDriverProvider<Eryph.Runtime.Ze
 
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
-using Eryph.Modules.GenePool.Genetics;
-using Eryph.Modules.HostAgent.Networks;
 
 namespace Eryph.Runtime.Zero;
 
