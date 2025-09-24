@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading;
+using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.HostAgent.Networks.OVS;
@@ -262,47 +263,75 @@ public static class ProviderNetworkUpdate<RT>
             .SequenceSerial()
         select vmAdapters.Flatten();
 
-    private record OperationError([property: DataMember] Seq<NetworkChangeOperation<RT>> ExecutedOperations, Error Cause)
-        : Expected("Operation failed", 100, Cause);
+    public static Aff<RT, Unit> executeChangesWithRollback(
+        NetworkChanges<RT> changes) =>
+        changes.Operations.Match(
+            Empty: () => unitAff,
+            Seq: _ => executeExistingChangesWithRollback(changes));
 
+    private static Aff<RT, Unit> executeExistingChangesWithRollback(
+        NetworkChanges<RT> changes) =>
+        from _1 in Logger<RT>.logInformation<NetworkChanges<RT>>(
+            "Executing network changes: {changes}",
+            changes.Operations.Select(x => x.Operation).ToList())
+        from _2 in use(
+            SuccessAff<RT, ProviderNetworkUpdateState<RT>>(new ProviderNetworkUpdateState<RT>()),
+            updateState => executeChangeOperations(changes, updateState)
+                           | @catch(e => rollback(e, updateState)))
+        from _3 in Logger<RT>.logInformation<NetworkChanges<RT>>("Network changes successfully applied.")
+        select unit;
 
-    private static Aff<RT, Unit> autoRollbackChanges(Error error)
-    {
-        if (error is not OperationError opError)
-            return FailAff<Unit>(error);
+    private static Aff<RT, Unit> executeChangeOperations(
+        NetworkChanges<RT> changes,
+        ProviderNetworkUpdateState<RT> updateState) =>
+        from _ in changes.Operations
+            .Map(op => executeChangeOperation(op, updateState))
+            .SequenceSerial()
+        select unit;
 
-        var executedOpCodes = opError.ExecutedOperations
-            .Select(o => o.Operation);
-        return opError.ExecutedOperations.Where(o => (
-                o.CanRollBack?.Invoke(executedOpCodes)).GetValueOrDefault())
-            .Where(o => o.Rollback != null)
-            .Map(o => o.Rollback!()).TraverseSerial(l => l)
-            .Bind(_ => FailAff<Unit>(opError.Cause));
-    }
+    private static Aff<RT, Unit> executeChangeOperation(
+        NetworkChangeOperation<RT> operation,
+        ProviderNetworkUpdateState<RT> updateState) =>
+        from _1 in Logger<RT>.logInformation<NetworkChanges<RT>>("Executing {Operation}", operation.Text)
+        from _2 in operation.Change()
+        from _3 in updateState.AddExecutedOperation(operation)
+        select unit;
 
-    public static Aff<RT, Unit> executeChanges(NetworkChanges<RT> changes)
-    {
-        Seq<NetworkChangeOperation<RT>> executedOps = default;
+    private static Aff<RT, Unit> rollback(
+        Error error,
+        ProviderNetworkUpdateState<RT> updateState) =>
+        from executedOperations in updateState.GetExecutedOperations()
+        from _1 in rollback(executedOperations)
+        from _2 in FailAff<RT, Unit>(error)
+        select unit;
 
-        if (changes.Operations.Length == 0)
-            return unitAff;
+    private static Aff<RT, Unit> rollback(
+        Seq<NetworkChangeOperation<RT>> executedOperations) =>
+        from _1 in Logger<RT>.logInformation<NetworkChanges<RT>>("Rolling back changes...")
+        let executedOpCodes = executedOperations.Select(o => o.Operation)
+        let revertibleOperations = executedOperations
+            .Filter(op => (op.CanRollBack?.Invoke(executedOpCodes)).GetValueOrDefault())
+            .Filter(op => op.Rollback is not null)
+        from _2 in revertibleOperations.Match(
+                       Empty: () => unitAff,
+                       Seq: rollbackOperations)
+                   | @catch(e => Logger<RT>.logError<NetworkChanges<RT>>(e, "Rollback failed."))
+        select unit;
 
-        return
-            (from l1 in Logger<RT>.logInformation<NetworkChanges<RT>>("Executing network changes: {changes}", changes.Operations.Select(x=>x.Operation))
-             from ops in changes.Operations.Map(o =>
-                    from _ in o.Change().Map(
-                        r =>
-                        {
-                            executedOps = executedOps.Add(o);
-                            return r;
-                        }
-                    )
-                    select unit).TraverseSerial(l => l)
-                select unit)
+    private static Aff<RT, Unit> rollbackOperations(
+        Seq<NetworkChangeOperation<RT>> operations) =>
+        from _1 in Logger<RT>.logInformation<NetworkChanges<RT>>(
+            "Rolling back revertible operations...")
+        from _2 in operations
+            .Map(rollbackOperation)
+            .SequenceSerial()
+        from _3 in Logger<RT>.logInformation<NetworkChanges<RT>>(
+            "Revertible operation have been rolled back.")
+        select unit;
 
-            .Bind(_ => Logger<RT>.logInformation<NetworkChanges<RT>>("Network changes successfully applied."))
-            .Map(_ => unit)
-            .MapFail(e => new OperationError(executedOps, e))
-            .IfFailAff(autoRollbackChanges);
-    }
+    private static Aff<RT, Unit> rollbackOperation(
+        NetworkChangeOperation<RT> operation) =>
+        from _1 in Logger<RT>.logDebug<NetworkChanges<RT>>("Rollback of {Operation}", operation.Text)
+        from _2 in operation.Rollback!()
+        select unit;
 }

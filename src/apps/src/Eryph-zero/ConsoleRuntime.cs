@@ -24,7 +24,6 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     HasOVSControl<ConsoleRuntime>,
     HasAgentSyncClient<ConsoleRuntime>,
     HasHostNetworkCommands<ConsoleRuntime>,
-    HasConsole<ConsoleRuntime>,
     HasNetworkProviderManager<ConsoleRuntime>,
     HasLogger<ConsoleRuntime>,
     HasFile<ConsoleRuntime>,
@@ -59,9 +58,6 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
 
     public Eff<ConsoleRuntime, ISyncClient> AgentSync =>
         Eff<ConsoleRuntime, ISyncClient>(_ => new SyncClient());
-
-    public Eff<ConsoleRuntime,ConsoleIO> ConsoleEff =>
-        SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
 
     public Eff<ConsoleRuntime, INetworkProviderManager> NetworkProviderManager =>
         Eff<ConsoleRuntime, INetworkProviderManager>(_ => new NetworkProviderManager());

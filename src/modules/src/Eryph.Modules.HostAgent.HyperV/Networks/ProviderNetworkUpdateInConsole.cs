@@ -1,18 +1,14 @@
-﻿using Eryph.AnsiConsole.Sys;
-using Eryph.Core.Network;
-using Eryph.Modules.HostAgent.Networks.OVS;
-using Eryph.VmManagement.Sys;
-using Humanizer;
-using LanguageExt;
-using LanguageExt.Common;
-using LanguageExt.Effects.Traits;
-using LanguageExt.Sys;
-using LanguageExt.Sys.Traits;
-using System;
+﻿using System;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
-using System.Threading.Channels;
+using Eryph.AnsiConsole.Sys;
+using Eryph.Core.Network;
+using Eryph.Modules.HostAgent.Networks.OVS;
+using Eryph.VmManagement.Sys;
+using LanguageExt;
+using LanguageExt.Common;
+using LanguageExt.Effects.Traits;
 using Spectre.Console;
 
 using static LanguageExt.Prelude;
@@ -23,14 +19,12 @@ namespace Eryph.Modules.HostAgent.Networks;
 public static class ProviderNetworkUpdateInConsole<RT>
     where RT : struct,
     HasAnsiConsole<RT>,
-    HasConsole<RT>,
     HasCancel<RT>,
     HasOVSControl<RT>,
     HasAgentSyncClient<RT>,
     HasHostNetworkCommands<RT>,
     HasNetworkProviderManager<RT>, 
     HasLogger<RT>
-
 {
     public static Aff<RT, Unit> checkHostInterfacesWithProgress() =>
         from _ in AnsiConsole<RT>.withProgress(
@@ -46,8 +40,9 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
     private static Aff<RT, Unit> rollback(
         Error error,
-        Seq<NetworkChangeOperation<RT>> executedOperations,
+        ProviderNetworkUpdateState<RT> updateState,
         Option<NetworkProvidersConfiguration> rollbackConfiguration) =>
+        from executedOperations in updateState.GetExecutedOperations()
         from _1 in rollback(executedOperations, rollbackConfiguration)
         from _2 in FailAff<RT, Unit>(error)
         select unit;
@@ -76,37 +71,6 @@ public static class ProviderNetworkUpdateInConsole<RT>
             : unitEff
         select unit;
 
-    private static Aff<RT, Unit> rollbackToCurrentConfig(
-        Error error,
-        NetworkProvidersConfiguration currentConfig,
-        Func<Aff<RT, HostState>> getHostState)
-    {
-        return (
-                from m1 in Console<RT>.writeLine(
-                    $"\nError: {error}" +
-                    "\nFailed to apply new configuration. Rolling back to current active configuration.\n")
-                from hostState in getHostState()
-                from currentConfigChanges in ProviderNetworkUpdate<RT>
-                    .generateChanges(hostState, currentConfig, true)
-                from _ in currentConfigChanges.Operations.Length == 0
-                    ? Console<RT>.writeLine(
-                        "No changes found to be rolled back." +
-                        "\nPlease note that rollback cannot undo all changes, you should check" +
-                        "\nif networking is still working properly in host and catlets.")
-                    : from _ in executeChangesConsole(currentConfigChanges)
-                    from m2 in Console<RT>.writeLine("Rollback complete")
-                    select unit
-                select unit
-            )
-            // if rollback fails output error inf rollback
-            .IfFailAff(f =>
-                Console<RT>.writeLine($"\nError: {f}" + "\nFailed to rollback.\n")
-            )
-
-            //always exit rollback with a error
-            .Bind(_ => FailAff<Unit>(error));
-    }
-
     private static Aff<RT, Unit> rollbackToConfig(
         NetworkProvidersConfiguration config) =>
         from _1 in AnsiConsole<RT>.writeLine("Rolling back to previous configuration...")
@@ -121,7 +85,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
     private static Aff<RT, Unit> executeRollbackChanges(
         NetworkChanges<RT> changes) =>
         from _1 in AnsiConsole<RT>.writeLine("Applying necessary changes for rollback...")
-        from _2 in executeChangesConsole(changes)
+        from _2 in executeChanges(changes)
         from _3 in AnsiConsole<RT>.writeLine("Rolled back to previous config.")
         select unit;
 
@@ -141,58 +105,21 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _2 in operation.Rollback!()
         select unit;
 
-    private static Aff<RT, T> minRollbackChanges<T>(Error error, bool fullRollbackFollows)
-    {
-        if (error is not OperationError opError)
-            return FailAff<T>(error);
-
-        var rollbackMessage = false;
-        var executedOpCodes = opError.ExecutedOperations
-            .Select(o => o.Operation);
-        return default(RT).ConsoleEff.Bind(console =>
-                opError.ExecutedOperations.Where(o => (
-                        o.CanRollBack?.Invoke(executedOpCodes)).GetValueOrDefault())
-                    .Where(o => o.Rollback != null)
-                    .Map(o =>
-                    {
-                        if (!rollbackMessage)
-                            console.WriteLine("=> Operation failed. Trying to rollback.");
-                        rollbackMessage = true;
-                        console.WriteLine($"rollback of: {o.Text}");
-                        return o.Rollback!();
-                    }).TraverseSerial(l => l)
-                    .Bind(_ =>
-                    {
-                        if (rollbackMessage && !fullRollbackFollows)
-                        {
-                            console.WriteLine("\nA rollback was executed for at least a part of the changes." +
-                                              "\nPlease note that rollback cannot undo all changes, you should check" +
-                                              "\nif networking is still working properly in host and catlets.");
-                        }
-
-                        return FailAff<T>(opError.Cause);
-                    }));
-    }
-
-    private record OperationError([property: DataMember] Seq<NetworkChangeOperation<RT>> ExecutedOperations, Error Cause)
-        : Expected("Operation failed", 100, Cause);
-
-
-    private static Aff<RT, Unit> executeChangesConsole(NetworkChanges<RT> changes) =>
-        changes.Operations.Match(
-            Empty: () => unitAff,
-            Seq: _ => executeChangeOperations(changes));
-
-    private static Aff<RT, Unit> executeChangeOperations(
-        NetworkChanges<RT> changes) =>
+    private static Aff<RT, Unit> executeChangesWithRollback(
+        NetworkChanges<RT> changes,
+        Option<NetworkProvidersConfiguration> rollbackConfig) =>
         from _1 in AnsiConsole<RT>.writeLine("Applying host changes:")
         from _2 in use(
             SuccessAff<RT, ProviderNetworkUpdateState<RT>>(new ProviderNetworkUpdateState<RT>()),
             updateState => executeChangeOperations(changes, updateState)
-                           |@catch(e => from executedOperations in updateState.GetExecutedOperations()
-                                        from _ in FailAff<RT, Unit>(new OperationError(executedOperations, e))
-                                        select unit))
+                           | @catch(e => rollback(e, updateState, rollbackConfig)))
         from _3 in AnsiConsole<RT>.writeLine("Host network configuration was updated.")
+        select unit;
+
+    private static Aff<RT, Unit> executeChanges(NetworkChanges<RT> changes) =>
+        from _1 in use(
+            SuccessAff<RT, ProviderNetworkUpdateState<RT>>(new ProviderNetworkUpdateState<RT>()),
+            updateState => executeChangeOperations(changes, updateState))
         select unit;
 
     private static Aff<RT, Unit> executeChangeOperations(
@@ -222,15 +149,15 @@ public static class ProviderNetworkUpdateInConsole<RT>
     private static Aff<RT, (bool isValid, bool refreshState)> trySyncCurrentConfigChanges(
         NetworkChanges<RT> currentConfigChanges,
         bool nonInteractive) =>
-        from _1 in SuccessAff(unit)
-        let rows = Seq1(new Text("The currently active configuration is not fully applied on host."))
-                   + Seq1(new Text("Following changes have to be applied:", new Style(Color.Yellow)))
-                   + currentConfigChanges.Operations.Map(op => new Text(op.Text))
-        from _2 in AnsiConsole<RT>.write(new Rows(rows))
+        from _1 in AnsiConsole<RT>.write(new Rows([
+                new Text("The currently active configuration is not fully applied on host."),
+                new Text("Following changes have to be applied:", new Style(Color.Yellow)),
+                ..currentConfigChanges.Operations.Map(op => new Text(op.Text))
+            ]))
         from syncChanges in nonInteractive
-            ? from _1 in AnsiConsole<RT>.writeLine("Non interactive mode - changes will be applied.")
+            ? from _2 in AnsiConsole<RT>.writeLine("Non interactive mode - changes will be applied.")
               select true
-            : from _2 in AnsiConsole<RT>.write(new Rows(
+            : from _3 in AnsiConsole<RT>.write(new Rows(
                   new Text("You can ignore these changes and proceed with validating the new config."),
                   new Text("However, it is recommended to create a valid current state first. "
                            + "With a valid current state a rollback is more likely to succeed in case the new config cannot be applied.")))
@@ -239,13 +166,10 @@ public static class ProviderNetworkUpdateInConsole<RT>
                 v => from _ in guard(v is "a" or "i" or "c", Error.New("Please select a valid option."))
                         .ToValidation()
                     select v)
-            from _3 in guardnot(promptResult == "c", Errors.Cancelled)
+            from _4 in guardnot(promptResult == "c", Errors.Cancelled)
             select promptResult == "a"
         from isValid in syncChanges
-            ? executeChangesConsole(currentConfigChanges)
-                .Catch(e => rollback(e, ))
-                .Map(_ => true)
-                .IfFailAff(f => minRollbackChanges<bool>(f, false))
+            ? executeChangesWithRollback(currentConfigChanges, None).Map(_ => true)
             : SuccessAff(false)
         select (isValid, isValid);
 
@@ -300,7 +224,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
             .Match(
                 Empty: () => unitEff,
                 Seq: names => AnsiConsole<RT>.write(new Rows([
-                    new Text( "MAC address spoofing will be disabled for the following providers:"),
+                    new Text("MAC address spoofing will be disabled for the following providers:"),
                     ..names.Map(n => new Text(n)),
                     new Text("MAC address spoofing will not be automatically disabled for existing catlets."),
                     new Text("Please update any affected catlets manually.")
@@ -352,57 +276,38 @@ public static class ProviderNetworkUpdateInConsole<RT>
         select unit;
 
     public static Aff<RT, Unit> applyChangesInConsole(
-        NetworkProvidersConfiguration currentConfig,
         NetworkChanges<RT> newConfigChanges,
         Func<Aff<RT, HostState>> getHostState,
         bool nonInteractive,
-        bool rollbackToCurrent)
-    {
-        return default(RT).ConsoleEff.Bind(console =>
-        {
+        Option<NetworkProvidersConfiguration> rollbackConfig) =>
+        newConfigChanges.Operations.Match(
+            Empty: () =>
+                AnsiConsole<RT>.writeLine(
+                    "The network configuration does not require any changes to the host network."),
+            Seq: _ => tryApplyChangesInConsole(newConfigChanges, getHostState, nonInteractive, rollbackConfig));
 
-            Eff<RT, Unit> InteractiveCheck() =>
-                from m1 in Console<RT>.writeLine(
-                    "\nThe following changes have to be applied to the host network configuration:")
-                from m2 in newConfigChanges.Operations
-                    .Map(op => Console<RT>.writeLine("- " + op.Text))
-                    .Traverse(l => l)
-
-                from output in !nonInteractive
-                    ? from m3 in Console<RT>.writeLine(
-                        "\nNetwork connectivity may be interrupted while applying these changes." +
-                        "\nIn the event of an error, a rollback is attempted.\n")
-
-                    from decision in repeat(
-                                         from _ in Console<RT>.write("\nApply (a) or Cancel (c): ")
-                                         from l in Console<RT>.readLine
-                                         let input = l.ToLowerInvariant()
-                                         from f1 in guardnot(input == "c", Errors.Cancelled)
-                                         from f2 in guardnot(input == "a", Error.New(100, "apply"))
-                                         from _1 in Console<RT>.writeLine("Invalid input. Accepted input: a, or c")
-                                         select l)
-                                     | @catch(100, "a")
-                    select unit
-                    : from m4 in Console<RT>.writeLine("Non interactive mode - changes will be applied.")
-                    select unit
-                select output;
-
-            var isEmpty = newConfigChanges.Operations.Length == 0;
-
-            return (!isEmpty
-                    ? InteractiveCheck()
-                    : Console<RT>.writeLine("The network configuration does not require any changes to the host network."))
-                .Bind(_ => executeChangesConsole(newConfigChanges)
-
-                    // rollback changes that have a direct rollback attached
-                    .IfFailAff(f => minRollbackChanges<Unit>(f, rollbackToCurrent))
-
-                    // try to rollback to a valid, current config
-                    .IfFailAff(f =>
-                        rollbackToCurrent ?
-                            rollbackToCurrentConfig(f, currentConfig, getHostState)
-                            : FailAff<Unit>(f)));
-
-        });
-    }
+    private static Aff<RT, Unit> tryApplyChangesInConsole(
+        NetworkChanges<RT> newConfigChanges,
+        Func<Aff<RT, HostState>> getHostState,
+        bool nonInteractive,
+        Option<NetworkProvidersConfiguration> rollbackConfig) =>
+        from _1 in AnsiConsole<RT>.write(new Rows([
+                new Text("The following changes have to be applied to the host network configuration:"),
+                ..newConfigChanges.Operations.Map(op => new Text(op.Text))
+            ]))
+        from _2 in nonInteractive
+            ? from _3 in AnsiConsole<RT>.writeLine("Non interactive mode - changes will be applied.")
+              select unit
+            : from _4 in AnsiConsole<RT>.write(new Rows(
+                new Text("Network connectivity may be interrupted while applying these changes.", new Style(Color.Yellow)),
+                new Text("In the event of an error, a rollback is attempted.")))
+              from promptResult in AnsiConsole<RT>.prompt(
+                "Apply (a) or Cancel (c):",
+                v => from _ in guard(v is "a" or "c", Error.New("Please select a valid option."))
+                        .ToValidation()
+                    select v)
+              from _5 in guardnot(promptResult == "c", Errors.Cancelled)
+              select unit
+        from _6 in executeChangesWithRollback(newConfigChanges, rollbackConfig)
+        select unit;
 }

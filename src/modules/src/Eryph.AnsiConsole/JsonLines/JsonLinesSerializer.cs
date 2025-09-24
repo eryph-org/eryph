@@ -14,7 +14,7 @@ public static class JsonLinesSerializer
         new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower) },
         });

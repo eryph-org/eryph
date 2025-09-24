@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
@@ -25,6 +26,7 @@ using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Seeding;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Configuration;
@@ -60,10 +62,10 @@ using static Eryph.Modules.HostAgent.Networks.NetworkProviderManager<Eryph.Runti
 using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdate<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.HostAgent.Networks.OvsDriverProvider<Eryph.Runtime.Zero.ConsoleRuntime>;
-using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.HostAgent.Networks;
 
 namespace Eryph.Runtime.Zero;
@@ -1186,15 +1188,18 @@ internal static class Program
             }
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
             from _4 in validateNetworkImpact(newConfig, currentConfig, defaults)
-            from _5 in applyChangesInConsole(currentConfig, newConfigChanges,
-                getHostStateWithProgress, nonInteractive, syncResult.IsValid)
+            from _5 in applyChangesInConsole(
+                newConfigChanges,
+                getHostStateWithProgress,
+                nonInteractive,
+                Some(currentConfig).Filter(_ =>syncResult.IsValid))
             from _6 in saveConfigurationYaml(configString)
             from _7 in syncNetworks()
-            from _8 in writeLine("New Network configuration was imported.")
+            from _8 in AnsiConsole<ConsoleRuntime>.writeLine("New Network configuration was imported.")
             from _9 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
-                Spectre.Console.AnsiConsole.Console,
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
                 nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
@@ -1217,8 +1222,11 @@ internal static class Program
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
             from pendingChanges in generateChanges(hostState, currentConfig, true)
-            from _5 in applyChangesInConsole(currentConfig, pendingChanges,
-                getHostStateWithProgress, nonInteractive, false)
+            from _5 in applyChangesInConsole(
+                pendingChanges,
+                getHostStateWithProgress,
+                nonInteractive,
+                None)
             from _6 in syncNetworks()
             from _7 in checkHostInterfacesWithProgress()
             select unit,
@@ -1256,10 +1264,10 @@ internal static class Program
 
     private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
         where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
-        action.Catch(e =>
-                from _ in AnsiConsole<RT>.write(new Rows(
-                    new Markup("[red]The command failed with the following error(s):[/]"),
-                    Renderable(e)))
+        action
+            .Bind(_ => WriteResult<RT>())
+            .Catch(e =>
+                from _ in  WriteError<RT>(e)
                 from __ in FailAff<RT>(e)
                 select unit)
             .Run(runtime)
@@ -1268,20 +1276,39 @@ internal static class Program
                 Succ: _ => 0,
                 Fail: error => error.Code != 0 ? error.Code : -1));
 
-    //private static Task<int> Run<RT, TResult>(
-    //    Aff<RT, TResult> action,
-    //    RT runtime,
-    //    JsonSerializerOptions serializerOptions)
-    //    where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
+    private static Aff<RT, Unit> WriteResult<RT>()
+        where RT : struct, HasAnsiConsole<RT> =>
+        from console in default(RT).AnsiConsoleEff
+        from _ in console.AnsiConsole switch
+        {
+            JsonLinesAnsiConsole jsonLinesConsole =>
+                Eff<RT, Unit>(_ =>
+                {
+                    jsonLinesConsole.WriteResult(null);
+                    return unit;
+                }),
+            _ => unitEff
+        }
+        select unit;
 
-
-    //private static Aff<RT, Unit> Run<RT, TResult>(
-    //    Aff<RT, TResult> action,
-    //    JsonSerializerOptions serializerOptions)
-    //    where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
-    //    from result in action
-    //    from json in Eff(() => JsonSerializer.Serialize(result, serializerOptions))
-    //    from _ in AnsiConsole<RT>.writeLine(json)
+    private static Aff<RT, Unit> WriteError<RT>(
+        Error error)
+        where RT : struct, HasAnsiConsole<RT> =>
+        from console in default(RT).AnsiConsoleEff
+        let errorCode = error.Code != 0 ? error.Code : -1
+        from _ in console.AnsiConsole switch
+        {
+            JsonLinesAnsiConsole jsonLinesConsole =>
+                Eff<RT, Unit>(_ =>
+                {
+                    jsonLinesConsole.WriteError(errorCode, error.Print());
+                    return unit;
+                }),
+            _ => AnsiConsole<RT>.write(new Rows(
+                new Markup("[red]The command failed with the following error(s):[/]"),
+                Renderable(error)))
+        }
+        select unit;
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {

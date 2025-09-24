@@ -189,7 +189,7 @@ public class OVSChassisService : IHostedService
                    from hostState in HostStateProvider<AgentRuntime>.getHostState()
                    from currentConfigChanges in generateChanges(hostState, currentConfig, true)
                    from _1 in canBeAutoApplied(currentConfigChanges)
-                       ? executeChanges(currentConfigChanges)
+                       ? executeChangesWithRollback(currentConfigChanges)
                        : VmManagement.Sys.Logger<AgentRuntime>.logWarning<OVSChassisService>(
                            "Network provider configuration is not fully applied to host." +
                            "\nSome of the required changes cannot be executed automatically." +
