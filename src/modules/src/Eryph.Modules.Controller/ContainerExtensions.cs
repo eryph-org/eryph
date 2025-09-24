@@ -14,8 +14,8 @@ public static class ContainerExtensions
     public static void AddStateDbDataServices(
         this Container container)
     {
-        container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
-        container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
+        container.Register<ICatletDataService, CatletDataService>(Lifestyle.Scoped);
+        container.Register<ICatletMetadataService, CatletMetadataService>(Lifestyle.Scoped);
         container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
 
         container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
