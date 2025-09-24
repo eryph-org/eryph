@@ -13,8 +13,3 @@ public readonly struct LiveAnsiConsoleIO(IAnsiConsole ansiConsole) : AnsiConsole
 
     public IAnsiConsole AnsiConsole => ansiConsole;
 }
-
-public readonly struct TestAnsiConsoleIO(IAnsiConsole console) : AnsiConsoleIO
-{
-    public IAnsiConsole AnsiConsole => console;
-}

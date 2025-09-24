@@ -41,15 +41,17 @@ public static class ProviderNetworkUpdateInConsole<RT>
     private static Aff<RT, Unit> rollback(
         Error error,
         ProviderNetworkUpdateState<RT> updateState,
-        Option<NetworkProvidersConfiguration> rollbackConfiguration) =>
+        Option<NetworkProvidersConfiguration> rollbackConfiguration,
+        Func<Aff<RT, HostState>> getHostState) =>
         from executedOperations in updateState.GetExecutedOperations()
-        from _1 in rollback(executedOperations, rollbackConfiguration)
+        from _1 in rollback(executedOperations, rollbackConfiguration, getHostState)
         from _2 in FailAff<RT, Unit>(error)
         select unit;
 
     private static Aff<RT, Unit> rollback(
         Seq<NetworkChangeOperation<RT>> executedOperations,
-        Option<NetworkProvidersConfiguration> rollbackConfiguration) =>
+        Option<NetworkProvidersConfiguration> rollbackConfiguration,
+        Func<Aff<RT, HostState>> getHostState) =>
         from _1 in AnsiConsole<RT>.writeLine("Rolling back changes...")
         let executedOpCodes = executedOperations.Select(o => o.Operation)
         let revertibleOperations = executedOperations
@@ -60,7 +62,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                        Seq: rollbackOperations)
                    | @catch(e => AnsiConsole<RT>.write(Renderable(e)))
         from _3 in rollbackConfiguration.Match(
-                       Some: rollbackToConfig,
+                       Some: c => rollbackToConfig(c, getHostState),
                        None: () => unitAff)
                    | @catch(e => AnsiConsole<RT>.write(Renderable(e)))
         from _4 in !executedOperations.IsEmpty && rollbackConfiguration.IsNone
@@ -72,9 +74,10 @@ public static class ProviderNetworkUpdateInConsole<RT>
         select unit;
 
     private static Aff<RT, Unit> rollbackToConfig(
-        NetworkProvidersConfiguration config) =>
+        NetworkProvidersConfiguration config,
+        Func<Aff<RT, HostState>> getHostState) =>
         from _1 in AnsiConsole<RT>.writeLine("Rolling back to previous configuration...")
-        from hostState in getHostStateWithProgress()
+        from hostState in getHostState()
         from pendingChanges in ProviderNetworkUpdate<RT>.generateChanges(hostState, config, true)
         from _2 in pendingChanges.Operations.Match(
                 Empty: () => AnsiConsole<RT>.writeLine("Previous configuration seems to be fully applied."),
@@ -107,12 +110,13 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
     private static Aff<RT, Unit> executeChangesWithRollback(
         NetworkChanges<RT> changes,
-        Option<NetworkProvidersConfiguration> rollbackConfig) =>
+        Option<NetworkProvidersConfiguration> rollbackConfig,
+        Func<Aff<RT, HostState>> getHostState) =>
         from _1 in AnsiConsole<RT>.writeLine("Applying host changes:")
         from _2 in use(
             SuccessAff<RT, ProviderNetworkUpdateState<RT>>(new ProviderNetworkUpdateState<RT>()),
             updateState => executeChangeOperations(changes, updateState)
-                           | @catch(e => rollback(e, updateState, rollbackConfig)))
+                           | @catch(e => rollback(e, updateState, rollbackConfig, getHostState)))
         from _3 in AnsiConsole<RT>.writeLine("Host network configuration was updated.")
         select unit;
 
@@ -138,17 +142,20 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _3 in updateState.AddExecutedOperation(operation)
         select unit;
 
-    public static Aff<RT, (bool IsValid, bool RefreshState)> syncCurrentConfigBeforeNewConfig(
+    public static Aff<RT, (bool IsValid, HostState HostState)> syncCurrentConfigBeforeNewConfig(
         HostState hostState,
         NetworkChanges<RT> currentConfigChanges,
-        bool nonInteractive) =>
+        bool nonInteractive,
+        Func<Aff<RT, HostState>> getHostState) =>
         currentConfigChanges.Operations.Match(
-            Empty: () => SuccessAff((true, false)),
-            Seq: _ => trySyncCurrentConfigChanges(currentConfigChanges, nonInteractive));
+            Empty: () => SuccessAff((true, hostState)),
+            Seq: _ => trySyncCurrentConfigChanges(hostState, currentConfigChanges, nonInteractive, getHostState));
 
-    private static Aff<RT, (bool isValid, bool refreshState)> trySyncCurrentConfigChanges(
+    private static Aff<RT, (bool isValid, HostState HostState)> trySyncCurrentConfigChanges(
+        HostState hostState,
         NetworkChanges<RT> currentConfigChanges,
-        bool nonInteractive) =>
+        bool nonInteractive,
+        Func<Aff<RT, HostState>> getHostState) =>
         from _1 in AnsiConsole<RT>.write(new Rows([
                 new Text("The currently active configuration is not fully applied on host."),
                 new Text("Following changes have to be applied:", new Style(Color.Yellow)),
@@ -169,9 +176,11 @@ public static class ProviderNetworkUpdateInConsole<RT>
             from _4 in guardnot(promptResult == "c", Errors.Cancelled)
             select promptResult == "a"
         from isValid in syncChanges
-            ? executeChangesWithRollback(currentConfigChanges, None).Map(_ => true)
+            ? executeChangesWithRollback(currentConfigChanges, None, getHostState)
+                .Map(_ => true)
             : SuccessAff(false)
-        select (isValid, isValid);
+        from refreshedHostState in isValid ? getHostState() : SuccessAff(hostState)
+        select (isValid, refreshedHostState);
 
     public static Aff<RT, Unit> syncNetworks() =>
         from _ in AnsiConsole<RT>.withSpinner(
@@ -308,6 +317,6 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     select v)
               from _5 in guardnot(promptResult == "c", Errors.Cancelled)
               select unit
-        from _6 in executeChangesWithRollback(newConfigChanges, rollbackConfig)
+        from _6 in executeChangesWithRollback(newConfigChanges, rollbackConfig, getHostState)
         select unit;
 }

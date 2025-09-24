@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace Eryph.AnsiConsole.JsonLines;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(JsonLineInfo), typeDiscriminator: "info")]
 [JsonDerivedType(typeof(JsonLineResult), typeDiscriminator: "result")]
+[JsonDerivedType(typeof(JsonLineError), typeDiscriminator: "error")]
 public abstract class JsonLineOutput
 {
 }

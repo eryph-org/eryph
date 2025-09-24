@@ -16,11 +16,10 @@ namespace Eryph.Modules.HostAgent.HyperV.Test;
 public class RuntimeEnv<RT>(
     CancellationTokenSource source,
     Encoding encoding,
-    MemoryConsole console,
     MemoryFS fileSystem,
     TestTimeSpec? timeSpec,
     MemorySystemEnvironment sysEnv,
-    IAnsiConsole ansiConsole,
+    TestConsole ansiConsole,
     IOVSControl ovsControl,
     ISyncClient syncClient,
     IHostNetworkCommands<RT> hostNetworkCommands,
@@ -36,7 +35,6 @@ public class RuntimeEnv<RT>(
         : this(
             source,
             Encoding.Default,
-            new MemoryConsole(),
             new MemoryFS(),
             TestTimeSpec.RunningFromNow(),
             MemorySystemEnvironment.InitFromSystem(),
@@ -53,15 +51,13 @@ public class RuntimeEnv<RT>(
 
     public Encoding Encoding { get; } = encoding;
     
-    public MemoryConsole Console { get; } = console;
-    
     public MemoryFS FileSystem { get; } = fileSystem;
     
     public TestTimeSpec TimeSpec { get; } = timeSpec ?? TestTimeSpec.RunningFromNow();
     
     public MemorySystemEnvironment SysEnv { get; } = sysEnv;
 
-    public IAnsiConsole AnsiConsole { get; } = ansiConsole;
+    public TestConsole AnsiConsole { get; } = ansiConsole;
 
     public IOVSControl OVSControl { get; init; } = ovsControl;
 

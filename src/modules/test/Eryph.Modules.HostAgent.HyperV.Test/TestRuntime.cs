@@ -20,7 +20,6 @@ namespace Eryph.Modules.HostAgent.HyperV.Test;
 public readonly struct TestRuntime :
     HasAnsiConsole<TestRuntime>,
     HasCancel<TestRuntime>,
-    HasConsole<TestRuntime>,
     HasFile<TestRuntime>,
     HasTime<TestRuntime>,
     HasDirectory<TestRuntime>,
@@ -66,7 +65,6 @@ public readonly struct TestRuntime :
         new TestRuntime(new RuntimeEnv<TestRuntime>(
             new CancellationTokenSource(),
             Env.Encoding,
-            Env.Console,
             Env.FileSystem,
             Env.TimeSpec,
             Env.SysEnv,
@@ -95,14 +93,6 @@ public readonly struct TestRuntime :
     /// <returns></returns>
     public Encoding Encoding =>
         Env.Encoding;
-
-    /// <summary>
-    /// Access the console environment
-    /// </summary>
-    /// <returns>Console environment</returns>
-    public Eff<TestRuntime, Traits.ConsoleIO> ConsoleEff =>
-        Eff<TestRuntime, Traits.ConsoleIO>(
-            rt => new LanguageExt.Sys.Test.ConsoleIO(rt.Env.Console));
 
     /// <summary>
     /// Access the file environment
@@ -154,7 +144,7 @@ public readonly struct TestRuntime :
             rt => rt.Env.NetworkProviderManager);
 
     public Eff<TestRuntime, AnsiConsoleIO> AnsiConsoleEff =>
-        Eff<TestRuntime, AnsiConsoleIO>(rt => new TestAnsiConsoleIO(rt.Env.AnsiConsole));
+        Eff<TestRuntime, AnsiConsoleIO>(rt => new LiveAnsiConsoleIO(rt.Env.AnsiConsole));
 
     public Eff<TestRuntime, ILogger> Logger(string category) =>
         Eff<TestRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));

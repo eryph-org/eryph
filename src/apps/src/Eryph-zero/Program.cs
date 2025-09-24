@@ -166,11 +166,11 @@ internal static class Program
 
         var importAgentSettingsCommand = new Command("import");
         importAgentSettingsCommand.AddOption(inFileOption);
-        importAgentSettingsCommand.AddOption(jsonOption);
         importAgentSettingsCommand.AddOption(nonInteractiveOption);
         importAgentSettingsCommand.AddOption(noCurrentConfigCheckOption);
+        importAgentSettingsCommand.AddOption(jsonOption);
         importAgentSettingsCommand.SetHandler(ImportAgentSettings, inFileOption,
-            jsonOption, nonInteractiveOption, noCurrentConfigCheckOption);
+            nonInteractiveOption, noCurrentConfigCheckOption, jsonOption);
         agentSettingsCommand.AddCommand(importAgentSettingsCommand);
 
         var genePoolCommand = new Command("genepool");
@@ -188,15 +188,6 @@ internal static class Program
         genePoolCommand.AddCommand(logoutCommand);
         logoutCommand.SetHandler(() => Logout(_genepoolSettings));
 
-        var hostStateCommand = new Command("hoststate");
-        rootCommand.AddCommand(hostStateCommand);
-
-        var getHostStateCommand = new Command("get");
-        getHostStateCommand.AddOption(outFileOption);
-        getHostStateCommand.AddOption(jsonOption);
-        getHostStateCommand.SetHandler(GetHostState, outFileOption, jsonOption);
-        hostStateCommand.AddCommand(getHostStateCommand);
-
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
 
@@ -208,17 +199,18 @@ internal static class Program
 
         var importNetworksCommand = new Command("import");
         importNetworksCommand.AddOption(inFileOption);
-        importNetworksCommand.AddOption(jsonOption);
         importNetworksCommand.AddOption(nonInteractiveOption);
         importNetworksCommand.AddOption(noCurrentConfigCheckOption);
+        importNetworksCommand.AddOption(jsonOption);
         importNetworksCommand.SetHandler(ImportNetworkConfig, inFileOption,
-            jsonOption, nonInteractiveOption, noCurrentConfigCheckOption);
+            nonInteractiveOption, noCurrentConfigCheckOption, jsonOption);
         networksCommand.AddCommand(importNetworksCommand);
 
         var syncNetworkConfigCommand = new Command("sync");
         syncNetworkConfigCommand.AddOption(nonInteractiveOption);
+        syncNetworkConfigCommand.AddOption(jsonOption);
         syncNetworkConfigCommand.SetHandler(SyncNetworkConfig,
-            nonInteractiveOption);
+            nonInteractiveOption, jsonOption);
         networksCommand.AddCommand(syncNetworkConfigCommand);
 
         var driverCommand = new Command("driver");
@@ -1055,15 +1047,16 @@ internal static class Program
             from yaml in VmHostAgentConfiguration<SimpleConsoleRuntime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            from _2 in WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
+            from _2 in WriteResult<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
-            SimpleConsoleRuntime.New());
+            SimpleConsoleRuntime.New(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
-        bool json,
         bool nonInteractive,
-        bool noCurrentConfigCheck) =>
+        bool noCurrentConfigCheck,
+        bool json) =>
         Run(from _1 in AdminGuard.ensureElevated()
             from configString in ReadInput(inFile)
             from hostSettings in HostSettingsProvider<SimpleConsoleRuntime>.getHostSettings()
@@ -1087,7 +1080,8 @@ internal static class Program
                   select unit
                 : SuccessAff(unit)
             select unit,
-            SimpleConsoleRuntime.New());
+            SimpleConsoleRuntime.New(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> Login(GenePoolSettings genepoolSettings) =>
         Run(from _1 in AdminGuard.ensureElevated()
@@ -1125,38 +1119,19 @@ internal static class Program
             new DriverCommandsRuntime(new(new CancellationTokenSource(), loggerFactory, psEngine)));
     }
 
-    private static async Task<int> GetHostState(FileSystemInfo? outFile, bool json)
-    {
-        using var nullLoggerFactory = new NullLoggerFactory();
-        using var psEngineLock = new PowershellEngineLock();
-        using var psEngine = new PowershellEngine(
-            nullLoggerFactory.CreateLogger(""),
-            psEngineLock);
-        var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
-        var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
-
-        return await Run(
-            from _1 in AdminGuard.ensureElevated()
-            from hostState in getHostStateWithProgress()
-            from _2 in checkHostInterfacesWithProgress()
-            select unit,
-            new ConsoleRuntime(new ConsoleRuntimeEnv(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
-                nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
-    }
-
     private static Task<int> GetNetworks(FileSystemInfo? outFile, bool json) =>
         Run(from _1 in AdminGuard.ensureElevated()
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
-            from _2 in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
+            from _2 in  WriteResult<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
-            SimpleConsoleRuntime.New());
+            SimpleConsoleRuntime.New(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
 
     private static async Task<int> ImportNetworkConfig(
         FileSystemInfo? inFile,
-        bool json,
         bool nonInteractive,
-        bool noCurrentConfigCheck)
+        bool noCurrentConfigCheck,
+        bool json)
     {
         using var nullLoggerFactory = new NullLoggerFactory();
         using var psEngineLock = new PowershellEngineLock();
@@ -1180,30 +1155,32 @@ internal static class Program
                 true => SuccessAff((false, hostState)),
                 false =>
                     from currentConfigChanges in generateChanges(hostState, currentConfig, true)
-                    from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
-                    from s in r.RefreshState
-                        ? getHostStateWithProgress()
-                        : SuccessAff(hostState)
-                    select (r.IsValid, HostState: s)
+                    from r in syncCurrentConfigBeforeNewConfig(
+                        hostState,
+                        currentConfigChanges,
+                        nonInteractive || json,
+                        getHostStateWithProgress)
+                    select r
             }
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
             from _4 in validateNetworkImpact(newConfig, currentConfig, defaults)
             from _5 in applyChangesInConsole(
                 newConfigChanges,
                 getHostStateWithProgress,
-                nonInteractive,
+                nonInteractive || json,
                 Some(currentConfig).Filter(_ =>syncResult.IsValid))
             from _6 in saveConfigurationYaml(configString)
             from _7 in syncNetworks()
             from _8 in AnsiConsole<ConsoleRuntime>.writeLine("New Network configuration was imported.")
             from _9 in checkHostInterfacesWithProgress()
+            from _10 in WriteResultToConsole<ConsoleRuntime>(null)
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
                 json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
                 nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
-    private static async Task<int> SyncNetworkConfig(bool nonInteractive)
+    private static async Task<int> SyncNetworkConfig(bool nonInteractive, bool json)
     {
         using var nullLoggerFactory = new NullLoggerFactory();
         using var psEngineLock = new PowershellEngineLock();
@@ -1225,13 +1202,14 @@ internal static class Program
             from _5 in applyChangesInConsole(
                 pendingChanges,
                 getHostStateWithProgress,
-                nonInteractive,
+                nonInteractive || json,
                 None)
             from _6 in syncNetworks()
             from _7 in checkHostInterfacesWithProgress()
+            from _8 in WriteResultToConsole<ConsoleRuntime>(null)
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
-                Spectre.Console.AnsiConsole.Console,
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
                 nullLoggerFactory,
                 psEngine,
                 sysEnv,
@@ -1255,18 +1233,9 @@ internal static class Program
         return await textReader.ReadToEndAsync();
     });
 
-    private static Aff<RT, Unit> WriteOutput<RT>(FileSystemInfo? outFile, string content)
-        where RT : struct, HasAnsiConsole<RT>, HasFile<RT> =>
-        from _ in Optional(outFile).Match(
-            Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
-            None: () => AnsiConsole<RT>.writeLine(content))
-        select unit;
-
     private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
         where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
-        action
-            .Bind(_ => WriteResult<RT>())
-            .Catch(e =>
+        action.Catch(e =>
                 from _ in  WriteError<RT>(e)
                 from __ in FailAff<RT>(e)
                 select unit)
@@ -1276,19 +1245,34 @@ internal static class Program
                 Succ: _ => 0,
                 Fail: error => error.Code != 0 ? error.Code : -1));
 
-    private static Aff<RT, Unit> WriteResult<RT>()
+    private static Aff<RT, Unit> WriteResult<RT>(
+        FileSystemInfo? outFile,
+        string content)
+        where RT : struct, HasAnsiConsole<RT>, HasFile<RT> =>
+        from console in default(RT).AnsiConsoleEff
+        from _ in Optional(outFile).Match(
+            Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
+            None: () => WriteResultToConsole<RT>(content))
+        select unit;
+
+    private static Aff<RT, Unit> WriteResultToConsole<RT>(
+        string? content)
         where RT : struct, HasAnsiConsole<RT> =>
         from console in default(RT).AnsiConsoleEff
-        from _ in console.AnsiConsole switch
+        from _ in Eff<RT, Unit>(_ =>
         {
-            JsonLinesAnsiConsole jsonLinesConsole =>
-                Eff<RT, Unit>(_ =>
-                {
-                    jsonLinesConsole.WriteResult(null);
-                    return unit;
-                }),
-            _ => unitEff
-        }
+            if (console.AnsiConsole is JsonLinesAnsiConsole jsonLinesConsole)
+            {
+                jsonLinesConsole.WriteResult(content);
+                return unit;
+            }
+
+            if (content is null)
+                return unit;
+
+            console.AnsiConsole.Profile.Out.Writer.WriteLine(content);
+            return unit;
+        })
         select unit;
 
     private static Aff<RT, Unit> WriteError<RT>(

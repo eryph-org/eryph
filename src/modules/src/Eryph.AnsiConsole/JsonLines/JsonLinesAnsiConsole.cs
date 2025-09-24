@@ -1,11 +1,5 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Rendering;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Eryph.AnsiConsole.JsonLines;
 
@@ -53,34 +47,32 @@ public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
 
         var jsonLine = new JsonLineInfo
         {
-            Message = result.Trim(),
+            Message = result.Trim().ReplaceLineEndings("\n"),
         };
 
         var json = JsonLinesSerializer.Serialize(jsonLine);
-        _outputConsole.WriteLine(json);
+        _outputConsole.Profile.Out.Writer.WriteLine(json);
     }
 
     public void WriteError(int code, string message)
     {
-        var jsonLineResult = new JsonLineResult
+        var jsonLineResult = new JsonLineError
         {
-            Successful = false,
             ExitCode = code,
-            Error = message,
+            Error = message.ReplaceLineEndings("\n"),
         };
         var json = JsonLinesSerializer.Serialize(jsonLineResult);
-        _outputConsole.WriteLine(json);
+        _outputConsole.Profile.Out.Writer.WriteLine(json);
     }
 
-    public void WriteResult(JsonElement? result)
+    public void WriteResult(string? result)
     {
         var jsonLineResult = new JsonLineResult
         {
-            Successful = true,
             ExitCode = 0,
-            Result = result
+            Result = result?.ReplaceLineEndings("\n")
         };
         var json = JsonLinesSerializer.Serialize(jsonLineResult);
-        _outputConsole.WriteLine(json);
+        _outputConsole.Profile.Out.Writer.WriteLine(json);
     }
 }
