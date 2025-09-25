@@ -71,6 +71,11 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
             select unit)
         select Eff(fun(tcs.SetResult));
 
+    /// <summary>
+    /// Renders a progress indicator for a single task with the name
+    /// <paramref name="taskName"/>. The maximum value for the progress
+    /// is set to <c>1</c>.
+    /// </summary>
     public static Aff<RT, T> withProgress<T>(
         string taskName,
         Func<Func<double, Eff<Unit>>, Aff<RT, T>> aff) =>
@@ -81,13 +86,13 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
             {
                 var progressTask = ctx.AddTask(taskName, autoStart: true, maxValue: 1d);
 
-                Eff<Unit> reportProgress(double value) => Eff(() =>
+                Eff<Unit> ReportProgress(double value) => Eff(() =>
                 {
                     progressTask.Value = value;
                     return unit;
                 });
 
-                return await aff(reportProgress).Run(rt);
+                return await aff(ReportProgress).Run(rt);
             });
         })
         select result;

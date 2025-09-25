@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
 
@@ -13,7 +10,7 @@ namespace Eryph.Modules.HostAgent.Networks;
 internal sealed class ProviderNetworkUpdateState<RT> : IDisposable
     where RT : struct, HasCancel<RT>
 {
-    private readonly List<NetworkChangeOperation<RT>> _executedOperations = new();
+    private readonly List<NetworkChangeOperation<RT>> _executedOperations = [];
 
     public Eff<Unit> AddExecutedOperation(NetworkChangeOperation<RT> operation)
     {

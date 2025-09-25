@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
-using System.Runtime.Serialization;
-using System.Threading;
-using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.HostAgent.Networks.OVS;
@@ -276,12 +272,12 @@ public static class ProviderNetworkUpdate<RT>
             changes.Operations.Select(x => x.Operation).ToList())
         from _2 in use(
             SuccessAff<RT, ProviderNetworkUpdateState<RT>>(new ProviderNetworkUpdateState<RT>()),
-            updateState => executeChangeOperations(changes, updateState)
+            updateState => executeChanges(changes, updateState)
                            | @catch(e => rollback(e, updateState)))
         from _3 in Logger<RT>.logInformation<NetworkChanges<RT>>("Network changes successfully applied.")
         select unit;
 
-    private static Aff<RT, Unit> executeChangeOperations(
+    private static Aff<RT, Unit> executeChanges(
         NetworkChanges<RT> changes,
         ProviderNetworkUpdateState<RT> updateState) =>
         from _ in changes.Operations
@@ -292,7 +288,7 @@ public static class ProviderNetworkUpdate<RT>
     private static Aff<RT, Unit> executeChangeOperation(
         NetworkChangeOperation<RT> operation,
         ProviderNetworkUpdateState<RT> updateState) =>
-        from _1 in Logger<RT>.logInformation<NetworkChanges<RT>>("Executing {Operation}", operation.Text)
+        from _1 in Logger<RT>.logDebug<NetworkChanges<RT>>("Executing {Operation}", operation.Text)
         from _2 in operation.Change()
         from _3 in updateState.AddExecutedOperation(operation)
         select unit;
@@ -313,7 +309,7 @@ public static class ProviderNetworkUpdate<RT>
             .Filter(op => (op.CanRollBack?.Invoke(executedOpCodes)).GetValueOrDefault())
             .Filter(op => op.Rollback is not null)
         from _2 in revertibleOperations.Match(
-                       Empty: () => unitAff,
+                       Empty: () => Logger<RT>.logInformation<NetworkChanges<RT>>("No revertible operations found."),
                        Seq: rollbackOperations)
                    | @catch(e => Logger<RT>.logError<NetworkChanges<RT>>(e, "Rollback failed."))
         select unit;

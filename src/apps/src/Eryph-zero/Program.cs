@@ -1072,6 +1072,7 @@ internal static class Program
                     sc => sc.SendSyncCommand("SYNC_AGENT_SETTINGS", CancellationToken.None))
                   select unit
                 : SuccessAff(unit)
+            from _5 in WriteResultToConsole<SimpleConsoleRuntime>(null)
             select unit,
             SimpleConsoleRuntime.New(
                 json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
@@ -1254,7 +1255,7 @@ internal static class Program
         from console in default(RT).AnsiConsoleEff
         from _ in Eff<RT, Unit>(_ =>
         {
-            if (console.AnsiConsole is JsonLinesAnsiConsole jsonLinesConsole)
+            if (console.AnsiConsole is IJsonLinesAnsiConsole jsonLinesConsole)
             {
                 jsonLinesConsole.WriteResult(content);
                 return unit;
@@ -1275,7 +1276,7 @@ internal static class Program
         let errorCode = error.Code != 0 ? error.Code : -1
         from _ in console.AnsiConsole switch
         {
-            JsonLinesAnsiConsole jsonLinesConsole =>
+            IJsonLinesAnsiConsole jsonLinesConsole =>
                 Eff<RT, Unit>(_ =>
                 {
                     jsonLinesConsole.WriteError(errorCode, error.Print());

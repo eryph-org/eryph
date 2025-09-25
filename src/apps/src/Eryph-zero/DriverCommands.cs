@@ -37,7 +37,7 @@ internal static class DriverCommands
             new Text("The following driver packages are installed:"),
             ..installedDriverPackages.Map(p => new Padder(
                 new Text($"{p.Driver} - {p.Version} {p.OriginalFileName}"),
-                new Padding(4, 0,0 ,0)))
+                new Padding(2, 0,0 ,0)))
         ]))
         from ovsPackageLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
         from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide(ovsPackageLogger))

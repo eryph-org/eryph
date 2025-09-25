@@ -1,10 +1,21 @@
-﻿using Spectre.Console;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Spectre.Console;
 using Spectre.Console.Rendering;
 
 namespace Eryph.AnsiConsole.JsonLines;
 
 public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
 {
+    private static readonly Lazy<JsonSerializerOptions> LazyOptions = new(() =>
+        new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower) },
+        });
+
     private readonly IAnsiConsole _outputConsole;
     private readonly IAnsiConsole _innerConsole;
     private readonly StringWriter _writer;
@@ -50,7 +61,7 @@ public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
             Message = result.Trim().ReplaceLineEndings("\n"),
         };
 
-        var json = JsonLinesSerializer.Serialize(jsonLine);
+        var json = Serialize(jsonLine);
         _outputConsole.Profile.Out.Writer.WriteLine(json);
     }
 
@@ -61,7 +72,7 @@ public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
             ExitCode = code,
             Error = message.ReplaceLineEndings("\n"),
         };
-        var json = JsonLinesSerializer.Serialize(jsonLineResult);
+        var json = Serialize(jsonLineResult);
         _outputConsole.Profile.Out.Writer.WriteLine(json);
     }
 
@@ -72,7 +83,10 @@ public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
             ExitCode = 0,
             Result = result?.ReplaceLineEndings("\n")
         };
-        var json = JsonLinesSerializer.Serialize(jsonLineResult);
+        var json = Serialize(jsonLineResult);
         _outputConsole.Profile.Out.Writer.WriteLine(json);
     }
+
+    private static string Serialize(JsonLineOutput jsonLineOutput) =>
+        JsonSerializer.Serialize(jsonLineOutput, LazyOptions.Value);
 }

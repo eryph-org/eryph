@@ -2,7 +2,7 @@
 
 namespace Eryph.AnsiConsole.JsonLines;
 
-internal interface IJsonLinesAnsiConsole : IAnsiConsole
+public interface IJsonLinesAnsiConsole : IAnsiConsole
 {
     void WriteResult(string? result);
 
