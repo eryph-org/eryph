@@ -6,6 +6,6 @@ namespace Eryph.AnsiConsole.JsonLines;
 [JsonDerivedType(typeof(JsonLineInfo), typeDiscriminator: "info")]
 [JsonDerivedType(typeof(JsonLineResult), typeDiscriminator: "result")]
 [JsonDerivedType(typeof(JsonLineError), typeDiscriminator: "error")]
-public abstract class JsonLineOutput
+internal abstract class JsonLineOutput
 {
 }

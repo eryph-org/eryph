@@ -288,7 +288,7 @@ public static class ProviderNetworkUpdate<RT>
     private static Aff<RT, Unit> executeChangeOperation(
         NetworkChangeOperation<RT> operation,
         ProviderNetworkUpdateState<RT> updateState) =>
-        from _1 in Logger<RT>.logDebug<NetworkChanges<RT>>("Executing {Operation}", operation.Text)
+        from _1 in Logger<RT>.logDebug<NetworkChanges<RT>>("Executing {Operation}...", operation.Text)
         from _2 in operation.Change()
         from _3 in updateState.AddExecutedOperation(operation)
         select unit;
@@ -327,7 +327,7 @@ public static class ProviderNetworkUpdate<RT>
 
     private static Aff<RT, Unit> rollbackOperation(
         NetworkChangeOperation<RT> operation) =>
-        from _1 in Logger<RT>.logDebug<NetworkChanges<RT>>("Rollback of {Operation}", operation.Text)
+        from _1 in Logger<RT>.logDebug<NetworkChanges<RT>>("Rollback of {Operation}...", operation.Text)
         from _2 in operation.Rollback!()
         select unit;
 }

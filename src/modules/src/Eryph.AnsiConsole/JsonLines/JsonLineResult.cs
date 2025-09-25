@@ -1,6 +1,6 @@
 ﻿namespace Eryph.AnsiConsole.JsonLines;
 
-public class JsonLineResult : JsonLineOutput
+internal class JsonLineResult : JsonLineOutput
 {
     public int ExitCode { get; set; }
 

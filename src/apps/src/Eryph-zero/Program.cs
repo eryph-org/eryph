@@ -116,7 +116,7 @@ internal static class Program
 
         var jsonOption = new System.CommandLine.Option<bool>(
             name: "--json",
-            description: "Input and output use the JSON format. This implies non-interactive.");
+            description: "Command output use the JSON lines format. This implies non-interactive.");
 
         var runCommand = new Command("run");
         runCommand.AddOption(warmupOption);
@@ -235,19 +235,7 @@ internal static class Program
 
         commandLineBuilder.UseDefaults();
         var parser = commandLineBuilder.Build();
-        if (args.Length > 0)
-            return await parser.InvokeAsync(args);
-
-        while (true)
-        {
-            Console.Write("eryph-zero> ");
-            var input = Console.ReadLine();
-            if (!string.IsNullOrEmpty(input))
-            {
-                await parser.InvokeAsync(input);
-            }
-        }
-
+        return await parser.InvokeAsync(args);
     }
 
     private static async Task<int> Run(string[] args)

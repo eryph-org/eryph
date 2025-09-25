@@ -1,6 +1,6 @@
 ﻿namespace Eryph.AnsiConsole.JsonLines;
 
-public class JsonLineInfo : JsonLineOutput
+internal class JsonLineInfo : JsonLineOutput
 {
     public required string Message { get; set; }
 }

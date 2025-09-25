@@ -56,34 +56,41 @@ public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
         if (string.IsNullOrWhiteSpace(result))
             return;
 
-        var jsonLine = new JsonLineInfo
+        var output = new JsonLineInfo
         {
             Message = result.Trim().ReplaceLineEndings("\n"),
         };
 
-        var json = Serialize(jsonLine);
-        _outputConsole.Profile.Out.Writer.WriteLine(json);
+        Write(output);
     }
 
     public void WriteError(int code, string message)
     {
-        var jsonLineResult = new JsonLineError
+        var output = new JsonLineError
         {
             ExitCode = code,
             Error = message.ReplaceLineEndings("\n"),
         };
-        var json = Serialize(jsonLineResult);
-        _outputConsole.Profile.Out.Writer.WriteLine(json);
+
+        Write(output);
     }
 
     public void WriteResult(string? result)
     {
-        var jsonLineResult = new JsonLineResult
+        var output = new JsonLineResult
         {
             ExitCode = 0,
             Result = result?.ReplaceLineEndings("\n")
         };
-        var json = Serialize(jsonLineResult);
+        
+        Write(output);
+    }
+
+    private void Write(JsonLineOutput output)
+    {
+        var json = Serialize(output);
+        // Write directly to the underlying output as SpectreConsole
+        // formats the output and adds additional new lines, etc.
         _outputConsole.Profile.Out.Writer.WriteLine(json);
     }
 

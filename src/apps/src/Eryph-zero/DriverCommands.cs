@@ -34,11 +34,11 @@ internal static class DriverCommands
             : "Hyper-V switch extension driver service is not running")
         from installedDriverPackages in getInstalledDriverPackages()
         from _4 in write(new Rows([
-            new Text("The following driver packages are installed:"),
-            ..installedDriverPackages.Map(p => new Padder(
-                new Text($"{p.Driver} - {p.Version} {p.OriginalFileName}"),
-                new Padding(2, 0,0 ,0)))
-        ]))
+                new Text("The following driver packages are installed:"),
+                ..installedDriverPackages.Map(p => new Padder(
+                    new Text($"{p.Driver} - {p.Version} {p.OriginalFileName}"),
+                    new Padding(2, 0, 0 ,0)))
+            ]))
         from ovsPackageLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
         from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide(ovsPackageLogger))
         let packageInfFile = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")

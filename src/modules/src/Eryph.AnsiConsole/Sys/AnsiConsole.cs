@@ -105,7 +105,7 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
         {
             return await ansiConsole.AnsiConsole.Status().StartAsync(
                 text,
-                async ctx => await aff.Run(rt));
+                async _ => await aff.Run(rt));
         })
         select result;
 }
