@@ -69,9 +69,9 @@ public class ProviderNetworkConsoleTests
         _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_happy_path)}:");
         generatedText.Iter(_testOutput.WriteLine);
 
-        generatedText.Should().HaveCount(11);
-        generatedText[2].Should().Be("Add bridge '{0}'");
-        generatedText[10].Should().Be("Host network configuration was updated.");
+        generatedText.Should().HaveCount(13);
+        generatedText[3].Should().Match("  Add bridge '{0}'*");
+        generatedText[12].Should().Be("Host network configuration was updated.");
     }
 
     [Fact]
@@ -114,9 +114,9 @@ public class ProviderNetworkConsoleTests
         _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_with_rollback)}:");
         generatedText.Iter(_testOutput.WriteLine);
 
-        generatedText.Should().HaveCount(21);
-        generatedText[4].Should().Be("Add host NAT for provider '{0}' with prefix '{1}'");
-        generatedText[16].Should().Be("rollback of: Add bridge '{0}'");
+        generatedText.Should().HaveCount(23);
+        generatedText[5].Should().Match("  Add host NAT for provider '{0}' with prefix '{1}'*");
+        generatedText[18].Should().Match("  Rollback of Add bridge '{0}'...*");
     }
 
     [Fact]
@@ -147,8 +147,8 @@ public class ProviderNetworkConsoleTests
         _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_happy_path)}:");
         generatedText.Iter(_testOutput.WriteLine);
 
-        generatedText.Should().HaveCount(8);
-        generatedText[1].Should().Be("Add bridge '{0}'");
+        generatedText.Should().HaveCount(10);
+        generatedText[2].Should().Match("  Add bridge '{0}'*");
     }
 
     [Fact]
@@ -193,10 +193,10 @@ public class ProviderNetworkConsoleTests
         _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_with_rollback)}:");
         generatedText.Iter(_testOutput.WriteLine);
 
-        generatedText.Should().HaveCount(23);
-        generatedText[1].Should().Be("Add bridge '{0}'");
-        generatedText[13].Should().Be("rollback of: Add bridge '{0}'");
-        generatedText[21].Should().Contain("running: Update mapping of bridges to network providers");
+        generatedText.Should().HaveCount(25);
+        generatedText[2].Should().Match("  Add bridge '{0}'*");
+        generatedText[15].Should().Match("  Rollback of Add bridge '{0}'...*");
+        generatedText[23].Should().Match("  Update mapping of bridges to network providers...*");
     }
 
     private static HostState CreateHostState()
