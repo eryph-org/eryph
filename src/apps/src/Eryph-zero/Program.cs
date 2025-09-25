@@ -1231,7 +1231,6 @@ internal static class Program
         FileSystemInfo? outFile,
         string content)
         where RT : struct, HasAnsiConsole<RT>, HasFile<RT> =>
-        from console in default(RT).AnsiConsoleEff
         from _ in Optional(outFile).Match(
             Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
             None: () => WriteResultToConsole<RT>(content))
