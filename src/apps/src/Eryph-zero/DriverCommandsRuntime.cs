@@ -18,7 +18,6 @@ namespace Eryph.Runtime.Zero;
 
 internal readonly struct DriverCommandsRuntime :
     HasAnsiConsole<DriverCommandsRuntime>,
-    HasConsole<DriverCommandsRuntime>,
     HasDirectory<DriverCommandsRuntime>,
     HasDism<DriverCommandsRuntime>,
     HasFile<DriverCommandsRuntime>,

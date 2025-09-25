@@ -118,10 +118,6 @@ internal static class Program
             name: "--json",
             description: "Input and output use the JSON format. This implies non-interactive.");
 
-        var dryRunOption = new System.CommandLine.Option<bool>(
-            name: "--dry-run",
-            description: "Outputs the expected changes without applying them.");
-
         var runCommand = new Command("run");
         runCommand.AddOption(warmupOption);
         runCommand.SetHandler(_ => Run(args));
@@ -1085,21 +1081,21 @@ internal static class Program
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
             from _2 in GenePoolCli<SimpleConsoleRuntime>.login(genePoolApiStore, genepoolSettings)
             select unit,
-            SimpleConsoleRuntime.New());
+            SimpleConsoleRuntime.New(Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> GetGenePoolInfo(GenePoolSettings genepoolSettings) =>
         Run(from _1 in AdminGuard.ensureElevated()
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
             from _2 in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore, genepoolSettings)
             select unit,
-            SimpleConsoleRuntime.New());
+            SimpleConsoleRuntime.New(Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> Logout(GenePoolSettings genepoolSettings) =>
         Run(from _1 in AdminGuard.ensureElevated()
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
             from _2 in GenePoolCli<SimpleConsoleRuntime>.logout(genePoolApiStore, genepoolSettings)
             select unit,
-            SimpleConsoleRuntime.New());
+            SimpleConsoleRuntime.New(Spectre.Console.AnsiConsole.Console));
 
     private static async Task<int> GetDriverStatus()
     {

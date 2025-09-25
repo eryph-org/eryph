@@ -1,21 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Sys;
 using Eryph.Modules.GenePool.Inventory;
 using Eryph.Modules.HostAgent;
-using Eryph.Modules.HostAgent.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging.Abstractions;
 using Spectre.Console;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
@@ -35,14 +31,6 @@ public readonly struct SimpleConsoleRuntime :
     {
         _env = env;
     }
-
-    public static SimpleConsoleRuntime New() =>
-        new(new SimpleConsoleRuntimeEnv(
-            Spectre.Console.AnsiConsole.Console,
-            new ZeroApplicationInfoProvider(),
-            new WindowsHardwareIdProvider(new NullLoggerFactory()),
-            new SyncClient(),
-            new CancellationTokenSource()));
 
     public static SimpleConsoleRuntime New(IAnsiConsole ansiConsole) =>
         new(new SimpleConsoleRuntimeEnv(
