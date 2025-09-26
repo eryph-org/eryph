@@ -149,11 +149,18 @@ public sealed class DiskStoresChangeWatcherService(
     private IObservable<FileSystemEventArgs> ObservePath(string path) =>
         Observable.Defer(() =>
         {
-            if (Directory.Exists(path))
+            try
+            {
+                // Proactively create the path if it does not exist. We cannot set up
+                // the file system watcher otherwise.
+                Directory.CreateDirectory(path);
                 return Observable.Return(path);
-
-            logger.LogWarning("The store path '{Path}' does not exist and will not be monitored.", path);
-            return Observable.Empty<string>();
+            }
+            catch
+            {
+                logger.LogWarning("The store path '{Path}' cannot be created and will not be monitored.", path);
+                return Observable.Empty<string>();
+            }
         })
         .SelectMany(
             Observe(() => new FileSystemWatcher(path)
