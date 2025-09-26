@@ -156,9 +156,9 @@ public sealed class DiskStoresChangeWatcherService(
                 Directory.CreateDirectory(path);
                 return Observable.Return(path);
             }
-            catch
+            catch (Exception ex)
             {
-                logger.LogWarning("The store path '{Path}' cannot be created and will not be monitored.", path);
+                logger.LogWarning(ex, "The store path '{Path}' cannot be created and will not be monitored.", path);
                 return Observable.Empty<string>();
             }
         })
