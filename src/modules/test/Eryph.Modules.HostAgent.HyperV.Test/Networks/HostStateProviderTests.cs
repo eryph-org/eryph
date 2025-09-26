@@ -273,7 +273,7 @@ public class HostStateProviderTests
         pif1Info.ConfiguredName.Should().BeNone();
         otherAdapterInfo.IsPhysical.Should().BeFalse();
 
-        hostState.NetRoutes.Should().SatisfyRespectively(route =>
+        hostState.HostRoutes.Should().SatisfyRespectively(route =>
         {
             route.InterfaceId.Should().BeSome().Which.Should().Be(otherAdapterId);
             route.Destination.Should().Be(IPNetwork2.Parse("10.100.0.0/24"));

@@ -174,7 +174,7 @@ public static class ProviderNetworkUpdate<RT>
         let overlayInterfaces = toHashSet(hostState.VMSwitches
             .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
             .Bind(s => s.NetAdapterInterfaceGuid.ToSeq()))
-        let result = hostState.NetRoutes
+        let result = hostState.HostRoutes
             .Filter(r => r.InterfaceId.Match(
                 Some: i => !overlayInterfaces.Contains(i),
                 None: () => true))

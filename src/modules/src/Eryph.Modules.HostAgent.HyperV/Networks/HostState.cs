@@ -9,5 +9,5 @@ public record HostState(
     Seq<VMSwitch> VMSwitches,
     HostAdaptersInfo HostAdapters,
     Seq<NetNat> NetNat,
-    Seq<HostRouteInfo> NetRoutes,
+    Seq<HostRouteInfo> HostRoutes,
     OvsBridgesInfo OvsBridges);
