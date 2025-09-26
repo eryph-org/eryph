@@ -171,6 +171,7 @@ public static class ProviderNetworkUpdate<RT>
     private static Eff<Seq<HostRouteInfo>> prepareUnmanagedRoutes(
         HostState hostState) =>
         from _ in unitEff
+        // TODO we also need to exclude VMNetworkAdapter ManagementOS
         let overlayInterfaces = toHashSet(hostState.VMSwitches
             .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
             .Bind(s => s.NetAdapterInterfaceGuid.ToSeq()))
