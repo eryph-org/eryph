@@ -1,4 +1,5 @@
-﻿using Dbosoft.OVN.Model;
+﻿using System.Net;
+using Dbosoft.OVN.Model;
 using Eryph.Core;
 using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
@@ -131,6 +132,7 @@ public class HostStateProviderTests
                 new HostNetworkAdapter
                 {
                     InterfaceGuid = otherAdapterId,
+                    InterfaceIndex = 42,
                     Name = "other-adapter",
                     Virtual = true,
                 })));
@@ -140,6 +142,15 @@ public class HostStateProviderTests
             {
                 Name = "test-nat",
                 InternalIPInterfaceAddressPrefix = "10.0.0.0/24",
+            })));
+
+        _hostNetworkCommandsMock.Setup(x => x.GetNetRoute())
+            .Returns(SuccessAff(Seq1(new NetRoute
+            {
+                InterfaceIndex = 42,
+                DestinationPrefix = "10.100.0.0/24",
+                InterfaceAlias = "other-adapter",
+                NextHop = "0.0.0.0",
             })));
 
         var brIntId = Guid.NewGuid();
@@ -261,6 +272,13 @@ public class HostStateProviderTests
         otherAdapterInfo.Name.Should().Be("other-adapter");
         pif1Info.ConfiguredName.Should().BeNone();
         otherAdapterInfo.IsPhysical.Should().BeFalse();
+
+        hostState.NetRoutes.Should().SatisfyRespectively(route =>
+        {
+            route.InterfaceId.Should().BeSome().Which.Should().Be(otherAdapterId);
+            route.Destination.Should().Be(IPNetwork2.Parse("10.100.0.0/24"));
+            route.NextHop.Should().Be(IPAddress.Parse("0.0.0.0"));
+        });
 
         hostState.OvsBridges.Bridges.Should().HaveCount(2);
         

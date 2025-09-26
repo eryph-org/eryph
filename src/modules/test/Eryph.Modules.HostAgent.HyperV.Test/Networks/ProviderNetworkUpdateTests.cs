@@ -51,6 +51,7 @@ public class ProviderNetworkUpdateTests
                 ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true)),
                 ("pif-3", new HostAdapterInfo("pif-3", pif3Id, None, true)))),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap(
                 ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
                     ("br-pif-bond", new OvsBridgePortInfo(
@@ -104,6 +105,7 @@ public class ProviderNetworkUpdateTests
             new HostAdaptersInfo(HashMap(
                 ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)))),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap(
                 ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
                     ("pif-1", new OvsBridgePortInfo(
@@ -140,6 +142,7 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
@@ -167,6 +170,7 @@ public class ProviderNetworkUpdateTests
                 new VMSwitch { Id = Guid.NewGuid(), Name = EryphConstants.OverlaySwitchName }),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
@@ -431,6 +435,7 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
@@ -467,6 +472,7 @@ public class ProviderNetworkUpdateTests
             new HostAdaptersInfo(HashMap(
                 ("test-adapter", new HostAdapterInfo("test-adapter", adapterId, None, true)))),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
@@ -510,6 +516,7 @@ public class ProviderNetworkUpdateTests
             Seq1(new VMSwitch { Name = EryphConstants.OverlaySwitchName }),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq1(new NetNat { Name = "other-nat", InternalIPInterfaceAddressPrefix = otherNetwork }),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
@@ -534,5 +541,6 @@ public class ProviderNetworkUpdateTests
             }),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 }

@@ -220,6 +220,7 @@ public class ProviderNetworkConsoleTests
             new HostAdaptersInfo(HashMap(
                 ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), None, true)))),
             Seq1(new NetNat { Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24" }),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         return hostState;
