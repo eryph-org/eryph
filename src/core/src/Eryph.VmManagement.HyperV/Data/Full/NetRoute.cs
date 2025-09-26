@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Eryph.VmManagement.Data.Full;
+﻿namespace Eryph.VmManagement.Data.Full;
 
 public class NetRoute
 {

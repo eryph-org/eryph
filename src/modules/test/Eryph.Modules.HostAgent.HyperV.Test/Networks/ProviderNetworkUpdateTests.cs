@@ -47,9 +47,9 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitchExtension>(),
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap(
-                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)),
-                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true)),
-                ("pif-3", new HostAdapterInfo("pif-3", pif3Id, None, true)))),
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true, None)),
+                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true, None)),
+                ("pif-3", new HostAdapterInfo("pif-3", pif3Id, None, true, None)))),
             Seq<NetNat>(),
             Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap(
@@ -103,7 +103,7 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitchExtension>(),
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap(
-                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)))),
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true, None)))),
             Seq<NetNat>(),
             Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap(
@@ -161,7 +161,7 @@ public class ProviderNetworkUpdateTests
     [Fact]
     public async Task GenerateChanges_MultipleOverlaySwitches_GeneratesRebuildOfOverlaySwitch()
     {
-        _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+        _hostNetworkCommandsMock.Setup(x => x.GetVmAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
 
         var hostState = new HostState(
@@ -276,8 +276,8 @@ public class ProviderNetworkUpdateTests
                             new OvsInterfaceInfo("test-adapter", "", None, None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
-                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true, None)),
+                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false, None))
                 )),
         };
 
@@ -344,8 +344,8 @@ public class ProviderNetworkUpdateTests
                             new OvsInterfaceInfo("renamed-adapter", "", None, None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
-                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true, None)),
+                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false, None))
                 )),
         };
 
@@ -358,7 +358,7 @@ public class ProviderNetworkUpdateTests
     [Fact]
     public async Task GenerateChanges_AddOverlayWithBond_GeneratesChanges()
     {
-        _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+        _hostNetworkCommandsMock.Setup(x => x.GetVmAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
 
         var providersConfig = new NetworkProvidersConfiguration
@@ -390,8 +390,8 @@ public class ProviderNetworkUpdateTests
         var hostState = CreateStateWithOverlaySwitch() with
         {
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)),
-                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true)))),
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true, None)),
+                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true, None)))),
         };
 
         var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
@@ -470,7 +470,7 @@ public class ProviderNetworkUpdateTests
                 NetAdapterInterfaceGuid = [adapterId],
             }),
             new HostAdaptersInfo(HashMap(
-                ("test-adapter", new HostAdapterInfo("test-adapter", adapterId, None, true)))),
+                ("test-adapter", new HostAdapterInfo("test-adapter", adapterId, None, true, None)))),
             Seq<NetNat>(),
             Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));

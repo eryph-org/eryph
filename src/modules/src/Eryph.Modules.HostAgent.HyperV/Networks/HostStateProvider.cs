@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Modules.HostAgent.Networks.OVS;
+using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
@@ -55,36 +56,38 @@ public static class HostStateProvider<RT>
         Func<double, Eff<Unit>> progressCallback) =>
         from ovsTool in default(RT).OVS
         from hostCommands in default(RT).HostNetworkCommands
-        from _1 in progressCallback(1/8d)
+        from _1 in progressCallback(1/9d)
         from vmSwitchExtensions in hostCommands.GetSwitchExtensions()
-        from _2 in progressCallback(2/8d)
+        from _2 in progressCallback(2/9d)
         from vmSwitches in hostCommands.GetSwitches()
-        from _3 in progressCallback(3/8d)
+        from _3 in progressCallback(3/9d)
         from hostAdapters in hostCommands.GetHostAdapters()
-        from _4 in progressCallback(4/8d)
+        from _4 in progressCallback(4/9d)
+        from hostVirtualAdapters in hostCommands.GetHostVirtualAdapters()
+        from _5 in progressCallback(5/9d)
         from netNat in hostCommands.GetNetNat()
-        from _5 in progressCallback(5/8d)
+        from _6 in progressCallback(6/9d)
         from netRoutes in hostCommands.GetNetRoute()
-        from _6 in progressCallback(6/8d)
+        from _7 in progressCallback(7/9d)
         from ovsBridges in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from b in ovsTool.GetBridges(ct).ToAff(e => e)
             select b)
-        from _7 in progressCallback(7/8d)
+        from _8 in progressCallback(8/9d)
         from ovsBridgePorts in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from p in ovsTool.GetPorts(ct).ToAff(e => e)
             select p)
-        from _8 in progressCallback(1d)
+        from _9 in progressCallback(1d)
         from ovsInterfaces in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from i in ovsTool.GetInterfaces(ct).ToAff(e => e)
             select i)
         let bridgesInfo = createBridgesInfo(ovsBridges, ovsBridgePorts, ovsInterfaces)
-        from hostAdaptersInfo in createHostAdaptersInfo(hostAdapters)
+        from hostAdaptersInfo in createHostAdaptersInfo(hostAdapters, vmSwitches, hostVirtualAdapters)
         from hostRouteInfos in CreateHostRouteInfos(netRoutes, hostAdapters)
         let hostState = new HostState(
             vmSwitchExtensions,
@@ -93,7 +96,7 @@ public static class HostStateProvider<RT>
             netNat,
             hostRouteInfos,
             bridgesInfo)
-        from _9 in Logger<RT>.logTrace<HostState>("Fetched host state: {HostState}", hostState)
+        from _10 in Logger<RT>.logTrace<HostState>("Fetched host state: {HostState}", hostState)
         select hostState;
 
     private static Validation<Error, Unit> checkHostInterface(
@@ -147,22 +150,37 @@ public static class HostStateProvider<RT>
                 .Filter(notEmpty));
 
     private static Eff<HostAdaptersInfo> createHostAdaptersInfo(
-        Seq<HostNetworkAdapter> hostAdapters) =>
+        Seq<HostNetworkAdapter> hostAdapters,
+        Seq<VMSwitch> switches,
+        Seq<VMNetworkAdapter> hostVirtualAdapters) =>
         from _ in unitEff
-        let configuredAdapters = HashMap<Guid, string>()
+        // A network adapter on host can be either a physical adapter
+        // or a virtual adapter. Unfortunately, we need to check different
+        // locations to find out if the adapter is attached to a Hyper-V switch.
+        let switchByPhysicalAdapterId = switches
+            .SelectMany(
+                s => s.NetAdapterInterfaceGuid.ToSeq(),
+                (s, a) => (a, s.Id))
+        let switchByVirtualAdapterId = hostVirtualAdapters
+            .Filter(a => a.DeviceId.HasValue)
+            .Map(a => (a.DeviceId!.Value, a.SwitchId))
+        let switchByAdapterId = switchByPhysicalAdapterId
+            .Concat(switchByVirtualAdapterId)
+            .ToHashMap()
         let adapterInfos = hostAdapters
-            .Map(adapter => createHostAdapterInfo(adapter, configuredAdapters))
+            .Map(adapter => createHostAdapterInfo(adapter, switchByAdapterId))
             .Map(adapterInfo => (adapterInfo.Name, adapterInfo))
             .ToHashMap()
         select new HostAdaptersInfo(adapterInfos);
 
     private static HostAdapterInfo createHostAdapterInfo(
         HostNetworkAdapter hostAdapter,
-        HashMap<Guid, string> configuredAdapters) =>
+        HashMap<Guid, Guid> switchByAdapterId) =>
         new(hostAdapter.Name,
             hostAdapter.InterfaceGuid,
-            configuredAdapters.Find(hostAdapter.InterfaceGuid),
-            !hostAdapter.Virtual);
+            None,
+            !hostAdapter.Virtual,
+            switchByAdapterId.Find(hostAdapter.InterfaceGuid));
 
     private static Eff<Seq<HostRouteInfo>> CreateHostRouteInfos(
         Seq<NetRoute> netRoutes,

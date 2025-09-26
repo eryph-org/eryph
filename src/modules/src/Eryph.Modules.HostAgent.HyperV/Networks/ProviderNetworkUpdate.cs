@@ -171,10 +171,15 @@ public static class ProviderNetworkUpdate<RT>
     private static Eff<Seq<HostRouteInfo>> prepareUnmanagedRoutes(
         HostState hostState) =>
         from _ in unitEff
-        // TODO we also need to exclude VMNetworkAdapter ManagementOS
-        let overlayInterfaces = toHashSet(hostState.VMSwitches
-            .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
-            .Bind(s => s.NetAdapterInterfaceGuid.ToSeq()))
+        let overlaySwitches = toHashSet(hostState.VMSwitches
+            .Find(s => s.Name == EryphConstants.OverlaySwitchName)
+            .Map(s => s.Id))
+        let overlayInterfaces = toHashSet(hostState.HostAdapters.Adapters.Values
+            .ToSeq()
+            .Filter(a => a.SwitchId.Match(
+                Some: overlaySwitches.Contains,
+                None: () => false))
+            .Map(a => a.InterfaceId))
         let result = hostState.HostRoutes
             .Filter(r => r.InterfaceId.Match(
                 Some: i => !overlayInterfaces.Contains(i),
@@ -271,7 +276,7 @@ public static class ProviderNetworkUpdate<RT>
         Seq<VMSwitch> switches) => 
         from hostCommands in default(RT).HostNetworkCommands
         from vmAdapters in switches
-            .Map(s => hostCommands.GetNetAdaptersBySwitch(s.Id))
+            .Map(s => hostCommands.GetVmAdaptersBySwitch(s.Id))
             .SequenceSerial()
         select vmAdapters.Flatten();
 

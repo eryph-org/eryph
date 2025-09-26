@@ -218,7 +218,7 @@ public class ProviderNetworkConsoleTests
                 NetAdapterInterfaceGuid = null
             }),
             new HostAdaptersInfo(HashMap(
-                ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), None, true)))),
+                ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), None, true, None)))),
             Seq1(new NetNat { Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24" }),
             Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
@@ -228,7 +228,7 @@ public class ProviderNetworkConsoleTests
 
     private void AddMocks()
     {
-        _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+        _hostNetworkCommandsMock.Setup(x => x.GetVmAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
 
         _ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))

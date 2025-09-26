@@ -14,4 +14,5 @@ public record HostAdapterInfo(
     string Name,
     Guid InterfaceId,
     Option<string> ConfiguredName,
-    bool IsPhysical);
+    bool IsPhysical,
+    Option<Guid> SwitchId);

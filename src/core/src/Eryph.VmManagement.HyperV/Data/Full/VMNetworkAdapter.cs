@@ -1,11 +1,18 @@
 ﻿using System;
 using Eryph.ConfigModel;
 using Eryph.VmManagement.Data.Core;
+using JetBrains.Annotations;
 
 namespace Eryph.VmManagement.Data.Full;
 
 public class VMNetworkAdapter : VirtualMachineDeviceInfo
 {
+    /// <summary>
+    /// The <c>InterfaceGuid</c> of the network adapter. Only populated
+    /// when this virtual adapter belongs to the management OS / host.
+    /// </summary>
+    public Guid? DeviceId { get; init; }
+
     //public bool DynamicMacAddressEnabled { get; private set; }
 
     //public bool AllowPacketDirect { get; private set; }
@@ -80,14 +87,13 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
     [PrivateIdentifier]
     public string SwitchName { get; init; }
 
-    [PrivateIdentifier]
-    public string VMName { get; init; }
+    [PrivateIdentifier] [CanBeNull] public string VMName { get; init; }
 
     [PrivateIdentifier]
     public Guid SwitchId { get; init; }
 
     [PrivateIdentifier]
-    public Guid VMId { get; init; }
+    public Guid? VMId { get; init; }
 
     //public VMNetworkAdapterBandwidthSetting BandwidthSetting { get; private set; }
 

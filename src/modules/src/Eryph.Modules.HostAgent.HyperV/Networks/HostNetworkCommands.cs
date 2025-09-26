@@ -134,7 +134,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from uAddIp in psEngine.RunAsync(ipCommand).ToAff()
         select unit;
 
-    public Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> GetNetAdaptersBySwitch(Guid switchId) =>
+    public Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> GetVmAdaptersBySwitch(Guid switchId) =>
         from psEngine in default(RT).Powershell.ToAff()
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMNetworkAdapter")
@@ -143,6 +143,15 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from adapters in psEngine.GetObjectsAsync<VMNetworkAdapter>(command).ToAff()
         select adapters.Filter(a => !string.IsNullOrWhiteSpace(a.Value.VMName))
             .Filter(a => a.Value.SwitchId == switchId);
+
+    public Aff<RT, Seq<VMNetworkAdapter>> GetHostVirtualAdapters() =>
+        from psEngine in default(RT).Powershell.ToAff()
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VMNetworkAdapter")
+            .AddParameter("ManagementOS")
+            .AddParameter("ErrorAction", "SilentlyContinue")
+        from adapters in psEngine.GetObjectsAsync<VMNetworkAdapter>(command).ToAff()
+        select adapters.Map(a => a.Value).Strict();
 
     public Aff<RT, Unit> DisconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
         from psEngine in default(RT).Powershell
