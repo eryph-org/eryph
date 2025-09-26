@@ -204,7 +204,8 @@ public class OVSChassisService : IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failure in automatic network provider update.");
+            _logger.LogCritical(ex, "Automatic configuration of network provider(s) failed. The networking might not work. "
+                                    + "Please run 'eryph-zero networks sync' to resolve the issues.");
         }
 
     }

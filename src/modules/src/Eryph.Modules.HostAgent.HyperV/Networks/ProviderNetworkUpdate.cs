@@ -69,6 +69,9 @@ public static class ProviderNetworkUpdate<RT>
         from hostStateWithFallback in withFallback
             ? addFallbackData(hostState)
             : SuccessEff(hostState)
+        // Find all network routes which use an interface which is not controlled
+        // by eryph/OVS. We use these to detect conflicts with eryph-controlled IP ranges.
+        from unmanagedRoutes in prepareUnmanagedRoutes(hostStateWithFallback)
 
         // Enable the OVS extension of the overlay switch(es) in case
         // it was disabled somehow. Otherwise, the execution of OVS
@@ -124,7 +127,7 @@ public static class ProviderNetworkUpdate<RT>
         from _5 in changeBuilder.ConfigureOverlayAdapterPorts(
             expectedBridges, ovsBridges4, hostStateWithFallback.HostAdapters)
 
-        from _6 in changeBuilder.AddMissingNats(expectedBridges, validNats)
+        from _6 in changeBuilder.AddMissingNats(expectedBridges, validNats, unmanagedRoutes)
 
         // Update OVS bridge mapping to new network names and bridges
         from _7 in changeBuilder.UpdateBridgeMappings(expectedBridges)
@@ -164,6 +167,18 @@ public static class ProviderNetworkUpdate<RT>
         from network in parseIPNetwork2(subnet.Network)
             .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has an invalid network."))
         select new NewBridgeNat(getNetNatName(providerConfig.Name), gateway, network);
+
+    private static Eff<Seq<HostRouteInfo>> prepareUnmanagedRoutes(
+        HostState hostState) =>
+        from _ in unitEff
+        let overlayInterfaces = toHashSet(hostState.VMSwitches
+            .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
+            .Bind(s => s.NetAdapterInterfaceGuid.ToSeq()))
+        let result = hostState.NetRoutes
+            .Filter(r => r.InterfaceId.Match(
+                Some: i => !overlayInterfaces.Contains(i),
+                None: () => true))
+        select result;
 
     private static string getNetNatName(string providerName)
         // The pattern for the NetNat name should be "eryph_{providerName}_{subnetName}".

@@ -82,6 +82,13 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from netNat in psEngine.GetObjectValuesAsync<NetNat>(command).ToAff()
         select netNat.Strict();
 
+    public Aff<RT, Seq<NetRoute>> GetNetRoute() =>
+        from psEngine in default(RT).Powershell.ToAff()
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-NetRoute")
+        from netNat in psEngine.GetObjectValuesAsync<NetRoute>(command).ToAff()
+        select netNat.Strict();
+
     public Aff<RT, Unit> EnableBridgeAdapter(string adapterName) =>
         from psEngine in default(RT).Powershell
         let command = PsCommandBuilder.Create()

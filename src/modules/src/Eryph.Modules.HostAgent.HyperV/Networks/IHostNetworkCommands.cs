@@ -21,6 +21,9 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
     Aff<RT, Seq<HostNetworkAdapter>> GetHostAdapters();
 
     Aff<RT, Seq<NetNat>> GetNetNat();
+
+    Aff<RT, Seq<NetRoute>> GetNetRoute();
+
     Aff<RT, Unit> EnableBridgeAdapter(string adapterName);
     Aff<RT, Unit> ConfigureAdapterIp(string adapterName, IPAddress ipAddress, IPNetwork2 network);
     Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> GetNetAdaptersBySwitch(Guid switchId);
