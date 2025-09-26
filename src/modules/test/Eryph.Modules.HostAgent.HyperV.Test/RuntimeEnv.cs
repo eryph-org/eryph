@@ -8,16 +8,18 @@ using LanguageExt.Sys;
 using LanguageExt.Sys.Test;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Spectre.Console;
+using Spectre.Console.Testing;
 
 namespace Eryph.Modules.HostAgent.HyperV.Test;
 
 public class RuntimeEnv<RT>(
     CancellationTokenSource source,
     Encoding encoding,
-    MemoryConsole console,
     MemoryFS fileSystem,
     TestTimeSpec? timeSpec,
     MemorySystemEnvironment sysEnv,
+    TestConsole ansiConsole,
     IOVSControl ovsControl,
     ISyncClient syncClient,
     IHostNetworkCommands<RT> hostNetworkCommands,
@@ -33,10 +35,10 @@ public class RuntimeEnv<RT>(
         : this(
             source,
             Encoding.Default,
-            new MemoryConsole(),
             new MemoryFS(),
             TestTimeSpec.RunningFromNow(),
             MemorySystemEnvironment.InitFromSystem(),
+            new TestConsole(),
             ovsControl,
             syncClient,
             hostNetworkCommands,
@@ -49,13 +51,13 @@ public class RuntimeEnv<RT>(
 
     public Encoding Encoding { get; } = encoding;
     
-    public MemoryConsole Console { get; } = console;
-    
     public MemoryFS FileSystem { get; } = fileSystem;
     
     public TestTimeSpec TimeSpec { get; } = timeSpec ?? TestTimeSpec.RunningFromNow();
     
     public MemorySystemEnvironment SysEnv { get; } = sysEnv;
+
+    public TestConsole AnsiConsole { get; } = ansiConsole;
 
     public IOVSControl OVSControl { get; init; } = ovsControl;
 

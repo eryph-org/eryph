@@ -14,6 +14,7 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
@@ -24,7 +25,6 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     HasOVSControl<ConsoleRuntime>,
     HasAgentSyncClient<ConsoleRuntime>,
     HasHostNetworkCommands<ConsoleRuntime>,
-    HasConsole<ConsoleRuntime>,
     HasNetworkProviderManager<ConsoleRuntime>,
     HasLogger<ConsoleRuntime>,
     HasFile<ConsoleRuntime>,
@@ -47,7 +47,10 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
             new HostNetworkCommands<ConsoleRuntime>());
 
     public ConsoleRuntime LocalCancel => new(new ConsoleRuntimeEnv(
-        Env.LoggerFactory, Env.PowershellEngine, Env.SystemEnvironment,
+        Env.AnsiConsole,
+        Env.LoggerFactory,
+        Env.PowershellEngine,
+        Env.SystemEnvironment,
         new CancellationTokenSource()));
 
     public CancellationToken CancellationToken => Env.Token;
@@ -56,9 +59,6 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
 
     public Eff<ConsoleRuntime, ISyncClient> AgentSync =>
         Eff<ConsoleRuntime, ISyncClient>(_ => new SyncClient());
-
-    public Eff<ConsoleRuntime,ConsoleIO> ConsoleEff =>
-        SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
 
     public Eff<ConsoleRuntime, INetworkProviderManager> NetworkProviderManager =>
         Eff<ConsoleRuntime, INetworkProviderManager>(_ => new NetworkProviderManager());
@@ -79,5 +79,6 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
 
     public Eff<ConsoleRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
 
-    public Eff<ConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff => SuccessEff(LiveAnsiConsoleIO.Default);
+    public Eff<ConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff =>
+        Eff<ConsoleRuntime, AnsiConsoleIO>(rt => new LiveAnsiConsoleIO(rt.Env.AnsiConsole));
 }

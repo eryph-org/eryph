@@ -4,6 +4,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using Spectre.Console;
 using Spectre.Console.Rendering;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.AnsiConsole.Sys;
@@ -69,4 +70,42 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
                 }))
             select unit)
         select Eff(fun(tcs.SetResult));
+
+    /// <summary>
+    /// Renders a progress indicator for a single task with the name
+    /// <paramref name="taskName"/>. The maximum value for the progress
+    /// is set to <c>1</c>.
+    /// </summary>
+    public static Aff<RT, T> withProgress<T>(
+        string taskName,
+        Func<Func<double, Eff<Unit>>, Aff<RT, T>> aff) =>
+        from ansiConsole in default(RT).AnsiConsoleEff
+        from result in AffMaybe<RT, T>(async rt =>
+        {
+            return await ansiConsole.AnsiConsole.Progress().StartAsync(async ctx =>
+            {
+                var progressTask = ctx.AddTask(taskName, autoStart: true, maxValue: 1d);
+
+                Eff<Unit> ReportProgress(double value) => Eff(() =>
+                {
+                    progressTask.Value = value;
+                    return unit;
+                });
+
+                return await aff(ReportProgress).Run(rt);
+            });
+        })
+        select result;
+
+    public static Aff<RT, T> withSpinner<T>(
+        string text, 
+        Aff<RT, T> aff) =>
+        from ansiConsole in default(RT).AnsiConsoleEff
+        from result in AffMaybe<RT, T>(async rt =>
+        {
+            return await ansiConsole.AnsiConsole.Status().StartAsync(
+                text,
+                async _ => await aff.Run(rt));
+        })
+        select result;
 }

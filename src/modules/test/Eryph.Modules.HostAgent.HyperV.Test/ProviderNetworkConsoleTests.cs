@@ -2,10 +2,10 @@
 using Dbosoft.OVN.Model;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.Modules.HostAgent.Networks.Powershell;
+using Eryph.StateDb.Specifications;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -13,6 +13,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using Xunit.Abstractions;
+
 using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
 using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
 using ChangeOp = Eryph.Modules.HostAgent.Networks.NetworkChangeOperation<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
@@ -56,28 +57,21 @@ public class ProviderNetworkConsoleTests
             }.ToSeq()
         };
 
-        _runtime.Env.Console.WriteKeyLine("a");
+        _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
 
-
-        var res = await syncCurrentConfigBeforeNewConfig(hostState, changes, false)
+        var fin = await syncCurrentConfigBeforeNewConfig(hostState, changes, false, () => SuccessAff(hostState))
             .Run(_runtime);
 
-        res.Match(
-            Fail: l => l.Throw(),
-            Succ: (r) =>
-            {
-                r.IsValid.Should().BeTrue();
-                r.RefreshState.Should().BeTrue();
+        var result = fin.Should().BeSuccess().Subject;
+        result.IsValid.Should().BeTrue();
 
-                var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
-                _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_happy_path)}:");
-                generatedText.Iter(_testOutput.WriteLine);
+        var generatedText = _runtime.Env.AnsiConsole.Lines;
+        _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_happy_path)}:");
+        generatedText.Iter(_testOutput.WriteLine);
 
-                generatedText.Should().HaveCount(15);
-                generatedText[2].Should().Be("- Add bridge '{0}'");
-                generatedText[13].Should().Be("Host network configuration was updated.");
-
-            });
+        generatedText.Should().HaveCount(13);
+        generatedText[3].Should().Match("  Add bridge '{0}'*");
+        generatedText[12].Should().Be("Host network configuration was updated.");
     }
 
     [Fact]
@@ -108,27 +102,21 @@ public class ProviderNetworkConsoleTests
             }.ToSeq()
         };
 
-        _runtime.Env.Console.WriteKeyLine("a");
+        _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
 
-        var res = (await syncCurrentConfigBeforeNewConfig(hostState, changes, false)
-            .Run(_runtime));
+        var fin = await syncCurrentConfigBeforeNewConfig(hostState, changes, false, () => SuccessAff(hostState))
+            .Run(_runtime);
 
-        res.Match(
-            Fail: l =>
-            {
-                Assert.Same(Errors.TimedOut, l);
-            },
-            Succ: (_) => throw new Exception("This should not succeed!"));
+        fin.Should().BeFail().Which.Should().Be(Errors.TimedOut);
+        rolledBack.Should().BeTrue();
 
-        Assert.True(rolledBack);
-
-        var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
+        var generatedText = _runtime.Env.AnsiConsole.Lines;
         _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_with_rollback)}:");
         generatedText.Iter(_testOutput.WriteLine);
 
-        generatedText.Should().HaveCount(22);
-        generatedText[4].Should().Be("- Add host NAT for provider '{0}' with prefix '{1}'");
-        generatedText[17].Should().Be("rollback of: Add bridge '{0}'");
+        generatedText.Should().HaveCount(23);
+        generatedText[5].Should().Match("  Add host NAT for provider '{0}' with prefix '{1}'*");
+        generatedText[18].Should().Match("  Rollback of Add bridge '{0}'...*");
     }
 
     [Fact]
@@ -147,25 +135,20 @@ public class ProviderNetworkConsoleTests
             }.ToSeq()
         };
 
-        _runtime.Env.Console.WriteKeyLine("a");
+        _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
 
-
-
-        var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => applyChangesInConsole(c, changes, () => SuccessAff(hostState), false, true))
+        var fin = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+            .Bind(c => applyChangesInConsole(changes, () => SuccessAff(hostState), false, c))
             .Run(_runtime);
 
-        result.Match(
-            Fail: l => l.Throw(),
-            Succ: (_) =>
-            {
-                var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
-                _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_happy_path)}:");
-                generatedText.Iter(_testOutput.WriteLine);
+        fin.Should().BeSuccess();
 
-                generatedText.Should().HaveCount(14);
-                generatedText[2].Should().Be("- Add bridge '{0}'");
-            });
+        var generatedText = _runtime.Env.AnsiConsole.Lines;
+        _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_happy_path)}:");
+        generatedText.Iter(_testOutput.WriteLine);
+
+        generatedText.Should().HaveCount(10);
+        generatedText[2].Should().Match("  Add bridge '{0}'*");
     }
 
     [Fact]
@@ -197,30 +180,24 @@ public class ProviderNetworkConsoleTests
             }.ToSeq()
         };
 
-        _runtime.Env.Console.WriteKeyLine("a");
+        _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
 
-        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                .Bind(c => applyChangesInConsole(c, changes, () => SuccessAff(hostState), false, true))
+        var fin = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+                .Bind(c => applyChangesInConsole(changes, () => SuccessAff(hostState), false, c))
                 .Run(_runtime);
-        res.Match(
-            Fail: l =>
-            {
-                Assert.Same(Errors.TimedOut, l);
-            },
-            Succ: (_) => throw new Exception("This should not succeed!"));
 
-        Assert.True(rolledBack);
+        fin.Should().BeFail().Which.Should().Be(Errors.TimedOut);
+        rolledBack.Should().BeTrue();
 
-        var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
+        var generatedText = _runtime.Env.AnsiConsole.Lines;
         _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_with_rollback)}:");
         generatedText.Iter(_testOutput.WriteLine);
 
-        generatedText.Should().HaveCount(31);
-        generatedText[2].Should().Be("- Add bridge '{0}'");
-        generatedText[16].Should().Be("rollback of: Add bridge '{0}'");
-        generatedText[26].Should().Contain("running: Update mapping of bridges to network providers");
+        generatedText.Should().HaveCount(25);
+        generatedText[2].Should().Match("  Add bridge '{0}'*");
+        generatedText[15].Should().Match("  Rollback of Add bridge '{0}'...*");
+        generatedText[23].Should().Match("  Update mapping of bridges to network providers...*");
     }
-
 
     private static HostState CreateHostState()
     {

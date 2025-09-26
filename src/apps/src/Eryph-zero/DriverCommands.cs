@@ -1,20 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.AnsiConsole.Sys;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.VmManagement;
 using LanguageExt;
-using LanguageExt.Sys;
 using Microsoft.Extensions.Logging;
-
+using Spectre.Console;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
 
-using static Console<DriverCommandsRuntime>;
+using static AnsiConsole<DriverCommandsRuntime>;
 using static OvsDriverProvider<DriverCommandsRuntime>;
 
 internal static class DriverCommands
@@ -25,35 +23,37 @@ internal static class DriverCommands
         let extensionMessage = extensionInfo.Match(
             Some: ei => $"Hyper-V switch extension found: {ei.Name} {ei.Version}",
             None: () => "Hyper-V switch extension not found")
-        from _ in writeLine(extensionMessage)
+        from _1 in writeLine(extensionMessage)
         from isDriverLoaded in isDriverLoaded()
-        from __ in writeLine(isDriverLoaded
+        from _2 in writeLine(isDriverLoaded
             ? "Hyper-V switch extension driver is loaded"
             : "Hyper-V switch extension driver is not loaded. Overlay network might not work. Consider reinstalling the driver.")
         from isDriverServiceRunning in isDriverServiceRunning()
-        from ___ in writeLine(isDriverServiceRunning
+        from _3 in writeLine(isDriverServiceRunning
             ? "Hyper-V switch extension driver service is running"
             : "Hyper-V switch extension driver service is not running")
         from installedDriverPackages in getInstalledDriverPackages()
-        from ____ in writeLine(installedDriverPackages.Fold(
-            $"The following driver packages are installed:",
-            (acc, info) =>
-                $"{acc}{Environment.NewLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
+        from _4 in write(new Rows([
+                new Text("The following driver packages are installed:"),
+                ..installedDriverPackages.Map(p => new Padder(
+                    new Text($"{p.Driver} - {p.Version} {p.OriginalFileName}"),
+                    new Padding(2, 0, 0 ,0)))
+            ]))
         from ovsPackageLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
         from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide(ovsPackageLogger))
         let packageInfFile = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
         from packageDriverVersion in getDriverVersionFromInfFile(
             packageInfFile)
-        from _____ in writeLine(
+        from _5 in writeLine(
             $"Driver version in OVS package: {packageDriverVersion}")
         from isDriverPackageTestSigned in
             isDriverPackageTestSigned(
                 packageInfFile)
-        from ______ in isDriverPackageTestSigned
+        from _6 in isDriverPackageTestSigned
             ? writeLine($"Driver in OVS package is test signed")
             : SuccessEff(unit)
         from isDriverTestSigningEnabled in isDriverTestSigningEnabled()
-        from _______ in writeLine(
+        from _7 in writeLine(
             $"Driver test signing is {(isDriverTestSigningEnabled ? "" : "not ")}enabled")
         select unit;
 

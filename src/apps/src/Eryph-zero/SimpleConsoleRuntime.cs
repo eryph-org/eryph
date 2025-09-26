@@ -1,20 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Sys;
 using Eryph.Modules.GenePool.Inventory;
 using Eryph.Modules.HostAgent;
-using Eryph.Modules.HostAgent.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging.Abstractions;
+using Spectre.Console;
 
 using static LanguageExt.Prelude;
 
@@ -36,14 +32,16 @@ public readonly struct SimpleConsoleRuntime :
         _env = env;
     }
 
-    public static SimpleConsoleRuntime New() =>
+    public static SimpleConsoleRuntime New(IAnsiConsole ansiConsole) =>
         new(new SimpleConsoleRuntimeEnv(
+            ansiConsole,
             new ZeroApplicationInfoProvider(),
             new WindowsHardwareIdProvider(new NullLoggerFactory()),
             new SyncClient(),
             new CancellationTokenSource()));
 
     public SimpleConsoleRuntime LocalCancel => new(new SimpleConsoleRuntimeEnv(
+        _env.AnsiConsole,
         _env.ApplicationInfoProvider,
         _env.HardwareIdProvider,
         _env.SyncClient,
@@ -53,7 +51,8 @@ public readonly struct SimpleConsoleRuntime :
 
     public CancellationTokenSource CancellationTokenSource => _env.CancellationTokenSource;
 
-    public Eff<SimpleConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff => SuccessEff(LiveAnsiConsoleIO.Default);
+    public Eff<SimpleConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff =>
+        Eff<SimpleConsoleRuntime, AnsiConsoleIO>(rt => new LiveAnsiConsoleIO(rt._env.AnsiConsole));
 
     public Eff<SimpleConsoleRuntime, IApplicationInfoProvider> ApplicationInfoProviderEff =>
         Eff<SimpleConsoleRuntime, IApplicationInfoProvider>(rt => rt._env.ApplicationInfoProvider);
@@ -76,11 +75,14 @@ public readonly struct SimpleConsoleRuntime :
 }
 
 public class SimpleConsoleRuntimeEnv(
+    IAnsiConsole ansiConsole,
     IApplicationInfoProvider applicationInfoProvider,
     IHardwareIdProvider hardwareIdProvider,
     ISyncClient syncClient,
     CancellationTokenSource cancellationTokenSource)
 {
+    public IAnsiConsole AnsiConsole { get; } = ansiConsole;
+
     public IApplicationInfoProvider ApplicationInfoProvider { get; } = applicationInfoProvider;
 
     public CancellationTokenSource CancellationTokenSource { get; } = cancellationTokenSource;
