@@ -10,6 +10,7 @@ namespace Eryph.Runtime.Uninstaller
     {
         Other = 0,
         NotNeededAnymore = 1,
-        DidNotWork = 2,
+        TechnicalIssues = 2,
+        WillReinstallLater = 3,
     }
 }

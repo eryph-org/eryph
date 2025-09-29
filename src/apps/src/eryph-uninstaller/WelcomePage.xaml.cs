@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Wpf.Ui.Controls;
 
 namespace Eryph.Runtime.Uninstaller
 {
@@ -26,27 +27,35 @@ namespace Eryph.Runtime.Uninstaller
             InitializeComponent();
         }
 
-        private void UninstallButton_Click(object sender, RoutedEventArgs e)
+        private void ReasonButton_Click(object sender, RoutedEventArgs e)
         {
-            var reason = UninstallReasonsGrid.Children
-                .OfType<RadioButton>()
-                .First(r => r.IsChecked == true);
+            if (sender is not Wpf.Ui.Controls.Button button || button.Tag is not UninstallReason reason)
+                return;
 
-            NavigationService!.Navigate(new ProgressPage(
-                    RemoveConfigCheckBox.IsChecked ?? false,
-                    RemoveVirtualMachinesCheckBox.IsChecked ?? false,
-                    (UninstallReason)reason.Tag,
-                    FeedbackTextBox.Text));
+            // Navigate to appropriate next step based on selection
+            switch (reason)
+            {
+                case UninstallReason.TechnicalIssues:
+                    NavigationService!.Navigate(new TechnicalIssuesPage(reason));
+                    break;
+
+                case UninstallReason.NotNeededAnymore:
+                    NavigationService!.Navigate(new FeedbackPage(reason, "Thank you for trying Eryph. We understand your needs may have changed."));
+                    break;
+
+                case UninstallReason.WillReinstallLater:
+                    NavigationService!.Navigate(new FeedbackPage(reason, "Thanks for trying Eryph! We'd love to make your next installation even better."));
+                    break;
+
+                case UninstallReason.Other:
+                    NavigationService!.Navigate(new FeedbackPage(reason, ""));
+                    break;
+            }
         }
 
-        private void ReasonSelected(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            UninstallButton.IsEnabled = true;
-        }
-
-        private void RemoveConfigCheckBox_OnUnchecked(object sender, RoutedEventArgs e)
-        {
-            RemoveVirtualMachinesCheckBox.IsChecked = false;
+            Window.GetWindow(this)?.Close();
         }
     }
 }

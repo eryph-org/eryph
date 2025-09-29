@@ -1,0 +1,65 @@
+﻿<UserControl x:Class="Eryph.Runtime.Uninstaller.TwoColumnLayout"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             mc:Ignorable="d"
+             d:DesignHeight="500" d:DesignWidth="800">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid x:Name="MainGrid" Margin="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="LeftColumn" Width="300"/>
+                <ColumnDefinition x:Name="RightColumn" Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel -->
+            <Grid Grid.Column="0" x:Name="LeftPanel" Margin="16,24,24,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Top content -->
+                <StackPanel Grid.Row="0">
+                    <TextBlock x:Name="LeftTitleTextBlock"
+                               Text="{Binding LeftTitle, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               FontSize="20"
+                               FontWeight="Medium"
+                               Margin="0,0,0,16"/>
+
+                    <TextBlock x:Name="ContextDescriptionTextBlock"
+                               Text="{Binding ContextDescription, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               FontSize="14"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,24"/>
+
+                    <TextBlock x:Name="BreadcrumbTextBlock"
+                               Text="{Binding BreadcrumbText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               FontSize="12"
+                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                               Margin="0,0,0,8"/>
+                </StackPanel>
+
+                <!-- Icon at bottom -->
+                <Image x:Name="BottomIcon"
+                       Grid.Row="2"
+                       Source="Assets/catlet_icon.ico"
+                       Width="48"
+                       Height="48"
+                       Margin="0,24,0,0"
+                       HorizontalAlignment="Left"
+                       Opacity="0.6"/>
+            </Grid>
+
+            <!-- Right Panel -->
+            <ContentPresenter Grid.Column="1"
+                              x:Name="RightPanel"
+                              Margin="24"
+                              Content="{Binding PageContent, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,37 @@
+﻿<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+  <Costura>
+    <!-- Exclude system assemblies that should not be embedded -->
+    <ExcludeAssemblies>
+      mscorlib
+      System
+      System.Core
+      System.Xml
+      System.Data
+      System.Configuration
+      System.Drawing
+      System.Windows.Forms
+      PresentationCore
+      PresentationFramework
+      WindowsBase
+      UIAutomationProvider
+      UIAutomationTypes
+      ReachFramework
+      System.Printing
+      System.Deployment
+      Accessibility
+      Microsoft.CSharp
+      System.Data.DataSetExtensions
+      System.Net.Http
+      System.Web
+    </ExcludeAssemblies>
+
+    <!-- Create temporary assemblies -->
+    <CreateTemporaryAssemblies>false</CreateTemporaryAssemblies>
+
+    <!-- Disable compression for faster startup -->
+    <DisableCompression>false</DisableCompression>
+
+    <!-- Load assemblies from disk or from memory -->
+    <LoadAtModuleInit>true</LoadAtModuleInit>
+  </Costura>
+</Weavers>
