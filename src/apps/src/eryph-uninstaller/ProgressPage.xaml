@@ -22,15 +22,14 @@
 
         <!-- Header Section -->
         <StackPanel Grid.Row="0" Margin="0,0,0,24">
-            <TextBlock x:Name="HeaderText"
-                       Text="Uninstalling Eryph"
-                       FontSize="24"
-                       FontWeight="Medium"
-                       Margin="0,0,0,8"/>
-            <TextBlock x:Name="SubHeaderText"
-                       Text="Please wait while we remove Eryph from your system..."
-                       FontSize="14"
-                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"/>
+            <ui:TextBlock x:Name="HeaderText"
+                          Text="Uninstalling eryph"
+                          FontTypography="Title"
+                          Margin="0,0,0,8"/>
+            <ui:TextBlock x:Name="SubHeaderText"
+                          Text="Please wait while we remove eryph from your system..."
+                          FontTypography="Body"
+                          Appearance="Secondary"/>
         </StackPanel>
 
         <!-- Progress Indicator -->
@@ -41,10 +40,16 @@
                                      IsIndeterminate="True"
                                      Width="20" Height="20"
                                      Margin="0,0,12,0"/>
-                    <TextBlock x:Name="ProgressStatusText"
-                               Text="Initializing uninstallation..."
-                               FontWeight="Medium"
-                               VerticalAlignment="Center"/>
+                    <ui:SymbolIcon x:Name="CompletionIcon"
+                                   Symbol="CheckmarkCircle24"
+                                   FontSize="20"
+                                   Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,12,0"
+                                   Visibility="Collapsed"/>
+                    <ui:TextBlock x:Name="ProgressStatusText"
+                                  Text="Initializing uninstallation..."
+                                  FontTypography="Body"
+                                  VerticalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
         </ui:Card>
@@ -52,19 +57,18 @@
         <!-- Progress Log -->
         <ui:Card Grid.Row="2" Margin="0,0,0,16">
             <StackPanel Margin="24">
-                <TextBlock Text="Progress Details"
-                           FontWeight="Medium"
-                           FontSize="16"
-                           Margin="0,0,0,12"/>
+                <ui:TextBlock Text="Progress Details"
+                              FontTypography="Body"
+                              Margin="0,0,0,12"/>
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               MaxHeight="200">
-                    <TextBlock x:Name="LogTextBlock"
-                               FontFamily="Consolas,Courier New,Monospace"
-                               FontSize="12"
-                               Text=""
-                               TextWrapping="Wrap"
-                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ui:TextBlock x:Name="LogTextBlock"
+                                  FontFamily="Consolas,Courier New,Monospace"
+                                  FontTypography="Caption"
+                                  Text=""
+                                  TextWrapping="Wrap"
+                                  Appearance="Secondary"/>
                 </ScrollViewer>
             </StackPanel>
         </ui:Card>

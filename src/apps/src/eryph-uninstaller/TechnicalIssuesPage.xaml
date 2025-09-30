@@ -15,17 +15,16 @@
         BreadcrumbText="Technical Issues">
         <local:TwoColumnLayout.PageContent>
             <StackPanel>
-                <TextBlock Text="What specific problem are you experiencing?"
-                           FontSize="24"
-                           FontWeight="Medium"
-                           Margin="0,0,0,24"/>
+                <ui:TextBlock Text="What specific problem are you experiencing?"
+                              FontTypography="Title"
+                              Margin="0,0,0,24"/>
 
                 <StackPanel>
                     <ui:Button HorizontalAlignment="Stretch"
                                HorizontalContentAlignment="Left"
                                Appearance="Secondary"
                                Icon="{ui:SymbolIcon LockClosed24}"
-                               Content="Cannot login into VMs"
+                               Content="Cannot log in into VMs"
                                Click="IssueButton_Click"
                                Tag="LoginIssues"
                                Margin="0,0,0,16"

@@ -1,26 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Eryph.Runtime.Uninstaller
 {
     /// <summary>
     /// Interaction logic for TwoColumnLayout.xaml
     /// </summary>
-    public partial class TwoColumnLayout : UserControl
+    public partial class TwoColumnLayout
     {
-        private const double MOBILE_BREAKPOINT = 800;
+        private const double WidthBreakpoint = 800;
 
         public TwoColumnLayout()
         {
@@ -31,39 +19,39 @@ namespace Eryph.Runtime.Uninstaller
         #region Dependency Properties
 
         public static readonly DependencyProperty LeftTitleProperty =
-            DependencyProperty.Register("LeftTitle", typeof(string), typeof(TwoColumnLayout), new PropertyMetadata(""));
+            DependencyProperty.Register(nameof(LeftTitle), typeof(string), typeof(TwoColumnLayout), new PropertyMetadata(""));
 
         public static readonly DependencyProperty ContextDescriptionProperty =
-            DependencyProperty.Register("ContextDescription", typeof(string), typeof(TwoColumnLayout), new PropertyMetadata(""));
+            DependencyProperty.Register(nameof(ContextDescription), typeof(string), typeof(TwoColumnLayout), new PropertyMetadata(""));
 
         public static readonly DependencyProperty BreadcrumbTextProperty =
-            DependencyProperty.Register("BreadcrumbText", typeof(string), typeof(TwoColumnLayout), new PropertyMetadata(""));
+            DependencyProperty.Register(nameof(BreadcrumbText), typeof(string), typeof(TwoColumnLayout), new PropertyMetadata(""));
 
         public static readonly DependencyProperty PageContentProperty =
-            DependencyProperty.Register("PageContent", typeof(object), typeof(TwoColumnLayout), new PropertyMetadata(null));
+            DependencyProperty.Register(nameof(PageContent), typeof(object), typeof(TwoColumnLayout), new PropertyMetadata(null));
 
         public string LeftTitle
         {
-            get { return (string)GetValue(LeftTitleProperty); }
-            set { SetValue(LeftTitleProperty, value); }
+            get => (string)GetValue(LeftTitleProperty);
+            set => SetValue(LeftTitleProperty, value);
         }
 
         public string ContextDescription
         {
-            get { return (string)GetValue(ContextDescriptionProperty); }
-            set { SetValue(ContextDescriptionProperty, value); }
+            get => (string)GetValue(ContextDescriptionProperty);
+            set => SetValue(ContextDescriptionProperty, value);
         }
 
         public string BreadcrumbText
         {
-            get { return (string)GetValue(BreadcrumbTextProperty); }
-            set { SetValue(BreadcrumbTextProperty, value); }
+            get => (string)GetValue(BreadcrumbTextProperty);
+            set => SetValue(BreadcrumbTextProperty, value);
         }
 
         public object PageContent
         {
-            get { return GetValue(PageContentProperty); }
-            set { SetValue(PageContentProperty, value); }
+            get => GetValue(PageContentProperty);
+            set => SetValue(PageContentProperty, value);
         }
 
         #endregion
@@ -75,7 +63,7 @@ namespace Eryph.Runtime.Uninstaller
 
         private void HandleResponsiveLayout(double width)
         {
-            if (width < MOBILE_BREAKPOINT)
+            if (width < WidthBreakpoint)
             {
                 // Mobile Layout: Single Column Stack
                 MainGrid.ColumnDefinitions.Clear();
@@ -115,8 +103,6 @@ namespace Eryph.Runtime.Uninstaller
                 LeftPanel.Margin = new Thickness(16, 24, 24, 24);
                 RightPanel.Margin = new Thickness(24);
 
-                // Reset font sizes
-                ContextDescriptionTextBlock.FontSize = 14;
             }
         }
     }

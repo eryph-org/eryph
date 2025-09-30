@@ -1,20 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Markup;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace Eryph.Runtime.Uninstaller
 {
@@ -24,42 +13,43 @@ namespace Eryph.Runtime.Uninstaller
     public partial class ProgressPage : Page
     {
         private readonly Uninstaller _uninstaller;
-        private bool _uninstallCompleted = false;
-        private bool _uninstallSuccessful = false;
 
         public ProgressPage(
             bool removeConfig,
             bool removeVirtualMachines,
             UninstallReason uninstallReason,
-            string feedback)
+            FeedbackData feedbackData)
         {
             InitializeComponent();
-            _uninstaller = new(removeConfig, removeVirtualMachines, uninstallReason,
-                feedback, ReportProgress);
+
+            // Set the checkbox values in the feedback data
+            feedbackData.RemoveConfig = removeConfig;
+            feedbackData.RemoveVirtualMachines = removeVirtualMachines;
+            feedbackData.UninstallReason = uninstallReason;
+
+            _uninstaller = new(removeConfig, removeVirtualMachines, feedbackData, ReportProgress);
         }
 
-        public bool CanClose { get; private set; } = false;
+        public bool CanClose { get; private set; }
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
             try
             {
-        //        await Task.Run(() => _uninstaller.UninstallAsync());
-                _uninstallSuccessful = true;
+                await Task.Run(() => _uninstaller.UninstallAsync());
                 await ShowCompletionStatus();
             }
             catch (Exception ex)
             {
-                _uninstallSuccessful = false;
                 await ShowErrorStatus(ex.Message);
             }
             finally
             {
-                _uninstallCompleted = true;
                 CanClose = true;
                 await Dispatcher.InvokeAsync(() =>
                 {
                     ProgressRing.IsIndeterminate = false;
+                    ProgressRing.Visibility = Visibility.Collapsed;
                     CloseButton.IsEnabled = true;
                 });
             }
@@ -69,13 +59,16 @@ namespace Eryph.Runtime.Uninstaller
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                HeaderText.Text = "Uninstallation Complete";
-                SubHeaderText.Text = "Eryph has been successfully removed from your system.";
-                ProgressStatusText.Text = "Completed successfully";
+                HeaderText.Text = "Uninstallation Process Complete";
+                SubHeaderText.Text = "The uninstallation process has finished.";
+                ProgressStatusText.Text = "Process completed";
 
-                StatusInfoBar.Title = "Uninstallation Successful";
-                StatusInfoBar.Message = "Eryph has been completely removed from your system. Thank you for trying Eryph!";
-                StatusInfoBar.Severity = Wpf.Ui.Controls.InfoBarSeverity.Success;
+                // Show completion icon instead of progress ring
+                CompletionIcon.Visibility = Visibility.Visible;
+
+                StatusInfoBar.Title = "Process Complete";
+                StatusInfoBar.Message = "The uninstallation process has finished. Please check the log details above for any specific information.";
+                StatusInfoBar.Severity = Wpf.Ui.Controls.InfoBarSeverity.Informational;
                 StatusInfoBar.Visibility = Visibility.Visible;
 
                 // Show restart button if needed (e.g., if drivers were uninstalled)
@@ -90,12 +83,15 @@ namespace Eryph.Runtime.Uninstaller
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                HeaderText.Text = "Uninstallation Incomplete";
-                SubHeaderText.Text = "Some issues occurred during the uninstallation process.";
-                ProgressStatusText.Text = "Completed with errors";
+                HeaderText.Text = "Uninstallation Process Complete";
+                SubHeaderText.Text = "The uninstallation process has finished with errors.";
+                ProgressStatusText.Text = "Process completed with errors";
 
-                StatusInfoBar.Title = "Uninstallation Issues";
-                StatusInfoBar.Message = $"Some components could not be removed automatically. You may need to manually remove remaining files. Error: {errorMessage}";
+                // Show completion icon (same as success since we don't know the actual outcome)
+                CompletionIcon.Visibility = Visibility.Visible;
+
+                StatusInfoBar.Title = "Process Complete with Issues";
+                StatusInfoBar.Message = $"The uninstallation process encountered an issue: {errorMessage}. Please check the log details above for more information.";
                 StatusInfoBar.Severity = Wpf.Ui.Controls.InfoBarSeverity.Warning;
                 StatusInfoBar.Visibility = Visibility.Visible;
             });
@@ -133,7 +129,7 @@ namespace Eryph.Runtime.Uninstaller
             return FindChild<ScrollViewer>(this);
         }
 
-        private static T? FindChild<T>(DependencyObject parent) where T : DependencyObject
+        private static T? FindChild<T>(DependencyObject? parent) where T : DependencyObject
         {
             if (parent == null) return null;
 
@@ -160,7 +156,7 @@ namespace Eryph.Runtime.Uninstaller
         {
             try
             {
-                Process.Start("shutdown", "/r /t 10 /c \"Restarting to complete Eryph uninstallation\"");
+                Process.Start("shutdown", "/r /t 10 /c \"Restarting to complete eryph uninstallation\"");
                 Window.GetWindow(this)!.Close();
             }
             catch

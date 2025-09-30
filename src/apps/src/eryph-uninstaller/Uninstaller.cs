@@ -14,8 +14,7 @@ namespace Eryph.Runtime.Uninstaller
     {
         private readonly bool _removeConfig;
         private readonly bool _removeVirtualMachines;
-        private readonly UninstallReason _uninstallReason;
-        private readonly string _feedback;
+        private readonly FeedbackData _feedbackData;
         private readonly Func<string, Task> _reportProgress;
 
         private const string DataPlaneUrl = "https://dp-t.dbosoft.eu/v1/track";
@@ -24,14 +23,12 @@ namespace Eryph.Runtime.Uninstaller
         public Uninstaller(
             bool removeConfig,
             bool removeVirtualMachines,
-            UninstallReason uninstallReason,
-            string feedback,
+            FeedbackData feedbackData,
             Func<string, Task> reportProgress)
         {
             _removeConfig = removeConfig;
             _removeVirtualMachines = removeVirtualMachines;
-            _uninstallReason = uninstallReason;
-            _feedback = feedback;
+            _feedbackData = feedbackData;
             _reportProgress = reportProgress;
         }
 
@@ -65,9 +62,16 @@ namespace Eryph.Runtime.Uninstaller
                      "event": "uninstall_eryph",
                      "properties": {
                          "product": "eryph_zero",
-                         "version": "{{HttpUtility.JavaScriptStringEncode(productVersion)}}",
-                         "uninstall_reason": "{{_uninstallReason:G}}",
-                         "feedback": "{{HttpUtility.JavaScriptStringEncode(_feedback)}}"
+                         "product_version": "{{HttpUtility.JavaScriptStringEncode(productVersion)}}",
+                         "uninstall_reason": "{{_feedbackData.UninstallReason:G}}",
+                         "technical_issue_type": "{{HttpUtility.JavaScriptStringEncode(_feedbackData.TechnicalIssueType ?? "")}}",
+                         "technical_issue_details": "{{HttpUtility.JavaScriptStringEncode(_feedbackData.TechnicalIssueDetails ?? "")}}",
+                         "technical_issue_email": "{{HttpUtility.JavaScriptStringEncode(_feedbackData.TechnicalIssueEmail ?? "")}}",
+                         "additional_feedback_text": "{{HttpUtility.JavaScriptStringEncode(_feedbackData.AdditionalFeedbackText ?? "")}}",
+                         "feedback_email": "{{HttpUtility.JavaScriptStringEncode(_feedbackData.FeedbackEmail ?? "")}}",
+                         "remove_config": "{{_feedbackData.RemoveConfig.ToString().ToLower()}}",
+                         "remove_virtual_machines": "{{_feedbackData.RemoveVirtualMachines.ToString().ToLower()}}",
+                         "feedback_source": "{{HttpUtility.JavaScriptStringEncode(_feedbackData.FeedbackSource)}}"
                      }
                  }
                  """;
@@ -94,22 +98,37 @@ namespace Eryph.Runtime.Uninstaller
             }
         }
 
+        public static FileVersionInfo? GetEryphVersion()
+        {
+            var exePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "eryph", "zero", "bin", "eryph-zero.exe");
+
+            if (!File.Exists(exePath))
+                return null;
+
+            try
+            {
+                var fileVersionInfo = FileVersionInfo.GetVersionInfo(exePath);
+                return fileVersionInfo;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public async Task<FileVersionInfo?> DetectInstall()
         {
             await _reportProgress("Detecting eryph installation..." + Environment.NewLine);
 
-            var exePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "eryph", "zero", "bin", "eryph-zero.exe");
-            if (!File.Exists(exePath))
-            {
-                await _reportProgress("Eryph installation not found." + Environment.NewLine);
-                return null;
-            }
+            var version = GetEryphVersion();
 
-            var fileVersionInfo = FileVersionInfo.GetVersionInfo(exePath);
-            await _reportProgress($"Eryph version {fileVersionInfo.ProductVersion} found." + Environment.NewLine);
+            if(version!= null)
+                await _reportProgress($"eryph version {version.ProductVersion} found." + Environment.NewLine);
+            else
+                await _reportProgress($"eryph-zero not found." + Environment.NewLine);
 
-            return fileVersionInfo;
+            return version;
         }
 
         private async Task RunUninstall(string path)

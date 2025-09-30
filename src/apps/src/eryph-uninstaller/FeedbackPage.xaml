@@ -7,67 +7,36 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       mc:Ignorable="d"
       d:DesignHeight="500" d:DesignWidth="800"
-      Title="FeedbackPage"
-      SizeChanged="Page_SizeChanged">
+      Title="FeedbackPage">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid x:Name="MainGrid" Margin="16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="LeftColumn" Width="300"/>
-                <ColumnDefinition x:Name="RightColumn" Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Left Panel -->
-            <StackPanel Grid.Column="0" x:Name="LeftPanel" Margin="16,24,24,24">
-                <TextBlock Text="Final Step"
-                           FontSize="20"
-                           FontWeight="Medium"
-                           Margin="0,0,0,16"/>
-
-                <TextBlock x:Name="ContextDescription"
-                           Text="Ready to uninstall Eryph from your system."
-                           FontSize="14"
-                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,24"/>
-
-                <TextBlock x:Name="BreadcrumbText"
-                           Text="Final Step"
-                           FontSize="12"
-                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                           Margin="0,0,0,8"/>
-            </StackPanel>
-
-            <!-- Right Panel -->
-            <StackPanel Grid.Column="1" x:Name="RightPanel" Margin="24">
-                <TextBlock x:Name="MainTitle"
-                           Text="Share Your Feedback"
-                           FontSize="28"
-                           FontWeight="Medium"
-                           Margin="0,0,0,8"/>
-                <TextBlock x:Name="SubHeaderText"
-                           Text="Your feedback helps us improve Eryph for everyone."
-                           FontSize="16"
-                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,32"/>
+    <local:TwoColumnLayout
+        LeftTitle="Final Step"
+        ContextDescription="Ready to uninstall eryph from your system."
+        BreadcrumbText="Final Step">
+        <local:TwoColumnLayout.PageContent>
+            <StackPanel>
+                <ui:TextBlock Text="Share Your Feedback"
+                              FontTypography="Title"
+                              Margin="0,0,0,8"/>
+                <ui:TextBlock Text="Your feedback helps us improve eryph for everyone."
+                              FontTypography="Body"
+                              Appearance="Secondary"
+                              TextWrapping="Wrap"
+                              Margin="0,0,0,32"/>
 
                 <!-- Thank you message -->
-                <ui:InfoBar x:Name="ThankYouInfoBar"
-                            Title=""
-                            Message=""
+                <ui:InfoBar Title="{Binding ThankYouTitle}"
+                            Message="{Binding ThankYouMessage}"
                             Severity="Success"
-                            Visibility="Collapsed"
+                            Visibility="{Binding ThankYouVisibility}"
                             Margin="0,0,0,24"/>
 
-                <TextBlock x:Name="FeedbackPrompt"
-                           Text="Please share any additional thoughts or feedback (optional)"
-                           FontWeight="Medium"
-                           FontSize="18"
-                           Margin="0,0,0,24"/>
+                <ui:TextBlock Text="{Binding FeedbackPrompt}"
+                              FontTypography="Subtitle"
+                              Margin="0,0,0,24"/>
 
-                <ui:TextBox x:Name="FeedbackTextBox"
-                            PlaceholderText="What could we do better? What features would you like to see? Any other thoughts..."
+                <ui:TextBox PlaceholderText="{Binding FeedbackPlaceholder}"
+                            Text="{Binding FeedbackText, UpdateSourceTrigger=PropertyChanged}"
                             TextWrapping="Wrap"
                             AcceptsReturn="True"
                             MaxLength="1000"
@@ -75,48 +44,42 @@
                             Margin="0,0,0,24"/>
 
                 <!-- Email Collection (for certain flows) -->
-                <StackPanel x:Name="EmailSection" Visibility="Collapsed" Margin="0,0,0,24">
-                    <TextBlock x:Name="EmailPrompt"
-                               Text="Keep me updated about Eryph improvements (optional)"
-                               FontWeight="Medium"
-                               FontSize="16"
-                               Margin="0,0,0,12"/>
-                    <ui:TextBox x:Name="EmailTextBox"
-                                PlaceholderText="your.email@example.com"/>
+                <StackPanel Visibility="{Binding EmailSectionVisibility}" Margin="0,0,0,24">
+                    <ui:TextBlock Text="{Binding EmailPrompt}"
+                                  FontTypography="Body"
+                                  Margin="0,0,0,12"/>
+                    <ui:TextBox PlaceholderText="your.email@example.com"
+                                Text="{Binding EmailText, UpdateSourceTrigger=PropertyChanged}"/>
                 </StackPanel>
 
-                <TextBlock Text="Uninstall Options"
-                           FontWeight="Medium"
-                           FontSize="16"
-                           Margin="0,0,0,16"/>
+                <ui:TextBlock Text="Uninstall Options"
+                              FontTypography="Body"
+                              Margin="0,0,0,16"/>
 
                 <StackPanel Margin="0,0,0,32">
-                    <CheckBox x:Name="RemoveConfigCheckBox"
-                              Content="Remove configuration files"
-                              Margin="0,0,0,8"
-                              Unchecked="RemoveConfigCheckBox_OnUnchecked"/>
+                    <CheckBox Content="Remove configuration files"
+                              IsChecked="{Binding RemoveConfig}"
+                              Margin="0,0,0,8"/>
 
-                    <CheckBox x:Name="RemoveVirtualMachinesCheckBox"
-                              Content="Remove catlets and virtual disks"
-                              Margin="16,0,0,0"
-                              IsEnabled="{Binding IsChecked, ElementName=RemoveConfigCheckBox}"/>
+                    <CheckBox Content="Remove catlets and virtual disks"
+                              IsChecked="{Binding RemoveVirtualMachines}"
+                              IsEnabled="{Binding RemoveConfig}"
+                              Margin="16,0,0,0"/>
                 </StackPanel>
 
                 <!-- Footer -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <ui:Button x:Name="BackButton"
-                               Content="Back"
+                    <ui:Button Content="Back"
                                Appearance="Secondary"
                                Click="BackButton_Click"
                                Width="120"
                                Margin="0,0,16,0"/>
-                    <ui:Button x:Name="UninstallButton"
-                               Content="Uninstall Eryph"
+                    <ui:Button Content="Uninstall eryph"
                                Appearance="Primary"
                                Click="UninstallButton_Click"
                                Width="140"/>
                 </StackPanel>
             </StackPanel>
-        </Grid>
-    </ScrollViewer>
+        </local:TwoColumnLayout.PageContent>
+    </local:TwoColumnLayout>
 </Page>

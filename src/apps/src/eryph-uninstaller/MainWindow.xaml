@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         mc:Ignorable="d"
-        Title="Eryph Uninstaller" Height="770" Width="1050"
+        Title="Uninstall eryph-zero" 
+        Height="770" Width="1050"
         MinWidth="760"
         MinHeight="600"
         ExtendsContentIntoTitleBar="true"
@@ -21,7 +22,7 @@
     <Grid >
             <ui:TitleBar
             x:Name="TitleBar"
-            Title="Eryph Uninstaller"
+            Title="Uninstall eryph-zero"
             Grid.Row="0"
             CloseWindowByDoubleClickOnIcon="True">
             <ui:TitleBar.Icon>

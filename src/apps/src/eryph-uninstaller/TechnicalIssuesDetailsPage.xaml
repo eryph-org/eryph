@@ -7,103 +7,81 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       mc:Ignorable="d"
       d:DesignHeight="500" d:DesignWidth="800"
-      Title="TechnicalIssuesDetailsPage"
-      SizeChanged="Page_SizeChanged">
+      Title="TechnicalIssuesDetailsPage">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid x:Name="MainGrid" Margin="16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="LeftColumn" Width="300"/>
-                <ColumnDefinition x:Name="RightColumn" Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Left Panel -->
-            <StackPanel Grid.Column="0" x:Name="LeftPanel" Margin="16,24,24,24">
-                <TextBlock Text="Get Help"
-                           FontSize="20"
-                           FontWeight="Medium"
-                           Margin="0,0,0,16"/>
-
-                <TextBlock x:Name="ContextDescription"
-                           Text="We'd like to help resolve this issue before you uninstall."
-                           FontSize="14"
-                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,24"/>
-
-                <TextBlock Text="Technical Issues > Get Help"
-                           FontSize="12"
-                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                           Margin="0,0,0,8"/>
-            </StackPanel>
-
-            <!-- Right Panel -->
-            <StackPanel Grid.Column="1" x:Name="RightPanel" Margin="24">
+    <local:TwoColumnLayout
+        LeftTitle="Get Help"
+        ContextDescription="We'd like to help resolve this issue before you uninstall."
+        BreadcrumbText="Technical Issues > Get Help">
+        <local:TwoColumnLayout.PageContent>
+            <StackPanel>
                 <!-- Selected Issue Title -->
-                <TextBlock x:Name="SelectedIssueTitle"
-                           Text="Cannot login into VMs"
-                           FontSize="24"
-                           FontWeight="Medium"
-                           Margin="0,0,0,24"/>
+                <ui:TextBlock Text="{Binding SelectedIssueTitle}"
+                              FontTypography="Title"
+                              Margin="0,0,0,24"/>
 
-                <!-- Documentation Hint Card - KEEP EXACTLY AS IS -->
-                <ui:Card x:Name="DocumentationHintCard" Margin="0,0,0,24">
+                <!-- Documentation Hint Card -->
+                <ui:Card Margin="0,0,0,24">
                     <StackPanel Margin="24">
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                             <ui:SymbolIcon Symbol="Info24"
                                            FontSize="20"
                                            Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
                                            Margin="0,0,12,0"/>
-                            <TextBlock x:Name="HintTitle"
-                                       Text="Helpful Resources"
-                                       FontWeight="Medium"
-                                       FontSize="16"
-                                       VerticalAlignment="Center"/>
+                            <ui:TextBlock Text="Helpful Resources"
+                                          FontTypography="Subtitle"
+                                          VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock x:Name="HintText"
-                                   Text=""
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,0,16"
-                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"/>
+                        <ui:TextBlock Text="{Binding HintText}"
+                                      FontTypography="Body"
+                                      Appearance="Primary"
+                                      TextWrapping="Wrap"
+                                      Margin="0,0,0,8"/>
 
-                        <TextBlock x:Name="DetailsPrompt"
-                                   Text="Additional details (optional):"
-                                   FontWeight="Medium"
-                                   FontSize="14"
-                                   Margin="0,0,0,8"/>
-                        <ui:TextBox x:Name="IssueDetailsTextBox"
-                                    PlaceholderText="Please describe your specific issue..."
+                        <ui:HyperlinkButton NavigateUri="{Binding HelpLink}"
+                                      Content="{Binding HelpLink}"
+                                      Margin="0,0,0,16"/>
+
+                        <ui:TextBlock Text="{Binding DetailsPrompt}"
+                                      FontTypography="Body"
+                                      Margin="0,0,0,8"/>
+                        <ui:TextBox PlaceholderText="{Binding IssueDetailsPlaceholder}"
+                                    Text="{Binding IssueDetailsText, UpdateSourceTrigger=PropertyChanged}"
                                     TextWrapping="Wrap"
                                     AcceptsReturn="True"
                                     MaxLength="1000"
                                     MinHeight="80"
                                     Margin="0,0,0,16"/>
 
-                        <TextBlock Text="Would you like us to follow up and help resolve this issue?"
-                                   FontWeight="Medium"
-                                   FontSize="14"
-                                   Margin="0,0,0,8"/>
-                        <ui:TextBox x:Name="EmailTextBox"
-                                    PlaceholderText="your.email@example.com (optional)"
+                        <ui:TextBlock Text="Would you like us to follow up and help resolve this issue?"
+                                      FontTypography="Body"
+                                      Margin="0,0,0,8"/>
+                        <ui:TextBox PlaceholderText="your.email@example.com (optional)"
+                                    Text="{Binding EmailText, UpdateSourceTrigger=PropertyChanged}"
                                     Margin="0,0,0,0"/>
                     </StackPanel>
                 </ui:Card>
 
                 <!-- Action Buttons -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <ui:Button x:Name="BackButton"
-                               Content="Back"
+                    <ui:Button Content="Back"
                                Appearance="Secondary"
                                Click="BackButton_Click"
                                Width="120"
                                Margin="0,0,12,0"/>
-                    <ui:Button x:Name="ContinueButton"
-                               Content="Continue to Uninstall"
+                    <ui:Button Content="Request Support"
                                Appearance="Primary"
+                               Icon="{ui:SymbolIcon Mail24}"
+                               Click="GetHelpButton_Click"
+                               Width="150"
+                               Margin="0,0,12,0"
+                               IsDefault="True"/>
+                    <ui:Button Content="Continue to Uninstall"
+                               Appearance="Secondary"
                                Click="ContinueButton_Click"
                                Width="160"/>
                 </StackPanel>
             </StackPanel>
-        </Grid>
-    </ScrollViewer>
+        </local:TwoColumnLayout.PageContent>
+    </local:TwoColumnLayout>
 </Page>

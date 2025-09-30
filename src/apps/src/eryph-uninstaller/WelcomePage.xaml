@@ -11,19 +11,18 @@
 
     <local:TwoColumnLayout
         LeftTitle="Choose Your Reason"
-        ContextDescription="Your feedback helps us improve Eryph for everyone."
+        ContextDescription="Your feedback helps us improve eryph for everyone."
         BreadcrumbText="Eryph Uninstaller">
         <local:TwoColumnLayout.PageContent>
             <StackPanel>
-                <TextBlock Text="We're sorry to see you go"
-                           FontSize="24"
-                           FontWeight="Medium"
-                           Margin="0,0,0,8"/>
-                <TextBlock Text="Please help us improve Eryph by telling us why you're uninstalling."
-                           FontSize="16"
-                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,32"/>
+                <ui:TextBlock Text="We're sorry to see you go"
+                              FontTypography="Title"
+                              Margin="0,0,0,8"/>
+                <ui:TextBlock Text="Please help us improve eryph by telling us why you're uninstalling."
+                              FontTypography="Body"
+                              Appearance="Secondary"
+                              TextWrapping="Wrap"
+                              Margin="0,0,0,32"/>
 
                 <StackPanel>
                     <ui:Button HorizontalAlignment="Stretch"

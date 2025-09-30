@@ -24,24 +24,19 @@
 
                 <!-- Top content -->
                 <StackPanel Grid.Row="0">
-                    <TextBlock x:Name="LeftTitleTextBlock"
-                               Text="{Binding LeftTitle, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                               FontSize="20"
-                               FontWeight="Medium"
-                               Margin="0,0,0,16"/>
+                    <ui:TextBlock x:Name="LeftTitleTextBlock"
+                                  Text="{Binding LeftTitle, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  FontTypography="TitleLarge"
+                                  TextWrapping="Wrap"
+                                  Margin="0,0,0,16"/>
 
-                    <TextBlock x:Name="ContextDescriptionTextBlock"
-                               Text="{Binding ContextDescription, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                               FontSize="14"
-                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,24"/>
+                    <ui:TextBlock x:Name="ContextDescriptionTextBlock"
+                                  Text="{Binding ContextDescription, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  FontTypography="Subtitle"
+                                  Appearance="Secondary"
+                                  TextWrapping="Wrap"
+                                  Margin="0,0,0,24"/>
 
-                    <TextBlock x:Name="BreadcrumbTextBlock"
-                               Text="{Binding BreadcrumbText, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                               FontSize="12"
-                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                               Margin="0,0,0,8"/>
                 </StackPanel>
 
                 <!-- Icon at bottom -->
