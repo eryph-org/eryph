@@ -154,7 +154,7 @@ public static class HostStateProvider<RT>
         Seq<VMSwitch> switches,
         Seq<VMNetworkAdapter> hostVirtualAdapters) =>
         from _ in unitEff
-        // A network adapter on host can be either a physical adapter
+        // A network adapter on the host can be either a physical adapter
         // or a virtual adapter. Unfortunately, we need to check different
         // locations to find out if the adapter is attached to a Hyper-V switch.
         let switchByPhysicalAdapterId = switches
@@ -201,12 +201,12 @@ public static class HostStateProvider<RT>
             .ToEff()
         from nextHop in parseIPAddress(netRoute.NextHop)
             .ToEff()
-        // The routes only contain the interface index but no the
+        // The routes only contain the interface index but not the
         // interface ID. Hence, we need to look up the interface ID
         // Some routes might have an interface index for which
         // we do not have a corresponding adapter. One possibility
-        // are routes for the loopback interface for which no adapter
-        // exists.
+        // are routes for the loopback pseudo interface for which no
+        // adapter exists.
         let adapterId = hostAdapters.Find(netRoute.InterfaceIndex)
         select new HostRouteInfo(adapterId, destination, nextHop);
 }

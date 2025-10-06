@@ -137,6 +137,9 @@ public class HostStateProviderTests
                     Virtual = true,
                 })));
 
+        _hostNetworkCommandsMock.Setup(x => x.GetHostVirtualAdapters())
+            .Returns(SuccessAff(Seq<VMNetworkAdapter>()));
+
         _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
             .Returns(SuccessAff(Seq1(new NetNat
             {

@@ -149,7 +149,6 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMNetworkAdapter")
             .AddParameter("ManagementOS")
-            .AddParameter("ErrorAction", "SilentlyContinue")
         from adapters in psEngine.GetObjectsAsync<VMNetworkAdapter>(command).ToAff()
         select adapters.Map(a => a.Value).Strict();
 

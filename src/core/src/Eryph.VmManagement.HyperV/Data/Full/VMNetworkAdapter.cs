@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Eryph.ConfigModel;
 using Eryph.VmManagement.Data.Core;
-using JetBrains.Annotations;
 
 namespace Eryph.VmManagement.Data.Full;
 
@@ -87,11 +87,19 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
     [PrivateIdentifier]
     public string SwitchName { get; init; }
 
-    [PrivateIdentifier] [CanBeNull] public string VMName { get; init; }
+    /// <summary>
+    /// The name of the VM to which this adapter belongs. Only populated
+    /// when the adapter belongs to a VM.
+    /// </summary>
+    [PrivateIdentifier] [MaybeNull] public string VMName { get; init; }
 
     [PrivateIdentifier]
     public Guid SwitchId { get; init; }
 
+    /// <summary>
+    /// The ID of the VM to which this adapter belongs. Only populated
+    /// when the adapter belongs to a VM.
+    /// </summary>
     [PrivateIdentifier]
     public Guid? VMId { get; init; }
 
