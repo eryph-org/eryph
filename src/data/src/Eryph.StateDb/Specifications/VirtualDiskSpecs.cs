@@ -36,7 +36,8 @@ namespace Eryph.StateDb.Specifications
                                  && x.DataStore == dataStore
                                  && x.Environment == environment
                                  && x.StorageIdentifier == storageIdentifier
-                                 && x.Name == name);
+                                 && x.Name == name
+                                 && !x.Deleted);
             }
         }
 
