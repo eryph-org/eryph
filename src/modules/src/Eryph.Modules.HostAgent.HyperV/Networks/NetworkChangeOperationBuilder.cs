@@ -347,11 +347,14 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 $"The IP range '{newNat.Network}' of the provider '{expectedBridge.ProviderName}' overlaps "
                     + $"the IP range '{un.Network}' of the NAT '{un.Name}' which is not managed by eryph.")),
             None: () => unitEff)
-        from _2 in unmanagedRoutes.Find(ur => ur.Destination.Overlap(newNat.Network)).Match(
-            Some: ur => FailEff<Unit>(Error.New(
-                $"The IP range '{newNat.Network}' of the provider '{expectedBridge.ProviderName}' overlaps "
-                + $"the IP range '{ur.Destination}' of a network route which is not managed by eryph.")),
-            None: () => unitEff)
+        from _2 in unmanagedRoutes
+            // Skip the default route(s), e.g. 0.0.0.0/0.
+            .Filter(ur => ur.Destination.Cidr > 0)
+            .Find(ur => ur.Destination.Overlap(newNat.Network)).Match(
+                Some: ur => FailEff<Unit>(Error.New(
+                    $"The IP range '{newNat.Network}' of the provider '{expectedBridge.ProviderName}' overlaps "
+                    + $"the IP range '{ur.Destination}' of a network route which is not managed by eryph.")),
+                None: () => unitEff)
         from _3 in AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
                   from _1 in hostCommands.AddNetNat(newNat.NatName, newNat.Network)

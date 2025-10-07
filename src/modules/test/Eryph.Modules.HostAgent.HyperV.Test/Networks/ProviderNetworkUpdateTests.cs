@@ -160,6 +160,30 @@ public class ProviderNetworkUpdateTests
     }
 
     [Fact]
+    public async Task GenerateChanges_DefaultConfigWithDefaultRouteOnHost_GeneratesExpectedChanges()
+    {
+        var hostState = new HostState(
+            Seq<VMSwitchExtension>(),
+            Seq<VMSwitch>(),
+            new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
+            Seq<NetNat>(),
+            Seq1(new HostRouteInfo(None, IPNetwork2.Parse("0.0.0.0/0"), IPAddress.Parse("192.168.0.1"))),
+            new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
+
+        var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+            .Bind(c => generateChanges(hostState, c, false))
+            .Run(_runtime);
+
+        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.CreateOverlaySwitch),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.StartOVN),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
     public async Task GenerateChanges_MultipleOverlaySwitches_GeneratesRebuildOfOverlaySwitch()
     {
         _hostNetworkCommandsMock.Setup(x => x.GetVmAdaptersBySwitch(It.IsAny<Guid>()))
