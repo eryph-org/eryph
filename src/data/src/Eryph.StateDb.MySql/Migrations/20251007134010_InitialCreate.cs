@@ -717,6 +717,83 @@ namespace Eryph.StateDb.MySql.Migrations
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
+            migrationBuilder.CreateTable(
+                name: "CatletSpecifications",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ResourceType = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LatestId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletSpecifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CatletSpecifications_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "CatletSpecificationVersions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    SpecificationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    CatletId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ConfigYaml = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsDraft = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletSpecificationVersions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CatletSpecificationVersions_CatletSpecifications_Specificati~",
+                        column: x => x.SpecificationId,
+                        principalTable: "CatletSpecifications",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "CatletSpecificationVersionGenes",
+                columns: table => new
+                {
+                    SpecificationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    UniqueGeneIndex = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Hash = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    GeneSet = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Architecture = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletSpecificationVersionGenes", x => new { x.SpecificationId, x.UniqueGeneIndex });
+                    table.ForeignKey(
+                        name: "FK_CatletSpecificationVersionGenes_CatletSpecificationVersions_~",
+                        column: x => x.SpecificationId,
+                        principalTable: "CatletSpecificationVersions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
             migrationBuilder.CreateIndex(
                 name: "IX_CatletDrives_AttachedDiskId",
                 table: "CatletDrives",
@@ -741,6 +818,28 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_Catlets_ProjectId",
                 table: "Catlets",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecifications_LatestId",
+                table: "CatletSpecifications",
+                column: "LatestId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecifications_ProjectId",
+                table: "CatletSpecifications",
+                column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecificationVersionGenes_UniqueGeneIndex",
+                table: "CatletSpecificationVersionGenes",
+                column: "UniqueGeneIndex",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecificationVersions_SpecificationId",
+                table: "CatletSpecificationVersions",
+                column: "SpecificationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
@@ -876,16 +975,35 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_VirtualNetworks_ProjectId",
                 table: "VirtualNetworks",
                 column: "ProjectId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_CatletSpecifications_CatletSpecificationVersions_LatestId",
+                table: "CatletSpecifications",
+                column: "LatestId",
+                principalTable: "CatletSpecificationVersions",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_CatletSpecifications_Projects_ProjectId",
+                table: "CatletSpecifications");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_CatletSpecifications_CatletSpecificationVersions_LatestId",
+                table: "CatletSpecifications");
+
             migrationBuilder.DropTable(
                 name: "CatletDrives");
 
             migrationBuilder.DropTable(
                 name: "CatletNetworkAdapters");
+
+            migrationBuilder.DropTable(
+                name: "CatletSpecificationVersionGenes");
 
             migrationBuilder.DropTable(
                 name: "Genes");
@@ -949,6 +1067,12 @@ namespace Eryph.StateDb.MySql.Migrations
 
             migrationBuilder.DropTable(
                 name: "Tenants");
+
+            migrationBuilder.DropTable(
+                name: "CatletSpecificationVersions");
+
+            migrationBuilder.DropTable(
+                name: "CatletSpecifications");
         }
     }
 }
