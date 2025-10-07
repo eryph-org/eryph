@@ -122,6 +122,67 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.ToTable("CatletNetworkAdapters");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CatletId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ConfigYaml")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDraft")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid>("SpecificationId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpecificationId");
+
+                    b.ToTable("CatletSpecificationVersions");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionGene", b =>
+                {
+                    b.Property<Guid>("SpecificationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("UniqueGeneIndex")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("GeneSet")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("SpecificationId", "UniqueGeneIndex");
+
+                    b.HasIndex("UniqueGeneIndex")
+                        .IsUnique();
+
+                    b.ToTable("CatletSpecificationVersionGenes");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
                 {
                     b.Property<Guid>("Id")
@@ -740,6 +801,19 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.ToTable("CatletFarms");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
+                {
+                    b.HasBaseType("Eryph.StateDb.Model.Resource");
+
+                    b.Property<Guid>("LatestId")
+                        .HasColumnType("char(36)");
+
+                    b.HasIndex("LatestId")
+                        .IsUnique();
+
+                    b.ToTable("CatletSpecifications");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
@@ -942,6 +1016,24 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Navigation("Catlet");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersion", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.CatletSpecification", null)
+                        .WithMany()
+                        .HasForeignKey("SpecificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionGene", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.CatletSpecificationVersion", null)
+                        .WithMany("Genes")
+                        .HasForeignKey("SpecificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.NetworkPort", "NetworkPort")
@@ -1129,6 +1221,17 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Navigation("Host");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.CatletSpecificationVersion", "Latest")
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.CatletSpecification", "LatestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Latest");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
@@ -1171,6 +1274,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadata", b =>
+                {
+                    b.Navigation("Genes");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersion", b =>
                 {
                     b.Navigation("Genes");
                 });

@@ -1,15 +1,14 @@
 ﻿using System.Text.Json.Serialization;
 
+namespace Eryph.Resources;
 
-namespace Eryph.Resources
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ResourceType
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum ResourceType
-    {
-        Catlet,
-        VirtualDisk,
-        VirtualNetwork,
-        CatletFarm
-    }
+    Catlet,
+    CatletSpecification,
+    VirtualDisk,
+    VirtualNetwork,
+    CatletFarm
 }
 

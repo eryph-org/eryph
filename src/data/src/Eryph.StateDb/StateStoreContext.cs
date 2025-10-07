@@ -57,6 +57,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<CatletMetadataGene> MetadataGenes { get; set; }
 
+    public DbSet<CatletSpecification> CatletSpecifications { get; set; }
+
+    public DbSet<CatletSpecificationVersion> CatletSpecificationVersions { get; set; }
+
+    public DbSet<CatletSpecificationVersionGene> CatletSpecificationVersionGenes { get; set; }
+
     public DbSet<Project> Projects { get; set; }
 
     public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
@@ -327,5 +333,40 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<Gene>()
             .HasIndex(x => new { Combined = x.UniqueGeneIndex, x.LastSeenAgent })
             .IsUnique();
+
+        modelBuilder.Entity<CatletSpecification>()
+            .HasMany<CatletSpecificationVersion>()
+            .WithOne()
+            .HasForeignKey(v => v.SpecificationId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletSpecification>()
+            .HasOne(s => s.Latest)
+            .WithOne()
+            .HasForeignKey<CatletSpecification>(s => s.LatestId)
+            .IsRequired();
+
+        modelBuilder.Entity<CatletSpecificationVersion>()
+            .HasMany(s => s.Genes)
+            .WithOne()
+            .HasForeignKey(g => g.SpecificationId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletSpecificationVersion>()
+            .Navigation(s => s.Genes)
+            .AutoInclude();
+
+        modelBuilder.Entity<CatletSpecificationVersionGene>()
+            .HasKey(g => new { g.SpecificationId, g.UniqueGeneIndex });
+
+        modelBuilder.Entity<CatletSpecificationVersionGene>()
+            .HasIndex(g => g.UniqueGeneIndex)
+            .IsUnique();
+
+        modelBuilder.Entity<CatletMetadataGene>()
+            .Property(g => g.UniqueGeneIndex)
+            .UsePropertyAccessMode(PropertyAccessMode.Property);
     }
 }
