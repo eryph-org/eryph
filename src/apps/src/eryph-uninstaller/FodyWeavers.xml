@@ -21,7 +21,6 @@
       Accessibility
       Microsoft.CSharp
       System.Data.DataSetExtensions
-      System.Net.Http
       System.Web
     </ExcludeAssemblies>
 

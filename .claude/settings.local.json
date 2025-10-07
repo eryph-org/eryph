@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/Source/Repos/eryph/eryph/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
