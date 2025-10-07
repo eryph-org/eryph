@@ -15,7 +15,6 @@ using LanguageExt.Effects.Traits;
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
-
 namespace Eryph.Modules.HostAgent.Networks;
 
 public static class HostStateProvider<RT>

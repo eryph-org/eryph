@@ -149,8 +149,8 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMNetworkAdapter")
             .AddParameter("ManagementOS")
-        from adapters in psEngine.GetObjectsAsync<VMNetworkAdapter>(command).ToAff()
-        select adapters.Map(a => a.Value).Strict();
+        from adapters in psEngine.GetObjectValuesAsync<VMNetworkAdapter>(command).ToAff()
+        select adapters.Strict();
 
     public Aff<RT, Unit> DisconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
         from psEngine in default(RT).Powershell
