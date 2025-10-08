@@ -335,7 +335,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .IsUnique();
 
         modelBuilder.Entity<CatletSpecification>()
-            .HasMany<CatletSpecificationVersion>()
+            .HasMany(s => s.Versions)
             .WithOne()
             .HasForeignKey(v => v.SpecificationId)
             .IsRequired()
@@ -350,7 +350,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<CatletSpecificationVersion>()
             .HasMany(s => s.Genes)
             .WithOne()
-            .HasForeignKey(g => g.SpecificationId)
+            .HasForeignKey(g => g.SpecificationVersionId)
             .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -359,13 +359,13 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .AutoInclude();
 
         modelBuilder.Entity<CatletSpecificationVersionGene>()
-            .HasKey(g => new { g.SpecificationId, g.UniqueGeneIndex });
+            .HasKey(g => new { g.SpecificationVersionId, g.UniqueGeneIndex });
 
         modelBuilder.Entity<CatletSpecificationVersionGene>()
             .HasIndex(g => g.UniqueGeneIndex)
             .IsUnique();
 
-        modelBuilder.Entity<CatletMetadataGene>()
+        modelBuilder.Entity<CatletSpecificationVersionGene>()
             .Property(g => g.UniqueGeneIndex)
             .UsePropertyAccessMode(PropertyAccessMode.Property);
     }
