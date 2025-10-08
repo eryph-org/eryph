@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -156,7 +155,7 @@ namespace Eryph.Runtime.Uninstaller
         {
             try
             {
-                Process.Start("shutdown", "/r /t 10 /c \"Restarting to complete eryph uninstallation\"");
+                NativeShutdown.InitiateRestart("Restarting to complete eryph uninstallation", 10);
                 Window.GetWindow(this)!.Close();
             }
             catch
