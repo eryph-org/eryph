@@ -770,7 +770,7 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "CatletSpecificationVersionGenes",
                 columns: table => new
                 {
-                    SpecificationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    SpecificationVersionId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     UniqueGeneIndex = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Hash = table.Column<string>(type: "longtext", nullable: false)
@@ -784,10 +784,10 @@ namespace Eryph.StateDb.MySql.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CatletSpecificationVersionGenes", x => new { x.SpecificationId, x.UniqueGeneIndex });
+                    table.PrimaryKey("PK_CatletSpecificationVersionGenes", x => new { x.SpecificationVersionId, x.UniqueGeneIndex });
                     table.ForeignKey(
                         name: "FK_CatletSpecificationVersionGenes_CatletSpecificationVersions_~",
-                        column: x => x.SpecificationId,
+                        column: x => x.SpecificationVersionId,
                         principalTable: "CatletSpecificationVersions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);

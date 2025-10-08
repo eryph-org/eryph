@@ -8,6 +8,7 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
+using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore;
 using LanguageExt;
@@ -21,6 +22,15 @@ public static class RequestValidations
     public static Validation<ValidationIssue, CatletConfig> ValidateCatletConfig(
         JsonElement jsonElement) =>
         from config in Try(() => CatletConfigJsonSerializer.Deserialize(jsonElement))
+            .ToValidation(ToValidationIssue)
+        let namingPolicy = Optional(CatletConfigJsonSerializer.Options.PropertyNamingPolicy)
+        from _ in CatletConfigValidations.ValidateCatletConfig(config)
+            .MapFail(vi => vi.ToJsonPath(namingPolicy))
+        select config;
+
+    public static Validation<ValidationIssue, CatletConfig> ValidateCatletConfigYaml(
+        string yaml) =>
+        from config in Try(() => CatletConfigYamlSerializer.Deserialize(yaml))
             .ToValidation(ToValidationIssue)
         let namingPolicy = Optional(CatletConfigJsonSerializer.Options.PropertyNamingPolicy)
         from _ in CatletConfigValidations.ValidateCatletConfig(config)

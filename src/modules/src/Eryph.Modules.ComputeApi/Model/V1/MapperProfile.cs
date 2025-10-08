@@ -125,6 +125,8 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.Gene, Gene>()
                 .Include<StateDb.Model.Gene, GeneWithUsage>();
             CreateMap<StateDb.Model.Gene, GeneWithUsage>();
+
+            CreateMap<StateDb.Model.CatletSpecification, CatletSpecification>();
         }
     }
 }

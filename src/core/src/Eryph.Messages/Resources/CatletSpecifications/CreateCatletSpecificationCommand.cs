@@ -1,0 +1,16 @@
+﻿using System;
+
+namespace Eryph.Messages.Resources.CatletSpecifications;
+
+[SendMessageTo(MessageRecipient.Controllers)]
+public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelationId
+{
+    public Guid ProjectId { get; set; }
+
+    public string Name { get; set; }
+
+    public string ConfigYaml { get; set; }
+    public Guid CorrelationId { get; set; }
+
+    public string GetCommandName() => $"Create catlet specification {Name}";
+}

@@ -655,7 +655,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletSpecificationVersionGenes",
                 columns: table => new
                 {
-                    SpecificationId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SpecificationVersionId = table.Column<Guid>(type: "TEXT", nullable: false),
                     UniqueGeneIndex = table.Column<string>(type: "TEXT", nullable: false),
                     Hash = table.Column<string>(type: "TEXT", nullable: false),
                     GeneSet = table.Column<string>(type: "TEXT", nullable: false),
@@ -664,10 +664,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CatletSpecificationVersionGenes", x => new { x.SpecificationId, x.UniqueGeneIndex });
+                    table.PrimaryKey("PK_CatletSpecificationVersionGenes", x => new { x.SpecificationVersionId, x.UniqueGeneIndex });
                     table.ForeignKey(
-                        name: "FK_CatletSpecificationVersionGenes_CatletSpecificationVersions_SpecificationId",
-                        column: x => x.SpecificationId,
+                        name: "FK_CatletSpecificationVersionGenes_CatletSpecificationVersions_SpecificationVersionId",
+                        column: x => x.SpecificationVersionId,
                         principalTable: "CatletSpecificationVersions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);

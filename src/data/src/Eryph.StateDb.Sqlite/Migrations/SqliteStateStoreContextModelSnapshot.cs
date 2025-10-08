@@ -148,7 +148,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionGene", b =>
                 {
-                    b.Property<Guid>("SpecificationId")
+                    b.Property<Guid>("SpecificationVersionId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("UniqueGeneIndex")
@@ -170,7 +170,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("SpecificationId", "UniqueGeneIndex");
+                    b.HasKey("SpecificationVersionId", "UniqueGeneIndex");
 
                     b.HasIndex("UniqueGeneIndex")
                         .IsUnique();
@@ -1014,7 +1014,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersion", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.CatletSpecification", null)
-                        .WithMany()
+                        .WithMany("Versions")
                         .HasForeignKey("SpecificationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1024,7 +1024,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.HasOne("Eryph.StateDb.Model.CatletSpecificationVersion", null)
                         .WithMany("Genes")
-                        .HasForeignKey("SpecificationId")
+                        .HasForeignKey("SpecificationVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1342,6 +1342,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.CatletFarm", b =>
                 {
                     b.Navigation("Catlets");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
