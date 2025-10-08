@@ -8,7 +8,7 @@ namespace Eryph.StateDb.Model;
 
 public class CatletSpecificationVersionGene
 {
-    public required Guid SpecificationId { get; set; }
+    public required Guid SpecificationVersionId { get; set; }
 
     public required string Hash { get; set; }
 
