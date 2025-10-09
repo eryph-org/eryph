@@ -1,0 +1,85 @@
+﻿<Page x:Class="Eryph.Runtime.Uninstaller.FeedbackPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:Eryph.Runtime.Uninstaller"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      mc:Ignorable="d"
+      d:DesignHeight="500" d:DesignWidth="800"
+      Title="FeedbackPage">
+
+    <local:TwoColumnLayout
+        LeftTitle="Final Step"
+        ContextDescription="Ready to uninstall eryph from your system."
+        BreadcrumbText="Final Step">
+        <local:TwoColumnLayout.PageContent>
+            <StackPanel>
+                <ui:TextBlock Text="Share Your Feedback"
+                              FontTypography="Title"
+                              Margin="0,0,0,8"/>
+                <ui:TextBlock Text="Your feedback helps us improve eryph for everyone."
+                              FontTypography="Body"
+                              Appearance="Secondary"
+                              TextWrapping="Wrap"
+                              Margin="0,0,0,32"/>
+
+                <!-- Thank you message -->
+                <ui:InfoBar Title="{Binding ThankYouTitle}"
+                            Message="{Binding ThankYouMessage}"
+                            Severity="Success"
+                            Visibility="{Binding ThankYouVisibility}"
+                            Margin="0,0,0,24"/>
+
+                <ui:TextBlock Text="{Binding FeedbackPrompt}"
+                              FontTypography="Subtitle"
+                              Margin="0,0,0,24"/>
+
+                <ui:TextBox PlaceholderText="{Binding FeedbackPlaceholder}"
+                            Text="{Binding FeedbackText, UpdateSourceTrigger=PropertyChanged}"
+                            TextWrapping="Wrap"
+                            AcceptsReturn="True"
+                            MaxLength="1000"
+                            MinHeight="120"
+                            Margin="0,0,0,24"/>
+
+                <!-- Email Collection (for certain flows) -->
+                <StackPanel Visibility="{Binding EmailSectionVisibility}" Margin="0,0,0,24">
+                    <ui:TextBlock Text="{Binding EmailPrompt}"
+                                  FontTypography="Body"
+                                  Margin="0,0,0,12"/>
+                    <ui:TextBox PlaceholderText="your.email@example.com"
+                                Text="{Binding EmailText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <ui:TextBlock Text="Uninstall Options"
+                              FontTypography="Body"
+                              Margin="0,0,0,16"/>
+
+                <StackPanel Margin="0,0,0,32">
+                    <CheckBox Content="Remove configuration files"
+                              IsChecked="{Binding RemoveConfig}"
+                              Margin="0,0,0,8"/>
+
+                    <CheckBox Content="Remove catlets and virtual disks"
+                              IsChecked="{Binding RemoveVirtualMachines}"
+                              IsEnabled="{Binding RemoveConfig}"
+                              Margin="16,0,0,0"/>
+                </StackPanel>
+
+                <!-- Footer -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <ui:Button Content="Back"
+                               Appearance="Secondary"
+                               Click="BackButton_Click"
+                               Width="120"
+                               Margin="0,0,16,0"/>
+                    <ui:Button Content="Uninstall eryph"
+                               Appearance="Primary"
+                               Click="UninstallButton_Click"
+                               Width="140"/>
+                </StackPanel>
+            </StackPanel>
+        </local:TwoColumnLayout.PageContent>
+    </local:TwoColumnLayout>
+</Page>

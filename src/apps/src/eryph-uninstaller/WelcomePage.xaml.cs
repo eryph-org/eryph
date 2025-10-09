@@ -1,52 +1,43 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace Eryph.Runtime.Uninstaller
 {
     /// <summary>
     /// Interaction logic for WelcomePage.xaml
     /// </summary>
-    public partial class WelcomePage : Page
+    public partial class WelcomePage
     {
         public WelcomePage()
         {
             InitializeComponent();
         }
 
-        private void UninstallButton_Click(object sender, RoutedEventArgs e)
+        private void ReasonButton_Click(object sender, RoutedEventArgs e)
         {
-            var reason = UninstallReasonsGrid.Children
-                .OfType<RadioButton>()
-                .First(r => r.IsChecked == true);
+            if (sender is not Wpf.Ui.Controls.Button { Tag: UninstallReason reason })
+                return;
 
-            NavigationService!.Navigate(new ProgressPage(
-                    RemoveConfigCheckBox.IsChecked ?? false,
-                    RemoveVirtualMachinesCheckBox.IsChecked ?? false,
-                    (UninstallReason)reason.Tag,
-                    FeedbackTextBox.Text));
+            // Navigate to appropriate next step based on selection
+            switch (reason)
+            {
+                case UninstallReason.TechnicalIssues:
+                    NavigationService!.Navigate(new TechnicalIssuesPage(reason));
+                    break;
+
+                case UninstallReason.NotNeededAnymore:
+                case UninstallReason.WillReinstallLater:
+                case UninstallReason.Other:
+                    // Create empty feedback data for non-technical reasons
+                    var feedbackData = new FeedbackData { FeedbackSource = "other_reason" };
+                    NavigationService!.Navigate(new FeedbackPage(reason, feedbackData));
+                    break;
+            }
         }
 
-        private void ReasonSelected(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            UninstallButton.IsEnabled = true;
-        }
-
-        private void RemoveConfigCheckBox_OnUnchecked(object sender, RoutedEventArgs e)
-        {
-            RemoveVirtualMachinesCheckBox.IsChecked = false;
+            Window.GetWindow(this)?.Close();
         }
     }
 }

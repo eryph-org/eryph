@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace Eryph.Runtime.Uninstaller
@@ -36,7 +31,12 @@ namespace Eryph.Runtime.Uninstaller
             
             Directory.CreateDirectory(tempFolderPath);
             File.Copy(currentExecutablePath, tempExecutablePath, true);
-            
+
+            var appConfig = currentExecutablePath + ".config";
+            var tempAppConfigPath = tempExecutablePath + ".config";
+            if (File.Exists(appConfig))
+                File.Copy(appConfig, tempAppConfigPath, true);
+
             var startInfo = new ProcessStartInfo(tempExecutablePath)
             {
                 Arguments = "-continue",
@@ -57,10 +57,11 @@ namespace Eryph.Runtime.Uninstaller
             var currentProcess = Process.GetCurrentProcess();
             var executablePath = currentProcess!.MainModule!.FileName;
             var folderPath = Path.GetDirectoryName(executablePath);
+            var configPath = executablePath + ".config";
 
             var startInfo = new ProcessStartInfo("powershell.exe")
             {
-                Arguments = $"""-C "Wait-Process -Id {currentProcess.Id}; Remove-Item -LiteralPath '{executablePath}';Remove-Item -LiteralPath '{folderPath}';" """,
+                Arguments = $"""-C "Wait-Process -Id {currentProcess.Id}; Remove-Item -LiteralPath '{executablePath}'; Remove-Item -LiteralPath '{configPath}';Remove-Item -LiteralPath '{folderPath}';" """,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
