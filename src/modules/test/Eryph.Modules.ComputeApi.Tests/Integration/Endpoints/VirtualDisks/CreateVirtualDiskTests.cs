@@ -163,4 +163,94 @@ public class CreateVirtualDiskTests(ITestOutputHelper outputHelper)
                 m.DataStore.Should().Be(null);
             });
     }
+
+    [Fact]
+    public async Task Virtual_disk_is_created_when_deleted_disk_with_same_name_exists()
+    {
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<VirtualDisk>().AddAsync(
+                new VirtualDisk()
+                {
+                    ProjectId = EryphConstants.DefaultProjectId,
+                    Name = DiskName,
+                    Environment = EnvironmentName,
+                    DataStore = StoreName,
+                    StorageIdentifier = LocationName,
+                    Deleted = true
+                });
+            await stateStore.SaveChangesAsync();
+        });
+
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
+            .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
+            {
+                ProjectId = EryphConstants.DefaultProjectId.ToString(),
+                Name = DiskName,
+                Location = LocationName,
+                Size = DiskSize,
+                Environment = EnvironmentName,
+                Store = StoreName,
+            },
+            options: ApiJsonSerializerOptions.Options);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        var messages = Factory.GetPendingRebusMessages<CreateVirtualDiskCommand>();
+        messages.Should().SatisfyRespectively(
+            m =>
+            {
+                m.ProjectId.Should().Be(EryphConstants.DefaultProjectId);
+                m.Name.Should().Be(DiskName);
+                m.Size.Should().Be(DiskSize);
+                m.StorageIdentifier.Should().Be(LocationName);
+                m.Environment.Should().Be(EnvironmentName);
+                m.DataStore.Should().Be(StoreName);
+            });
+    }
+
+    [Fact]
+    public async Task Virtual_disk_with_default_values_is_created_when_deleted_disk_with_same_name_exists()
+    {
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<VirtualDisk>().AddAsync(
+                new VirtualDisk()
+                {
+                    ProjectId = EryphConstants.DefaultProjectId,
+                    Name = DiskName,
+                    Environment = EryphConstants.DefaultEnvironmentName,
+                    DataStore = EryphConstants.DefaultDataStoreName,
+                    StorageIdentifier = LocationName,
+                    Deleted = true
+                });
+            await stateStore.SaveChangesAsync();
+        });
+
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
+            .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
+            {
+                ProjectId = EryphConstants.DefaultProjectId.ToString(),
+                Name = DiskName,
+                Location = LocationName,
+                Size = DiskSize,
+            },
+            options: ApiJsonSerializerOptions.Options);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        var messages = Factory.GetPendingRebusMessages<CreateVirtualDiskCommand>();
+        messages.Should().SatisfyRespectively(
+            m =>
+            {
+                m.ProjectId.Should().Be(EryphConstants.DefaultProjectId);
+                m.Name.Should().Be(DiskName);
+                m.Size.Should().Be(DiskSize);
+                m.StorageIdentifier.Should().Be(LocationName);
+                m.Environment.Should().Be(null);
+                m.DataStore.Should().Be(null);
+            });
+    }
 }
