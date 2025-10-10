@@ -20,7 +20,7 @@ internal class CatletSpecificationVersionChangeInterceptor(
         return dbContext.ChangeTracker.Entries<CatletSpecificationVersion>().ToList()
             .Map(e => (e.Entity.Id, e.Entity.SpecificationId))
             .Distinct()
-            .Map(c => new CatletSpecificationVersionChange(c.Id, c.SpecificationId))
+            .Map(c => new CatletSpecificationVersionChange(c.Id))
             .ToSeq()
             .AsTask();
     }

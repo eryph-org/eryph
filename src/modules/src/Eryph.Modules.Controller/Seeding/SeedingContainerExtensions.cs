@@ -38,6 +38,8 @@ namespace Eryph.Modules.Controller.Seeding
             container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IConfigSeeder<ControllerModule>, CatletNetworkPortSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IConfigSeeder<ControllerModule>, CatletSpecificationSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IConfigSeeder<ControllerModule>, CatletSpecificationVersionSeeder>(Lifestyle.Scoped);
         }
     }
 }

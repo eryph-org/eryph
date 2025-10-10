@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20251008155109_InitialCreate")]
+    [Migration("20251009094711_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -803,12 +803,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<Guid>("LatestId")
-                        .HasColumnType("TEXT");
-
-                    b.HasIndex("LatestId")
-                        .IsUnique();
-
                     b.ToTable("CatletSpecifications");
                 });
 
@@ -1217,17 +1211,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Host");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.CatletSpecificationVersion", "Latest")
-                        .WithOne()
-                        .HasForeignKey("Eryph.StateDb.Model.CatletSpecification", "LatestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Latest");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>

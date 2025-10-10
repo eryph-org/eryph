@@ -805,12 +805,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<Guid>("LatestId")
-                        .HasColumnType("char(36)");
-
-                    b.HasIndex("LatestId")
-                        .IsUnique();
-
                     b.ToTable("CatletSpecifications");
                 });
 
@@ -1219,17 +1213,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Host");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.CatletSpecificationVersion", "Latest")
-                        .WithOne()
-                        .HasForeignKey("Eryph.StateDb.Model.CatletSpecification", "LatestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Latest");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>

@@ -4,7 +4,7 @@ namespace Eryph.Configuration.Model;
 
 public class CatletSpecificationVersionConfigModel
 {
-    public int Version { get; set; } = 1;
+    public Guid SpecificationId { get; set; }
 
     /// <summary>
     /// The ID of the catlet when this specification has been deployed.

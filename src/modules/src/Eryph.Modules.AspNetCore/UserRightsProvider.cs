@@ -99,6 +99,7 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
         var resourceType = typeof(TResource) switch
         {
             var type when type == typeof(Catlet) => ResourceType.Catlet,
+            var type when type == typeof(CatletSpecification) => ResourceType.CatletSpecification,
             var type when type == typeof(VirtualDisk) => ResourceType.VirtualDisk,
             var type when type == typeof(VirtualNetwork) => ResourceType.VirtualNetwork,
             _ => throw new ArgumentOutOfRangeException(nameof(TResource), typeof(TResource), null)

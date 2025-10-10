@@ -32,7 +32,7 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
         CancellationToken cancellationToken = default)
     {
         var id = change.Id;
-        var path = Path.Combine(_config.CatletSpecificationVersionsConfigPath, $"{change.SpecificationId}_{id}.json");
+        var path = Path.Combine(_config.CatletSpecificationVersionsConfigPath, $"{id}.json");
 
         var specificationVersion
             = await _stateStore.For<CatletSpecificationVersion>()
@@ -45,6 +45,7 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
 
         var versionConfig = new CatletSpecificationVersionConfigModel
         {
+            SpecificationId = specificationVersion.SpecificationId,
             CatletId = specificationVersion.CatletId,
             ConfigYaml = specificationVersion.ConfigYaml,
             IsDraft = specificationVersion.IsDraft,

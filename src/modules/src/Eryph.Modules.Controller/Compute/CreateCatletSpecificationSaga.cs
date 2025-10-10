@@ -72,11 +72,13 @@ internal class CreateCatletSpecificationSaga(
                 ProjectId = Data.Data.ProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
                 Name = Data.Data.Name!,
-                Latest = specificationVersion,
+                //Latest = specificationVersion,
                 Versions = [specificationVersion]
             };
 
             await stateStore.For<CatletSpecification>().AddAsync(specification);
+            await stateStore.SaveChangesAsync();
+
 
             await Complete();
         });
