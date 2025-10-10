@@ -61,10 +61,10 @@ internal class CatletSpecificationSeeder : SeederBase
 
         // TODO Seed only the Latest reference and seed the other versions separately
 
-        await SeedVersionsAsync(entityId, cancellationToken);
+        //await SeedVersionsAsync(entityId, cancellationToken);
 
-        specification.LatestId = config.LatestId;
-        await _specificationRepository.SaveChangesAsync(cancellationToken);
+        //specification.LatestId = config.LatestId;
+        //await _specificationRepository.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedVersionsAsync(Guid specificationId, CancellationToken cancellationToken)

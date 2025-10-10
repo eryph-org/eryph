@@ -43,6 +43,8 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
             .Select(r => r.Id)
             .ToHashSet();
 
+        // TODO Delete specifications as well
+
         Data.Data.PendingDisks = message.Resources
             .Where(r => r.Type == ResourceType.VirtualDisk)
             .Select(r => r.Id)
