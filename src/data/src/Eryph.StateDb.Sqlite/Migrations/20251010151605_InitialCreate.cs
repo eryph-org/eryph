@@ -166,7 +166,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Environment = table.Column<string>(type: "TEXT", nullable: false)
+                    Environment = table.Column<string>(type: "TEXT", nullable: false),
+                    Architecture = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -382,7 +383,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     SpecificationId = table.Column<Guid>(type: "TEXT", nullable: false),
                     CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
                     ConfigYaml = table.Column<string>(type: "TEXT", nullable: false),
-                    IsDraft = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Comment = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

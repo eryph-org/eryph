@@ -131,15 +131,15 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid?>("CatletId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("Comment")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ConfigYaml")
                         .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("IsDraft")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<Guid>("SpecificationId")
                         .HasColumnType("char(36)");
@@ -804,6 +804,10 @@ namespace Eryph.StateDb.MySql.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
+
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.ToTable("CatletSpecifications");
                 });

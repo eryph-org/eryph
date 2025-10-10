@@ -10,6 +10,8 @@ public class CreateCatletSpecificationSagaData : TaskWorkflowSagaData
 {
     public string? ConfigYaml { get; set; }
 
+    public string? Comment { get; set; }
+
     public CatletConfig? BuiltConfig { get; set; }
 
     public string? Name { get; set; }

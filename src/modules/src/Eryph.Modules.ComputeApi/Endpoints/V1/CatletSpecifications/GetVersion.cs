@@ -6,6 +6,6 @@ using System.Threading.Tasks;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
-internal class GetVersion
+public class GetVersion
 {
 }

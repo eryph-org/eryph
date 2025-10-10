@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20251009094711_InitialCreate")]
+    [Migration("20251010151605_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -129,15 +129,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid?>("CatletId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Comment")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ConfigYaml")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDraft")
-                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("SpecificationId")
                         .HasColumnType("TEXT");
@@ -802,6 +802,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
+
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.ToTable("CatletSpecifications");
                 });
