@@ -8,6 +8,8 @@ namespace Eryph.StateDb.Model;
 
 public class CatletSpecification : Resource
 {
+    public required string Architecture { get; set; }
+
     //public Guid LatestId { get; set; }
 
     // TODO the Latest causes a circular reference and saving fails

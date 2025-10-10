@@ -53,64 +53,10 @@ internal class CatletSpecificationSeeder : SeederBase
             Name = config.Name,
             Environment = EryphConstants.DefaultEnvironmentName,
             ResourceType = ResourceType.CatletSpecification,
-            //LatestId = config.LatestId,
+            Architecture = config.Architecture,
         };
 
         await _specificationRepository.AddAsync(specification, cancellationToken);
         await _specificationRepository.SaveChangesAsync(cancellationToken);
-
-        // TODO Seed only the Latest reference and seed the other versions separately
-
-        //await SeedVersionsAsync(entityId, cancellationToken);
-
-        //specification.LatestId = config.LatestId;
-        //await _specificationRepository.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task SeedVersionsAsync(Guid specificationId, CancellationToken cancellationToken)
-    {
-        var files = _fileSystem.Directory.EnumerateFiles(_specificationVersionsConfigPath, $"{specificationId}_*.json");
-        foreach (var file in files)
-        {
-            try
-            {
-                _fileSystem.File.Copy(file, $"{file}.bak", true);
-                var content = await _fileSystem.File.ReadAllTextAsync(file, Encoding.UTF8, cancellationToken);
-                var entityId = Guid.Parse(_fileSystem.Path.GetFileNameWithoutExtension(file));
-                await SeedVersionAsync(specificationId, entityId, content, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                throw new SeederException($"Failed to seed database from file '{file}'", ex);
-            }
-        }
-    }
-
-    private async Task SeedVersionAsync(
-        Guid specificationId,
-        Guid entityId,
-        string json,
-        CancellationToken cancellationToken)
-    {
-        bool exists = await _specificationVersionRepository.AnyAsync(
-            new CatletSpecificationVersionSpecs.GetByIdReadOnly(entityId),
-            cancellationToken);
-        if (exists)
-            return;
-
-        var config = CatletSpecificationVersionConfigModelJsonSerializer.Deserialize(json);
-        var specificationVersion = new CatletSpecificationVersion
-        {
-            Id = entityId,
-            SpecificationId = specificationId,
-            ConfigYaml = config.ConfigYaml,
-            CatletId = config.CatletId,
-            CreatedAt = config.CreatedAt,
-            IsDraft = config.IsDraft,
-            // TODO add genes
-        };
-
-        await _specificationVersionRepository.AddAsync(specificationVersion, cancellationToken);
-        await _specificationVersionRepository.SaveChangesAsync(cancellationToken);
     }
 }

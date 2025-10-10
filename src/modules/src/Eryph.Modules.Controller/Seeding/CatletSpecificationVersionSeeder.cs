@@ -39,10 +39,9 @@ internal class CatletSpecificationVersionSeeder : SeederBase
             Id = entityId,
             SpecificationId = config.SpecificationId,
             ConfigYaml = config.ConfigYaml,
-            IsDraft = config.IsDraft,
+            Comment = config.Comment,
             CatletId = config.CatletId,
             CreatedAt = config.CreatedAt,
-            //LatestId = config.LatestId,
         };
 
         await _specificationVersionRepository.AddAsync(specificationVersion, cancellationToken);

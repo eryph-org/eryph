@@ -45,6 +45,7 @@ internal class CatletSpecificationChangeHandler : IChangeHandler<CatletSpecifica
         {   
             ProjectId = specification.ProjectId,
             Name = specification.Name,
+            Architecture = specification.Architecture,
         };
 
         var json = CatletSpecificationConfigModelJsonSerializer.Serialize(specificationConfig);

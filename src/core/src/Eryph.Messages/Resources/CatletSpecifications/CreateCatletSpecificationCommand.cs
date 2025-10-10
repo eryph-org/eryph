@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
@@ -10,6 +11,9 @@ public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
     public string Name { get; set; }
 
     public string ConfigYaml { get; set; }
+
+    [MaybeNull] public string Comment { get; set; }
+
     public Guid CorrelationId { get; set; }
 
     public string GetCommandName() => $"Create catlet specification {Name}";

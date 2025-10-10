@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Eryph.Configuration.Model;
 
@@ -13,7 +14,7 @@ public class CatletSpecificationVersionConfigModel
 
     public required string ConfigYaml { get; set; }
 
-    public bool IsDraft { get; set; }
+    [MaybeNull] public string Comment { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 }

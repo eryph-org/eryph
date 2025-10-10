@@ -35,6 +35,7 @@ internal class CreateCatletSpecificationSaga(
         Data.Data.Name = message.Name;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
         Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.Comment = message.Comment;
         Data.Data.SpecificationId = Guid.NewGuid();
         Data.Data.ProjectId = message.ProjectId;
 
@@ -62,7 +63,7 @@ internal class CreateCatletSpecificationSaga(
             {
                 Id = Guid.NewGuid(),
                 ConfigYaml = Data.Data.ConfigYaml!,
-                IsDraft = false,
+                Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
             };
 
@@ -72,13 +73,12 @@ internal class CreateCatletSpecificationSaga(
                 ProjectId = Data.Data.ProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
                 Name = Data.Data.Name!,
-                //Latest = specificationVersion,
+                Architecture = Data.Data.Architecture!.Value,
                 Versions = [specificationVersion]
             };
 
             await stateStore.For<CatletSpecification>().AddAsync(specification);
             await stateStore.SaveChangesAsync();
-
 
             await Complete();
         });

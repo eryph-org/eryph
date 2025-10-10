@@ -22,24 +22,8 @@ internal static class CatletSpecificationConfigModelJsonSerializer
             WriteIndented = true,
         });
 
-    public static int GetVersion(JsonDocument document)
-    {
-        if (!document.RootElement.TryGetProperty("version", out var property))
-            return 1;
-
-        if (!property.TryGetInt32(out var version))
-            throw new JsonException("The Version property must be a number.");
-        
-        return version;
-    }
-
-
     public static CatletSpecificationConfigModel Deserialize(string json) =>
         JsonSerializer.Deserialize<CatletSpecificationConfigModel>(json, LazyOptions.Value)
-        ?? throw new JsonException("The catlet specification must not be null.");
-
-    public static CatletSpecificationConfigModel Deserialize(JsonDocument document) =>
-        document.Deserialize<CatletSpecificationConfigModel>(LazyOptions.Value)
         ?? throw new JsonException("The catlet specification must not be null.");
 
     public static string Serialize(CatletSpecificationConfigModel config) =>
