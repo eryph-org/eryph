@@ -16,7 +16,7 @@ public class CatletSpecificationVersion
 
     public required string ConfigYaml { get; set; }
 
-    public bool IsDraft { get; set; }
+    public string? Comment { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 
