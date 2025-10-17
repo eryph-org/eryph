@@ -52,7 +52,7 @@ public class Update(
             return ValidationProblem(
                 detail:"The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
-                    nameof(NewCatletRequest.Configuration)));
+                    nameof(UpdateCatletRequestBody.Configuration)));
 
         return await base.HandleAsync(request, cancellationToken);
     }
