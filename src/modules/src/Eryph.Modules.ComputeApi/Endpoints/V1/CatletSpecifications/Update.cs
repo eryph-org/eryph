@@ -1,11 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
+using Eryph.ConfigModel.Json;
+using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.AspNetCore;
+using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
+using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.StateDb.Model;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
-internal class Update
+public class Update(
+    IEntityOperationRequestHandler<CatletSpecification> operationHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, CatletSpecification> specBuilder)
+    : ResourceOperationEndpoint<UpdateCatletSpecificationRequest, CatletSpecification>(operationHandler, specBuilder)
 {
+    protected override object CreateOperationMessage(
+        CatletSpecification model,
+        UpdateCatletSpecificationRequest request)
+    {
+        var config = CatletConfigJsonSerializer.Deserialize(request.Body.Configuration);
+
+        return new UpdateCatletCommand
+        {
+            CatletId = model.Id,
+            CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
+            Config = config
+        };
+    }
+
+    [Authorize(Policy = "compute:catlets:write")]
+    [HttpPut("catlet_specifications/{id}")]
+    [SwaggerOperation(
+        Summary = "Update a catlet specification",
+        Description = "Update a catlet specification",
+        OperationId = "CatletSpecifications_Update",
+        Tags = ["Catlet Specifications"])
+    ]
+    public override async Task<ActionResult<Operation>> HandleAsync(
+        [FromRoute] UpdateCatletSpecificationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var validation = RequestValidations.ValidateCatletConfigYaml(
+            request.Body.Configuration);
+        if (validation.IsFail)
+            return ValidationProblem(
+                detail: "The catlet configuration is invalid.",
+                modelStateDictionary: validation.ToModelStateDictionary(
+                    nameof(UpdateCatletSpecificationRequestBody.Configuration)));
+
+
+        return await base.HandleAsync(request, cancellationToken);
+    }
 }
