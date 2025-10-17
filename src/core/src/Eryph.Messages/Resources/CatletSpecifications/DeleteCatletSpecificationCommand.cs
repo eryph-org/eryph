@@ -1,15 +1,14 @@
 ﻿using System;
 using Eryph.Resources;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
-internal class DeleteCatletSpecificationCommand : IHasCorrelationId, IHasResource
+[SendMessageTo(MessageRecipient.Controllers)]
+public class DeleteCatletSpecificationCommand : ICommandWithName, IHasResource
 {
-    public Guid CorrelationId { get; set; }
+    public Guid SpecificationId { get; set; }
 
-    public Resource Resource => throw new NotImplementedException();
+    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
+
+    public string GetCommandName() => "Delete catlet specification";
 }

@@ -1,21 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Eryph.Resources;
+using System;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
 [SendMessageTo(MessageRecipient.Controllers)]
-public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelationId
+public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelationId, IHasResource
 {
-    public Guid Id { get; set; }
+    public Guid SpecificationId { get; set; }
 
     public string Name { get; set; }
 
     public Guid CorrelationId { get; set; }
 
+    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
+
     public string GetCommandName() => $"Deploy catlet specification {Name}";
 }
-

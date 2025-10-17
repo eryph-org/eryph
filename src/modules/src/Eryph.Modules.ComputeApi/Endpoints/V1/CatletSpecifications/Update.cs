@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.ConfigModel.Json;
-using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -27,11 +27,11 @@ public class Update(
     {
         var config = CatletConfigJsonSerializer.Deserialize(request.Body.Configuration);
 
-        return new UpdateCatletCommand
+        return new UpdateCatletSpecificationCommand
         {
-            CatletId = model.Id,
+            SpecificationId = model.Id,
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
-            Config = config
+            ConfigYaml = request.Body.Configuration,
         };
     }
 

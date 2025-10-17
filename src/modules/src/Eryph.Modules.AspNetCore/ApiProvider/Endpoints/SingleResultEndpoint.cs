@@ -30,6 +30,6 @@ public abstract class SingleResultEndpoint<TRequest, TResult, TModel> : Endpoint
     {
         return _requestHandler.HandleGetRequest(
             () => CreateSpecification(request),
-            cancellationToken );
+            cancellationToken);
     }
 }

@@ -13,5 +13,20 @@ public static class CatletSpecificationVersionSpecs
             Query.Where(x => x.Id == id)
                 .AsNoTracking();
         }
+
+        public GetByIdReadOnly(Guid specificationId, Guid id)
+        {
+            Query.Where(x => x.Id == id && x.SpecificationId == specificationId)
+                .AsNoTracking();
+        }
+    }
+
+    public sealed class ListBySpecificationIdReadOnly : Specification<CatletSpecificationVersion>
+    {
+        public ListBySpecificationIdReadOnly(Guid specificationId)
+        {
+            Query.Where(x => x.SpecificationId == specificationId)
+                .AsNoTracking();
+        }
     }
 }

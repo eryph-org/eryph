@@ -12,14 +12,24 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Ardalis.ApiEndpoints;
 using Eryph.Modules.ComputeApi.Model.V1;
+using Ardalis.Specification;
+using AutoMapper;
+using Eryph.Modules.AspNetCore;
+using Eryph.StateDb;
+using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
 public class ListVersions(
-    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, CatletSpecificationVersion, StateDb.Model.CatletSpecificationVersion> listRequestHandler,
-    IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.CatletSpecificationVersion> specBuilder)
-    : ListEntitiesEndpoint<ListFilteredByProjectRequest, CatletSpecificationVersion, StateDb.Model.CatletSpecificationVersion>(listRequestHandler, specBuilder)
+    IMapper mapper,
+    IReadonlyStateStoreRepository<StateDb.Model.CatletSpecification> specificationRepository,
+    IReadonlyStateStoreRepository<StateDb.Model.CatletSpecificationVersion> specificationVersionRepository,
+    IUserRightsProvider userRightsProvider)
+    : EndpointBaseAsync
+        .WithRequest<ListCatletSpecificationVersionsRequest>
+        .WithActionResult<ListResponse<CatletSpecificationVersion>>
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlet_specifications/{specification_id}/versions")]
@@ -35,10 +45,31 @@ public class ListVersions(
         type: typeof(ListResponse<CatletSpecificationVersion>),
         contentTypes: ["application/json"])
     ]
-    public override Task<ActionResult<ListResponse<CatletSpecificationVersion>>> HandleAsync(
-        [FromRoute] ListFilteredByProjectRequest request,
+    public override async Task<ActionResult<ListResponse<CatletSpecificationVersion>>> HandleAsync(
+        [FromRoute] ListCatletSpecificationVersionsRequest request,
         CancellationToken cancellationToken = default)
     {
-        return base.HandleAsync(request, cancellationToken);
+        if (!Guid.TryParse(request.SpecificationId, out var specificationId))
+            return new NotFoundResult();
+
+        var specificationExists = await specificationRepository.AnyAsync(
+            new ResourceSpecs<StateDb.Model.CatletSpecification>.GetById(
+                specificationId,
+                userRightsProvider.GetAuthContext(),
+                userRightsProvider.GetResourceRoles<StateDb.Model.CatletSpecification>(StateDb.Model.AccessRight.Read)),
+            cancellationToken);
+
+        if (!specificationExists)
+            return new NotFoundResult();
+
+        var dpSpecificationVersions = await specificationVersionRepository.ListAsync(
+            new CatletSpecificationVersionSpecs.ListBySpecificationIdReadOnly(specificationId),
+            cancellationToken);
+
+        var mappedResults = mapper.Map<IReadOnlyList<CatletSpecificationVersion>>(
+            dpSpecificationVersions,
+            o => o.SetAuthContext(userRightsProvider.GetAuthContext()));
+
+        return new JsonResult(new ListResponse<CatletSpecificationVersion> { Value = mappedResults });
     }
 }
