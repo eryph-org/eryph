@@ -23,7 +23,7 @@ public class Deploy(
     {
         return new DeployCatletSpecificationCommand
         {
-            Id = model.Id,
+            SpecificationId = model.Id,
             Name = model.Name,
         };
     }
