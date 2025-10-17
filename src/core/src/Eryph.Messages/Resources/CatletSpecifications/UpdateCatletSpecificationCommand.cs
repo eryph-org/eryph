@@ -1,15 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Messages;
-
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
 [SendMessageTo(MessageRecipient.Controllers)]
-internal class UpdateCatletSpecificationCommand : IHasCorrelationId, IHasResource
+public class UpdateCatletSpecificationCommand : IHasCorrelationId, IHasResource
 {
+    public Guid SpecificationId { get; set; }
 
+    public string ConfigYaml { get; set; }
+
+    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
+
+    public Guid CorrelationId { get; set; }
 }

@@ -1,25 +1,35 @@
-﻿using System;
+﻿using Ardalis.ApiEndpoints;
+using Ardalis.Specification;
+using Eryph.Modules.AspNetCore;
+using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
+using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.StateDb.Specifications;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Modules.AspNetCore.ApiProvider;
-using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
-using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using AutoMapper;
+using Eryph.StateDb;
 using Eryph.Modules.ComputeApi.Model.V1;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
 public class GetVersion(
-    IGetRequestHandler<StateDb.Model.CatletSpecification, CatletSpecificationVersion> requestHandler,
-    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.CatletSpecification> specBuilder)
-    : GetEntityEndpoint<SingleEntityRequest, CatletSpecificationVersion, StateDb.Model.CatletSpecification>(requestHandler, specBuilder)
+    IMapper mapper,
+    IReadonlyStateStoreRepository<StateDb.Model.CatletSpecification> specificationRepository,
+    IReadonlyStateStoreRepository<StateDb.Model.CatletSpecificationVersion> specificationVersionRepository,
+    IUserRightsProvider userRightsProvider)
+    : EndpointBaseAsync
+        .WithRequest<GetCatletSpecificationVersionRequest>
+        .WithActionResult<CatletSpecificationVersion>
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlet_specifications/{specification_id}/versions/{id}")]
@@ -36,9 +46,33 @@ public class GetVersion(
         contentTypes: ["application/json"])
     ]
     public override async Task<ActionResult<CatletSpecificationVersion>> HandleAsync(
-        [FromRoute] SingleEntityRequest request,
+        [FromRoute] GetCatletSpecificationVersionRequest request,
         CancellationToken cancellationToken = default)
     {
-        return await base.HandleAsync(request, cancellationToken);
+        if (!Guid.TryParse(request.SpecificationId, out var specificationId))
+            return new NotFoundResult();
+
+        if (!Guid.TryParse(request.Id, out var id))
+            return new NotFoundResult();
+
+        var specificationExists = await specificationRepository.AnyAsync(
+            new ResourceSpecs<StateDb.Model.CatletSpecification>.GetById(
+                specificationId,
+                userRightsProvider.GetAuthContext(),
+                userRightsProvider.GetResourceRoles<StateDb.Model.CatletSpecification>(StateDb.Model.AccessRight.Read)),
+            cancellationToken);
+
+        if (!specificationExists)
+            return new NotFoundResult();
+
+        var dbSpecificationVersion = await specificationVersionRepository.GetBySpecAsync(
+            new CatletSpecificationVersionSpecs.GetByIdReadOnly(specificationId, id),
+            cancellationToken);
+
+        var mappedResult = mapper.Map<CatletSpecificationVersion>(
+            dbSpecificationVersion,
+            o => o.SetAuthContext(userRightsProvider.GetAuthContext()));
+
+        return new JsonResult(mappedResult);
     }
 }
