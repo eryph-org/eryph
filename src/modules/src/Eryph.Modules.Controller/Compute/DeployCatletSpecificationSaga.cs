@@ -17,18 +17,19 @@ using Rebus.Handlers;
 using Rebus.Sagas;
 using System;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
+using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
+using Dbosoft.Functional;
 
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
-internal class DeployCatletSpecificationSaga(IWorkflow workflow,
-    IBus bus,
-    IInventoryLockManager lockManager,
-    ICatletDataService vmDataService,
-    IStorageIdentifierGenerator storageIdentifierGenerator,
+internal class DeployCatletSpecificationSaga(
     IReadonlyStateStoreRepository<CatletSpecification> specificationRepository,
     IReadonlyStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository,
-    ICatletMetadataService metadataService)
+    IStorageIdentifierGenerator storageIdentifierGenerator,
+    IWorkflow workflow)
     : OperationTaskWorkflowSaga<DeployCatletSpecificationCommand, EryphSagaData<DeployCatletSpecificationSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DeployCatletCommand>>
@@ -59,11 +60,25 @@ internal class DeployCatletSpecificationSaga(IWorkflow workflow,
         Data.Data.Architecture = Architecture.New(specification.Architecture);
         Data.Data.ResolvedGenes = specificationVersion.Genes.ToGenesDictionary();
         Data.Data.ConfigYaml = specificationVersion.ConfigYaml;
-        Data.Data.BuiltConfig = CatletConfigInstantiator.Instantiate(
+
+        var builtConfig = CatletConfigInstantiator.Instantiate(
             CatletConfigJsonSerializer.Deserialize(specificationVersion.ResolvedConfig),
             storageIdentifierGenerator.Generate());
 
-        // TODO Validate and apply variables
+        var updatedVariables = CatletConfigVariableApplier
+            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables)
+            .ToEither()
+            .MapLeft(errors => Error.New("Some variables are invalid.", Error.Many(errors)));
+        if (updatedVariables.IsLeft)
+        {
+            await Fail(Error.Many(updatedVariables.LeftToSeq()).Print());
+            return;
+        }
+
+        Data.Data.BuiltConfig = builtConfig.CloneWith(c =>
+        {
+            c.Variables = updatedVariables.ValueUnsafe().ToArray();
+        });
 
         // TODO Track deployed catlet in specification data
 
