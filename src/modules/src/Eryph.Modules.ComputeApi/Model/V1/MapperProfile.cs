@@ -126,7 +126,12 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 .Include<StateDb.Model.Gene, GeneWithUsage>();
             CreateMap<StateDb.Model.Gene, GeneWithUsage>();
 
-            CreateMap<StateDb.Model.CatletSpecification, CatletSpecification>();
+            CreateMap<StateDb.Model.CatletSpecification, CatletSpecification>()
+                .ForMember(
+                    s => s.Latest,
+                    o => o.MapFrom(s => s.Versions.OrderByDescending(v => v.CreatedAt).FirstOrDefault()));
+            CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersionInfo>();
+            CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersion>();
         }
     }
 }
