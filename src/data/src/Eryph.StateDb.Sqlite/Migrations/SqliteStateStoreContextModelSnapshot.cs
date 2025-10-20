@@ -136,6 +136,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ResolvedConfig")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("SpecificationId")
                         .HasColumnType("TEXT");
 
@@ -162,6 +166,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("GeneType")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Hash")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -172,8 +179,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("SpecificationVersionId", "UniqueGeneIndex");
 
-                    b.HasIndex("UniqueGeneIndex")
-                        .IsUnique();
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("CatletSpecificationVersionGenes");
                 });

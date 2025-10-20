@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.Core.Genetics;
 
 namespace Eryph.StateDb.Model;
 
 public class CatletSpecificationVersionGene
 {
     public required Guid SpecificationVersionId { get; set; }
+
+    public required GeneType GeneType { get; set; }
 
     public required string Hash { get; set; }
 

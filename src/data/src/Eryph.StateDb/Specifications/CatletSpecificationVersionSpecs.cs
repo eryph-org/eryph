@@ -21,6 +21,18 @@ public static class CatletSpecificationVersionSpecs
         }
     }
 
+    public sealed class GetLatestBySpecificationIdReadOnly : Specification<CatletSpecificationVersion>, ISingleResultSpecification
+    {
+        public GetLatestBySpecificationIdReadOnly(Guid specificationId)
+        {
+            Query.Where(x => x.SpecificationId == specificationId)
+                .OrderByDescending(x => x.CreatedAt)
+                .Include(x => x.Genes)
+                .Take(1)
+                .AsNoTracking();
+        }
+    }
+
     public sealed class ListBySpecificationIdReadOnly : Specification<CatletSpecificationVersion>
     {
         public ListBySpecificationIdReadOnly(Guid specificationId)

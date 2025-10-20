@@ -141,6 +141,10 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("ResolvedConfig")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<Guid>("SpecificationId")
                         .HasColumnType("char(36)");
 
@@ -167,6 +171,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int>("GeneType")
+                        .HasColumnType("int");
+
                     b.Property<string>("Hash")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -177,8 +184,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasKey("SpecificationVersionId", "UniqueGeneIndex");
 
-                    b.HasIndex("UniqueGeneIndex")
-                        .IsUnique();
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("CatletSpecificationVersionGenes");
                 });
