@@ -15,5 +15,7 @@ public class CatletSpecificationSpecBuilder(
 {
     protected override void CustomizeQuery(ISpecificationBuilder<CatletSpecification> query)
     {
+        // Limiting the number of results with Take(1) is not supported by Sqlite.
+        query.Include(x => x.Versions);
     }
 }

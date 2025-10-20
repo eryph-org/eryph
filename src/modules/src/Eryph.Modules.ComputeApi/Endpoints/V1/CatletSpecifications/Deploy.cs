@@ -18,12 +18,15 @@ public class Deploy(
     ISingleEntitySpecBuilder<SingleEntityRequest, CatletSpecification> specBuilder)
     : ResourceOperationEndpoint<DeployCatletSpecificationRequest, CatletSpecification>(operationHandler, specBuilder)
 {
-    protected override object CreateOperationMessage(CatletSpecification model, DeployCatletSpecificationRequest request)
+    protected override object CreateOperationMessage(
+        CatletSpecification model,
+        DeployCatletSpecificationRequest request)
     {
         return new DeployCatletSpecificationCommand
         {
             SpecificationId = model.Id,
             Name = model.Name,
+            Variables = request.Body.Variables,
         };
     }
 

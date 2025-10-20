@@ -1,24 +1,17 @@
-﻿using Ardalis.ApiEndpoints;
-using Ardalis.Specification;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Ardalis.ApiEndpoints;
+using AutoMapper;
 using Eryph.Modules.AspNetCore;
-using Eryph.Modules.AspNetCore.ApiProvider;
-using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
-using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.ComputeApi.Model.V1;
+using Eryph.StateDb;
 using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using AutoMapper;
-using Eryph.StateDb;
-using Eryph.Modules.ComputeApi.Model.V1;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
@@ -36,7 +29,7 @@ public class GetVersion(
     [SwaggerOperation(
         Summary = "Get a catlet specification version",
         Description = "Get a catlet specification version",
-        OperationId = "CatletSpecificationVersions_Get",
+        OperationId = "CatletSpecifications_GetVersion",
         Tags = ["Catlet Specifications"])
     ]
     [SwaggerResponse(

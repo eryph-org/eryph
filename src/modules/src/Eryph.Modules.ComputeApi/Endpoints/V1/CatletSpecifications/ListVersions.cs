@@ -1,24 +1,18 @@
-﻿using Eryph.Modules.AspNetCore.ApiProvider;
-using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
-using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Ardalis.ApiEndpoints;
+using AutoMapper;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.ComputeApi.Model.V1;
+using Eryph.StateDb;
+using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Ardalis.ApiEndpoints;
-using Eryph.Modules.ComputeApi.Model.V1;
-using Ardalis.Specification;
-using AutoMapper;
-using Eryph.Modules.AspNetCore;
-using Eryph.StateDb;
-using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
@@ -36,7 +30,7 @@ public class ListVersions(
     [SwaggerOperation(
         Summary = "List all catlet specification versions",
         Description = "List all catlet specification versions",
-        OperationId = "CatletSpecificationVersions_List",
+        OperationId = "CatletSpecifications_ListVersions",
         Tags = ["Catlet Specifications"])
     ]
     [SwaggerResponse(

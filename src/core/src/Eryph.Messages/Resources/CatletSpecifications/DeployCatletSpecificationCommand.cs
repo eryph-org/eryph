@@ -1,5 +1,6 @@
 ﻿using Eryph.Resources;
 using System;
+using System.Collections.Generic;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
@@ -9,6 +10,8 @@ public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
     public Guid SpecificationId { get; set; }
 
     public string Name { get; set; }
+
+    public IReadOnlyDictionary<string, string> Variables { get; set; }
 
     public Guid CorrelationId { get; set; }
 
