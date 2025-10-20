@@ -383,6 +383,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     SpecificationId = table.Column<Guid>(type: "TEXT", nullable: false),
                     CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
                     ConfigYaml = table.Column<string>(type: "TEXT", nullable: false),
+                    ResolvedConfig = table.Column<string>(type: "TEXT", nullable: false),
                     Comment = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -599,6 +600,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     SpecificationVersionId = table.Column<Guid>(type: "TEXT", nullable: false),
                     UniqueGeneIndex = table.Column<string>(type: "TEXT", nullable: false),
+                    GeneType = table.Column<int>(type: "INTEGER", nullable: false),
                     Hash = table.Column<string>(type: "TEXT", nullable: false),
                     GeneSet = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
@@ -706,8 +708,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_CatletSpecificationVersionGenes_UniqueGeneIndex",
                 table: "CatletSpecificationVersionGenes",
-                column: "UniqueGeneIndex",
-                unique: true);
+                column: "UniqueGeneIndex");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CatletSpecificationVersions_SpecificationId",

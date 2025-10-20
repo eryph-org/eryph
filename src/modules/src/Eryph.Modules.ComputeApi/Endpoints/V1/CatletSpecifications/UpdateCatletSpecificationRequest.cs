@@ -14,5 +14,7 @@ public class UpdateCatletSpecificationRequestBody
 {
     public Guid? CorrelationId { get; set; }
 
+    public string? Comment { get; set; }
+
     public required string Configuration { get; set; }
 }

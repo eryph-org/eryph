@@ -452,6 +452,8 @@ namespace Eryph.StateDb.MySql.Migrations
                     CatletId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     ConfigYaml = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    ResolvedConfig = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     Comment = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
@@ -708,6 +710,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     SpecificationVersionId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     UniqueGeneIndex = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    GeneType = table.Column<int>(type: "int", nullable: false),
                     Hash = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     GeneSet = table.Column<string>(type: "longtext", nullable: false)
@@ -829,8 +832,7 @@ namespace Eryph.StateDb.MySql.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_CatletSpecificationVersionGenes_UniqueGeneIndex",
                 table: "CatletSpecificationVersionGenes",
-                column: "UniqueGeneIndex",
-                unique: true);
+                column: "UniqueGeneIndex");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CatletSpecificationVersions_SpecificationId",

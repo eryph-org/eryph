@@ -30,6 +30,7 @@ public class Create(
         {
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             Name = request.Name,
+            Comment = request.Comment,
             ProjectId = request.ProjectId,
             ConfigYaml = request.Configuration,
         };

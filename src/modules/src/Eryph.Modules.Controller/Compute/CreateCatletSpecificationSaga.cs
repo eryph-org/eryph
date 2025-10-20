@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Json;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -36,7 +37,7 @@ internal class CreateCatletSpecificationSaga(
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
         Data.Data.ConfigYaml = message.ConfigYaml;
         Data.Data.Comment = message.Comment;
-        Data.Data.SpecificationId = Guid.NewGuid();
+        Data.Data.SpecificationId = message.CorrelationId;
         Data.Data.ProjectId = message.ProjectId;
 
         await StartNewTask(new BuildCatletSpecificationCommand
@@ -59,12 +60,15 @@ internal class CreateCatletSpecificationSaga(
             Data.Data.ResolvedGenes = response.ResolvedGenes;
             Data.Data.BuiltConfig = response.BuiltConfig;
 
+            var specificationVersionId = Guid.NewGuid();
             var specificationVersion = new CatletSpecificationVersion
             {
-                Id = Guid.NewGuid(),
+                Id = specificationVersionId,
                 ConfigYaml = Data.Data.ConfigYaml!,
+                ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
+                Genes = Data.Data.ResolvedGenes.ToGenesList(specificationVersionId),
             };
 
             var specification = new CatletSpecification

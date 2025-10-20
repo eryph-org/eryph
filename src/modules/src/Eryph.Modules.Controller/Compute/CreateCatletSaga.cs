@@ -86,6 +86,7 @@ internal class CreateCatletSaga(
 
             await StartNewTask(new DeployCatletCommand
             {
+                // TODO use correlation ID to prevent duplicate command execution
                 ProjectId = Data.Data.ProjectId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,

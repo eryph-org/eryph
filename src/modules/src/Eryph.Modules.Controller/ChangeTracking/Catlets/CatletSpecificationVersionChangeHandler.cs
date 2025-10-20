@@ -48,6 +48,7 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
             SpecificationId = specificationVersion.SpecificationId,
             CatletId = specificationVersion.CatletId,
             ConfigYaml = specificationVersion.ConfigYaml,
+            ResolvedConfig = specificationVersion.ResolvedConfig,
             Comment = specificationVersion.Comment,
             CreatedAt = specificationVersion.CreatedAt,
         };
