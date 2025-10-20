@@ -32,6 +32,7 @@ public class Update(
             SpecificationId = model.Id,
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             ConfigYaml = request.Body.Configuration,
+            Comment = request.Body.Comment,
         };
     }
 

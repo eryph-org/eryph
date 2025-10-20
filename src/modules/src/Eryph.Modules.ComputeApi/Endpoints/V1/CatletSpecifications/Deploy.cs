@@ -1,6 +1,5 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -17,9 +16,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 public class Deploy(
     IEntityOperationRequestHandler<CatletSpecification> operationHandler,
     ISingleEntitySpecBuilder<SingleEntityRequest, CatletSpecification> specBuilder)
-    : ResourceOperationEndpoint<SingleEntityRequest, CatletSpecification>(operationHandler, specBuilder)
+    : ResourceOperationEndpoint<DeployCatletSpecificationRequest, CatletSpecification>(operationHandler, specBuilder)
 {
-    protected override object CreateOperationMessage(CatletSpecification model, SingleEntityRequest request)
+    protected override object CreateOperationMessage(CatletSpecification model, DeployCatletSpecificationRequest request)
     {
         return new DeployCatletSpecificationCommand
         {
@@ -37,7 +36,7 @@ public class Deploy(
         Tags = ["Catlet Specifications"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
-        [FromRoute] SingleEntityRequest request,
+        [FromRoute] DeployCatletSpecificationRequest request,
         CancellationToken cancellationToken = default)
     {
         return await base.HandleAsync(request, cancellationToken);

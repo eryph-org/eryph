@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
@@ -9,6 +10,8 @@ public class UpdateCatletSpecificationCommand : IHasCorrelationId, IHasResource
     public Guid SpecificationId { get; set; }
 
     public string ConfigYaml { get; set; }
+
+    [MaybeNull] public string Comment { get; set; }
 
     public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
 

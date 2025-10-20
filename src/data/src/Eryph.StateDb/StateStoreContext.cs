@@ -362,8 +362,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasKey(g => new { g.SpecificationVersionId, g.UniqueGeneIndex });
 
         modelBuilder.Entity<CatletSpecificationVersionGene>()
-            .HasIndex(g => g.UniqueGeneIndex)
-            .IsUnique();
+            .HasIndex(g => g.UniqueGeneIndex);
 
         modelBuilder.Entity<CatletSpecificationVersionGene>()
             .Property(g => g.UniqueGeneIndex)

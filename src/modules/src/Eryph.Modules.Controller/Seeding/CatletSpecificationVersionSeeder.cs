@@ -39,6 +39,7 @@ internal class CatletSpecificationVersionSeeder : SeederBase
             Id = entityId,
             SpecificationId = config.SpecificationId,
             ConfigYaml = config.ConfigYaml,
+            ResolvedConfig = config.ResolvedConfig,
             Comment = config.Comment,
             CatletId = config.CatletId,
             CreatedAt = config.CreatedAt,
