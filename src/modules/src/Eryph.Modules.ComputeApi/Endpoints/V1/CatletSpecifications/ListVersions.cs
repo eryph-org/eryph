@@ -23,7 +23,7 @@ public class ListVersions(
     IUserRightsProvider userRightsProvider)
     : EndpointBaseAsync
         .WithRequest<ListCatletSpecificationVersionsRequest>
-        .WithActionResult<ListResponse<CatletSpecificationVersion>>
+        .WithActionResult<ListResponse<CatletSpecificationVersionInfo>>
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlet_specifications/{specification_id}/versions")]
@@ -36,10 +36,10 @@ public class ListVersions(
     [SwaggerResponse(
         statusCode: StatusCodes.Status200OK,
         description: "Success",
-        type: typeof(ListResponse<CatletSpecificationVersion>),
+        type: typeof(ListResponse<CatletSpecificationVersionInfo>),
         contentTypes: ["application/json"])
     ]
-    public override async Task<ActionResult<ListResponse<CatletSpecificationVersion>>> HandleAsync(
+    public override async Task<ActionResult<ListResponse<CatletSpecificationVersionInfo>>> HandleAsync(
         [FromRoute] ListCatletSpecificationVersionsRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -60,10 +60,10 @@ public class ListVersions(
             new CatletSpecificationVersionSpecs.ListBySpecificationIdReadOnly(specificationId),
             cancellationToken);
 
-        var mappedResults = mapper.Map<IReadOnlyList<CatletSpecificationVersion>>(
+        var mappedResults = mapper.Map<IReadOnlyList<CatletSpecificationVersionInfo>>(
             dpSpecificationVersions,
             o => o.SetAuthContext(userRightsProvider.GetAuthContext()));
 
-        return new JsonResult(new ListResponse<CatletSpecificationVersion> { Value = mappedResults });
+        return new JsonResult(new ListResponse<CatletSpecificationVersionInfo> { Value = mappedResults });
     }
 }

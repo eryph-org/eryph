@@ -10,6 +10,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "result_type")]
 [JsonDerivedType(typeof(CatletConfigOperationResult), "CatletConfig")]
+[JsonDerivedType(typeof(CatletSpecificationOperationResult), "CatletSpecification")]
 public abstract class OperationResult
 {
 }
