@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages;
+using Eryph.Messages.Resources;
 using Eryph.StateDb.Model;
 using Microsoft.Extensions.Logging;
 
@@ -157,6 +158,7 @@ public class OperationManager(
             ErrorData errorData => errorData.AdditionalData,
             string _ => null,
             ProjectReference _ => null,
+            ResourceReference _ => null,
             _ => additionalData
         };
 
@@ -177,6 +179,19 @@ public class OperationManager(
                 });
             }
         }
+        else if (additionalData is ResourceReference resourceReference)
+        {
+            await db.Entry(op.Model).Collection(x => x.Resources).LoadAsync();
+            if (op.Model.Resources.All(x => x.ResourceId != resourceReference.Resource.Id))
+            {
+                op.Model.Resources.Add(new OperationResourceModel
+                {
+                    ResourceId = resourceReference.Resource.Id,
+                    ResourceType = resourceReference.Resource.Type
+                });
+            }
+        }
+
 
         op.Model.LastUpdated = timestamp;
         log.LogTrace("operation {operationId}: Updated operation model: {@opModel}", newStatus, op.Model);
