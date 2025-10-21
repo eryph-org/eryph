@@ -341,12 +341,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
 
-        //modelBuilder.Entity<CatletSpecification>()
-        //    .HasOne(s => s.Latest)
-        //    .WithOne()
-        //    .HasForeignKey<CatletSpecification>(s => s.LatestId)
-        //    .IsRequired();
-
         modelBuilder.Entity<CatletSpecificationVersion>()
             .HasMany(s => s.Genes)
             .WithOne()

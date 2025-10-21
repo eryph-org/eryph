@@ -1,29 +1,27 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Resources;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.CatletSpecifications;
+using Eryph.Resources;
+using Eryph.StateDb.Model;
 using Eryph.ModuleCore;
 using Eryph.StateDb;
-using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Json;
-using Eryph.StateDb.Model;
+using Resource = Eryph.Resources.Resource;
 
 namespace Eryph.Modules.Controller.Compute;
 
-
 [UsedImplicitly]
 internal class CreateCatletSpecificationSaga(
-    IStateStore stateStore,
+    IStateStoreRepository<CatletSpecification> repository,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CreateCatletSpecificationCommand, EryphSagaData<CreateCatletSpecificationSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
@@ -37,7 +35,8 @@ internal class CreateCatletSpecificationSaga(
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
         Data.Data.ConfigYaml = message.ConfigYaml;
         Data.Data.Comment = message.Comment;
-        Data.Data.SpecificationId = message.CorrelationId;
+        Data.Data.SpecificationId = Guid.NewGuid();
+        Data.Data.SpecificationVersionId = Guid.NewGuid();
         Data.Data.ProjectId = message.ProjectId;
 
         await StartNewTask(new BuildCatletSpecificationCommand
@@ -60,15 +59,14 @@ internal class CreateCatletSpecificationSaga(
             Data.Data.ResolvedGenes = response.ResolvedGenes;
             Data.Data.BuiltConfig = response.BuiltConfig;
 
-            var specificationVersionId = Guid.NewGuid();
             var specificationVersion = new CatletSpecificationVersion
             {
-                Id = specificationVersionId,
+                Id = Data.Data.SpecificationVersionId,
                 ConfigYaml = Data.Data.ConfigYaml!,
                 ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
-                Genes = Data.Data.ResolvedGenes.ToGenesList(specificationVersionId),
+                Genes = Data.Data.ResolvedGenes.ToGenesList(Data.Data.SpecificationVersionId),
             };
 
             var specification = new CatletSpecification
@@ -81,10 +79,13 @@ internal class CreateCatletSpecificationSaga(
                 Versions = [specificationVersion]
             };
 
-            await stateStore.For<CatletSpecification>().AddAsync(specification);
-            await stateStore.SaveChangesAsync();
+            await repository.AddAsync(specification);
+            await repository.SaveChangesAsync();
 
-            await Complete();
+            await Complete(new ResourceReference
+            {
+                Resource = new Resource(ResourceType.CatletSpecification, Data.Data.SpecificationId),
+            });
         });
     }
 

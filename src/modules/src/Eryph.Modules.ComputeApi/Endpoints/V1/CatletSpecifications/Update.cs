@@ -25,14 +25,13 @@ public class Update(
         CatletSpecification model,
         UpdateCatletSpecificationRequest request)
     {
-        var config = CatletConfigJsonSerializer.Deserialize(request.Body.Configuration);
-
         return new UpdateCatletSpecificationCommand
         {
             SpecificationId = model.Id,
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             ConfigYaml = request.Body.Configuration,
             Comment = request.Body.Comment,
+            Name = request.Body.Name,
         };
     }
 

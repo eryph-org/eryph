@@ -24,6 +24,8 @@ public class CreateCatletSpecificationSagaData : TaskWorkflowSagaData
 
     public Guid SpecificationId { get; set; }
 
+    public Guid SpecificationVersionId { get; set; }
+
     public Architecture? Architecture { get; set; }
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();

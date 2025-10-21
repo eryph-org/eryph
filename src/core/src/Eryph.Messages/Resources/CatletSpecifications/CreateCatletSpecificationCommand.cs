@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
 [SendMessageTo(MessageRecipient.Controllers)]
-public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelationId, IHasResource
+public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelationId
 {
     public Guid ProjectId { get; set; }
 
@@ -16,9 +16,6 @@ public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
     [MaybeNull] public string Comment { get; set; }
 
     public Guid CorrelationId { get; set; }
-
-    // TODO Find a better way associate the operation with the new catlet specification
-    public Resource Resource => new(ResourceType.CatletSpecification, CorrelationId);
 
     public string GetCommandName() => $"Create catlet specification {Name}";
 }
