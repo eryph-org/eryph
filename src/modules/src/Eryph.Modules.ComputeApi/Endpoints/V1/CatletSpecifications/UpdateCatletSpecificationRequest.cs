@@ -16,5 +16,7 @@ public class UpdateCatletSpecificationRequestBody
 
     public string? Comment { get; set; }
 
+    public string? Name { get; set; }
+
     public required string Configuration { get; set; }
 }

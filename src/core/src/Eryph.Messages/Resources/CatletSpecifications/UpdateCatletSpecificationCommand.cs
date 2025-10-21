@@ -11,6 +11,8 @@ public class UpdateCatletSpecificationCommand : IHasCorrelationId, IHasResource
 
     public string ConfigYaml { get; set; }
 
+    [MaybeNull] public string Name { get; set; }
+
     [MaybeNull] public string Comment { get; set; }
 
     public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);

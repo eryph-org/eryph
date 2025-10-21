@@ -1,10 +1,7 @@
-﻿using Eryph.ConfigModel.Catlets;
-using Eryph.Core.Genetics;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -23,6 +20,8 @@ public class UpdateCatletSpecificationSagaData
     public UpdateCatletSpecificationSagaState State { get; set; }
 
     public Guid SpecificationId { get; set; }
+
+    public Guid SpecificationVersionId { get; set; }
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
 }
