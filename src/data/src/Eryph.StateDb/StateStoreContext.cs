@@ -147,7 +147,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Navigation(x => x.NetworkAdapters)
             .AutoInclude();
 
-
         modelBuilder.Entity<Catlet>()
             .HasMany(x => x.Drives)
             .WithOne(x => x.Catlet)
@@ -161,6 +160,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<Catlet>()
             .Property(e => e.Features)
             .HasSetConversion();
+
+        modelBuilder.Entity<Catlet>()
+            .HasIndex(c => c.SpecificationId)
+            .IsUnique();
 
         modelBuilder.Entity<VirtualNetwork>()
             .HasMany(x => x.NetworkPorts)
@@ -288,6 +291,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<CatletMetadata>()
             .Property(m => m.MetadataJson);
+
+        modelBuilder.Entity<CatletMetadata>()
+            .HasIndex(c => c.SpecificationId)
+            .IsUnique();
 
         modelBuilder.Entity<CatletMetadata>()
             .Navigation(m => m.Genes)

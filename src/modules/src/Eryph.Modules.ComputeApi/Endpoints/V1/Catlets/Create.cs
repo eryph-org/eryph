@@ -71,10 +71,6 @@ public class Create(
             Some: n => ProjectName.New(n),
             None: () => ProjectName.New("default"));
 
-        var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
-            Some: n => EnvironmentName.New(n),
-            None: () => EnvironmentName.New("default"));
-
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)
             return Problem(
@@ -85,7 +81,7 @@ public class Create(
             ? EryphConstants.DefaultCatletName
             : config.Name;
         var existingCatlet = await repository.GetBySpecAsync(
-            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value, environmentName.Value),
+            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value),
             cancellationToken);
 
         if (existingCatlet != null)

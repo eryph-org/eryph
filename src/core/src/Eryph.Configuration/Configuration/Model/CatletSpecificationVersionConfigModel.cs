@@ -7,11 +7,6 @@ public class CatletSpecificationVersionConfigModel
 {
     public Guid SpecificationId { get; set; }
 
-    /// <summary>
-    /// The ID of the catlet when this specification has been deployed.
-    /// </summary>
-    public Guid? CatletId { get; set; }
-
     public required string ConfigYaml { get; set; }
 
     public required string ResolvedConfig { get; set; }

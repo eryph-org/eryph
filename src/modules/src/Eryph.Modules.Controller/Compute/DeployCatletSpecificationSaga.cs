@@ -80,8 +80,6 @@ internal class DeployCatletSpecificationSaga(
             c.Variables = updatedVariables.ValueUnsafe().ToArray();
         });
 
-        // TODO Track deployed catlet in specification data
-
         await StartNewTask(new ValidateCatletDeploymentCommand
         {
             ProjectId = Data.Data.ProjectId,
@@ -103,13 +101,14 @@ internal class DeployCatletSpecificationSaga(
 
             await StartNewTask(new DeployCatletCommand
             {
-                // TODO use correlation ID to prevent duplicate command execution
                 ProjectId = Data.Data.ProjectId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
                 ConfigYaml = Data.Data.ConfigYaml,
                 ResolvedGenes = Data.Data.ResolvedGenes,
+                SpecificationId = Data.Data.SpecificationId,
+                SpecificationVersionId = Data.Data.SpecificationVersionId,
             });
         });
     }

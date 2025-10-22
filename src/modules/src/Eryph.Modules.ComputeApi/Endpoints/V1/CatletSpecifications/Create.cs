@@ -82,7 +82,7 @@ public class Create(
         if (existingSpecification != null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: $"A catlet with the name '{specificationName}' already exists in the project '{project.Name}'. Catlet names must be unique within a project.");
+                detail: $"A catlet specification with the name '{specificationName}' already exists in the project '{project.Name}'. Catlet names must be unique within a project.");
 
         return await base.HandleAsync(request, cancellationToken);
     }

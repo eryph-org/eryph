@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using CatletStatus = Eryph.StateDb.Model.CatletStatus;
 
@@ -31,4 +32,6 @@ public class Catlet
     public IReadOnlyList<CatletNetworkAdapter>? NetworkAdapters { get; set; }
 
     public IReadOnlyList<CatletDrive>? Drives { get; set; }
+
+    public CatletSpecificationInfo? Specification { get; set; }
 }

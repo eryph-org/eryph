@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20251020125628_InitialCreate")]
+    [Migration("20251022094901_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -67,10 +67,19 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<bool>("SecretDataHidden")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<Guid?>("SpecificationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SpecificationVersionId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid>("VmId")
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SpecificationId")
+                        .IsUnique();
 
                     b.ToTable("Metadata");
                 });
@@ -129,9 +138,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("CatletId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Comment")
@@ -780,6 +786,12 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("SecureBootTemplate")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid?>("SpecificationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SpecificationVersionId")
+                        .HasColumnType("char(36)");
+
                     b.Property<long>("StartupMemory")
                         .HasColumnType("bigint");
 
@@ -796,6 +808,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasIndex("HostId");
+
+                    b.HasIndex("SpecificationId")
+                        .IsUnique();
 
                     b.ToTable("Catlets");
                 });
