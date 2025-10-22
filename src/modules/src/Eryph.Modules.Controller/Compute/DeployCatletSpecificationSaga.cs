@@ -65,6 +65,8 @@ internal class DeployCatletSpecificationSaga(
             CatletConfigJsonSerializer.Deserialize(specificationVersion.ResolvedConfig),
             storageIdentifierGenerator.Generate());
 
+        builtConfig.Name = specification.Name;
+
         var updatedVariables = CatletConfigVariableApplier
             .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables)
             .ToEither()
