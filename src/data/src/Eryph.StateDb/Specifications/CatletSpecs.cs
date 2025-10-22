@@ -6,18 +6,21 @@ namespace Eryph.StateDb.Specifications
 {
     public class CatletSpecs
     {
-
         public sealed class GetByName : Specification<Catlet>, ISingleResultSpecification
         {
-            public GetByName(string name, Guid tenantId, string projectName, string environment)
+            public GetByName(string name, Guid tenantId, string projectName)
             {
                 Query
                     .Include(x => x.Project)
                     .Where(x => x.Project.TenantId == tenantId && x.Project.Name == projectName.ToLowerInvariant())
-                    .Where(x => x.Environment == environment.ToLowerInvariant())
                     .Where(x => x.Name == name.ToLowerInvariant());
+            }
 
-
+            public GetByName(string name, Guid projectId)
+            {
+                Query
+                    .Where(x => x.ProjectId == projectId)
+                    .Where(x => x.Name == name.ToLowerInvariant());
             }
         }
 
@@ -68,6 +71,14 @@ namespace Eryph.StateDb.Specifications
                     .Include(x => x.Project)
                     .Include(x => x.Drives)
                     .ThenInclude(x => x.AttachedDisk);
+            }
+        }
+
+        public sealed class GetBySpecificationId : Specification<Catlet>, ISingleResultSpecification
+        {
+            public GetBySpecificationId(Guid specificationId)
+            {
+                Query.Where(x => x.SpecificationId == specificationId);
             }
         }
     }

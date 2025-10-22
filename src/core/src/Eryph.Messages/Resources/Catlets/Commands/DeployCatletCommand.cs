@@ -26,4 +26,8 @@ public class DeployCatletCommand : IHasCorrelationId, ICommandWithName
 
     public string GetCommandName() =>
         CatletId.HasValue ? $"Deploy catlet {CatletId.Value}" : "Deploy new catlet"; 
+
+    public Guid? SpecificationId { get; set; }
+
+    public Guid? SpecificationVersionId { get; set; }
 }

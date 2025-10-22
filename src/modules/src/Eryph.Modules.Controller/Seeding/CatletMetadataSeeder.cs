@@ -101,6 +101,8 @@ internal class CatletMetadataSeeder : SeederBase
             Metadata = metadataConfig.Metadata.HasValue
                 ? CatletMetadataContentJsonSerializer.Deserialize(metadataConfig.Metadata.Value)
                 : null,
+            SpecificationId = metadataConfig.SpecificationId,
+            SpecificationVersionId = metadataConfig.SpecificationVersionId,
         };
 
         await _metadataService.AddMetadata(metadata, cancellationToken);

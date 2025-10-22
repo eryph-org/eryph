@@ -18,4 +18,6 @@ public class CatletSpecification
     public required Project Project { get; set; }
 
     public required CatletSpecificationVersionInfo Latest { get; set; }
+
+    public string? CatletId { get; set; }
 }

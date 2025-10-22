@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
-using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +14,7 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
 public class Deploy(
-    IEntityOperationRequestHandler<CatletSpecification> operationHandler,
+    DeployCatletSpecificationHandler operationHandler,
     ISingleEntitySpecBuilder<SingleEntityRequest, CatletSpecification> specBuilder)
     : ResourceOperationEndpoint<DeployCatletSpecificationRequest, CatletSpecification>(operationHandler, specBuilder)
 {

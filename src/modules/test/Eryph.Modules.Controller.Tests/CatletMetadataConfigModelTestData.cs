@@ -30,7 +30,9 @@ internal static class CatletMetadataConfigModelTestData
               "name": "test-catlet",
               "parent": "acme/acme-os/1.0"
             }
-          }
+          },
+          "specification_id": "9982cc45-23d5-4d68-a1c6-3c817dc63d2c",
+          "specification_version_id": "d1671bdf-e6e4-41cf-937b-6f603ec3c705"
         }
         """;
 
@@ -69,5 +71,7 @@ internal static class CatletMetadataConfigModelTestData
         VmId = Guid.Parse("99c58ef6-2208-4046-be3e-ece1d56a073a"),
         SecretDataHidden = true,
         Metadata = CatletMetadataContentJsonSerializer.SerializeToElement(Content),
+        SpecificationId = Guid.Parse("9982cc45-23d5-4d68-a1c6-3c817dc63d2c"),
+        SpecificationVersionId = Guid.Parse("d1671bdf-e6e4-41cf-937b-6f603ec3c705"),
     };
 }

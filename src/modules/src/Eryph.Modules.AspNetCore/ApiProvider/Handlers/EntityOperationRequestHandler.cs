@@ -69,7 +69,7 @@ public class EntityOperationRequestHandler<TEntity>(
                     detail: "You do not have admin access to the project.");
         }
 
-        var validationResult = ValidateRequest(model);
+        var validationResult = await ValidateRequest(model, cancellationToken);
         if (validationResult is not null)
             return validationResult;
 
@@ -85,7 +85,8 @@ public class EntityOperationRequestHandler<TEntity>(
     /// <summary>
     /// Override this method to perform addition validation based on the loaded model.
     /// </summary>
-    /// <param name="model"></param>
-    /// <returns></returns>
-    protected virtual ActionResult? ValidateRequest(TEntity model) => null;
+    protected virtual Task<ActionResult?> ValidateRequest(
+        TEntity model,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<ActionResult?>(null);
 }

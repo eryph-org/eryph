@@ -46,7 +46,6 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
         var versionConfig = new CatletSpecificationVersionConfigModel
         {
             SpecificationId = specificationVersion.SpecificationId,
-            CatletId = specificationVersion.CatletId,
             ConfigYaml = specificationVersion.ConfigYaml,
             ResolvedConfig = specificationVersion.ResolvedConfig,
             Comment = specificationVersion.Comment,

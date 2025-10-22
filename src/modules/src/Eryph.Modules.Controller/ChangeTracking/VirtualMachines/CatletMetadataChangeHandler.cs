@@ -50,6 +50,8 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
             Metadata = CatletMetadataContentJsonSerializer.SerializeToElement(metadata.Metadata),
             IsDeprecated = metadata.IsDeprecated,
             SecretDataHidden = metadata.SecretDataHidden,
+            SpecificationId = metadata.SpecificationId,
+            SpecificationVersionId = metadata.SpecificationVersionId,
         };
 
         var json = CatletMetadataConfigModelJsonSerializer.Serialize(metadataConfig);

@@ -40,7 +40,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     VmId = table.Column<Guid>(type: "TEXT", nullable: false),
                     SecretDataHidden = table.Column<bool>(type: "INTEGER", nullable: false),
                     IsDeprecated = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MetadataJson = table.Column<string>(type: "TEXT", nullable: false)
+                    MetadataJson = table.Column<string>(type: "TEXT", nullable: false),
+                    SpecificationId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    SpecificationVersionId = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -356,7 +358,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     MinimumMemory = table.Column<long>(type: "INTEGER", nullable: false),
                     MaximumMemory = table.Column<long>(type: "INTEGER", nullable: false),
                     SecureBootTemplate = table.Column<string>(type: "TEXT", nullable: true),
-                    Features = table.Column<string>(type: "TEXT", nullable: false)
+                    Features = table.Column<string>(type: "TEXT", nullable: false),
+                    SpecificationId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    SpecificationVersionId = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -381,7 +385,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     SpecificationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
                     ConfigYaml = table.Column<string>(type: "TEXT", nullable: false),
                     ResolvedConfig = table.Column<string>(type: "TEXT", nullable: false),
                     Comment = table.Column<string>(type: "TEXT", nullable: true),
@@ -701,6 +704,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Catlets_SpecificationId",
+                table: "Catlets",
+                column: "SpecificationId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CatletSpecifications_ProjectId",
                 table: "CatletSpecifications",
                 column: "ProjectId");
@@ -751,6 +760,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_Logs_TaskId",
                 table: "Logs",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Metadata_SpecificationId",
+                table: "Metadata",
+                column: "SpecificationId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_MetadataGenes_UniqueGeneIndex",
