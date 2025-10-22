@@ -22,7 +22,17 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()
                 .ForMember(x => x.ProviderName, x => x.MapFrom(y => y.NetworkProvider));
 
-            CreateMap<StateDb.Model.Catlet, Catlet>();
+            CreateMap<StateDb.Model.Catlet, Catlet>()
+                .ForMember(
+                    c => c.Specification,
+                    o => o.MapFrom((c, _, _, context) =>
+                        c.SpecificationId.HasValue && c.SpecificationVersionId.HasValue
+                            ? new CatletSpecificationInfo
+                            {
+                                SpecificationId = context.Mapper.Map<string>(c.SpecificationId),
+                                SpecificationVersionId = context.Mapper.Map<string>(c.SpecificationVersionId),
+                            }
+                            : null));
             CreateMap<StateDb.Model.CatletDrive, CatletDrive>()
                 .ForMember(
                     d => d.AttachedDiskId,

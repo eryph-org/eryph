@@ -27,4 +27,8 @@ public class DeployCatletSagaData : TaskWorkflowSagaData
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
 
     public Architecture? Architecture { get; set; }
+
+    public Guid? SpecificationId { get; set; }
+
+    public Guid? SpecificationVersionId { get; set; }
 }

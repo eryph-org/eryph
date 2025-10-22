@@ -59,10 +59,19 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<bool>("SecretDataHidden")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("SpecificationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SpecificationVersionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("VmId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SpecificationId")
+                        .IsUnique();
 
                     b.ToTable("Metadata");
                 });
@@ -121,9 +130,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("CatletId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Comment")
@@ -772,6 +778,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("SecureBootTemplate")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SpecificationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SpecificationVersionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("StartupMemory")
                         .HasColumnType("INTEGER");
 
@@ -788,6 +800,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasIndex("HostId");
+
+                    b.HasIndex("SpecificationId")
+                        .IsUnique();
 
                     b.ToTable("Catlets");
                 });

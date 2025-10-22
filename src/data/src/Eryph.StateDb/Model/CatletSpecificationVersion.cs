@@ -10,11 +10,6 @@ public class CatletSpecificationVersion
 
     public Guid SpecificationId { get; set; }
 
-    /// <summary>
-    /// The ID of the catlet when this specification has been deployed.
-    /// </summary>
-    public Guid? CatletId { get; set; }
-
     public required string ConfigYaml { get; set; }
 
     // TODO use a wrapper property with lazy serialization?

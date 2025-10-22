@@ -51,7 +51,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     SecretDataHidden = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     IsDeprecated = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     MetadataJson = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SpecificationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    SpecificationVersionId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -423,7 +425,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     SecureBootTemplate = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Features = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SpecificationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    SpecificationVersionId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -449,7 +453,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     SpecificationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    CatletId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     ConfigYaml = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ResolvedConfig = table.Column<string>(type: "longtext", nullable: false)
@@ -825,6 +828,12 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Catlets_SpecificationId",
+                table: "Catlets",
+                column: "SpecificationId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CatletSpecifications_ProjectId",
                 table: "CatletSpecifications",
                 column: "ProjectId");
@@ -875,6 +884,12 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_Logs_TaskId",
                 table: "Logs",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Metadata_SpecificationId",
+                table: "Metadata",
+                column: "SpecificationId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_MetadataGenes_UniqueGeneIndex",

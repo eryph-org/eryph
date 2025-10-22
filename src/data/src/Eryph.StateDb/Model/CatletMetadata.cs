@@ -27,4 +27,17 @@ public class CatletMetadata
     public CatletMetadataContent? Metadata { get; set; }
 
     public IList<CatletMetadataGene> Genes { get; set; } = null!;
+
+    /// <summary>
+    /// The ID of the specification (and the version via <see cref="SpecificationVersionId"/>)
+    /// which was used to create this catlet.
+    /// </summary>
+    /// <remarks>
+    /// This ID and <see cref="SpecificationVersionId"/> are soft-links and not enforced
+    /// via a foreign key constraint. It can happen that the corresponding specification
+    /// does not exist.
+    /// </remarks>
+    public Guid? SpecificationId { get; set; }
+
+    public Guid? SpecificationVersionId { get; set; }
 }
