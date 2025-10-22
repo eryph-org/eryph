@@ -62,7 +62,6 @@ internal class DeployCatletSaga(
                 }
             }
             
-
             Data.Data.CatletId = Guid.NewGuid();
             Data.Data.MetadataId = Guid.NewGuid();
             await StartNewTask(new CreateCatletVMCommand
