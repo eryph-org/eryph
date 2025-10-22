@@ -10,12 +10,9 @@ using Eryph.StateDb.Specifications;
 using LanguageExt.Pipes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
@@ -24,6 +21,7 @@ public class DeployCatletSpecificationHandler(
     IOperationDispatcher operationDispatcher,
     IStateStoreRepository<Catlet> catletRepository,
     IStateStoreRepository<CatletSpecification> specificationRepository,
+    IStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository,
     IEndpointResolver endpointResolver,
     IMapper mapper,
     IUserRightsProvider userRightsProvider,
@@ -58,6 +56,17 @@ public class DeployCatletSpecificationHandler(
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 detail: $"A catlet with the name '{model.Name}' already exists in the project '{model.Project.Name}'. Catlet names must be unique within a project.");
+
+
+        var specificationVersion = await specificationVersionRepository.GetBySpecAsync(
+            new CatletSpecificationVersionSpecs.GetLatestBySpecificationIdReadOnly(model.Id),
+            cancellationToken);
+        if (specificationVersion is null)
+        {
+            return ValidationProblem(
+                detail: "The catlet specification has no deployable version.",
+                new ModelStateDictionary());
+        }
 
         return await base.ValidateRequest(model, cancellationToken);
     }
