@@ -1,40 +1,28 @@
-﻿using Eryph.ConfigModel.Json;
-using Eryph.Core;
-using Eryph.StateDb.Specifications;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO.Abstractions;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
-using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Serializers;
 using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.Controller.Seeding;
 
 internal class CatletSpecificationSeeder : SeederBase
 {
-    private readonly string _specificationVersionsConfigPath;
-    private readonly IFileSystem _fileSystem;
     private readonly IStateStoreRepository<CatletSpecification> _specificationRepository;
-    private readonly IStateStoreRepository<CatletSpecificationVersion> _specificationVersionRepository;
 
     public CatletSpecificationSeeder(
         ChangeTrackingConfig config,
         IFileSystem fileSystem,
-        IStateStoreRepository<CatletSpecification> specificationRepository,
-        IStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository)
+        IStateStoreRepository<CatletSpecification> specificationRepository)
         : base(fileSystem, config.CatletSpecificationsConfigPath)
     {
-        _specificationVersionsConfigPath = config.CatletSpecificationVersionsConfigPath;
-        _fileSystem = fileSystem;
         _specificationRepository = specificationRepository;
-        _specificationVersionRepository = specificationVersionRepository;
     }
 
     protected override async Task SeedAsync(Guid entityId, string json, CancellationToken cancellationToken = default)

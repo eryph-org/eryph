@@ -4,7 +4,7 @@ using Eryph.Resources;
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
 [SendMessageTo(MessageRecipient.Controllers)]
-public class DeleteCatletSpecificationCommand : ICommandWithName, IHasResource
+public class DestroyCatletSpecificationCommand : ICommandWithName, IHasResource
 {
     public Guid SpecificationId { get; set; }
 
