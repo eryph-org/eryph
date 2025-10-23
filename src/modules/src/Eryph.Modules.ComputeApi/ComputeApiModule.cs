@@ -54,7 +54,7 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
             GetVirtualNetworksConfigurationHandler>();
         container.Register<IEntityOperationRequestHandler<StateDb.Model.VirtualDisk>,
             DeleteVirtualDiskHandler>();
-        //container.Register<DeployCatletSpecificationHandler>();
+        container.Register<DeleteCatletSpecificationHandler>();
         container.Register<IGetRequestHandler<StateDb.Model.CatletSpecification, CatletSpecification>,
             GetCatletSpecificationHandler>();
         container.Register<IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, CatletSpecification, StateDb.Model.CatletSpecification>,

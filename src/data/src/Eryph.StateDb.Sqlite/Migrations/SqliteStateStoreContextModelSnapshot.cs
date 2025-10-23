@@ -1035,7 +1035,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasOne("Eryph.StateDb.Model.CatletSpecification", null)
                         .WithMany("Versions")
                         .HasForeignKey("SpecificationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

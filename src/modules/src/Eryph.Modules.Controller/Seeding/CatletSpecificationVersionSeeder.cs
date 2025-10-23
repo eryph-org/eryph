@@ -1,7 +1,11 @@
 ﻿using System;
 using System.IO.Abstractions;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Json;
+using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Serializers;
 using Eryph.StateDb;
@@ -39,9 +43,13 @@ internal class CatletSpecificationVersionSeeder : SeederBase
             Id = entityId,
             SpecificationId = config.SpecificationId,
             ConfigYaml = config.ConfigYaml,
-            ResolvedConfig = config.ResolvedConfig,
+            ResolvedConfig = JsonSerializer.Serialize(config.ResolvedConfig, CatletConfigJsonSerializer.Options),
             Comment = config.Comment,
             CreatedAt = config.CreatedAt,
+            Genes = config.PinnedGenes
+                .Map(kvp => (UniqueGeneIdentifier.New(kvp.Key), GeneHash.New(kvp.Value)))
+                .ToDictionary()
+                .ToGenesList(entityId),
         };
 
         await _specificationVersionRepository.AddAsync(specificationVersion, cancellationToken);
