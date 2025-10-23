@@ -346,7 +346,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .WithOne()
             .HasForeignKey(v => v.SpecificationId)
             .IsRequired()
-            .OnDelete(DeleteBehavior.Cascade);
+            // We do not use Cascade here as it prevents our change tracking
+            // from detecting the deletion of the specification versions. With Restrict,
+            // we are forced to load the specification versions before deletion.
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<CatletSpecificationVersion>()
             .HasMany(s => s.Genes)

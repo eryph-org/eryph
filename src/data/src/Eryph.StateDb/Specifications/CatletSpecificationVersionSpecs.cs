@@ -41,4 +41,12 @@ public static class CatletSpecificationVersionSpecs
                 .AsNoTracking();
         }
     }
+
+    public sealed class ListBySpecificationId : Specification<CatletSpecificationVersion>
+    {
+        public ListBySpecificationId(Guid specificationId)
+        {
+            Query.Where(x => x.SpecificationId == specificationId);
+        }
+    }
 }

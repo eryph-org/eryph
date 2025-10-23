@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Messages.Resources.Commands;
 using Eryph.ModuleCore;
 using Eryph.Resources;
@@ -19,6 +20,7 @@ namespace Eryph.Modules.Controller.Compute;
 internal class DestroyResourcesSaga(IWorkflow workflow) :
     OperationTaskWorkflowSaga<DestroyResourcesCommand, EryphSagaData<DestroyResourcesSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
+    IHandleMessages<OperationTaskStatusEvent<DestroyCatletSpecificationCommand>>,
     IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>,
     IHandleMessages<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>
 {
@@ -27,6 +29,8 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
     {
         base.CorrelateMessages(config);
         config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<DestroyCatletSpecificationCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
@@ -43,7 +47,10 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
             .Select(r => r.Id)
             .ToHashSet();
 
-        // TODO Delete specifications as well
+        Data.Data.PendingCatletSpecifications = message.Resources
+            .Where(r => r.Type == ResourceType.CatletSpecification)
+            .Select(r => r.Id)
+            .ToHashSet();
 
         Data.Data.PendingDisks = message.Resources
             .Where(r => r.Type == ResourceType.VirtualDisk)
@@ -75,7 +82,25 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
             
             await StartNextTask();
         });
-    
+
+    public Task Handle(OperationTaskStatusEvent<DestroyCatletSpecificationCommand> message) =>
+        FailOrRun(message, async (DestroyResourcesResponse response) =>
+        {
+            Collect(response);
+            var removedCatlets = response.DestroyedResources.ToSeq()
+                .Concat(response.DetachedResources.ToSeq())
+                .Filter(r => r.Type is ResourceType.CatletSpecification)
+                .Map(r => r.Id);
+            Data.Data.PendingCatletSpecifications = Data.Data.PendingCatletSpecifications
+                .Except(removedCatlets)
+                .ToHashSet();
+
+            if (Data.Data.PendingCatletSpecifications.Count > 0)
+                return;
+
+            await StartNextTask();
+        });
+
 
     public Task Handle(OperationTaskStatusEvent<DestroyVirtualDiskCommand> message) => 
         FailOrRun(message, async (DestroyResourcesResponse response) =>
@@ -134,6 +159,21 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
             }
 
             Data.Data.State = DestroyResourceState.CatletsDestroyed;
+        }
+
+        if (Data.Data.State < DestroyResourceState.CatletSpecificationsDestroyed)
+        {
+            if (Data.Data.PendingCatletSpecifications.Count > 0)
+            {
+                foreach (var catletSpecificationId in Data.Data.PendingCatletSpecifications)
+                {
+                    await StartNewTask(new DestroyCatletSpecificationCommand { SpecificationId = catletSpecificationId });
+                }
+
+                return;
+            }
+
+            Data.Data.State = DestroyResourceState.CatletSpecificationsDestroyed;
         }
 
         if (Data.Data.State < DestroyResourceState.DisksDestroyed)

@@ -398,7 +398,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         column: x => x.SpecificationId,
                         principalTable: "CatletSpecifications",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(

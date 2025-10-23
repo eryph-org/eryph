@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration.Model;
@@ -43,13 +45,19 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
             return;
         }
 
+        using var jsonDocument = JsonDocument.Parse(specificationVersion.ResolvedConfig);
+
         var versionConfig = new CatletSpecificationVersionConfigModel
         {
             SpecificationId = specificationVersion.SpecificationId,
             ConfigYaml = specificationVersion.ConfigYaml,
-            ResolvedConfig = specificationVersion.ResolvedConfig,
+            ResolvedConfig = jsonDocument.RootElement,
             Comment = specificationVersion.Comment,
             CreatedAt = specificationVersion.CreatedAt,
+            PinnedGenes = specificationVersion.Genes
+                .ToGenesDictionary()
+                .Map(kvp => (kvp.Key.Value, kvp.Value.Value))
+                .ToDictionary(),
         };
 
         var json = CatletSpecificationVersionConfigModelJsonSerializer.Serialize(versionConfig);
