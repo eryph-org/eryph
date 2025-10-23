@@ -78,7 +78,7 @@ internal class UpdateCatletSpecificationSaga(
             {
                 Id = Data.Data.SpecificationVersionId,
                 SpecificationId = Data.Data.SpecificationId,
-                ConfigYaml = Data.Data.ConfigYaml!,
+                ConfigYaml = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
                 ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
