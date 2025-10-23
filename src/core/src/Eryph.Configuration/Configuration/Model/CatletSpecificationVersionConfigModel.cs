@@ -7,6 +7,8 @@ namespace Eryph.Configuration.Model;
 
 public class CatletSpecificationVersionConfigModel
 {
+    public Guid Id { get; set; }
+
     public Guid SpecificationId { get; set; }
 
     public required string ConfigYaml { get; set; }

@@ -43,6 +43,7 @@ internal class CatletSpecificationChangeHandler : IChangeHandler<CatletSpecifica
 
         var specificationConfig = new CatletSpecificationConfigModel
         {   
+            Id = specification.Id,
             ProjectId = specification.ProjectId,
             Name = specification.Name,
             Architecture = specification.Architecture,
