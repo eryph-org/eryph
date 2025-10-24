@@ -9,13 +9,13 @@ public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
 {
     public Guid ProjectId { get; set; }
 
-    public string Name { get; set; }
+    public string ContentType { get; set; }
 
-    public string ConfigYaml { get; set; }
+    public string Configuration { get; set; }
 
     [MaybeNull] public string Comment { get; set; }
 
     public Guid CorrelationId { get; set; }
 
-    public string GetCommandName() => $"Create catlet specification {Name}";
+    public string GetCommandName() => "Create catlet specification";
 }

@@ -29,10 +29,10 @@ public class Create(
         return new CreateCatletSpecificationCommand
         {
             CorrelationId = request.CorrelationId.GetOrGenerate(),
-            Name = request.Name,
             Comment = request.Comment,
             ProjectId = request.ProjectId,
-            ConfigYaml = request.Configuration,
+            ContentType = request.Configuration.ContentType,
+            Configuration = request.Configuration.Content,
         };
     }
 
@@ -49,7 +49,7 @@ public class Create(
         CancellationToken cancellationToken = default)
     {
         // TODO support JSON as well (use content types?)
-        var validation = RequestValidations.ValidateCatletConfigYaml(
+        var validation = RequestValidations.ValidateCatletSpecificationConfig(
             request.Configuration);
         if (validation.IsFail)
             return ValidationProblem(

@@ -9,6 +9,8 @@ public class UpdateCatletSpecificationCommand : IHasCorrelationId, IHasResource
 {
     public Guid SpecificationId { get; set; }
 
+    public string ContentType { get; set; }
+
     public string ConfigYaml { get; set; }
 
     [MaybeNull] public string Name { get; set; }

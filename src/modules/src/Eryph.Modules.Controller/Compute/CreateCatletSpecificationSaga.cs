@@ -31,9 +31,9 @@ internal class CreateCatletSpecificationSaga(
     {
         Data.Data.State = CreateCatletSpecificationSagaState.Initiated;
         Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Name = message.Name;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
-        Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.ContentType = message.ContentType;
+        Data.Data.Configuration = message.Configuration;
         Data.Data.Comment = message.Comment;
         Data.Data.SpecificationId = Guid.NewGuid();
         Data.Data.SpecificationVersionId = Guid.NewGuid();
@@ -42,7 +42,7 @@ internal class CreateCatletSpecificationSaga(
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = message.ConfigYaml,
+            Configuration = message.Configuration,
             Architecture = Data.Data.Architecture,
         });
     }
@@ -62,11 +62,10 @@ internal class CreateCatletSpecificationSaga(
             var specificationVersion = new CatletSpecificationVersion
             {
                 Id = Data.Data.SpecificationVersionId,
-                ConfigYaml = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
-                ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
+                ContentType = Data.Data.ContentType!,
+                Configuration = Data.Data.Configuration!.ReplaceLineEndings("\n"),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
-                Genes = Data.Data.ResolvedGenes.ToGenesList(Data.Data.SpecificationVersionId),
             };
 
             var specification = new CatletSpecification
@@ -74,8 +73,8 @@ internal class CreateCatletSpecificationSaga(
                 Id = Data.Data.SpecificationId,
                 ProjectId = Data.Data.ProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
-                Name = Data.Data.Name!,
-                Architecture = Data.Data.Architecture!.Value,
+                // TODO validate that catlet name is specified
+                Name = response.BuiltConfig.Name!,
                 Versions = [specificationVersion]
             };
 

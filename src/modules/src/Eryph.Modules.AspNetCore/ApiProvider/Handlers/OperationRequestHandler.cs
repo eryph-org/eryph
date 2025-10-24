@@ -43,14 +43,23 @@ public class OperationRequestHandler<TEntity>(
         using var ta = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled);
         ta.EnlistRebus();
 
-        if (typeof(TEntity) != typeof(Gene))
+        if (typeof(TEntity) == typeof(Gene))
+        {
+            if (!await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin))
+                return Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
+                    detail: "You do not have super admin access.");
+        }
+        else if (typeof(TEntity) == typeof(CatletSpecificationVersion))
+        {
+            // We do not perform a permission check as we do not have the necessary
+            // information. The endpoint must perform the permission check itself.
+        }
+        else
+        {
             return new NotFoundResult();
-            
-        if (!await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin))
-            return Problem(
-                statusCode: StatusCodes.Status403Forbidden,
-                detail: "You do not have super admin access.");
-
+        }
+        
         var command = createOperationFunc();
         var result = await StartOperation(command);
 

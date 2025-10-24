@@ -21,11 +21,11 @@ internal class ValidateCatletSpecificationSaga(
     protected override async Task Initiated(ValidateCatletSpecificationCommand message)
     {
         Data.Data.State = ValidateCatletSpecificationSagaState.Initiated;
-        Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.ConfigYaml = message.Configuration;
 
         await StartNewTask(new BuildCatletSpecificationCommand
         {
-            ConfigYaml = message.ConfigYaml,
+            Configuration = message.Configuration,
             Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
             AgentName = System.Environment.MachineName,
         });

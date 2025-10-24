@@ -1,8 +1,6 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
@@ -39,6 +37,8 @@ public class Create(
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             TenantId = userRightsProvider.GetUserTenantId(),
             Name = string.IsNullOrWhiteSpace(config.Name) ? EryphConstants.DefaultCatletName : config.Name,
+            // Convert the configuration to YAML as it is more useful to the user
+            ContentType = "application/yaml",
             ConfigYaml = CatletConfigYamlSerializer.Serialize(config),
         };
     }

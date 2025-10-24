@@ -198,8 +198,6 @@ namespace Eryph.StateDb.MySql.Migrations
                     Name = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Environment = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Architecture = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -453,9 +451,9 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     SpecificationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    ConfigYaml = table.Column<string>(type: "longtext", nullable: false)
+                    ContentType = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    ResolvedConfig = table.Column<string>(type: "longtext", nullable: false)
+                    Configuration = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Comment = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -707,35 +705,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "CatletSpecificationVersionGenes",
-                columns: table => new
-                {
-                    SpecificationVersionId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    UniqueGeneIndex = table.Column<string>(type: "varchar(255)", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    GeneType = table.Column<int>(type: "int", nullable: false),
-                    Hash = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    GeneSet = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Architecture = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CatletSpecificationVersionGenes", x => new { x.SpecificationVersionId, x.UniqueGeneIndex });
-                    table.ForeignKey(
-                        name: "FK_CatletSpecificationVersionGenes_CatletSpecificationVersions_~",
-                        column: x => x.SpecificationVersionId,
-                        principalTable: "CatletSpecificationVersions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "IpPools",
                 columns: table => new
                 {
@@ -837,11 +806,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_CatletSpecifications_ProjectId",
                 table: "CatletSpecifications",
                 column: "ProjectId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CatletSpecificationVersionGenes_UniqueGeneIndex",
-                table: "CatletSpecificationVersionGenes",
-                column: "UniqueGeneIndex");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CatletSpecificationVersions_SpecificationId",
@@ -1000,7 +964,7 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "CatletNetworkAdapters");
 
             migrationBuilder.DropTable(
-                name: "CatletSpecificationVersionGenes");
+                name: "CatletSpecificationVersions");
 
             migrationBuilder.DropTable(
                 name: "Genes");
@@ -1033,7 +997,7 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "VirtualDisks");
 
             migrationBuilder.DropTable(
-                name: "CatletSpecificationVersions");
+                name: "CatletSpecifications");
 
             migrationBuilder.DropTable(
                 name: "IpPools");
@@ -1046,9 +1010,6 @@ namespace Eryph.StateDb.MySql.Migrations
 
             migrationBuilder.DropTable(
                 name: "OperationTasks");
-
-            migrationBuilder.DropTable(
-                name: "CatletSpecifications");
 
             migrationBuilder.DropTable(
                 name: "Subnet");

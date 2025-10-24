@@ -1,7 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
-using Eryph.ConfigModel.Json;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -29,9 +28,9 @@ public class Update(
         {
             SpecificationId = model.Id,
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
-            ConfigYaml = request.Body.Configuration,
+            ContentType = request.Body.Configuration.ContentType,
+            ConfigYaml = request.Body.Configuration.Content,
             Comment = request.Body.Comment,
-            Name = request.Body.Name,
         };
     }
 
@@ -47,7 +46,7 @@ public class Update(
         [FromRoute] UpdateCatletSpecificationRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = RequestValidations.ValidateCatletConfigYaml(
+        var validation = RequestValidations.ValidateCatletSpecificationConfig(
             request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(

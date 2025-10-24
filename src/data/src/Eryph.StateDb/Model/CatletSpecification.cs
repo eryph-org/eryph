@@ -10,7 +10,5 @@ public class CatletSpecification : Resource
         ResourceType = ResourceType.CatletSpecification;
     }
 
-    public required string Architecture { get; set; }
-
     public ICollection<CatletSpecificationVersion> Versions { get; set; } = null!;
 }
