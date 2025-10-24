@@ -141,7 +141,9 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     s => s.Latest,
                     o => o.MapFrom(s => s.Versions.OrderByDescending(v => v.CreatedAt).FirstOrDefault()));
             CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersionInfo>();
-            CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersion>();
+            CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersion>()
+                .ForMember(v => v.Configuration, o => o.MapFrom(s => s.ConfigYaml));
+            CreateMap<StateDb.Model.CatletSpecificationVersionGene, CatletSpecificationVersionGene>();
         }
     }
 }
