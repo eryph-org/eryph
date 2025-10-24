@@ -17,4 +17,6 @@ public class CatletSpecificationVersion
     public required string Configuration { get; set; }
 
     public required string ResolvedConfig { get; set; }
+
+    public required IReadOnlyList<CatletSpecificationVersionGene>? Genes { get; set; }
 }

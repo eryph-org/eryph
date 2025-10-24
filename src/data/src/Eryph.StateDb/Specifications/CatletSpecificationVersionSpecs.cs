@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
 
@@ -11,12 +12,14 @@ public static class CatletSpecificationVersionSpecs
         public GetByIdReadOnly(Guid id)
         {
             Query.Where(x => x.Id == id)
+                .Include(x => x.Genes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
 
         public GetByIdReadOnly(Guid specificationId, Guid id)
         {
             Query.Where(x => x.Id == id && x.SpecificationId == specificationId)
+                .Include(x => x.Genes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
     }
