@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using AutoMapper;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
@@ -142,8 +143,15 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     o => o.MapFrom(s => s.Versions.OrderByDescending(v => v.CreatedAt).FirstOrDefault()));
             CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersionInfo>();
             CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersion>()
-                .ForMember(v => v.Configuration, o => o.MapFrom(s => s.ConfigYaml));
+                .ForMember(v => v.Configuration, o => o.MapFrom(s => s.ConfigYaml))
+                .ForMember(v => v.ResolvedConfig, o => o.MapFrom(s => MapToJsonElement(s.ResolvedConfig)));
             CreateMap<StateDb.Model.CatletSpecificationVersionGene, CatletSpecificationVersionGene>();
+        }
+
+        private static JsonElement MapToJsonElement(string json)
+        {
+            using var jsonDocument = JsonDocument.Parse(json);
+            return jsonDocument.RootElement.Clone();
         }
     }
 }
