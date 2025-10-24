@@ -12,14 +12,12 @@ public static class CatletSpecificationVersionSpecs
         public GetByIdReadOnly(Guid id)
         {
             Query.Where(x => x.Id == id)
-                .Include(x => x.Genes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
 
         public GetByIdReadOnly(Guid specificationId, Guid id)
         {
             Query.Where(x => x.Id == id && x.SpecificationId == specificationId)
-                .Include(x => x.Genes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
     }
@@ -30,7 +28,6 @@ public static class CatletSpecificationVersionSpecs
         {
             Query.Where(x => x.SpecificationId == specificationId)
                 .OrderByDescending(x => x.CreatedAt)
-                .Include(x => x.Genes)
                 .Take(1)
                 .AsNoTracking();
         }

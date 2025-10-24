@@ -3,7 +3,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Dbosoft.Functional.Validations;
 using LanguageExt;
+using LanguageExt.ClassInstances;
 using LanguageExt.Common;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Core;
 
@@ -20,6 +23,26 @@ public static partial class ValidationIssueExtensions
 {
     [GeneratedRegex(@"\w[\d\w]*")]
     private static partial Regex NameRegex();
+
+    [GeneratedRegex(@"^\$")]
+    private static partial Regex RootRegex();
+
+    public static Validation<ValidationIssue, T> AddJsonPathPrefix<T>(
+        this Validation<ValidationIssue, T> validation,
+        Option<string> prefix) =>
+        validation.MapFail(vi => vi.AddJsonPathPrefix(prefix));
+
+    public static ValidationIssue AddJsonPathPrefix(
+        this ValidationIssue issue,
+        Option<string> prefix) =>
+        new(AddJsonPathPrefix(issue.Member, prefix), issue.Message);
+
+    public static string AddJsonPathPrefix(
+        this string path,
+        Option<string> prefix) =>
+        prefix.Match(
+            Some: p => RootRegex().Replace(ToJsonPath(path, None), ToJsonPath(p, None)),
+            None: () => path);
 
     /// <summary>
     /// Converts the given <paramref name="validation"/> to an <see cref="Either{Error, T}"/>.

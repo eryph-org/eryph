@@ -13,8 +13,6 @@ public class CatletSpecification
     
     public required string Name { get; set; }
 
-    public required string Architecture { get; set; }
-
     public required Project Project { get; set; }
 
     public required CatletSpecificationVersionInfo Latest { get; set; }

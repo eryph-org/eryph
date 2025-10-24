@@ -35,7 +35,7 @@ internal class ExpandNewCatletConfigSaga(
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
+            Configuration = CatletConfigYamlSerializer.Serialize(message.Config),
             Architecture = Data.Data.Architecture,
         });
     }

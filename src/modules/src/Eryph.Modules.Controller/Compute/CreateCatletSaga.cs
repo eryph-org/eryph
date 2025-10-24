@@ -36,7 +36,7 @@ internal class CreateCatletSaga(
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = message.ConfigYaml,
+            Configuration = message.ConfigYaml,
             Architecture = Data.Data.Architecture,
         });
     }

@@ -9,7 +9,13 @@ public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
 {
     public Guid SpecificationId { get; set; }
 
+    public Guid SpecificationVersionId { get; set; }
+
+    public string Architecture { get; set; }
+
     public string Name { get; set; }
+
+    public bool Redeploy { get; set; }
 
     public IReadOnlyDictionary<string, string> Variables { get; set; }
 

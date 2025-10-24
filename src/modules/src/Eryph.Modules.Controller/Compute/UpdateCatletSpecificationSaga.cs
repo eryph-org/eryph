@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Json;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.CatletSpecifications;
@@ -38,14 +39,15 @@ internal class UpdateCatletSpecificationSaga(
         Data.Data.SpecificationVersionId = Guid.NewGuid();
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Name = message.Name;
+        Data.Data.ContentType = message.ContentType;
         Data.Data.ConfigYaml = message.ConfigYaml;
         Data.Data.Comment = message.Comment;
 
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = message.ConfigYaml,
-            Architecture = Architecture.New(specification.Architecture),
+            Configuration = message.ConfigYaml,
+            Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
         });
     }
 
@@ -78,11 +80,10 @@ internal class UpdateCatletSpecificationSaga(
             {
                 Id = Data.Data.SpecificationVersionId,
                 SpecificationId = Data.Data.SpecificationId,
-                ConfigYaml = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
-                ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
+                ContentType = Data.Data.ContentType!,
+                Configuration = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
-                Genes = Data.Data.ResolvedGenes.ToGenesList(Data.Data.SpecificationVersionId),
             };
 
             await stateStore.For<CatletSpecificationVersion>().AddAsync(specificationVersion);

@@ -46,17 +46,15 @@ public abstract class CatletSpecificationSeederTests(
             specification!.Id.Should().Be(specificationId);
             specification.ProjectId.Should().Be(CatletSpecificationConfigModelTestData.Specification.ProjectId);
             specification.Name.Should().Be(CatletSpecificationConfigModelTestData.Specification.Name);
-            specification.Architecture.Should().Be(CatletSpecificationConfigModelTestData.Specification.Architecture);
 
             var version = await stateStore.Read<CatletSpecificationVersion>().GetByIdAsync(specificationVersionId);
             version.Should().NotBeNull();
             version!.Id.Should().Be(specificationVersionId);
             version.SpecificationId.Should().Be(specificationId);
-            version.ConfigYaml.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.ConfigYaml);
-            version.ResolvedConfig.Should().Be(CatletConfigJsonSerializer.Serialize(CatletSpecificationConfigModelTestData.Config));
+            version.ContentType.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.ContentType);
+            version.Configuration.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.Configuration);
             version.Comment.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.Comment);
             version.CreatedAt.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.CreatedAt);
-            version.Genes.Should().HaveCount(2);
         });
 
         var specificationBackupContent = await MockFileSystem.File.ReadAllTextAsync(

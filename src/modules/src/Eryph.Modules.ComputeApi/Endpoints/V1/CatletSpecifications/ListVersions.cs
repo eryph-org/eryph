@@ -16,6 +16,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
+[Route("v{version:apiVersion}")]
 public class ListVersions(
     IMapper mapper,
     IReadonlyStateStoreRepository<StateDb.Model.CatletSpecification> specificationRepository,

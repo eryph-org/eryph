@@ -34,7 +34,7 @@ internal class PopulateCatletConfigVariablesSaga(
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
+            Configuration = CatletConfigYamlSerializer.Serialize(message.Config),
             Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
         });
     }

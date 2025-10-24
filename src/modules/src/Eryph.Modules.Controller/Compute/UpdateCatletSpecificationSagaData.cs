@@ -7,6 +7,8 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class UpdateCatletSpecificationSagaData
 {
+    public string? ContentType { get; set; }
+
     public string? ConfigYaml { get; set; }
 
     public string? Comment { get; set; }

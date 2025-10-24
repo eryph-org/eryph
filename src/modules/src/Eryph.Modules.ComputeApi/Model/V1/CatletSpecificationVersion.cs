@@ -15,9 +15,5 @@ public class CatletSpecificationVersion
 
     public string? Comment { get; set; }
 
-    public required string Configuration { get; set; }
-
-    public required JsonElement ResolvedConfig { get; set; }
-
-    public required IReadOnlyList<CatletSpecificationVersionGene>? Genes { get; set; }
+    public required CatletSpecificationConfig Configuration { get; set; }
 }

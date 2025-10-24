@@ -1,6 +1,7 @@
-﻿using System;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
+﻿using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Mvc;
+using System;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
@@ -15,7 +16,5 @@ public class UpdateCatletSpecificationRequestBody
 
     public string? Comment { get; set; }
 
-    public string? Name { get; set; }
-
-    public required string Configuration { get; set; }
+    public required CatletSpecificationConfig Configuration { get; set; }
 }
