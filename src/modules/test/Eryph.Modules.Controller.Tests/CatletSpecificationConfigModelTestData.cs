@@ -30,7 +30,7 @@ internal static class CatletSpecificationConfigModelTestData
             "parent": "acme/acme-os/1.0"
           },
           "comment": "first version",
-          "created_at": "2025-01-01T04:42:42.4242424+00:00",
+          "created_at": "2025-01-01T04:42:42+00:00",
           "pinned_genes": {
             "catlet::gene:acme/acme-os/1.0:catlet[any]": "sha256:a8a2f6ebe286697c527eb35a58b5539532e9b3ae3b64d4eb0a46fb657b41562c",
             "fodder::gene:acme/acme-tools/1.0:test-food[hyperv/amd64]": "sha256:cb476d331140e6e28442a79f26d3a1120faf2d110659508a4415ae5ce138bbf1"
@@ -59,7 +59,7 @@ internal static class CatletSpecificationConfigModelTestData
         Id = Guid.Parse("fd096457-dfc8-453e-a770-d3b8ffe6720b"),
         SpecificationId = Guid.Parse("226f70ba-1cf2-4a68-b6e3-824197e3e58c"),
         Comment = "first version",
-        CreatedAt = DateTimeOffset.Parse("2025-01-01T04:42:42.4242424+00:00"),
+        CreatedAt = DateTimeOffset.Parse("2025-01-01T04:42:42+00:00"),
         ConfigYaml = "name: test-specification\nparent: acme/acme-os/1.0\n",
         ResolvedConfig = CatletConfigJsonSerializer.SerializeToElement(Config),
         PinnedGenes = new Dictionary<string, string>
