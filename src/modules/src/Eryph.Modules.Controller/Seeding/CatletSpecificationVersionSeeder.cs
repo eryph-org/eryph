@@ -44,8 +44,13 @@ internal class CatletSpecificationVersionSeeder : SeederBase
             SpecificationId = config.SpecificationId,
             ContentType = config.ContentType,
             Configuration = config.Configuration,
+            ResolvedConfig = JsonSerializer.Serialize(config.ResolvedConfig, CatletConfigJsonSerializer.Options),
             Comment = config.Comment,
             CreatedAt = config.CreatedAt,
+            Genes = config.PinnedGenes
+                .Map(kvp => (UniqueGeneIdentifier.New(kvp.Key), GeneHash.New(kvp.Value)))
+                .ToDictionary()
+                .ToGenesList(entityId),
         };
 
         await _specificationVersionRepository.AddAsync(specificationVersion, cancellationToken);

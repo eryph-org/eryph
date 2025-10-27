@@ -61,6 +61,8 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<CatletSpecificationVersion> CatletSpecificationVersions { get; set; }
 
+    public DbSet<CatletSpecificationVersionGene> CatletSpecificationVersionGenes { get; set; }
+
     public DbSet<Project> Projects { get; set; }
 
     public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
@@ -348,5 +350,26 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             // from detecting the deletion of the specification versions. With Restrict,
             // we are forced to load the specification versions before deletion.
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatletSpecificationVersion>()
+            .HasMany(s => s.Genes)
+            .WithOne()
+            .HasForeignKey(g => g.SpecificationVersionId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletSpecificationVersion>()
+            .Navigation(s => s.Genes)
+            .AutoInclude();
+
+        modelBuilder.Entity<CatletSpecificationVersionGene>()
+            .HasKey(g => new { g.SpecificationVersionId, g.UniqueGeneIndex });
+
+        modelBuilder.Entity<CatletSpecificationVersionGene>()
+            .HasIndex(g => g.UniqueGeneIndex);
+
+        modelBuilder.Entity<CatletSpecificationVersionGene>()
+            .Property(g => g.UniqueGeneIndex)
+            .UsePropertyAccessMode(PropertyAccessMode.Property);
     }
 }

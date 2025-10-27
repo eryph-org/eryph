@@ -41,6 +41,7 @@ internal class CatletSpecificationSeeder : SeederBase
             Name = config.Name,
             Environment = EryphConstants.DefaultEnvironmentName,
             ResourceType = ResourceType.CatletSpecification,
+            Architecture = config.Architecture,
         };
 
         await _specificationRepository.AddAsync(specification, cancellationToken);

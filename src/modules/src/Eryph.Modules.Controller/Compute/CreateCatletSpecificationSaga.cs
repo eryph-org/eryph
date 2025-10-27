@@ -64,8 +64,10 @@ internal class CreateCatletSpecificationSaga(
                 Id = Data.Data.SpecificationVersionId,
                 ContentType = Data.Data.ContentType!,
                 Configuration = Data.Data.Configuration!.ReplaceLineEndings("\n"),
+                ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
+                Genes = Data.Data.ResolvedGenes.ToGenesList(Data.Data.SpecificationVersionId),
             };
 
             var specification = new CatletSpecification
@@ -75,6 +77,7 @@ internal class CreateCatletSpecificationSaga(
                 Environment = EryphConstants.DefaultEnvironmentName,
                 // TODO validate that catlet name is specified
                 Name = response.BuiltConfig.Name!,
+                Architecture = Data.Data.Architecture!.Value,
                 Versions = [specificationVersion]
             };
 
