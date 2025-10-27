@@ -27,11 +27,13 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class DeployCatletSpecificationSaga(
+    IReadonlyStateStoreRepository<Catlet> catletRepository,
     IReadonlyStateStoreRepository<CatletSpecification> specificationRepository,
     IReadonlyStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository,
     IStorageIdentifierGenerator storageIdentifierGenerator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<DeployCatletSpecificationCommand, EryphSagaData<DeployCatletSpecificationSagaData>>(workflow),
+        IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DeployCatletCommand>>
 {
@@ -58,9 +60,10 @@ internal class DeployCatletSpecificationSaga(
         Data.Data.SpecificationVersionId = specificationVersion.Id;
         Data.Data.ProjectId = specification.ProjectId;
         Data.Data.AgentName = Environment.MachineName;
+        Data.Data.Redeploy = message.Redeploy;
         Data.Data.ContentType = specificationVersion.ContentType;
         Data.Data.Configuration = specificationVersion.Configuration;
-        Data.Data.Architecture = Architecture.New(message.Architecture);
+        Data.Data.Architecture = message.Architecture;
 
         var specificationVersionVariant = specificationVersion.Variants
             .FirstOrDefault(v => v.Architecture == Data.Data.Architecture);
@@ -91,13 +94,51 @@ internal class DeployCatletSpecificationSaga(
             c.Variables = updatedVariables.ValueUnsafe().ToArray();
         });
 
-        await StartNewTask(new ValidateCatletDeploymentCommand
+        var existingCatlet = await catletRepository.GetBySpecAsync(
+            new CatletSpecs.GetBySpecificationId(specification.Id));
+        if (existingCatlet is null)
         {
-            ProjectId = Data.Data.ProjectId,
-            AgentName = Data.Data.AgentName,
-            Architecture = Data.Data.Architecture,
-            Config = Data.Data.BuiltConfig,
-            ResolvedGenes = Data.Data.ResolvedGenes,
+            Data.Data.State = DeployCatletSpecificationSagaState.CatletDestroyed;
+            await StartNewTask(new ValidateCatletDeploymentCommand
+            {
+                ProjectId = Data.Data.ProjectId,
+                AgentName = Data.Data.AgentName,
+                Architecture = Data.Data.Architecture,
+                Config = Data.Data.BuiltConfig,
+                ResolvedGenes = Data.Data.ResolvedGenes,
+            });
+            return;
+        }
+
+        if (!message.Redeploy)
+        {
+            await Fail($"The catlet specification {specification.Id} is already deployed as catlet {existingCatlet.Id}.");
+            return;
+        }
+
+        await StartNewTask(new DestroyCatletCommand
+        {
+            CatletId = existingCatlet.Id,
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<DestroyCatletCommand> message)
+    {
+        if (Data.Data.State >= DeployCatletSpecificationSagaState.CatletDestroyed)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async () =>
+        {
+            Data.Data.State = DeployCatletSpecificationSagaState.CatletDestroyed;
+
+            await StartNewTask(new ValidateCatletDeploymentCommand
+            {
+                ProjectId = Data.Data.ProjectId,
+                AgentName = Data.Data.AgentName,
+                Architecture = Data.Data.Architecture,
+                Config = Data.Data.BuiltConfig,
+                ResolvedGenes = Data.Data.ResolvedGenes,
+            });
         });
     }
 
@@ -141,6 +182,8 @@ internal class DeployCatletSpecificationSaga(
     {
         base.CorrelateMessages(config);
 
+        config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<DeployCatletCommand>>(

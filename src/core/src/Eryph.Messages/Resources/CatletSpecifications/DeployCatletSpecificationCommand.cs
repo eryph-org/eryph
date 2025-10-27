@@ -1,6 +1,7 @@
 ﻿using Eryph.Resources;
 using System;
 using System.Collections.Generic;
+using Eryph.Core.Genetics;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
@@ -11,7 +12,7 @@ public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
 
     public Guid SpecificationVersionId { get; set; }
 
-    public string Architecture { get; set; }
+    public Architecture Architecture { get; set; }
 
     public string Name { get; set; }
 

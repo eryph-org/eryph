@@ -3,7 +3,7 @@
 public enum DeployCatletSpecificationSagaState
 {
     Initiated = 0,
-    SpecificationBuilt = 10,
+    CatletDestroyed = 10,
     DeploymentValidated = 20,
     Deployed = 30,
 }

@@ -27,6 +27,8 @@ public class DeployCatletSpecificationSagaData : TaskWorkflowSagaData
 
     public string? Configuration { get; set; }
 
+    public bool Redeploy { get; set; }
+
     public CatletConfig? BuiltConfig { get; set; }
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
