@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -15,7 +17,8 @@ using Eryph.StateDb;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using Resource = Eryph.Resources.Resource;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -31,20 +34,25 @@ internal class CreateCatletSpecificationSaga(
     {
         Data.Data.State = CreateCatletSpecificationSagaState.Initiated;
         Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
+        Data.Data.Architectures = message.Architectures;
         Data.Data.ContentType = message.ContentType;
         Data.Data.Configuration = message.Configuration;
         Data.Data.Comment = message.Comment;
         Data.Data.SpecificationId = Guid.NewGuid();
         Data.Data.SpecificationVersionId = Guid.NewGuid();
         Data.Data.ProjectId = message.ProjectId;
+        Data.Data.PendingArchitectures = message.Architectures;
 
-        await StartNewTask(new BuildCatletSpecificationCommand
+        foreach (var architecture in Data.Data.PendingArchitectures)
         {
-            AgentName = Data.Data.AgentName,
-            Configuration = message.Configuration,
-            Architecture = Data.Data.Architecture,
-        });
+            await StartNewTask(new BuildCatletSpecificationCommand
+            {
+                AgentName = Data.Data.AgentName,
+                ContentType = Data.Data.ContentType,
+                Configuration = message.Configuration,
+                Architecture = architecture,
+            });
+        }
     }
 
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
@@ -54,20 +62,39 @@ internal class CreateCatletSpecificationSaga(
 
         return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
+            Data.Data.PendingArchitectures = toHashSet(Data.Data.PendingArchitectures)
+                .Remove(response.Architecture)
+                .ToHashSet();
+
+            var variantData = new CatletSpecificationVersionVariantSagaData
+            {
+                Architecture = response.Architecture,
+                BuiltConfig = response.BuiltConfig,
+                ResolvedGenes = response.ResolvedGenes,
+            };
+
+            Data.Data.Variants = Data.Data.Variants
+                .ToHashMap()
+                .AddOrUpdate(response.Architecture, variantData)
+                .ToDictionary();
+
+            if (Data.Data.PendingArchitectures.Count > 0)
+                return;
+
             Data.Data.State = CreateCatletSpecificationSagaState.SpecificationBuilt;
 
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
-            Data.Data.BuiltConfig = response.BuiltConfig;
 
             var specificationVersion = new CatletSpecificationVersion
             {
                 Id = Data.Data.SpecificationVersionId,
                 ContentType = Data.Data.ContentType!,
                 Configuration = Data.Data.Configuration!.ReplaceLineEndings("\n"),
-                ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
+                Architectures = Data.Data.Architectures!,
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
-                Genes = Data.Data.ResolvedGenes.ToGenesList(Data.Data.SpecificationVersionId),
+                Variants = Data.Data.Variants.Values
+                    .Map(v => v.ToDbVariant(Data.Data.SpecificationVersionId))
+                    .ToList(),
             };
 
             var specification = new CatletSpecification
@@ -77,7 +104,7 @@ internal class CreateCatletSpecificationSaga(
                 Environment = EryphConstants.DefaultEnvironmentName,
                 // TODO validate that catlet name is specified
                 Name = response.BuiltConfig.Name!,
-                Architecture = Data.Data.Architecture!.Value,
+                Architectures = Data.Data.Architectures!,
                 Versions = [specificationVersion]
             };
 
@@ -86,7 +113,7 @@ internal class CreateCatletSpecificationSaga(
 
             await Complete(new ResourceReference
             {
-                Resource = new Resource(ResourceType.CatletSpecification, Data.Data.SpecificationId),
+                Resource = new Resources.Resource(ResourceType.CatletSpecification, Data.Data.SpecificationId),
             });
         });
     }

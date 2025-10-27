@@ -39,7 +39,7 @@ public class Create(
             Name = string.IsNullOrWhiteSpace(config.Name) ? EryphConstants.DefaultCatletName : config.Name,
             // Convert the configuration to YAML as it is more useful to the user
             ContentType = "application/yaml",
-            ConfigYaml = CatletConfigYamlSerializer.Serialize(config),
+            OriginalConfig = CatletConfigYamlSerializer.Serialize(config),
         };
     }
 

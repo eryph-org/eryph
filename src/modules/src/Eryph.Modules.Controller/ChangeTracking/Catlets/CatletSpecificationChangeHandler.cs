@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,7 +47,7 @@ internal class CatletSpecificationChangeHandler : IChangeHandler<CatletSpecifica
             Id = specification.Id,
             ProjectId = specification.ProjectId,
             Name = specification.Name,
-            Architecture = specification.Architecture,
+            Architectures = specification.Architectures.Map(a => a.Value).ToHashSet(),
         };
 
         var json = CatletSpecificationConfigModelJsonSerializer.Serialize(specificationConfig);

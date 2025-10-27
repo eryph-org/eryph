@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,7 +21,20 @@ internal static class Conversions
                 .Map(Enum.Parse<TEnum>)
                 .ToHashSet(),
             new ValueComparer<ISet<TEnum>>(
-                (a, b) => a == b || a != null && b != null && a.SetEquals(b),
+                (a, b) => a == b || (a != null && b != null && a.SetEquals(b)),
+                s => s.Fold(0, HashCode.Combine),
+                s => s.ToHashSet()));
+
+    public static PropertyBuilder<ISet<TName>> HasEryphNameSetConversion<TName>(
+        this PropertyBuilder<ISet<TName>> builder)
+        where TName : EryphName<TName> =>
+        builder.HasConversion(
+            v => string.Join(',', v.Order().Map(n => n.Value)),
+            v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Map(EryphName<TName>.New)
+                .ToHashSet(),
+            new ValueComparer<ISet<TName>>(
+                (a, b) => a == b || (a != null && b != null && a.SetEquals(b)),
                 s => s.Fold(0, HashCode.Combine),
                 s => s.ToHashSet()));
 
@@ -30,7 +44,7 @@ internal static class Conversions
             v => SerializeList(v),
             v => DeserializeList<string>(v),
             new ValueComparer<IList<string>>(
-                (a, b) => a == b || a != null && b != null && a.SequenceEqual(b),
+                (a, b) => a == b || (a != null && b != null && a.SequenceEqual(b)),
                 l => l.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                 l => l.ToList()));
 

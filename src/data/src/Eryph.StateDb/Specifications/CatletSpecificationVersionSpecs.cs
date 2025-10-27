@@ -2,6 +2,7 @@
 using System.Linq;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
+using LanguageExt;
 
 namespace Eryph.StateDb.Specifications;
 
@@ -12,14 +13,16 @@ public static class CatletSpecificationVersionSpecs
         public GetByIdReadOnly(Guid id)
         {
             Query.Where(x => x.Id == id)
-                .Include(x => x.Genes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
+                .Include(x => x.Variants)
+                .ThenInclude(x => x.PinnedGenes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
 
         public GetByIdReadOnly(Guid specificationId, Guid id)
         {
             Query.Where(x => x.Id == id && x.SpecificationId == specificationId)
-                .Include(x => x.Genes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
+                .Include(x => x.Variants)
+                .ThenInclude(x => x.PinnedGenes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
     }
@@ -30,7 +33,7 @@ public static class CatletSpecificationVersionSpecs
         {
             Query.Where(x => x.SpecificationId == specificationId)
                 .OrderByDescending(x => x.CreatedAt)
-                .Include(x => x.Genes)
+                .Include(x => x.Variants).ThenInclude(x => x.PinnedGenes)
                 .Take(1)
                 .AsNoTracking();
         }

@@ -42,15 +42,30 @@ internal class CatletSpecificationVersionSeeder : SeederBase
         {
             Id = entityId,
             SpecificationId = config.SpecificationId,
+            Architectures = config.Architectures
+                .Map(a => Architecture.New(a))
+                .ToHashSet(),
             ContentType = config.ContentType,
-            Configuration = config.Configuration,
-            ResolvedConfig = JsonSerializer.Serialize(config.ResolvedConfig, CatletConfigJsonSerializer.Options),
+            Configuration = config.OriginalConfig,
             Comment = config.Comment,
             CreatedAt = config.CreatedAt,
-            Genes = config.PinnedGenes
-                .Map(kvp => (UniqueGeneIdentifier.New(kvp.Key), GeneHash.New(kvp.Value)))
-                .ToDictionary()
-                .ToGenesList(entityId),
+            Variants = config.Variants
+                .Map(v =>
+                {
+                    var builtConfig = JsonSerializer.Serialize(v.BuiltConfig, CatletConfigJsonSerializer.Options);
+                    return new CatletSpecificationVersionVariant
+                    {
+                        Id = v.Id,
+                        SpecificationVersionId = v.SpecificationVersionId,
+                        Architecture = Architecture.New(v.Architecture),
+                        BuiltConfig = builtConfig,
+                        PinnedGenes = v.PinnedGenes
+                            .Map(kvp => (UniqueGeneIdentifier.New(kvp.Key), GeneHash.New(kvp.Value)))
+                            .ToDictionary()
+                            .ToGenesList(entityId),
+                    };
+                }).ToList()
+
         };
 
         await _specificationVersionRepository.AddAsync(specificationVersion, cancellationToken);

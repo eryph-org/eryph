@@ -1,6 +1,7 @@
 ﻿using Eryph.Serializers;
 using System;
 using System.Collections.Generic;
+using Eryph.Core.Genetics;
 
 namespace Eryph.StateDb.Model;
 
@@ -22,13 +23,11 @@ public class CatletSpecificationVersion
     /// </summary>
     public required string Configuration { get; set; }
 
-    // TODO use a wrapper property with lazy serialization?
-
-    public required string ResolvedConfig { get; set; }
+    public required ISet<Architecture> Architectures { get; set; }
 
     public string? Comment { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 
-    public IList<CatletSpecificationVersionGene> Genes { get; set; } = null!;
+    public ICollection<CatletSpecificationVersionVariant> Variants { get; set; } = null!;
 }

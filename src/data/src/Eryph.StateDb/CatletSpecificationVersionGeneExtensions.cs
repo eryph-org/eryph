@@ -10,7 +10,7 @@ namespace Eryph.StateDb;
 public static class CatletSpecificationVersionGeneExtensions
 {
     public static IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ToGenesDictionary(
-        this IList<CatletSpecificationVersionGene> genes) =>
+        this IList<CatletSpecificationVersionVariantGene> genes) =>
         genes.ToDictionary(
             g => new UniqueGeneIdentifier(
                 g.GeneType,
@@ -19,12 +19,12 @@ public static class CatletSpecificationVersionGeneExtensions
             g => GeneHash.New(g.Hash));
     
 
-    public static IList<CatletSpecificationVersionGene> ToGenesList(
+    public static IList<CatletSpecificationVersionVariantGene> ToGenesList(
         this IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> genes,
-        Guid specificationVersionId) =>
-        genes.Map(kvp => new CatletSpecificationVersionGene
+        Guid specificationVersionVariantId) =>
+        genes.Map(kvp => new CatletSpecificationVersionVariantGene
         {
-            SpecificationVersionId = specificationVersionId,
+            SpecificationVersionVariantId = specificationVersionVariantId,
             GeneType = kvp.Key.GeneType,
             Architecture = kvp.Key.Architecture.Value,
             GeneSet = kvp.Key.Id.GeneSet.Value,

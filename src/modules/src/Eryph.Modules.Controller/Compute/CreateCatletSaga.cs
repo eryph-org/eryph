@@ -31,12 +31,13 @@ internal class CreateCatletSaga(
         Data.Data.TenantId = message.TenantId;
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
-        Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.ContentType = message.ContentType;
+        Data.Data.OriginalConfig = message.OriginalConfig;
 
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            Configuration = message.ConfigYaml,
+            Configuration = message.OriginalConfig,
             Architecture = Data.Data.Architecture,
         });
     }
@@ -86,12 +87,12 @@ internal class CreateCatletSaga(
 
             await StartNewTask(new DeployCatletCommand
             {
-                // TODO use correlation ID to prevent duplicate command execution
                 ProjectId = Data.Data.ProjectId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
-                ConfigYaml = Data.Data.ConfigYaml,
+                ContentType = Data.Data.ContentType,
+                OriginalConfig = Data.Data.OriginalConfig,
                 ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });

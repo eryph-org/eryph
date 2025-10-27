@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -33,6 +35,10 @@ public class Create(
             ProjectId = request.ProjectId,
             ContentType = request.Configuration.ContentType,
             Configuration = request.Configuration.Content,
+            Architectures = request.Architectures.ToSeq()
+                .Map(Architecture.New)
+                .DefaultIfEmpty(Architecture.New(EryphConstants.DefaultArchitecture))
+                .ToHashSet(),
         };
     }
 

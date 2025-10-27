@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 
@@ -13,4 +14,6 @@ public class NewCatletSpecificationRequest : RequestBase
     public string? Comment { get; set; }
 
     public required CatletSpecificationConfig Configuration { get; set; }
+
+    public IList<string>? Architectures { get; set; }
 }

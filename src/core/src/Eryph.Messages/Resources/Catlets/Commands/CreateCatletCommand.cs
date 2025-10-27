@@ -13,7 +13,7 @@ public class CreateCatletCommand : IHasCorrelationId, ICommandWithName
 
     public string ContentType { get; set; }
 
-    public string ConfigYaml { get; set; }
+    public string OriginalConfig { get; set; }
 
     public Guid CorrelationId { get; set; }
 
