@@ -1,4 +1,5 @@
 ﻿using Eryph.ConfigModel.Json;
+using Eryph.Core.Genetics;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -46,17 +47,26 @@ public abstract class CatletSpecificationSeederTests(
             specification!.Id.Should().Be(specificationId);
             specification.ProjectId.Should().Be(CatletSpecificationConfigModelTestData.Specification.ProjectId);
             specification.Name.Should().Be(CatletSpecificationConfigModelTestData.Specification.Name);
-            specification.Architecture.Should().Be(CatletSpecificationConfigModelTestData.Specification.Architecture);
+            specification.Architectures.Should()
+                .Equal(CatletSpecificationConfigModelTestData.Specification.Architectures.Map(Architecture.New));
 
             var version = await stateStore.Read<CatletSpecificationVersion>().GetByIdAsync(specificationVersionId);
             version.Should().NotBeNull();
             version!.Id.Should().Be(specificationVersionId);
             version.SpecificationId.Should().Be(specificationId);
-            version.ConfigYaml.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.ConfigYaml);
-            version.ResolvedConfig.Should().Be(CatletConfigJsonSerializer.Serialize(CatletSpecificationConfigModelTestData.Config));
+            version.ContentType.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.ContentType);
+            version.Configuration.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.OriginalConfig);
             version.Comment.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.Comment);
             version.CreatedAt.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.CreatedAt);
-            version.Genes.Should().HaveCount(2);
+
+            var expectedVariant = CatletSpecificationConfigModelTestData.SpecificationVersion.Variants![0];
+            var variant = await stateStore.Read<CatletSpecificationVersionVariant>().GetByIdAsync(expectedVariant.Id);
+            variant.Should().NotBeNull();
+            variant!.Id.Should().Be(expectedVariant.Id);
+            variant.SpecificationVersionId.Should().Be(specificationVersionId);
+            variant.Architecture.Should().Be(Architecture.New(expectedVariant.Architecture));
+            variant.BuiltConfig.Should().Be(CatletConfigJsonSerializer.Serialize(CatletSpecificationConfigModelTestData.Config));
+            variant.PinnedGenes.Should().HaveCount(2);
         });
 
         var specificationBackupContent = await MockFileSystem.File.ReadAllTextAsync(

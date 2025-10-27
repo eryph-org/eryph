@@ -16,6 +16,7 @@ using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using LanguageExt.Common;
@@ -45,10 +46,10 @@ internal class DeployCatletSpecificationSaga(
         }
 
         var specificationVersion = await specificationVersionRepository.GetBySpecAsync(
-            new CatletSpecificationVersionSpecs.GetLatestBySpecificationIdReadOnly(message.SpecificationId));
+            new CatletSpecificationVersionSpecs.GetByIdReadOnly(message.SpecificationId, message.SpecificationVersionId));
         if (specificationVersion is null)
         {
-            await Fail($"The specification {message.SpecificationId} has no deployable version.");
+            await Fail($"The specification version {message.SpecificationVersionId} does not exist.");
             return;
         }
 
@@ -57,15 +58,23 @@ internal class DeployCatletSpecificationSaga(
         Data.Data.SpecificationVersionId = specificationVersion.Id;
         Data.Data.ProjectId = specification.ProjectId;
         Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Architecture = Architecture.New(specification.Architecture);
-        Data.Data.ResolvedGenes = specificationVersion.Genes.ToGenesDictionary();
-        Data.Data.ConfigYaml = specificationVersion.ConfigYaml;
+        Data.Data.ContentType = specificationVersion.ContentType;
+        Data.Data.Configuration = specificationVersion.Configuration;
+        Data.Data.Architecture = Architecture.New(message.Architecture);
 
+        var specificationVersionVariant = specificationVersion.Variants
+            .FirstOrDefault(v => v.Architecture == Data.Data.Architecture);
+        if (specificationVersionVariant is null)
+        {
+            await Fail($"The specification version {message.SpecificationVersionId} does not support the architecture {Data.Data.Architecture}.");
+            return;
+        }
+
+        Data.Data.ResolvedGenes = specificationVersionVariant.PinnedGenes.ToGenesDictionary();
+        
         var builtConfig = CatletConfigInstantiator.Instantiate(
-            CatletConfigJsonSerializer.Deserialize(specificationVersion.ResolvedConfig),
+            CatletConfigJsonSerializer.Deserialize(specificationVersionVariant.BuiltConfig),
             storageIdentifierGenerator.Generate());
-
-        builtConfig.Name = specification.Name;
 
         var updatedVariables = CatletConfigVariableApplier
             .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables)
@@ -107,7 +116,7 @@ internal class DeployCatletSpecificationSaga(
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
-                ConfigYaml = Data.Data.ConfigYaml,
+                OriginalConfig = Data.Data.Configuration,
                 ResolvedGenes = Data.Data.ResolvedGenes,
                 SpecificationId = Data.Data.SpecificationId,
                 SpecificationVersionId = Data.Data.SpecificationVersionId,

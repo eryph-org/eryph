@@ -13,7 +13,7 @@ public class DeployCatletSpecificationRequest : SingleEntityRequest
 
 public class DeployCatletSpecificationRequestBody
 {
-    public required string Architecture { get; set; }
+    public string? Architecture { get; set; }
 
     public bool? Redeploy { get; set; }
 

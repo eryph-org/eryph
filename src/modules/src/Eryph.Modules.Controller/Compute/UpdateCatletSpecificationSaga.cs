@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations.Events;
+﻿using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
@@ -10,9 +8,16 @@ using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.ModuleCore;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using JetBrains.Annotations;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -38,18 +43,21 @@ internal class UpdateCatletSpecificationSaga(
 
         Data.Data.SpecificationVersionId = Guid.NewGuid();
         Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Name = message.Name;
         Data.Data.ContentType = message.ContentType;
-        Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.OriginalConfig = message.Configuration;
+        Data.Data.Architectures = message.Architectures;
         Data.Data.Comment = message.Comment;
+        Data.Data.PendingArchitectures = message.Architectures;
 
-        await StartNewTask(new BuildCatletSpecificationCommand
+        foreach (var architecture in Data.Data.PendingArchitectures)
         {
-            AgentName = Data.Data.AgentName,
-            Configuration = message.ConfigYaml,
-            Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
-            Architecture = Architecture.New(specification.Architecture),
-        });
+            await StartNewTask(new BuildCatletSpecificationCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Configuration = message.Configuration,
+                Architecture = architecture,
+            });
+        }
     }
 
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
@@ -59,10 +67,26 @@ internal class UpdateCatletSpecificationSaga(
 
         return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
-            Data.Data.State = UpdateCatletSpecificationSagaState.SpecificationBuilt;
+            Data.Data.PendingArchitectures = toHashSet(Data.Data.PendingArchitectures)
+                .Remove(response.Architecture)
+                .ToHashSet();
 
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
-            Data.Data.BuiltConfig = response.BuiltConfig;
+            var variantData = new CatletSpecificationVersionVariantSagaData
+            {
+                Architecture = response.Architecture,
+                BuiltConfig = response.BuiltConfig,
+                ResolvedGenes = response.ResolvedGenes,
+            };
+
+            Data.Data.Variants = Data.Data.Variants
+                .ToHashMap()
+                .AddOrUpdate(response.Architecture, variantData)
+                .ToDictionary();
+
+            if (Data.Data.PendingArchitectures.Count > 0)
+                return;
+
+            Data.Data.State = UpdateCatletSpecificationSagaState.SpecificationBuilt;
 
             var specification = await stateStore.For<CatletSpecification>()
                 .GetByIdAsync(Data.Data.SpecificationId);
@@ -72,21 +96,21 @@ internal class UpdateCatletSpecificationSaga(
                 return;
             }
 
-            if (Data.Data.Name is not null)
-            {
-                specification.Name = Data.Data.Name;
-            }
+            specification.Name = Data.Data.Variants.Values.First().BuiltConfig.Name!;
+            specification.Architectures = Data.Data.Variants.Keys.ToHashSet();
             
             var specificationVersion = new CatletSpecificationVersion
             {
                 Id = Data.Data.SpecificationVersionId,
                 SpecificationId = Data.Data.SpecificationId,
                 ContentType = Data.Data.ContentType!,
-                Configuration = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
-                ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
+                Configuration = Data.Data.OriginalConfig!.ReplaceLineEndings("\n"),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
-                Genes = Data.Data.ResolvedGenes.ToGenesList(Data.Data.SpecificationVersionId),
+                Architectures = Data.Data.Variants.Keys.ToHashSet(),
+                Variants = Data.Data.Variants.Values
+                    .Map(v => v.ToDbVariant(Data.Data.SpecificationVersionId))
+                    .ToList(),
             };
 
             await stateStore.For<CatletSpecificationVersion>().AddAsync(specificationVersion);

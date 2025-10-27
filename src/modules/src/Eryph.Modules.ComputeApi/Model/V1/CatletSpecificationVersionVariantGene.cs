@@ -2,7 +2,7 @@
 
 namespace Eryph.Modules.ComputeApi.Model.V1;
 
-public class CatletSpecificationVersionGene
+public class CatletSpecificationVersionVariantGene
 {
     public required GeneType GeneType { get; set; }
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Functional.Validations;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
+using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
@@ -29,7 +31,10 @@ public class Validate(
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             ContentType = request.Configuration.ContentType,
             Configuration = request.Configuration.Content,
-            Architecture = Architecture.New(request.Architecture),
+            Architectures = request.Architectures.ToSeq()
+                .Map(Architecture.New)
+                .DefaultIfEmpty(Architecture.New(EryphConstants.DefaultArchitecture))
+                .ToHashSet(),
         };
     }
 
@@ -52,7 +57,7 @@ public class Validate(
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(ValidateSpecificationRequest.Configuration)));
 
-        // TODO use separate validation for archicture and config?
+        // TODO use separate validation for architecture and config?
 
         return await base.HandleAsync(request, cancellationToken);
     }
@@ -64,9 +69,14 @@ public class Validate(
         from _2 in RequestValidations.ValidateCatletSpecificationConfig(request.Configuration)
                        .Map(_ => unit)
                        .AddJsonPathPrefix(nameof(ValidateSpecificationRequest.Configuration).ToJsonPath(apiNamingPolicy))
-                   | Architecture.NewValidation(request.Architecture)
-                       .Map(_ => unit)
-                       .MapFail(e => new ValidationIssue(nameof(ValidateSpecificationRequest.Architecture), e.Message))
+                   | ValidateList(request, r => r.Architectures, ValidateArchitecture, nameof(ValidateSpecificationRequest.Architectures))
                        .ToJsonPath(apiNamingPolicy)
+        select unit;
+
+    private static Validation<ValidationIssue, Unit> ValidateArchitecture(
+        string architecture,
+        string path) =>
+        from _ in Architecture.NewValidation(architecture)
+            .MapFail(e => new ValidationIssue(path, e.Message))
         select unit;
 }

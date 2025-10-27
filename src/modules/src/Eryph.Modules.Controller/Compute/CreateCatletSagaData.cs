@@ -8,7 +8,9 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class CreateCatletSagaData : TaskWorkflowSagaData
 {
-    public string? ConfigYaml { get; set; }
+    public string? ContentType { get; set; }
+
+    public string? OriginalConfig { get; set; }
 
     public CatletConfig? BuiltConfig { get; set; }
 

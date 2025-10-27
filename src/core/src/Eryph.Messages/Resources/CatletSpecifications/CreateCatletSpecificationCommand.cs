@@ -1,6 +1,8 @@
 ﻿using Eryph.Resources;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Eryph.Core.Genetics;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 
@@ -12,6 +14,8 @@ public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
     public string ContentType { get; set; }
 
     public string Configuration { get; set; }
+
+    public ISet<Architecture> Architectures { get; set; }
 
     [MaybeNull] public string Comment { get; set; }
 

@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Dbosoft.Functional.Validations;
+using Eryph.ConfigModel.Json;
+using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -34,6 +39,11 @@ public class Deploy(
         OperationId = "CatletSpecifications_Deploy",
         Tags = ["Catlet Specifications"])
     ]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status202Accepted,
+        description: "Success",
+        type: typeof(Operation),
+        contentTypes: ["application/json"])]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] DeployCatletSpecificationRequest request,
         CancellationToken cancellationToken = default)
@@ -59,6 +69,15 @@ public class Deploy(
         if (specificationVersion is null)
             return NotFound();
 
+        // TODO add validation
+        var architecture = Architecture.New(request.Body.Architecture ?? EryphConstants.DefaultArchitecture);
+        var specificationVersionVariant = specificationVersion.Variants
+            .FirstOrDefault(v => v.Architecture == architecture);
+        if (specificationVersionVariant is null)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The specification version does not support the requested architecture.");
+
         var projectAccess = await userRightsProvider.HasProjectAccess(specification.ProjectId, AccessRight.Write);
         if (!projectAccess)
             return Problem(
@@ -83,20 +102,17 @@ public class Deploy(
                 statusCode: StatusCodes.Status409Conflict,
                 detail: $"A catlet with the name '{specification.Name}' already exists in the project '{specification.Project.Name}'. Catlet names must be unique within a project.");
 
-        //var catletConfig = CatletConfigJsonSerializer.Deserialize(specificationVersion.ResolvedConfig);
-
-        //var variablesValidation = CatletConfigVariableApplier.ApplyVariables(
-        //        catletConfig.Variables.ToSeq(),
-        //        request.Body.Variables)
-        //    // TODO Improve the validation and path calculation
-        //    .MapFail(e => new ValidationIssue("$", e.Message));
-        //if (variablesValidation.IsFail)
-        //    return ValidationProblem(
-        //        detail: "The variables are invalid.",
-        //        modelStateDictionary: variablesValidation.ToModelStateDictionary(
-        //            nameof(DeployCatletSpecificationRequestBody.Variables)));
-
-        // TODO validate architecture
+        var catletConfig = CatletConfigJsonSerializer.Deserialize(specificationVersionVariant.BuiltConfig);
+        var variablesValidation = CatletConfigVariableApplier.ApplyVariables(
+                catletConfig.Variables.ToSeq(),
+                request.Body.Variables)
+            // TODO Improve the validation and path calculation
+            .MapFail(e => new ValidationIssue("$", e.Message));
+        if (variablesValidation.IsFail)
+            return ValidationProblem(
+                detail: "The variables are invalid.",
+                modelStateDictionary: variablesValidation.ToModelStateDictionary(
+                    nameof(DeployCatletSpecificationRequestBody.Variables)));
 
         return await operationHandler.HandleOperationRequest(
             () => new DeployCatletSpecificationCommand

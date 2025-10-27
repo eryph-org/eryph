@@ -82,6 +82,7 @@ internal class BuildCatletSpecificationSaga(
 
             await Complete(new BuildCatletSpecificationCommandResponse
             {
+                Architecture = Data.Data.Architecture,
                 BuiltConfig = response.BuiltConfig,
                 ResolvedGenes = response.ResolvedGenes,
             });

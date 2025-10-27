@@ -44,7 +44,8 @@ internal class DeployCatletSaga(
         Data.Data.AgentName = message.AgentName;
         Data.Data.Architecture = message.Architecture;
         Data.Data.Config = message.Config;
-        Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.ContentType = message.ContentType;
+        Data.Data.OriginalConfig = message.OriginalConfig;
         Data.Data.ResolvedGenes = message.ResolvedGenes;
         Data.Data.SpecificationId = message.SpecificationId;
         Data.Data.SpecificationVersionId = message.SpecificationVersionId;
@@ -116,7 +117,7 @@ internal class DeployCatletSaga(
                 Config = Data.Data.Config,
                 Architecture = Data.Data.Architecture,
                 PinnedGenes = Data.Data.ResolvedGenes,
-                ConfigYaml = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
+                OriginalConfig = Data.Data.OriginalConfig!.ReplaceLineEndings("\n"),
             };
 
             await metadataService.AddMetadata(

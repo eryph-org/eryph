@@ -14,10 +14,6 @@ public class CreateCatletSpecificationSagaData : TaskWorkflowSagaData
 
     public string? Comment { get; set; }
 
-    public CatletConfig? BuiltConfig { get; set; }
-
-    public string? Name { get; set; }
-
     public string? AgentName { get; set; }
 
     public CreateCatletSpecificationSagaState State { get; set; }
@@ -28,7 +24,10 @@ public class CreateCatletSpecificationSagaData : TaskWorkflowSagaData
 
     public Guid SpecificationVersionId { get; set; }
 
-    public Architecture? Architecture { get; set; }
+    public ISet<Architecture> PendingArchitectures = new HashSet<Architecture>();
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
+    public IReadOnlyDictionary<Architecture, CatletSpecificationVersionVariantSagaData> Variants { get; set; }
+        = new Dictionary<Architecture, CatletSpecificationVersionVariantSagaData>();
+
+    public ISet<Architecture> Architectures = new HashSet<Architecture>();
 }

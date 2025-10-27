@@ -7,9 +7,9 @@ using Eryph.Core.Genetics;
 
 namespace Eryph.StateDb.Model;
 
-public class CatletSpecificationVersionGene
+public class CatletSpecificationVersionVariantGene
 {
-    public required Guid SpecificationVersionId { get; set; }
+    public required Guid SpecificationVersionVariantId { get; set; }
 
     public required GeneType GeneType { get; set; }
 

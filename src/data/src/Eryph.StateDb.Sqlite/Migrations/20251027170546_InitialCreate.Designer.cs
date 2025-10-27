@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20251023152822_InitialCreate")]
+    [Migration("20251027170546_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -135,18 +135,22 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Architectures")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Comment")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ConfigYaml")
+                    b.Property<string>("Configuration")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentType")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ResolvedConfig")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("SpecificationId")
@@ -159,9 +163,33 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.ToTable("CatletSpecificationVersions");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionGene", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionVariant", b =>
                 {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuiltConfig")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("SpecificationVersionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpecificationVersionId");
+
+                    b.ToTable("CatletSpecificationVersionVariant");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionVariantGene", b =>
+                {
+                    b.Property<Guid>("SpecificationVersionVariantId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("UniqueGeneIndex")
@@ -186,11 +214,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("SpecificationVersionId", "UniqueGeneIndex");
+                    b.HasKey("SpecificationVersionVariantId", "UniqueGeneIndex");
 
                     b.HasIndex("UniqueGeneIndex");
 
-                    b.ToTable("CatletSpecificationVersionGenes");
+                    b.ToTable("CatletSpecificationVersionVariantGenes");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
@@ -824,7 +852,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<string>("Architecture")
+                    b.Property<string>("Architectures")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -1042,11 +1070,20 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionGene", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionVariant", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.CatletSpecificationVersion", null)
-                        .WithMany("Genes")
+                        .WithMany("Variants")
                         .HasForeignKey("SpecificationVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionVariantGene", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.CatletSpecificationVersionVariant", null)
+                        .WithMany("PinnedGenes")
+                        .HasForeignKey("SpecificationVersionVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1286,7 +1323,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersion", b =>
                 {
-                    b.Navigation("Genes");
+                    b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionVariant", b =>
+                {
+                    b.Navigation("PinnedGenes");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPool", b =>

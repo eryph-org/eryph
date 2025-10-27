@@ -23,7 +23,9 @@ public class DeployCatletSpecificationSagaData : TaskWorkflowSagaData
 
     public Guid SpecificationVersionId { get; set; }
 
-    public string? ConfigYaml { get; set; }
+    public string? ContentType { get; set; }
+
+    public string? Configuration { get; set; }
 
     public CatletConfig? BuiltConfig { get; set; }
 

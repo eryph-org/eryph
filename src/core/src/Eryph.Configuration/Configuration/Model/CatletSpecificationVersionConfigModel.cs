@@ -11,14 +11,15 @@ public class CatletSpecificationVersionConfigModel
 
     public Guid SpecificationId { get; set; }
 
+    public ISet<string> Architectures { get; set; }
+
     public required string ContentType { get; set; }
 
-    public required string Configuration { get; set; }
-    public required JsonElement ResolvedConfig { get; set; }
+    public required string OriginalConfig { get; set; }
 
     [MaybeNull] public string Comment { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 
-    [MaybeNull] public IReadOnlyDictionary<string, string> PinnedGenes { get; set; }
+    [MaybeNull] public IList<CatletSpecificationVersionVariantConfigModel> Variants { get; set; }
 }

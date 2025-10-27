@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Serializers;
 using Eryph.Resources;
@@ -41,7 +43,9 @@ internal class CatletSpecificationSeeder : SeederBase
             Name = config.Name,
             Environment = EryphConstants.DefaultEnvironmentName,
             ResourceType = ResourceType.CatletSpecification,
-            Architecture = config.Architecture,
+            Architectures = config.Architectures
+                .Map(a => Architecture.New(a))
+                .ToHashSet(),
         };
 
         await _specificationRepository.AddAsync(specification, cancellationToken);

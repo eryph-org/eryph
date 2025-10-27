@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -29,8 +31,12 @@ public class Update(
             SpecificationId = model.Id,
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             ContentType = request.Body.Configuration.ContentType,
-            ConfigYaml = request.Body.Configuration.Content,
+            Configuration = request.Body.Configuration.Content,
             Comment = request.Body.Comment,
+            Architectures = request.Body.Architectures.ToSeq()
+                .Map(Architecture.New)
+                .DefaultIfEmpty(Architecture.New(EryphConstants.DefaultArchitecture))
+                .ToHashSet(),
         };
     }
 
