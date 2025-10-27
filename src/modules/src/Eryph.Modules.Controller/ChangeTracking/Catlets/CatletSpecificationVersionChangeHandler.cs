@@ -45,14 +45,21 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
             return;
         }
 
+        using var jsonDocument = JsonDocument.Parse(specificationVersion.ResolvedConfig);
+
         var versionConfig = new CatletSpecificationVersionConfigModel
         {
             Id = specificationVersion.Id,
             SpecificationId = specificationVersion.SpecificationId,
             ContentType = specificationVersion.ContentType,
             Configuration = specificationVersion.Configuration,
+            ResolvedConfig = jsonDocument.RootElement,
             Comment = specificationVersion.Comment,
             CreatedAt = specificationVersion.CreatedAt,
+            PinnedGenes = specificationVersion.Genes
+                .ToGenesDictionary()
+                .Map(kvp => (kvp.Key.Value, kvp.Value.Value))
+                .ToDictionary(),
         };
 
         var json = CatletSpecificationVersionConfigModelJsonSerializer.Serialize(versionConfig);

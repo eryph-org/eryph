@@ -151,6 +151,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                         ContentType = s.ContentType,
                         Content = s.Configuration,
                     }));
+                .ForMember(v => v.ResolvedConfig, o => o.MapFrom(s => MapToJsonElement(s.ResolvedConfig)));
             CreateMap<StateDb.Model.CatletSpecificationVersionGene, CatletSpecificationVersionGene>();
         }
 

@@ -31,7 +31,6 @@ internal class DeployCatletSpecificationSaga(
     IStorageIdentifierGenerator storageIdentifierGenerator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<DeployCatletSpecificationCommand, EryphSagaData<DeployCatletSpecificationSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DeployCatletCommand>>
 {
@@ -46,69 +45,50 @@ internal class DeployCatletSpecificationSaga(
         }
 
         var specificationVersion = await specificationVersionRepository.GetBySpecAsync(
-            new CatletSpecificationVersionSpecs.GetByIdReadOnly(specification.Id, message.SpecificationVersionId));
+            new CatletSpecificationVersionSpecs.GetLatestBySpecificationIdReadOnly(message.SpecificationId));
         if (specificationVersion is null)
         {
-            await Fail($"The specification version {message.SpecificationVersionId} does not exist.");
+            await Fail($"The specification {message.SpecificationId} has no deployable version.");
             return;
         }
 
         Data.Data.State = DeployCatletSpecificationSagaState.Initiated;
-        Data.Data.Redeploy = message.Redeploy;
-        Data.Data.Architecture = Architecture.New(message.Architecture);
         Data.Data.SpecificationId = specification.Id;
         Data.Data.SpecificationVersionId = specificationVersion.Id;
         Data.Data.ProjectId = specification.ProjectId;
         Data.Data.AgentName = Environment.MachineName;
-        Data.Data.ContentType = specificationVersion.ContentType;
-        Data.Data.ConfigYaml = specificationVersion.Configuration;
-        Data.Data.Variables = message.Variables;
+        Data.Data.Architecture = Architecture.New(specification.Architecture);
+        Data.Data.ResolvedGenes = specificationVersion.Genes.ToGenesDictionary();
+        Data.Data.ConfigYaml = specificationVersion.ConfigYaml;
 
-        await StartNewTask(new BuildCatletSpecificationCommand
+        var builtConfig = CatletConfigInstantiator.Instantiate(
+            CatletConfigJsonSerializer.Deserialize(specificationVersion.ResolvedConfig),
+            storageIdentifierGenerator.Generate());
+
+        builtConfig.Name = specification.Name;
+
+        var updatedVariables = CatletConfigVariableApplier
+            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables)
+            .ToEither()
+            .MapLeft(errors => Error.New("Some variables are invalid.", Error.Many(errors)));
+        if (updatedVariables.IsLeft)
         {
-            AgentName = Data.Data.AgentName,
-            Configuration = Data.Data.ConfigYaml,
-            Architecture = Data.Data.Architecture,
+            await Fail(Error.Many(updatedVariables.LeftToSeq()).Print());
+            return;
+        }
+
+        Data.Data.BuiltConfig = builtConfig.CloneWith(c =>
+        {
+            c.Variables = updatedVariables.ValueUnsafe().ToArray();
         });
-    }
 
-    public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
-    {
-        if (Data.Data.State >= DeployCatletSpecificationSagaState.SpecificationBuilt)
-            return Task.CompletedTask;
-
-        return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
+        await StartNewTask(new ValidateCatletDeploymentCommand
         {
-            Data.Data.State = DeployCatletSpecificationSagaState.SpecificationBuilt;
-
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
-
-            var builtConfig = CatletConfigInstantiator.Instantiate(
-                response.BuiltConfig, storageIdentifierGenerator.Generate());
-
-            var updatedVariables = CatletConfigVariableApplier
-                .ApplyVariables(builtConfig.Variables.ToSeq(), Data.Data.Variables)
-                .ToEither()
-                .MapLeft(errors => Error.New("Some variables are invalid.", Error.Many(errors)));
-            if (updatedVariables.IsLeft)
-            {
-                await Fail(Error.Many(updatedVariables.LeftToSeq()).Print());
-                return;
-            }
-
-            Data.Data.BuiltConfig = builtConfig.CloneWith(c =>
-            {
-                c.Variables = updatedVariables.ValueUnsafe().ToArray();
-            });
-
-            await StartNewTask(new ValidateCatletDeploymentCommand
-            {
-                ProjectId = Data.Data.ProjectId,
-                AgentName = Data.Data.AgentName,
-                Architecture = Data.Data.Architecture,
-                Config = Data.Data.BuiltConfig,
-                ResolvedGenes = Data.Data.ResolvedGenes,
-            });
+            ProjectId = Data.Data.ProjectId,
+            AgentName = Data.Data.AgentName,
+            Architecture = Data.Data.Architecture,
+            Config = Data.Data.BuiltConfig,
+            ResolvedGenes = Data.Data.ResolvedGenes,
         });
     }
 
@@ -152,8 +132,6 @@ internal class DeployCatletSpecificationSaga(
     {
         base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<DeployCatletCommand>>(

@@ -14,8 +14,11 @@ public class CatletSpecificationVersionConfigModel
     public required string ContentType { get; set; }
 
     public required string Configuration { get; set; }
+    public required JsonElement ResolvedConfig { get; set; }
 
     [MaybeNull] public string Comment { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    [MaybeNull] public IReadOnlyDictionary<string, string> PinnedGenes { get; set; }
 }

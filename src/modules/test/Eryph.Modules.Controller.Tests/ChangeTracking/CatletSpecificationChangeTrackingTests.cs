@@ -37,7 +37,6 @@ public abstract class CatletSpecificationChangeTrackingTests(
     private static readonly Guid SpecificationVersionId = Guid.NewGuid();
     private static readonly DateTimeOffset CreatedAt = DateTimeOffset.Parse("2025-01-01T01:02:03Z");
     private static readonly string Comment = "Initial version";
-    private static readonly string ContentType = "application/yaml";
     private static readonly string ConfigYaml = "name: test-specification\nparent: acme/acme-os/1.0\n";
     private static readonly CatletConfig ResolvedConfig = new()
     {
@@ -64,7 +63,6 @@ public abstract class CatletSpecificationChangeTrackingTests(
         var updatedVersionId = Guid.NewGuid();
         var updatedName = "updated-specification";
         var updatedComment = "Updated version";
-        var updatedContentType = "application/yaml";
         var updatedConfigYaml = "name: updated-specification\nparent: acme/acme-unix/2.0\n";
         var updatedResolvedConfig = new CatletConfig
         {
@@ -86,10 +84,22 @@ public abstract class CatletSpecificationChangeTrackingTests(
             {
                 Id = updatedVersionId,
                 SpecificationId = SpecificationId,
-                ContentType = updatedContentType,
-                Configuration = updatedConfigYaml,
+                ConfigYaml = updatedConfigYaml,
+                ResolvedConfig = CatletConfigJsonSerializer.Serialize(updatedResolvedConfig),
                 Comment = updatedComment,
                 CreatedAt = updatedCreatedAt,
+                Genes =
+                [
+                    new CatletSpecificationVersionGene
+                    {
+                        SpecificationVersionId = updatedVersionId,
+                        GeneType = GeneType.Catlet,
+                        Architecture = "any",
+                        GeneSet = "acme/acme-unix/2.0",
+                        Name = "catlet",
+                        Hash = updatedGeneHash,
+                    }
+                ]
             };
 
             await stateStore.For<CatletSpecificationVersion>().AddAsync(newVersion);
@@ -100,20 +110,27 @@ public abstract class CatletSpecificationChangeTrackingTests(
         var specification = await ReadSpecification(SpecificationId);
         specification.ProjectId.Should().Be(EryphConstants.DefaultProjectId);
         specification.Name.Should().Be(updatedName);
+        specification.Architecture.Should().Be(EryphConstants.DefaultArchitecture);
 
         var firstVersion = await ReadSpecificationVersion(SpecificationVersionId);
         firstVersion.SpecificationId.Should().Be(SpecificationId);
-        firstVersion.ContentType.Should().Be(ContentType);
-        firstVersion.Configuration.Should().Be(ConfigYaml);
+        firstVersion.ConfigYaml.Should().Be(ConfigYaml);
+        var firstResolvedConfig = CatletConfigJsonSerializer.Deserialize(firstVersion.ResolvedConfig);
+        firstResolvedConfig.Should().BeEquivalentTo(ResolvedConfig);
         firstVersion.Comment.Should().Be(Comment);
         firstVersion.CreatedAt.Should().Be(CreatedAt);
+        firstVersion.PinnedGenes.Should().HaveCount(1);
+        firstVersion.PinnedGenes.Should().ContainKey(GeneId).WhoseValue.Should().Be(GeneHash);
 
         var secondVersion = await ReadSpecificationVersion(updatedVersionId);
         secondVersion.SpecificationId.Should().Be(SpecificationId);
-        secondVersion.ContentType.Should().Be(updatedContentType);
-        secondVersion.Configuration.Should().Be(updatedConfigYaml);
+        secondVersion.ConfigYaml.Should().Be(updatedConfigYaml);
+        var secondResolvedConfig = CatletConfigJsonSerializer.Deserialize(secondVersion.ResolvedConfig);
+        secondResolvedConfig.Should().BeEquivalentTo(updatedResolvedConfig);
         secondVersion.Comment.Should().Be(updatedComment);
         secondVersion.CreatedAt.Should().Be(updatedCreatedAt);
+        secondVersion.PinnedGenes.Should().HaveCount(1);
+        secondVersion.PinnedGenes.Should().ContainKey(updatedGeneId).WhoseValue.Should().Be(updatedGeneHash);
     }
 
     [Fact]
@@ -156,6 +173,7 @@ public abstract class CatletSpecificationChangeTrackingTests(
                 Id = SpecificationId,
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = Name,
+                Architecture = EryphConstants.DefaultArchitecture,
                 Environment = EryphConstants.DefaultEnvironmentName,
                 Versions =
                 [
@@ -163,10 +181,22 @@ public abstract class CatletSpecificationChangeTrackingTests(
                     {
                         Id =  SpecificationVersionId,
                         SpecificationId = SpecificationId,
-                        ContentType = ContentType,
-                        Configuration = ConfigYaml,
+                        ConfigYaml = ConfigYaml,
+                        ResolvedConfig = CatletConfigJsonSerializer.Serialize(ResolvedConfig),
                         Comment = Comment,
                         CreatedAt = CreatedAt,
+                        Genes =
+                        [
+                            new CatletSpecificationVersionGene
+                            {
+                                SpecificationVersionId = SpecificationVersionId,
+                                GeneType = GeneType.Catlet,
+                                Architecture = "any",
+                                GeneSet = "acme/acme-os/1.0",
+                                Name = "catlet",
+                                Hash = GeneHash,
+                            }
+                        ]
                     }
                 ]
             };
@@ -181,13 +211,17 @@ public abstract class CatletSpecificationChangeTrackingTests(
         var specification = await ReadSpecification(SpecificationId);
         specification.ProjectId.Should().Be(EryphConstants.DefaultProjectId);
         specification.Name.Should().Be(Name);
+        specification.Architecture.Should().Be(EryphConstants.DefaultArchitecture);
         
         var version = await ReadSpecificationVersion(SpecificationVersionId);
         version.SpecificationId.Should().Be(SpecificationId);
-        version.ContentType.Should().Be(ContentType);
-        version.Configuration.Should().Be(ConfigYaml);
+        version.ConfigYaml.Should().Be(ConfigYaml);
+        var resolved = CatletConfigJsonSerializer.Deserialize(version.ResolvedConfig);
+        resolved.Should().BeEquivalentTo(ResolvedConfig);
         version.Comment.Should().Be(Comment);
         version.CreatedAt.Should().Be(CreatedAt);
+        version.PinnedGenes.Should().HaveCount(1);
+        version.PinnedGenes.Should().ContainKey(GeneId).WhoseValue.Should().Be(GeneHash);
     }
 
     private string GetSpecificationPath(Guid specificationId) =>

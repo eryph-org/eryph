@@ -9,4 +9,6 @@ public class CatletSpecificationConfigModel
     public Guid ProjectId { get; set; }
 
     public string Name { get; set; } = null!;
+
+    public string Architecture { get; set; } = null!;
 }

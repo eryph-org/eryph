@@ -1,6 +1,9 @@
-﻿using System;
+﻿using Dbosoft.Rebus.Operations.Workflow;
+using System;
 using System.Collections.Generic;
-using Dbosoft.Rebus.Operations.Workflow;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 
@@ -20,13 +23,7 @@ public class DeployCatletSpecificationSagaData : TaskWorkflowSagaData
 
     public Guid SpecificationVersionId { get; set; }
 
-    public bool Redeploy { get; set; }
-
-    public string ContentType { get; set; }
-
     public string? ConfigYaml { get; set; }
-
-    public IReadOnlyDictionary<string, string> Variables { get; set; }
 
     public CatletConfig? BuiltConfig { get; set; }
 

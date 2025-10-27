@@ -48,6 +48,7 @@ internal class UpdateCatletSpecificationSaga(
             AgentName = Data.Data.AgentName,
             Configuration = message.ConfigYaml,
             Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
+            Architecture = Architecture.New(specification.Architecture),
         });
     }
 
@@ -82,8 +83,10 @@ internal class UpdateCatletSpecificationSaga(
                 SpecificationId = Data.Data.SpecificationId,
                 ContentType = Data.Data.ContentType!,
                 Configuration = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
+                ResolvedConfig = CatletConfigJsonSerializer.Serialize(Data.Data.BuiltConfig!),
                 Comment = Data.Data.Comment,
                 CreatedAt = DateTimeOffset.UtcNow,
+                Genes = Data.Data.ResolvedGenes.ToGenesList(Data.Data.SpecificationVersionId),
             };
 
             await stateStore.For<CatletSpecificationVersion>().AddAsync(specificationVersion);
