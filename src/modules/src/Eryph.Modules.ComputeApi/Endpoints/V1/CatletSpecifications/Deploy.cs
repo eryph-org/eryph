@@ -88,16 +88,16 @@ public class Deploy(
             new CatletSpecs.GetBySpecificationId(specification.Id),
             cancellationToken);
 
-        if (catlet is not null)
+        if (!request.Body.Redeploy.GetValueOrDefault() && catlet is not null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 detail: $"The catlet specification is already deployed as catlet {catlet.Id}. Please remove the catlet before deploying a new version.");
 
-        var catletWithNameExists = await catletRepository.AnyAsync(
+        var catletWithName = await catletRepository.GetBySpecAsync(
             new CatletSpecs.GetByName(specification.Name, specification.ProjectId),
             cancellationToken);
 
-        if (catletWithNameExists)
+        if (catlet is null && catletWithName is not null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 detail: $"A catlet with the name '{specification.Name}' already exists in the project '{specification.Project.Name}'. Catlet names must be unique within a project.");
@@ -120,7 +120,7 @@ public class Deploy(
                 SpecificationId = specification.Id,
                 SpecificationVersionId = specificationVersion.Id,
                 Name = specification.Name,
-                Architecture = request.Body.Architecture,
+                Architecture = architecture,
                 Redeploy = request.Body.Redeploy.GetValueOrDefault(),
                 Variables = request.Body.Variables,
             },
