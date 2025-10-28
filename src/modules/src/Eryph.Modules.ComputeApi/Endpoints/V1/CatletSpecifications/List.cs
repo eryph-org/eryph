@@ -29,7 +29,7 @@ public class List(
         statusCode: StatusCodes.Status200OK,
         description: "Success",
         type: typeof(ListResponse<CatletSpecification>),
-        contentTypes: ["application/json"])
+        contentTypes: "application/json")
     ]
     public override Task<ActionResult<ListResponse<CatletSpecification>>> HandleAsync(
         [FromRoute] ListFilteredByProjectRequest request,

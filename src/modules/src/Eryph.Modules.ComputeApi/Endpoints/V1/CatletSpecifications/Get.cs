@@ -29,7 +29,7 @@ public class Get(
         statusCode: StatusCodes.Status200OK,
         description: "Success",
         type: typeof(CatletSpecification),
-        contentTypes: ["application/json"])
+        contentTypes: "application/json")
     ]
     public override async Task<ActionResult<CatletSpecification>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

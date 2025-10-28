@@ -8,7 +8,9 @@ public class DestroyCatletSpecificationCommand : ICommandWithName, IHasResource
 {
     public Guid SpecificationId { get; set; }
 
+    public bool DestroyCatlet { get; set; }
+
     public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
 
-    public string GetCommandName() => "Delete catlet specification";
+    public string GetCommandName() => "Destroy catlet specification";
 }

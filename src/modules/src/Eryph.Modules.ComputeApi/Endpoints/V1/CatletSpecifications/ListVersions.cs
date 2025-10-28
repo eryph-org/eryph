@@ -38,7 +38,7 @@ public class ListVersions(
         statusCode: StatusCodes.Status200OK,
         description: "Success",
         type: typeof(ListResponse<CatletSpecificationVersionInfo>),
-        contentTypes: ["application/json"])
+        contentTypes: "application/json")
     ]
     public override async Task<ActionResult<ListResponse<CatletSpecificationVersionInfo>>> HandleAsync(
         [FromRoute] ListCatletSpecificationVersionsRequest request,
