@@ -13,13 +13,13 @@ public class CatletSpecificationVersionConfigModel
 
     public ISet<string> Architectures { get; set; }
 
-    public required string ContentType { get; set; }
-
-    public required string OriginalConfig { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
     [MaybeNull] public string Comment { get; set; }
 
-    public DateTimeOffset CreatedAt { get; set; }
+    public required string ContentType { get; set; }
+
+    public required string OriginalConfig { get; set; }
 
     [MaybeNull] public IList<CatletSpecificationVersionVariantConfigModel> Variants { get; set; }
 }
