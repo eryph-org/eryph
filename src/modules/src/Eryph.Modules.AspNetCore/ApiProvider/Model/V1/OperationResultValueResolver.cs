@@ -47,6 +47,10 @@ public class OperationResultValueResolver(
 
         return result switch
         {
+            DeployCatletSpecificationCommandResponse deployResponse => new CatletOperationResult
+            {
+                CatletId = deployResponse.CatletId.ToString(),
+            },
             ExpandNewCatletConfigCommandResponse expandResponse => new CatletConfigOperationResult
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),

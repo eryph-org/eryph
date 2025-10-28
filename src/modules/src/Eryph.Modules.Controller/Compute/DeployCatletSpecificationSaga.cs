@@ -170,10 +170,16 @@ internal class DeployCatletSpecificationSaga(
         if (Data.Data.State >= DeployCatletSpecificationSagaState.Deployed)
             return Task.CompletedTask;
 
-        return FailOrRun(message, async () =>
+        return FailOrRun(message, async (DeployCatletCommandResponse response) =>
         {
             Data.Data.State = DeployCatletSpecificationSagaState.Deployed;
-            await Complete();
+            // The ID of the deployed catlet is returned explicitly as
+            // multiple catlets might be associated with the operation
+            // (the deleted one and the new one).
+            await Complete(new DeployCatletSpecificationCommandResponse
+            {
+                CatletId = response.CatletId,
+            });
         });
     }
 
