@@ -54,6 +54,7 @@ internal class UpdateCatletSpecificationSaga(
             await StartNewTask(new BuildCatletSpecificationCommand
             {
                 AgentName = Data.Data.AgentName,
+                ContentType = message.ContentType,
                 Configuration = message.Configuration,
                 Architecture = architecture,
             });

@@ -2,7 +2,6 @@
 using System.Linq;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
-using LanguageExt;
 
 namespace Eryph.StateDb.Specifications;
 
@@ -12,29 +11,25 @@ public static class CatletSpecificationVersionSpecs
     {
         public GetByIdReadOnly(Guid id)
         {
-            Query.Where(x => x.Id == id)
-                .Include(x => x.Variants)
-                .ThenInclude(x => x.PinnedGenes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
+            Query.Where(v => v.Id == id)
+                .Include(v => v.Variants)
+                .ThenInclude(v => v.PinnedGenes
+                    .OrderBy(g => g.GeneType)
+                    .ThenBy(g => g.GeneSet)
+                    .ThenBy(g => g.Name)
+                    .ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
 
         public GetByIdReadOnly(Guid specificationId, Guid id)
         {
-            Query.Where(x => x.Id == id && x.SpecificationId == specificationId)
-                .Include(x => x.Variants)
-                .ThenInclude(x => x.PinnedGenes.OrderBy(g => g.GeneSet).ThenBy(g => g.Name).ThenBy(g => g.Architecture))
-                .AsNoTracking();
-        }
-    }
-
-    public sealed class GetLatestBySpecificationIdReadOnly : Specification<CatletSpecificationVersion>, ISingleResultSpecification
-    {
-        public GetLatestBySpecificationIdReadOnly(Guid specificationId)
-        {
-            Query.Where(x => x.SpecificationId == specificationId)
-                .OrderByDescending(x => x.CreatedAt)
-                .Include(x => x.Variants).ThenInclude(x => x.PinnedGenes)
-                .Take(1)
+            Query.Where(v => v.Id == id && v.SpecificationId == specificationId)
+                .Include(v => v.Variants)
+                .ThenInclude(v => v.PinnedGenes
+                    .OrderBy(g => g.GeneType)
+                    .ThenBy(g => g.GeneSet)
+                    .ThenBy(g => g.Name)
+                    .ThenBy(g => g.Architecture))
                 .AsNoTracking();
         }
     }
@@ -43,7 +38,8 @@ public static class CatletSpecificationVersionSpecs
     {
         public ListBySpecificationIdReadOnly(Guid specificationId)
         {
-            Query.Where(x => x.SpecificationId == specificationId)
+            Query.Where(v => v.SpecificationId == specificationId)
+                .OrderBy(v => v.CreatedAt)
                 .AsNoTracking();
         }
     }
@@ -52,7 +48,8 @@ public static class CatletSpecificationVersionSpecs
     {
         public ListBySpecificationId(Guid specificationId)
         {
-            Query.Where(x => x.SpecificationId == specificationId);
+            Query.Where(v => v.SpecificationId == specificationId)
+                .OrderBy(v => v.CreatedAt);
         }
     }
 }

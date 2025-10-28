@@ -24,11 +24,13 @@ internal static class CatletSpecificationConfigModelTestData
         {
           "id": "fd096457-dfc8-453e-a770-d3b8ffe6720b",
           "specification_id": "226f70ba-1cf2-4a68-b6e3-824197e3e58c",
-          "content_type": "application/yaml",
-          "original_config": "name: test-specification\nparent: acme/acme-os/1.0\n",
           "architectures": [
             "hyperv/amd64"
           ],
+          "created_at": "2025-01-01T04:42:42+00:00",
+          "comment": "first version",
+          "content_type": "application/yaml",
+          "original_config": "name: test-specification\nparent: acme/acme-os/1.0\n",
           "variants": [
             {
               "id": "60dc131b-fc3c-48d2-8150-91562f8c0b2b",
@@ -44,9 +46,7 @@ internal static class CatletSpecificationConfigModelTestData
                 "fodder::gene:acme/acme-tools/1.0:test-food[hyperv/amd64]": "sha256:cb476d331140e6e28442a79f26d3a1120faf2d110659508a4415ae5ce138bbf1"
               }
             }
-          ],
-          "comment": "first version",
-          "created_at": "2025-01-01T04:42:42+00:00"
+          ]
         }
         """;
 

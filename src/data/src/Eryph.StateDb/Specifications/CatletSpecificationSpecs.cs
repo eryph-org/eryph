@@ -10,7 +10,7 @@ public static class CatletSpecificationSpecs
     {
         public GetByIdReadOnly(Guid id)
         {
-            Query.Where(x => x.Id == id)
+            Query.Where(s => s.Id == id)
                 .AsNoTracking();
         }
     }
@@ -21,7 +21,7 @@ public static class CatletSpecificationSpecs
         {
             Query.Include(s => s.Project)
                 .Where(s => s.ProjectId == projectId)
-                .Where(x => x.Name == name.ToLowerInvariant());
+                .Where(s => s.Name == name.ToLowerInvariant());
         }
     }
 }
