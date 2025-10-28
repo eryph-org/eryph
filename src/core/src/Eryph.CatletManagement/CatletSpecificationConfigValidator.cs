@@ -23,6 +23,6 @@ public static class CatletSpecificationConfigValidator
                 Error.New("The configuration must be a fresh configuration."))
             .ToValidation();
 
-    private static Validation<Error, Unit> ValidateProjectName(string projectName) =>
+    private static Validation<Error, Unit> ValidateProjectName(string _) =>
         Fail<Error, Unit>(Error.New("The project must not be specified in the configuration."));
 }

@@ -24,10 +24,10 @@ public class CreateCatletSpecificationSagaData : TaskWorkflowSagaData
 
     public Guid SpecificationVersionId { get; set; }
 
-    public ISet<Architecture> PendingArchitectures = new HashSet<Architecture>();
+    public ISet<Architecture> PendingArchitectures { get; set; } = new HashSet<Architecture>();
 
     public IReadOnlyDictionary<Architecture, CatletSpecificationVersionVariantSagaData> Variants { get; set; }
         = new Dictionary<Architecture, CatletSpecificationVersionVariantSagaData>();
 
-    public ISet<Architecture> Architectures = new HashSet<Architecture>();
+    public ISet<Architecture> Architectures { get; set; } = new HashSet<Architecture>();
 }

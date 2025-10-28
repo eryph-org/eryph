@@ -21,6 +21,7 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
+[Route("v{version:apiVersion}")]
 public class Deploy(
     IOperationRequestHandler<CatletSpecificationVersion> operationHandler,
     IStateStoreRepository<Catlet> catletRepository,
@@ -43,7 +44,7 @@ public class Deploy(
         statusCode: StatusCodes.Status202Accepted,
         description: "Success",
         type: typeof(Operation),
-        contentTypes: ["application/json"])]
+        contentTypes: "application/json")]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] DeployCatletSpecificationRequest request,
         CancellationToken cancellationToken = default)
