@@ -270,7 +270,17 @@ internal class DeployCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<SyncVmNetworkPortsCommand> message)
     {
-        return FailOrRun(message, Complete);
+        if (Data.Data.State >= DeployCatletSagaState.NetworkPortsSynced)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async () =>
+        {
+            Data.Data.State = DeployCatletSagaState.NetworkPortsSynced;
+            await Complete(new DeployCatletCommandResponse
+            {
+                CatletId = Data.Data.CatletId,
+            });
+        });
     }
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<DeployCatletSagaData>> config)
