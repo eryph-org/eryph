@@ -32,7 +32,11 @@ internal class PopulateCatletConfigVariablesSaga(
         {
             AgentName = Data.Data.AgentName,
             ContentType = "application/yaml",
-            Configuration = CatletConfigYamlSerializer.Serialize(message.Config),
+            Configuration = CatletConfigYamlSerializer.Serialize(
+                message.Config.CloneWith(c =>
+                {
+                    c.Project = null;
+                })),
             Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
         });
     }

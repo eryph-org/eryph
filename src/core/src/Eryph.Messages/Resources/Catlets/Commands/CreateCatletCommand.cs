@@ -11,9 +11,7 @@ public class CreateCatletCommand : IHasCorrelationId, ICommandWithName
 
     public string Name { get; set; }
 
-    public string ContentType { get; set; }
-
-    public string OriginalConfig { get; set; }
+    public CatletConfig Config { get; set; }
 
     public Guid CorrelationId { get; set; }
 

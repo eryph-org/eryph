@@ -12,6 +12,10 @@ using Rebus.Handlers;
 using Rebus.Sagas;
 using System;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
+using Eryph.ConfigModel.Yaml;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -31,14 +35,32 @@ internal class CreateCatletSaga(
         Data.Data.TenantId = message.TenantId;
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
-        Data.Data.ContentType = message.ContentType;
-        Data.Data.OriginalConfig = message.OriginalConfig;
+
+        var projectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+            Some: n => ProjectName.New(n),
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
+        var project = await stateStore.For<Project>()
+            .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, projectName.Value));
+        if (project is null)
+        {
+            await Fail($"The project '{projectName}' does not exist.");
+            return;
+        }
+
+        Data.Data.ProjectId = project.Id;
+
+        Data.Data.ContentType = "application/yaml";
+        Data.Data.OriginalConfig = CatletConfigYamlSerializer.Serialize(
+            message.Config.CloneWith(c =>
+            {
+                c.Project = null;
+            }));
 
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
             ContentType = Data.Data.ContentType,
-            Configuration = message.OriginalConfig,
+            Configuration = Data.Data.OriginalConfig,
             Architecture = Data.Data.Architecture,
         });
     }
@@ -53,16 +75,6 @@ internal class CreateCatletSaga(
             Data.Data.State = CreateCatletSagaState.SpecificationBuilt;
 
             Data.Data.ResolvedGenes = response.ResolvedGenes;
-
-            var project = await stateStore.For<Project>()
-                .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, response.BuiltConfig.Project!));
-            if (project is null)
-            {
-                await Fail($"The project '{response.BuiltConfig.Project}' does not exist");
-                return;
-            }
-
-            Data.Data.ProjectId = project.Id;
             Data.Data.BuiltConfig = CatletConfigInstantiator.Instantiate(
                 response.BuiltConfig, storageIdentifierGenerator.Generate());
 

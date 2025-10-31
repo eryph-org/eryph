@@ -1,8 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using Dbosoft.Functional;
+﻿using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
@@ -14,6 +13,8 @@ using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using System;
+using System.Threading.Tasks;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -36,7 +37,11 @@ internal class ExpandNewCatletConfigSaga(
         {
             AgentName = Data.Data.AgentName,
             ContentType = "application/yaml",
-            Configuration = CatletConfigYamlSerializer.Serialize(message.Config),
+            Configuration = CatletConfigYamlSerializer.Serialize(
+                message.Config.CloneWith(c =>
+                {
+                    c.Project = null;
+                })),
             Architecture = Data.Data.Architecture,
         });
     }
