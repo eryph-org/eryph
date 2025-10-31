@@ -37,9 +37,7 @@ public class Create(
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             TenantId = userRightsProvider.GetUserTenantId(),
             Name = string.IsNullOrWhiteSpace(config.Name) ? EryphConstants.DefaultCatletName : config.Name,
-            // Convert the configuration to YAML as it is more useful to the user
-            ContentType = "application/yaml",
-            OriginalConfig = CatletConfigYamlSerializer.Serialize(config),
+            Config = config,
         };
     }
 
@@ -69,7 +67,7 @@ public class Create(
             
         var projectName = Optional(config.Project).Filter(notEmpty).Match(
             Some: n => ProjectName.New(n),
-            None: () => ProjectName.New("default"));
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
 
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)
