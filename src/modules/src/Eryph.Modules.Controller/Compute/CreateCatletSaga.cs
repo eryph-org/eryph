@@ -36,14 +36,14 @@ internal class CreateCatletSaga(
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
-        var projectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
             Some: n => ProjectName.New(n),
             None: () => ProjectName.New(EryphConstants.DefaultProjectName));
         var project = await stateStore.For<Project>()
-            .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, projectName.Value));
+            .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, Data.Data.ProjectName.Value));
         if (project is null)
         {
-            await Fail($"The project '{projectName}' does not exist.");
+            await Fail($"The project '{Data.Data.ProjectName}' does not exist.");
             return;
         }
 
@@ -76,7 +76,10 @@ internal class CreateCatletSaga(
 
             Data.Data.ResolvedGenes = response.ResolvedGenes;
             Data.Data.BuiltConfig = CatletConfigInstantiator.Instantiate(
-                response.BuiltConfig, storageIdentifierGenerator.Generate());
+                response.BuiltConfig,
+                storageIdentifierGenerator.Generate());
+
+            Data.Data.BuiltConfig.Project = Data.Data.ProjectName!.Value;
 
             await StartNewTask(new ValidateCatletDeploymentCommand
             {

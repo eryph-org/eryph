@@ -16,6 +16,8 @@ using Rebus.Sagas;
 using System;
 using System.Threading.Tasks;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
@@ -32,6 +34,10 @@ internal class ExpandNewCatletConfigSaga(
 
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
+
+        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+            Some: n => ProjectName.New(n),
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
 
         await StartNewTask(new BuildCatletSpecificationCommand
         {
@@ -55,8 +61,13 @@ internal class ExpandNewCatletConfigSaga(
         {
             Data.Data.State = ExpandNewCatletConfigSagaState.SpecificationBuilt;
 
+            var configWithProject = response.BuiltConfig.CloneWith(c =>
+            {
+                c.Project = Data.Data.ProjectName!.Value;
+            });
+
             var configWithSystemVariables = CatletSystemDataFeeding.FeedSystemVariables(
-                response.BuiltConfig, "#catletId", "#vmId");
+                configWithProject, "#catletId", "#vmId");
 
             var substitutionResult = CatletConfigVariableSubstitutions
                 .SubstituteVariables(configWithSystemVariables)
