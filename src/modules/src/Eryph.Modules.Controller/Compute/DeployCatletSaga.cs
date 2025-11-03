@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
@@ -26,9 +27,10 @@ internal class DeployCatletSaga(
     IWorkflow workflow,
     IBus bus,
     IInventoryLockManager lockManager,
-    ICatletDataService vmDataService,
+    ICatletDataService catletDataService,
     ICatletMetadataService metadataService,
-    IStateStoreRepository<Catlet> catletRepository)
+    IStateStoreRepository<Catlet> catletRepository,
+    IStateStoreRepository<Project> projectRepository)
     : OperationTaskWorkflowSaga<DeployCatletCommand, EryphSagaData<DeployCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletVMCommand>>,
@@ -43,7 +45,6 @@ internal class DeployCatletSaga(
         Data.Data.ProjectId = message.ProjectId;
         Data.Data.AgentName = message.AgentName;
         Data.Data.Architecture = message.Architecture;
-        Data.Data.Config = message.Config;
         Data.Data.ContentType = message.ContentType;
         Data.Data.OriginalConfig = message.OriginalConfig;
         Data.Data.ResolvedGenes = message.ResolvedGenes;
@@ -52,6 +53,18 @@ internal class DeployCatletSaga(
 
         if (!message.CatletId.HasValue)
         {
+            var project = await projectRepository.GetByIdAsync(Data.Data.ProjectId);
+            if (project is null)
+            {
+                await Fail($"The project {Data.Data.ProjectId} does not exist..");
+                return;
+            }
+
+            Data.Data.Config = message.Config.CloneWith(c =>
+            {
+                c.Project = project.Name;
+            });
+
             if (Data.Data.SpecificationId.HasValue)
             {
                 var deployedCatlet = await catletRepository.GetBySpecAsync(
@@ -80,7 +93,7 @@ internal class DeployCatletSaga(
 
         Data.Data.CatletId = message.CatletId.Value;
 
-        var catlet = await vmDataService.Get(Data.Data.CatletId);
+        var catlet = await catletDataService.Get(Data.Data.CatletId);
         if (catlet is null)
         {
             await Fail($"The catlet {Data.Data.CatletId} was not found.");
@@ -89,6 +102,10 @@ internal class DeployCatletSaga(
 
         Data.Data.MetadataId = catlet.MetadataId;
         Data.Data.VmId = catlet.VmId;
+        Data.Data.Config = message.Config.CloneWith(c =>
+        {
+            c.Project = catlet.Project.Name;
+        });
 
         await StartNewTask(new UpdateCatletNetworksCommand
         {
@@ -133,7 +150,7 @@ internal class DeployCatletSaga(
                     SpecificationVersionId = Data.Data.SpecificationVersionId,
                 });
 
-            await vmDataService.Add(new Catlet
+            await catletDataService.Add(new Catlet
             {
                 ProjectId = Data.Data.ProjectId,
                 Id = Data.Data.CatletId,
@@ -172,7 +189,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.CatletNetworksUpdated;
 
-            var catlet = await vmDataService.Get(Data.Data.CatletId);
+            var catlet = await catletDataService.Get(Data.Data.CatletId);
             if (catlet is null)
             {
                 await Fail($"The catlet {Data.Data.CatletId} was not found.");
@@ -253,7 +270,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.NetworksUpdated;
 
-            var catlet = await vmDataService.Get(Data.Data.CatletId);
+            var catlet = await catletDataService.Get(Data.Data.CatletId);
             if (catlet is null)
             {
                 await Fail($"The catlet {Data.Data.CatletId} was not found.");
