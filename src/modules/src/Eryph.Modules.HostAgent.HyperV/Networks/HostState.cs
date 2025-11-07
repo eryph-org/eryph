@@ -1,5 +1,4 @@
-﻿using Eryph.Modules.HostAgent.Networks.Powershell;
-using Eryph.VmManagement.Data.Core;
+﻿using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 
@@ -10,4 +9,5 @@ public record HostState(
     Seq<VMSwitch> VMSwitches,
     HostAdaptersInfo HostAdapters,
     Seq<NetNat> NetNat,
+    Seq<HostRouteInfo> HostRoutes,
     OvsBridgesInfo OvsBridges);

@@ -318,7 +318,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
     public Aff<RT, Unit> AddMissingNats(
         Seq<NewBridge> expectedBridges,
-        Seq<NetNat> netNats) =>
+        Seq<NetNat> netNats,
+        Seq<HostRouteInfo> unmanagedRoutes) =>
         from _1 in unitAff
         let unmanagedNats = netNats
             .Filter(n => !n.Name.StartsWith("eryph_"))
@@ -331,13 +332,14 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             .Filter(b => b.Nat.Match(
                 Some: newNat => !netNats.Exists(n => n.Name == newNat.NatName),
                 None: () => false))
-            .Map(b => AddMissingNat(b, unmanagedNats))
+            .Map(b => AddMissingNat(b, unmanagedNats, unmanagedRoutes))
             .SequenceSerial()
         select unit;
 
     private Aff<RT, Unit> AddMissingNat(
         NewBridge expectedBridge,
-        Seq<(string Name, IPNetwork2 Network)> unmanagedNats) =>
+        Seq<(string Name, IPNetwork2 Network)> unmanagedNats, 
+        Seq<HostRouteInfo> unmanagedRoutes) =>
         from newNat in expectedBridge.Nat
             .ToAff(Error.New($"BUG! NAT bridge '{expectedBridge.BridgeName}' has no NAT configuration."))
         from _1 in unmanagedNats.Find(un => un.Network.Overlap(newNat.Network)).Match(
@@ -345,7 +347,15 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 $"The IP range '{newNat.Network}' of the provider '{expectedBridge.ProviderName}' overlaps "
                     + $"the IP range '{un.Network}' of the NAT '{un.Name}' which is not managed by eryph.")),
             None: () => unitEff)
-        from _2 in AddOperation(
+        from _2 in unmanagedRoutes
+            // Skip the default route(s), e.g. 0.0.0.0/0.
+            .Filter(ur => ur.Destination.Cidr > 0)
+            .Find(ur => ur.Destination.Overlap(newNat.Network)).Match(
+                Some: ur => FailEff<Unit>(Error.New(
+                    $"The IP range '{newNat.Network}' of the provider '{expectedBridge.ProviderName}' overlaps "
+                    + $"the IP range '{ur.Destination}' of a network route which is not managed by eryph.")),
+                None: () => unitEff)
+        from _3 in AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
                   from _1 in hostCommands.AddNetNat(newNat.NatName, newNat.Network)
                   select unit,

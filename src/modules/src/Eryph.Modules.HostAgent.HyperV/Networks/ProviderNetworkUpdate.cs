@@ -69,6 +69,9 @@ public static class ProviderNetworkUpdate<RT>
         from hostStateWithFallback in withFallback
             ? addFallbackData(hostState)
             : SuccessEff(hostState)
+        // Find all network routes which use an interface which is not controlled
+        // by eryph/OVS. We use these to detect conflicts with eryph-controlled IP ranges.
+        from unmanagedRoutes in prepareUnmanagedRoutes(hostStateWithFallback)
 
         // Enable the OVS extension of the overlay switch(es) in case
         // it was disabled somehow. Otherwise, the execution of OVS
@@ -124,7 +127,7 @@ public static class ProviderNetworkUpdate<RT>
         from _5 in changeBuilder.ConfigureOverlayAdapterPorts(
             expectedBridges, ovsBridges4, hostStateWithFallback.HostAdapters)
 
-        from _6 in changeBuilder.AddMissingNats(expectedBridges, validNats)
+        from _6 in changeBuilder.AddMissingNats(expectedBridges, validNats, unmanagedRoutes)
 
         // Update OVS bridge mapping to new network names and bridges
         from _7 in changeBuilder.UpdateBridgeMappings(expectedBridges)
@@ -164,6 +167,24 @@ public static class ProviderNetworkUpdate<RT>
         from network in parseIPNetwork2(subnet.Network)
             .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has an invalid network."))
         select new NewBridgeNat(getNetNatName(providerConfig.Name), gateway, network);
+
+    private static Eff<Seq<HostRouteInfo>> prepareUnmanagedRoutes(
+        HostState hostState) =>
+        from _ in unitEff
+        let overlaySwitches = toHashSet(hostState.VMSwitches
+            .Find(s => s.Name == EryphConstants.OverlaySwitchName)
+            .Map(s => s.Id))
+        let overlayInterfaces = toHashSet(hostState.HostAdapters.Adapters.Values
+            .ToSeq()
+            .Filter(a => a.SwitchId.Match(
+                Some: overlaySwitches.Contains,
+                None: () => false))
+            .Map(a => a.InterfaceId))
+        let result = hostState.HostRoutes
+            .Filter(r => r.InterfaceId.Match(
+                Some: i => !overlayInterfaces.Contains(i),
+                None: () => true))
+        select result;
 
     private static string getNetNatName(string providerName)
         // The pattern for the NetNat name should be "eryph_{providerName}_{subnetName}".
@@ -255,7 +276,7 @@ public static class ProviderNetworkUpdate<RT>
         Seq<VMSwitch> switches) => 
         from hostCommands in default(RT).HostNetworkCommands
         from vmAdapters in switches
-            .Map(s => hostCommands.GetNetAdaptersBySwitch(s.Id))
+            .Map(s => hostCommands.GetVmAdaptersBySwitch(s.Id))
             .SequenceSerial()
         select vmAdapters.Flatten();
 

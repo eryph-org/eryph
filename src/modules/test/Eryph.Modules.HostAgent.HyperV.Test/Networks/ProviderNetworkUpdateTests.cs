@@ -1,4 +1,5 @@
-﻿using Dbosoft.OVN.Model;
+﻿using System.Net;
+using Dbosoft.OVN.Model;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.HostAgent;
@@ -47,10 +48,11 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitchExtension>(),
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap(
-                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)),
-                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true)),
-                ("pif-3", new HostAdapterInfo("pif-3", pif3Id, None, true)))),
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true, None)),
+                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true, None)),
+                ("pif-3", new HostAdapterInfo("pif-3", pif3Id, None, true, None)))),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap(
                 ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
                     ("br-pif-bond", new OvsBridgePortInfo(
@@ -102,8 +104,9 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitchExtension>(),
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap(
-                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)))),
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true, None)))),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap(
                 ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
                     ("pif-1", new OvsBridgePortInfo(
@@ -140,6 +143,31 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
+            new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
+
+        var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+            .Bind(c => generateChanges(hostState, c, false))
+            .Run(_runtime);
+
+        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.CreateOverlaySwitch),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.StartOVN),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
+    public async Task GenerateChanges_DefaultConfigWithDefaultRouteOnHost_GeneratesExpectedChanges()
+    {
+        var hostState = new HostState(
+            Seq<VMSwitchExtension>(),
+            Seq<VMSwitch>(),
+            new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
+            Seq<NetNat>(),
+            Seq1(new HostRouteInfo(None, IPNetwork2.Parse("0.0.0.0/0"), IPAddress.Parse("192.168.0.1"))),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
@@ -158,7 +186,7 @@ public class ProviderNetworkUpdateTests
     [Fact]
     public async Task GenerateChanges_MultipleOverlaySwitches_GeneratesRebuildOfOverlaySwitch()
     {
-        _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+        _hostNetworkCommandsMock.Setup(x => x.GetVmAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
 
         var hostState = new HostState(
@@ -167,6 +195,7 @@ public class ProviderNetworkUpdateTests
                 new VMSwitch { Id = Guid.NewGuid(), Name = EryphConstants.OverlaySwitchName }),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
@@ -272,8 +301,8 @@ public class ProviderNetworkUpdateTests
                             new OvsInterfaceInfo("test-adapter", "", None, None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
-                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true, OverlaySwitchId)),
+                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false, OverlaySwitchId))
                 )),
         };
 
@@ -340,8 +369,8 @@ public class ProviderNetworkUpdateTests
                             new OvsInterfaceInfo("renamed-adapter", "", None, None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
-                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true, OverlaySwitchId)),
+                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false, OverlaySwitchId))
                 )),
         };
 
@@ -354,7 +383,7 @@ public class ProviderNetworkUpdateTests
     [Fact]
     public async Task GenerateChanges_AddOverlayWithBond_GeneratesChanges()
     {
-        _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+        _hostNetworkCommandsMock.Setup(x => x.GetVmAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
 
         var providersConfig = new NetworkProvidersConfiguration
@@ -386,8 +415,8 @@ public class ProviderNetworkUpdateTests
         var hostState = CreateStateWithOverlaySwitch() with
         {
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)),
-                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true)))),
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true, None)),
+                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true, None)))),
         };
 
         var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
@@ -431,6 +460,7 @@ public class ProviderNetworkUpdateTests
             Seq<VMSwitch>(),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
@@ -457,16 +487,19 @@ public class ProviderNetworkUpdateTests
             ],
         };
 
+        var otherSwitchId = Guid.NewGuid();
         var hostState = new HostState(
             Seq<VMSwitchExtension>(),
             Seq1(new VMSwitch
             {
+                Id = otherSwitchId,
                 Name = "other-switch",
                 NetAdapterInterfaceGuid = [adapterId],
             }),
             new HostAdaptersInfo(HashMap(
-                ("test-adapter", new HostAdapterInfo("test-adapter", adapterId, None, true)))),
+                ("test-adapter", new HostAdapterInfo("test-adapter", adapterId, None, true, otherSwitchId)))),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
@@ -510,12 +543,59 @@ public class ProviderNetworkUpdateTests
             Seq1(new VMSwitch { Name = EryphConstants.OverlaySwitchName }),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq1(new NetNat { Name = "other-nat", InternalIPInterfaceAddressPrefix = otherNetwork }),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
 
         result.Should().BeFail().Which.Message
             .Should().Be($"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of the NAT 'other-nat' which is not managed by eryph.");
+    }
+
+    [Theory]
+    [InlineData("10.0.0.0/22", "10.0.1.0/24")]
+    [InlineData("10.0.1.0/24", "10.0.0.0/22")]
+    public async Task GenerateChanges_EryphNatOverlapsUnmanagedHostRoute_ReturnsError(
+        string eryphNetwork, string otherNetwork)
+    {
+        var providersConfig = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "test-provider",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-test",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = "default",
+                            Gateway = "10.0.1.1",
+                            Network = eryphNetwork,
+                        }
+                    ]
+                },
+            ],
+        };
+
+        var hostState = new HostState(
+            Seq<VMSwitchExtension>(),
+            Seq1(new VMSwitch
+            {
+                Id = OverlaySwitchId,
+                Name = EryphConstants.OverlaySwitchName
+            }),
+            new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
+            Seq<NetNat>(),
+            Seq1(new HostRouteInfo(None, IPNetwork2.Parse(otherNetwork), IPAddress.Parse("0.0.0.0"))),
+            new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
+
+        var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
+
+        result.Should().BeFail().Which.Message
+            .Should().Be($"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of a network route which is not managed by eryph.");
     }
 
     private static HostState CreateStateWithOverlaySwitch() =>
@@ -534,5 +614,6 @@ public class ProviderNetworkUpdateTests
             }),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
+            Seq<HostRouteInfo>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 }

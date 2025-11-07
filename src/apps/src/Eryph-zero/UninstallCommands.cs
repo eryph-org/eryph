@@ -46,7 +46,7 @@ internal class UninstallCommands
         from allSwitches in hostNetworkCommands.GetSwitches()
         let allOverlaySwitches = allSwitches.Filter(s => s.Name == EryphConstants.OverlaySwitchName)
         from allNetworkAdapters in allOverlaySwitches
-            .Map(s => hostNetworkCommands.GetNetAdaptersBySwitch(s.Id))
+            .Map(s => hostNetworkCommands.GetVmAdaptersBySwitch(s.Id))
             .SequenceSerial()
             .Map(l => l.Flatten())
         from _2 in hostNetworkCommands.DisconnectNetworkAdapters(allNetworkAdapters)
