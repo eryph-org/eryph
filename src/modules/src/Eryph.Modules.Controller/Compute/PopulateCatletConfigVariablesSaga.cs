@@ -1,4 +1,6 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Yaml;
@@ -10,11 +12,6 @@ using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -34,7 +31,12 @@ internal class PopulateCatletConfigVariablesSaga(
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
+            ContentType = "application/yaml",
+            Configuration = CatletConfigYamlSerializer.Serialize(
+                message.Config.CloneWith(c =>
+                {
+                    c.Project = null;
+                })),
             Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
         });
     }

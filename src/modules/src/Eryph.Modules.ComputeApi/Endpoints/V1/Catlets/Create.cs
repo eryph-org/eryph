@@ -1,8 +1,6 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
@@ -39,7 +37,7 @@ public class Create(
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             TenantId = userRightsProvider.GetUserTenantId(),
             Name = string.IsNullOrWhiteSpace(config.Name) ? EryphConstants.DefaultCatletName : config.Name,
-            ConfigYaml = CatletConfigYamlSerializer.Serialize(config),
+            Config = config,
         };
     }
 
@@ -69,11 +67,7 @@ public class Create(
             
         var projectName = Optional(config.Project).Filter(notEmpty).Match(
             Some: n => ProjectName.New(n),
-            None: () => ProjectName.New("default"));
-
-        var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
-            Some: n => EnvironmentName.New(n),
-            None: () => EnvironmentName.New("default"));
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
 
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)
@@ -85,7 +79,7 @@ public class Create(
             ? EryphConstants.DefaultCatletName
             : config.Name;
         var existingCatlet = await repository.GetBySpecAsync(
-            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value, environmentName.Value),
+            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value),
             cancellationToken);
 
         if (existingCatlet != null)

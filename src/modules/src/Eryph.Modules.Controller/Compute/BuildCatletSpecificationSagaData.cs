@@ -12,11 +12,13 @@ internal class BuildCatletSpecificationSagaData
 {
     public BuildCatletSpecificationSagaState State { get; set; }
 
-    public string? ConfigYaml { get; set; }
+    public string? ContentType { get; set; }
+
+    public string? Configuration { get; set; }
 
     public Architecture? Architecture { get; set; }
 
-    public CatletConfig? Config { get; set; }
+    public CatletConfig? ParsedConfig { get; set; }
 
     public CatletConfig? BuiltConfig { get; set; }
 

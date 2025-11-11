@@ -1,15 +1,16 @@
-﻿using System.Threading.Tasks;
-using Dbosoft.Functional;
+﻿using Dbosoft.Functional;
+using Dbosoft.Functional.Validations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.CatletManagement;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
-using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.ModuleCore;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -18,7 +19,7 @@ using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-
+using System.Threading.Tasks;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -37,23 +38,25 @@ internal class BuildCatletSpecificationSaga(
     protected override async Task Initiated(BuildCatletSpecificationCommand message)
     {
         Data.Data.State = BuildCatletSpecificationSagaState.Initiated;
-        Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.ContentType = message.ContentType;
+        Data.Data.Configuration = message.Configuration;
         Data.Data.Architecture = message.Architecture;
         Data.Data.AgentName = message.AgentName;
 
-        var parsedConfig = ParseCatletConfigYaml(message.ConfigYaml);
+        var parsedConfig = ParseCatletSpecificationConfig(
+            Data.Data.ContentType, Data.Data.Configuration);
         if (parsedConfig.IsLeft)
         {
             await Fail(Error.Many(parsedConfig.LeftToSeq()).Print());
             return;
         }
 
-        Data.Data.Config = parsedConfig.ValueUnsafe();
+        Data.Data.ParsedConfig = parsedConfig.ValueUnsafe();
 
         await StartNewTask(new BuildCatletSpecificationGenePoolCommand()
         {
             AgentName = Data.Data.AgentName,
-            CatletConfig = Data.Data.Config,
+            CatletConfig = Data.Data.ParsedConfig,
             CatletArchitecture = Data.Data.Architecture,
         });
     }
@@ -79,6 +82,7 @@ internal class BuildCatletSpecificationSaga(
 
             await Complete(new BuildCatletSpecificationCommandResponse
             {
+                Architecture = Data.Data.Architecture,
                 BuiltConfig = response.BuiltConfig,
                 ResolvedGenes = response.ResolvedGenes,
             });
@@ -94,15 +98,21 @@ internal class BuildCatletSpecificationSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
-    private static Either<Error, CatletConfig> ParseCatletConfigYaml(string yaml) =>
-        from parsedConfig in Try(() => CatletConfigYamlSerializer.Deserialize(yaml))
-            .ToEither(ex => Error.New("The catlet configuration is invalid.", Error.New(ex)))
-        from _ in CatletConfigValidations.ValidateCatletConfig(parsedConfig)
-            // The YAML serializer does not expose a readily usable naming policy. Hence,
-            // we use the naming policy of the JSON serializer. The two should match anyway
-            // as the underlying schema is the same.
-            .ToEitherWithJsonPath(
-                "The catlet configuration is invalid.",
-                CatletConfigJsonSerializer.Options.PropertyNamingPolicy)
+    private static Either<Error, CatletConfig> ParseCatletSpecificationConfig(
+        string contentType,
+        string content) =>
+        from parsedConfig in contentType switch
+        {
+            "application/json" => Try(() => CatletConfigJsonSerializer.Deserialize(content))
+                .ToEither(ex => Error.New("The catlet configuration is invalid.", Error.New(ex))),
+            "application/yaml" => Try(() => CatletConfigYamlSerializer.Deserialize(content))
+                .ToEither(ex => Error.New("The catlet configuration is invalid.", Error.New(ex))),
+            _ => Error.New($"The content type '{contentType}' is not supported.")
+        }
+        let validations = CatletConfigValidations.ValidateCatletConfig(parsedConfig)
+                          | CatletSpecificationConfigValidator.Validate(parsedConfig)
+        from _ in validations.ToEitherWithJsonPath(
+            "The catlet configuration is invalid.",
+            CatletConfigJsonSerializer.Options.PropertyNamingPolicy)
         select parsedConfig;
 }

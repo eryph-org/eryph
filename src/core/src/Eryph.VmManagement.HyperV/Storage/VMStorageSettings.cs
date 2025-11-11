@@ -62,15 +62,16 @@ namespace Eryph.VmManagement.Storage
         public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(
             CatletConfig config,
             VmHostAgentConfiguration vmHostAgentConfig) =>
-            from projectName in Optional(config.Project).Filter(notEmpty).Match(
-                Some: n => ProjectName.NewEither(n).ToAsync(),
-                None: () => RightAsync<Error, ProjectName>(ProjectName.New("default")))
-            from environmentName in Optional(config.Environment).Filter(notEmpty).Match(
-                Some: n => EnvironmentName.NewEither(n).ToAsync(),
-                None: () => RightAsync<Error, EnvironmentName>(EnvironmentName.New("default")))
-            from dataStoreName in Optional(config.Store).Filter(notEmpty).Match(
-                Some: n => DataStoreName.NewEither(n).ToAsync(),
-                None: () => RightAsync<Error, DataStoreName>(DataStoreName.New("default")))
+            // TODO Make these fail with an error. The Con
+            from projectName in ProjectName.NewEither(config.Project)
+                .MapLeft(e => Error.New($"The configured project of the catlet {config.Name} is invalid.", e))
+                .ToAsync()
+            from environmentName in EnvironmentName.NewEither(config.Environment)
+                .MapLeft(e => Error.New($"The configured environment of the catlet {config.Name} is invalid.", e))
+                .ToAsync()
+            from dataStoreName in DataStoreName.NewEither(config.Store)
+                .MapLeft(e => Error.New($"The configured data store of the catlet {config.Name} is invalid.", e))
+                .ToAsync()
             from storageIdentifier in Optional(config.Location).Filter(notEmpty)
                 .Map(n => ConfigModel.StorageIdentifier.NewEither(n).ToAsync())
                 .Sequence()

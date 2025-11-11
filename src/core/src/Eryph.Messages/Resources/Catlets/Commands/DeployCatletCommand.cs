@@ -16,7 +16,9 @@ public class DeployCatletCommand : IHasCorrelationId, ICommandWithName
 
     public CatletConfig Config { get; set; }
 
-    public string ConfigYaml { get; set; }
+    public string ContentType { get; set; }
+
+    public string OriginalConfig { get; set; }
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 
@@ -26,4 +28,8 @@ public class DeployCatletCommand : IHasCorrelationId, ICommandWithName
 
     public string GetCommandName() =>
         CatletId.HasValue ? $"Deploy catlet {CatletId.Value}" : "Deploy new catlet"; 
+
+    public Guid? SpecificationId { get; set; }
+
+    public Guid? SpecificationVersionId { get; set; }
 }

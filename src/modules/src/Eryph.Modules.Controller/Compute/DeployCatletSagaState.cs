@@ -14,4 +14,5 @@ public enum DeployCatletSagaState
     VmUpdated = 30,
     ConfigDriveUpdated = 40,
     NetworksUpdated = 50,
+    NetworkPortsSynced = 60,
 }

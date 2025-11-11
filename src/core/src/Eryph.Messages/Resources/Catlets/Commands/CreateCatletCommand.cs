@@ -11,7 +11,7 @@ public class CreateCatletCommand : IHasCorrelationId, ICommandWithName
 
     public string Name { get; set; }
 
-    public string ConfigYaml { get; set; }
+    public CatletConfig Config { get; set; }
 
     public Guid CorrelationId { get; set; }
 

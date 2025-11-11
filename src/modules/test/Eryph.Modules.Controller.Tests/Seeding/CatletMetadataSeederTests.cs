@@ -55,6 +55,8 @@ public abstract class CatletMetadataSeederTests(
             metadata.SecretDataHidden.Should().BeTrue();
             metadata.Genes.Should().HaveCount(2);
             metadata.Metadata.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Content);
+            metadata.SpecificationId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationId);
+            metadata.SpecificationVersionId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationVersionId);
         });
 
         var backupContent = await MockFileSystem.File.ReadAllTextAsync(
@@ -71,6 +73,8 @@ public abstract class CatletMetadataSeederTests(
         configModel.IsDeprecated.Should().BeFalse();
         configModel.SecretDataHidden.Should().BeTrue();
         configModel.Metadata.HasValue.Should().BeTrue();
+        configModel.SpecificationId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationId);
+        configModel.SpecificationVersionId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationVersionId);
         var content = CatletMetadataContentJsonSerializer.Deserialize(configModel.Metadata!.Value);
         content.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Content);
     }
@@ -124,6 +128,8 @@ public abstract class CatletMetadataSeederTests(
         configModel.IsDeprecated.Should().BeTrue();
         configModel.SecretDataHidden.Should().BeTrue();
         configModel.Metadata.Should().BeNull();
+        configModel.SpecificationId.Should().BeNull();
+        configModel.SpecificationVersionId.Should().BeNull();
     }
 
     private async Task ExecuteSeeder()

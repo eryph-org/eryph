@@ -25,12 +25,15 @@ internal static class CatletMetadataConfigModelTestData
               "catlet::gene:acme/acme-os/1.0:catlet[any]": "sha256:a8a2f6ebe286697c527eb35a58b5539532e9b3ae3b64d4eb0a46fb657b41562c",
               "fodder::gene:acme/acme-tools/1.0:test-food[hyperv/amd64]": "sha256:cb476d331140e6e28442a79f26d3a1120faf2d110659508a4415ae5ce138bbf1"
             },
-            "config_yaml": "name: test-catlet\nparent: acme/acme-os/1.0\n",
+            "content_type": "application/yaml",
+            "original_config": "name: test-catlet\nparent: acme/acme-os/1.0\n",
             "config": {
               "name": "test-catlet",
               "parent": "acme/acme-os/1.0"
             }
-          }
+          },
+          "specification_id": "9982cc45-23d5-4d68-a1c6-3c817dc63d2c",
+          "specification_version_id": "d1671bdf-e6e4-41cf-937b-6f603ec3c705"
         }
         """;
 
@@ -42,7 +45,8 @@ internal static class CatletMetadataConfigModelTestData
             Name = "test-catlet",
             Parent = "acme/acme-os/1.0",
         },
-        ConfigYaml = "name: test-catlet\nparent: acme/acme-os/1.0\n",
+        ContentType = "application/yaml",
+        OriginalConfig = "name: test-catlet\nparent: acme/acme-os/1.0\n",
         PinnedGenes = new Dictionary<UniqueGeneIdentifier, GeneHash>
         {
             {
@@ -69,5 +73,7 @@ internal static class CatletMetadataConfigModelTestData
         VmId = Guid.Parse("99c58ef6-2208-4046-be3e-ece1d56a073a"),
         SecretDataHidden = true,
         Metadata = CatletMetadataContentJsonSerializer.SerializeToElement(Content),
+        SpecificationId = Guid.Parse("9982cc45-23d5-4d68-a1c6-3c817dc63d2c"),
+        SpecificationVersionId = Guid.Parse("d1671bdf-e6e4-41cf-937b-6f603ec3c705"),
     };
 }

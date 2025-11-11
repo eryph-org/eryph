@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 
@@ -8,7 +9,9 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class CreateCatletSagaData : TaskWorkflowSagaData
 {
-    public string? ConfigYaml { get; set; }
+    public string? ContentType { get; set; }
+
+    public string? OriginalConfig { get; set; }
 
     public CatletConfig? BuiltConfig { get; set; }
 
@@ -19,6 +22,8 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
     public Guid TenantId { get; set; }
 
     public Guid ProjectId { get; set; }
+
+    public ProjectName? ProjectName { get; set; }
 
     public Architecture? Architecture { get; set; }
 
