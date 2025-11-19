@@ -62,7 +62,6 @@ namespace Eryph.VmManagement.Storage
         public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(
             CatletConfig config,
             VmHostAgentConfiguration vmHostAgentConfig) =>
-            // TODO Make these fail with an error. The Con
             from projectName in ProjectName.NewEither(config.Project)
                 .MapLeft(e => Error.New($"The configured project of the catlet {config.Name} is invalid.", e))
                 .ToAsync()

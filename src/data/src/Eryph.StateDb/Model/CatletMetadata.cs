@@ -33,7 +33,7 @@ public class CatletMetadata
     /// which was used to create this catlet.
     /// </summary>
     /// <remarks>
-    /// This ID and <see cref="SpecificationVersionId"/> are soft-links and not enforced
+    /// This ID and <see cref="SpecificationVersionId"/> are soft-links and are not enforced
     /// via a foreign key constraint. It can happen that the corresponding specification
     /// does not exist.
     /// </remarks>

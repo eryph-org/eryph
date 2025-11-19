@@ -1,5 +1,4 @@
-﻿using Eryph.Serializers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Eryph.Core.Genetics;
 
@@ -29,5 +28,5 @@ public class CatletSpecificationVersion
 
     public DateTimeOffset CreatedAt { get; set; }
 
-    public ICollection<CatletSpecificationVersionVariant> Variants { get; set; } = null!;
+    public IList<CatletSpecificationVersionVariant> Variants { get; set; } = null!;
 }
