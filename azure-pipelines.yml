@@ -18,7 +18,7 @@ jobs:
   steps:
   - task: DotNetCoreCLI@2
     displayName: Install AzureSignTool
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+    #condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       command: 'custom'
       custom: 'tool'
