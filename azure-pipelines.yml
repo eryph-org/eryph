@@ -26,7 +26,7 @@ jobs:
       
   - task: AzureCLI@2
     displayName: download signed ovs package
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+    #condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       azureSubscription: 'dbosoft Azure PN'
       scriptType: 'batch'
@@ -107,16 +107,16 @@ jobs:
 
   - task: AzureCLI@2
     displayName: 'Sign executables'
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+    #condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       scriptType: ps
       scriptLocation: inlineScript
       azureSubscription: 'dbosoft Azure PN'
-      addSpnToEnvironment: true
+      #addSpnToEnvironment: true
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build\bin'
       inlineScript: |
-        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2025" -v eryph-zero.exe
-        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2025" -v eryph-uninstaller.exe
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvm -tr http://timestamp.acs.microsoft.com/ -kvc "codesigning-2025" -v eryph-zero.exe
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvm -tr http://timestamp.acs.microsoft.com/ -kvc "codesigning-2025" -v eryph-uninstaller.exe
 
   - task: CopyFiles@2
     displayName: copy ovs package to zero build
