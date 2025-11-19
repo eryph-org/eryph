@@ -1,7 +1,7 @@
-﻿using Eryph.Resources;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Eryph.Core.Genetics;
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.CatletSpecifications;
 

@@ -75,7 +75,7 @@ public class VMDriveStorageSettings
         int controllerNumber,
         int controllerLocation) =>
         from dataStoreName in DataStoreName.NewEither(driveConfig.Store)
-            .MapLeft(e => Error.New($"The configured data store of the catlet drive {driveConfig.Name} is invalid.", e))
+            .MapLeft(e => Error.New($"The configured data store of the catlet drive '{driveConfig.Name}' is invalid.", e))
             .ToAsync()
         let driveStorageNames = new StorageNames
         {
