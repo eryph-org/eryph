@@ -28,7 +28,7 @@ jobs:
     displayName: download signed ovs package
     #condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
-      azureSubscription: 'dbosoft Azure PN'
+      azureSubscription: 'WebApps (releases)'
       scriptType: 'batch'
       scriptLocation: 'inlineScript'
       inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovspackage.zip --container-name=internal --name=ovs/3.3.90.1/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
@@ -111,7 +111,7 @@ jobs:
     inputs:
       scriptType: ps
       scriptLocation: inlineScript
-      azureSubscription: 'dbosoft Azure PN'
+      azureSubscription: 'WebApps (releases)'
       #addSpnToEnvironment: true
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build\bin'
       inlineScript: |
