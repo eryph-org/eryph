@@ -54,7 +54,6 @@ public class Create(
         [FromBody] NewCatletSpecificationRequest request,
         CancellationToken cancellationToken = default)
     {
-        // TODO support JSON as well (use content types?)
         var validation = RequestValidations.ValidateCatletSpecificationConfig(
             request.Configuration);
         if (validation.IsFail)
