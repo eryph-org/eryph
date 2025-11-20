@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
@@ -73,12 +74,14 @@ public class VMDriveStorageSettings
         Seq<UniqueGeneIdentifier> resolvedGenes,
         int controllerNumber,
         int controllerLocation) =>
-        from _1 in RightAsync<Error, Unit>(unit)
+        from dataStoreName in DataStoreName.NewEither(driveConfig.Store)
+            .MapLeft(e => Error.New($"The configured data store of the catlet drive '{driveConfig.Name}' is invalid.", e))
+            .ToAsync()
         let driveStorageNames = new StorageNames
         {
             ProjectName = storageSettings.StorageNames.ProjectName,
             EnvironmentName = storageSettings.StorageNames.EnvironmentName,
-            DataStoreName = Optional(driveConfig.Store).Filter(notEmpty).IfNone("default"),
+            DataStoreName = dataStoreName.Value,
         }
         let storageIdentifier = Optional(driveConfig.Location).Filter(notEmpty).Match(
             Some: s => s,

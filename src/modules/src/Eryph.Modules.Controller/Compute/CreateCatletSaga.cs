@@ -12,6 +12,10 @@ using Rebus.Handlers;
 using Rebus.Sagas;
 using System;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
+using Eryph.ConfigModel.Yaml;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -31,12 +35,32 @@ internal class CreateCatletSaga(
         Data.Data.TenantId = message.TenantId;
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
-        Data.Data.ConfigYaml = message.ConfigYaml;
+
+        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+            Some: n => ProjectName.New(n),
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
+        var project = await stateStore.For<Project>()
+            .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, Data.Data.ProjectName.Value));
+        if (project is null)
+        {
+            await Fail($"The project '{Data.Data.ProjectName}' does not exist.");
+            return;
+        }
+
+        Data.Data.ProjectId = project.Id;
+
+        Data.Data.ContentType = "application/yaml";
+        Data.Data.OriginalConfig = CatletConfigYamlSerializer.Serialize(
+            message.Config.CloneWith(c =>
+            {
+                c.Project = null;
+            }));
 
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = message.ConfigYaml,
+            ContentType = Data.Data.ContentType,
+            Configuration = Data.Data.OriginalConfig,
             Architecture = Data.Data.Architecture,
         });
     }
@@ -51,18 +75,11 @@ internal class CreateCatletSaga(
             Data.Data.State = CreateCatletSagaState.SpecificationBuilt;
 
             Data.Data.ResolvedGenes = response.ResolvedGenes;
-
-            var project = await stateStore.For<Project>()
-                .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, response.BuiltConfig.Project!));
-            if (project is null)
-            {
-                await Fail($"The project '{response.BuiltConfig.Project}' does not exist");
-                return;
-            }
-
-            Data.Data.ProjectId = project.Id;
             Data.Data.BuiltConfig = CatletConfigInstantiator.Instantiate(
-                response.BuiltConfig, storageIdentifierGenerator.Generate());
+                response.BuiltConfig,
+                storageIdentifierGenerator.Generate());
+
+            Data.Data.BuiltConfig.Project = Data.Data.ProjectName!.Value;
 
             await StartNewTask(new ValidateCatletDeploymentCommand
             {
@@ -90,7 +107,8 @@ internal class CreateCatletSaga(
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
-                ConfigYaml = Data.Data.ConfigYaml,
+                ContentType = Data.Data.ContentType,
+                OriginalConfig = Data.Data.OriginalConfig,
                 ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });

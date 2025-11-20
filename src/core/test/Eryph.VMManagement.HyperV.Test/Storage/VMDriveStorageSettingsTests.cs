@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
@@ -55,6 +56,7 @@ public class VMDriveStorageSettingsTests
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.Vhd,
+                    Store = EryphConstants.DefaultDataStoreName,
                     Name = "sda",
                 },
                 new CatletDriveConfig
@@ -65,6 +67,7 @@ public class VMDriveStorageSettingsTests
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.Vhd,
+                    Store = EryphConstants.DefaultDataStoreName,
                     Name = "sdb",
                 },
                 new CatletDriveConfig
@@ -132,6 +135,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = driveType,
                     Name = "sda",
+                    Store = EryphConstants.DefaultDataStoreName,
                 }
             ],
         };
@@ -174,6 +178,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.Vhd,
                     Name = "sda",
+                    Store = EryphConstants.DefaultDataStoreName,
                     Source = "gene:testorg/testset/testtag:sda",
                 }
             ],
@@ -229,6 +234,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.Vhd,
                     Name = "sda",
+                    Store = EryphConstants.DefaultDataStoreName,
                 }
             ],
         };
@@ -269,6 +275,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.Vhd,
                     Name = "sda",
+                    Store = EryphConstants.DefaultDataStoreName,
                     Size = 42,
                 }
             ],
@@ -315,6 +322,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.Vhd,
                     Name = "sda",
+                    Store = EryphConstants.DefaultDataStoreName,
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
                 }
@@ -371,6 +379,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.Vhd,
                     Name = "sda",
+                    Store = EryphConstants.DefaultDataStoreName,
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
                 }
@@ -415,6 +424,7 @@ public class VMDriveStorageSettingsTests
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.Vhd,
+                    Store = EryphConstants.DefaultDataStoreName,
                     Name = "sda",
                     Size = 42,
                 }
@@ -449,6 +459,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.Vhd,
                     Name = "sda",
+                    Store = EryphConstants.DefaultDataStoreName,
                     Size = 42,
                 }
             ],

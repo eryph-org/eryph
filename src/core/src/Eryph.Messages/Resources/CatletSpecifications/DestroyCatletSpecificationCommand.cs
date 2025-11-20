@@ -1,0 +1,16 @@
+﻿using System;
+using Eryph.Resources;
+
+namespace Eryph.Messages.Resources.CatletSpecifications;
+
+[SendMessageTo(MessageRecipient.Controllers)]
+public class DestroyCatletSpecificationCommand : ICommandWithName, IHasResource
+{
+    public Guid SpecificationId { get; set; }
+
+    public bool DestroyCatlet { get; set; }
+
+    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
+
+    public string GetCommandName() => "Destroy catlet specification";
+}

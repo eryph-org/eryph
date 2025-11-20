@@ -52,16 +52,11 @@ public static partial class ValidationIssueExtensions
                     .Filter(notEmpty)
                     .Map(p => p.ToJsonPath(ApiJsonSerializerOptions.Options.PropertyNamingPolicy));
 
-                foreach (var error in errors)
+                foreach (var error in errors.Map(e => e.AddJsonPathPrefix(jsonPathPrefix)))
                 {
-                    modelState.AddModelError(AddPrefix(error.Member, jsonPathPrefix), error.Message);
+                    modelState.AddModelError(error.Member, error.Message);
                 }
 
                 return modelState;
             });
-
-    private static string AddPrefix(string path, Option<string> prefix) =>
-        prefix.Match(
-            Some: p => RootRegex().Replace(path, p),
-            None: () => path);
 }

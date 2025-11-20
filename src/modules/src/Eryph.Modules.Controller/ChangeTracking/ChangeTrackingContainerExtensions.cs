@@ -1,4 +1,5 @@
-﻿using Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
+﻿using Eryph.Modules.Controller.ChangeTracking.Catlets;
+using Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 using Eryph.Modules.Controller.ChangeTracking.Projects;
 using Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
 using Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
@@ -19,6 +20,8 @@ public static class ChangeTrackingContainerExtensions
         options.AddHostedService<ChangeTrackingBackgroundService<NetworkProvidersChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<ProjectChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<CatletMetadataChange>>();
+        options.AddHostedService<ChangeTrackingBackgroundService<CatletSpecificationChange>>();
+        options.AddHostedService<ChangeTrackingBackgroundService<CatletSpecificationVersionChange>>();
     }
 
     private static void RegisterChangeTracking(this Container container)

@@ -21,11 +21,12 @@ internal class CatletMetadataChangeInterceptor : ChangeInterceptorBase<CatletMet
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        return dbContext.ChangeTracker.Entries<CatletMetadata>().ToList()
+        return dbContext.ChangeTracker.Entries<CatletMetadata>()
+            .ToSeq().Strict()
             .Map(e => e.Entity.Id)
             .Distinct()
             .Map(metadataId => new CatletMetadataChange(metadataId))
-            .ToSeq()
+            .ToSeq().Strict()
             .AsTask();
     }
 }
