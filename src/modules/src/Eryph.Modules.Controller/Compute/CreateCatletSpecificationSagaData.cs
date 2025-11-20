@@ -1,8 +1,7 @@
-﻿using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel.Catlets;
-using Eryph.Core.Genetics;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.Controller.Compute;
 

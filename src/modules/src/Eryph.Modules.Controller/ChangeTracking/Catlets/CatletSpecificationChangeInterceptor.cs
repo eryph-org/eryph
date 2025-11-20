@@ -17,7 +17,8 @@ internal class CatletSpecificationChangeInterceptor(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        return dbContext.ChangeTracker.Entries<CatletSpecification>().ToList()
+        return dbContext.ChangeTracker.Entries<CatletSpecification>()
+            .ToSeq().Strict()
             .Map(e => e.Entity.Id)
             .Distinct()
             .Map(id => new CatletSpecificationChange(id))

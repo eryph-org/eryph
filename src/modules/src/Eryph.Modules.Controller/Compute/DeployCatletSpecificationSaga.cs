@@ -1,27 +1,23 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Dbosoft.Functional;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
-using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.ModuleCore;
-using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.Inventory;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
-using Rebus.Bus;
-using Rebus.Handlers;
-using Rebus.Sagas;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
-using Dbosoft.Functional;
+using Rebus.Handlers;
+using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute;
 

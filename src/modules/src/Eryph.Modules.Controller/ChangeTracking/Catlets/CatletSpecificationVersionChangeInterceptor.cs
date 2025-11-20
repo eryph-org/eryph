@@ -17,9 +17,12 @@ internal class CatletSpecificationVersionChangeInterceptor(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        return dbContext.ChangeTracker.Entries<CatletSpecificationVersionVariant>().ToList()
+        return dbContext.ChangeTracker.Entries<CatletSpecificationVersionVariant>()
+            .ToSeq().Strict()
             .Map(e => e.Entity.SpecificationVersionId)
-            .Concat(dbContext.ChangeTracker.Entries<CatletSpecificationVersion>().ToList().Map(e => e.Entity.Id))
+            .Concat(dbContext.ChangeTracker.Entries<CatletSpecificationVersion>()
+                .ToSeq().Strict()
+                .Map(e => e.Entity.Id))
             .Distinct()
             .Map(id => new CatletSpecificationVersionChange(id))
             .ToSeq().Strict()

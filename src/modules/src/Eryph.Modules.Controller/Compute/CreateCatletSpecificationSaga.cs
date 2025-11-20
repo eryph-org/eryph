@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel.Json;
+using Eryph.ConfigModel;
 using Eryph.Core;
-using Eryph.Core.Genetics;
 using Eryph.Messages.Resources;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.CatletSpecifications;
@@ -102,8 +100,9 @@ internal class CreateCatletSpecificationSaga(
                 Id = Data.Data.SpecificationId,
                 ProjectId = Data.Data.ProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
-                // TODO validate that catlet name is specified
-                Name = response.BuiltConfig.Name!,
+                // Normize the name just to be sure. This also makes sure that
+                // a name has been provided. We should have validated this earlier though.
+                Name = CatletName.New(response.BuiltConfig.Name).Value,
                 Architectures = Data.Data.Architectures!,
                 Versions = [specificationVersion]
             };

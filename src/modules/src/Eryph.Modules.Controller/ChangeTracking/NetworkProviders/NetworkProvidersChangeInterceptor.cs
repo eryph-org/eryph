@@ -23,7 +23,8 @@ internal class NetworkProvidersChangeInterceptor
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        var poolProviders = await dbContext.ChangeTracker.Entries<IpPool>().ToList()
+        var poolProviders = await dbContext.ChangeTracker.Entries<IpPool>()
+            .ToSeq().Strict()
             .Map(async e =>
             {
                 var subnetReference = e.Reference(s => s.Subnet);
@@ -34,9 +35,11 @@ internal class NetworkProvidersChangeInterceptor
             .Map(e => e.Somes()
                 .Map(s => s.Entity)
                 .OfType<ProviderSubnet>()
-                .Map(s => s.ProviderName));
+                .Map(s => s.ProviderName)
+                .ToSeq().Strict());
 
-        var networkPorts = await dbContext.ChangeTracker.Entries<IpAssignment>().ToList()
+        var networkPorts = await dbContext.ChangeTracker.Entries<IpAssignment>()
+            .ToSeq().Strict()
             .Map(async e =>
             {
                 var networkPortReference = e.Reference(a => a.NetworkPort);
@@ -47,10 +50,11 @@ internal class NetworkProvidersChangeInterceptor
             .Map(e => e.Somes()
                 .Map(p => p.Entity)
                 .OfType<FloatingNetworkPort>()
-                .Map(dbContext.Entry));
+                .Map(dbContext.Entry)
+                .ToSeq().Strict());
 
         var portProviders = networkPorts
-            .Concat(dbContext.ChangeTracker.Entries<FloatingNetworkPort>().ToList())
+            .Concat(dbContext.ChangeTracker.Entries<FloatingNetworkPort>().ToSeq().Strict())
             .Map(e => e.Entity.ProviderName);
 
         return poolProviders
@@ -58,6 +62,6 @@ internal class NetworkProvidersChangeInterceptor
             .Distinct()
             .Match(
                 Empty: () => Empty,
-                More: p => Seq1(new NetworkProvidersChange(p.ToSeq())));
+                More: p => Seq1(new NetworkProvidersChange(p.Strict())));
     }
 }

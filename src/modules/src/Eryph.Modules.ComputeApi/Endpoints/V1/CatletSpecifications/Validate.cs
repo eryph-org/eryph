@@ -52,13 +52,8 @@ public class Validate(
     {
         var validation = ValidateRequest(request);
         if (validation.IsFail)
-            return ValidationProblem(
-                detail: "The catlet configuration is invalid.",
-                modelStateDictionary: validation.ToModelStateDictionary(
-                    nameof(ValidateSpecificationRequest.Configuration)));
-
-        // TODO use separate validation for architecture and config?
-
+            return ValidationProblem(validation.ToModelStateDictionary());
+        
         return await base.HandleAsync(request, cancellationToken);
     }
 
