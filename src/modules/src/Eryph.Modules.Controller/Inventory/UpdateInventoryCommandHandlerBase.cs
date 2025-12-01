@@ -137,7 +137,7 @@ namespace Eryph.Modules.Controller.Inventory
                 IsDeprecated = existingMetadata.IsDeprecated,
                 SecretDataHidden = existingMetadata.SecretDataHidden,
                 // We intentionally do not copy the specification information as a copied VM
-                // should no longer be associated with the catlets specification.
+                // should no longer be associated with the original catlet's specification.
             });
 
 
