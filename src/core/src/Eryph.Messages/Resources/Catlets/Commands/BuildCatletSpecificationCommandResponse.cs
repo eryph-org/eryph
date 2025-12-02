@@ -6,6 +6,8 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 
 public class BuildCatletSpecificationCommandResponse
 {
+    public Architecture Architecture { get; set; }
+
     public CatletConfig BuiltConfig { get; set; }
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }

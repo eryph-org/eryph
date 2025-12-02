@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
@@ -32,7 +33,9 @@ internal class DeleteVirtualDiskHandler(
         repository,
         userRightsProvider)
 {
-    protected override ActionResult? ValidateRequest(VirtualDisk model)
+    protected override async Task<ActionResult?> ValidateRequest(
+        VirtualDisk model,
+        CancellationToken cancellationToken = default)
     {
         if (model.GeneSet is not null)
             return Problem(
@@ -54,6 +57,6 @@ internal class DeleteVirtualDiskHandler(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: "The configuration of the disk is frozen. The disk cannot be deleted.");
 
-        return base.ValidateRequest(model);
+        return await base.ValidateRequest(model, cancellationToken);
     }
 }

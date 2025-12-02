@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Eryph.Core;
+using Eryph.Core.Genetics;
+using Eryph.StateDb.Converters;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -56,6 +58,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
     public DbSet<CatletMetadata> Metadata { get; set; }
 
     public DbSet<CatletMetadataGene> MetadataGenes { get; set; }
+
+    public DbSet<CatletSpecification> CatletSpecifications { get; set; }
+
+    public DbSet<CatletSpecificationVersion> CatletSpecificationVersions { get; set; }
+
+    public DbSet<CatletSpecificationVersionVariantGene> CatletSpecificationVersionVariantGenes { get; set; }
 
     public DbSet<Project> Projects { get; set; }
 
@@ -141,7 +149,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Navigation(x => x.NetworkAdapters)
             .AutoInclude();
 
-
         modelBuilder.Entity<Catlet>()
             .HasMany(x => x.Drives)
             .WithOne(x => x.Catlet)
@@ -155,6 +162,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<Catlet>()
             .Property(e => e.Features)
             .HasSetConversion();
+
+        modelBuilder.Entity<Catlet>()
+            .HasIndex(c => c.SpecificationId)
+            .IsUnique();
 
         modelBuilder.Entity<VirtualNetwork>()
             .HasMany(x => x.NetworkPorts)
@@ -284,6 +295,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Property(m => m.MetadataJson);
 
         modelBuilder.Entity<CatletMetadata>()
+            .HasIndex(c => c.SpecificationId)
+            .IsUnique();
+
+        modelBuilder.Entity<CatletMetadata>()
             .Navigation(m => m.Genes)
             .AutoInclude();
 
@@ -327,5 +342,59 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<Gene>()
             .HasIndex(x => new { Combined = x.UniqueGeneIndex, x.LastSeenAgent })
             .IsUnique();
+
+        modelBuilder.Entity<CatletSpecification>()
+            .Property(s => s.Architectures)
+            .HasEryphNameSetConversion();
+
+        modelBuilder.Entity<CatletSpecification>()
+            .HasMany(s => s.Versions)
+            .WithOne()
+            .HasForeignKey(v => v.SpecificationId)
+            .IsRequired()
+            // We do not use Cascade here as it prevents our change tracking
+            // from detecting the deletion of the specification versions. With Restrict,
+            // we are forced to load the specification versions before deletion.
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatletSpecificationVersion>()
+            .Property(v => v.Architectures)
+            .HasEryphNameSetConversion();
+
+        modelBuilder.Entity<CatletSpecificationVersion>()
+            .HasMany(s => s.Variants)
+            .WithOne()
+            .HasForeignKey(v => v.SpecificationVersionId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletSpecificationVersion>()
+            .Navigation(s => s.Variants)
+            .AutoInclude();
+
+        modelBuilder.Entity<CatletSpecificationVersionVariant>()
+            .Property(v => v.Architecture)
+            .HasConversion<EryphNameValueConverter<Architecture>>();
+
+        modelBuilder.Entity<CatletSpecificationVersionVariant>()
+            .HasMany(s => s.PinnedGenes)
+            .WithOne()
+            .HasForeignKey(g => g.SpecificationVersionVariantId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletSpecificationVersionVariant>()
+            .Navigation(s => s.PinnedGenes)
+            .AutoInclude();
+
+        modelBuilder.Entity<CatletSpecificationVersionVariantGene>()
+            .HasKey(g => new { g.SpecificationVersionVariantId, g.UniqueGeneIndex });
+
+        modelBuilder.Entity<CatletSpecificationVersionVariantGene>()
+            .HasIndex(g => g.UniqueGeneIndex);
+
+        modelBuilder.Entity<CatletSpecificationVersionVariantGene>()
+            .Property(g => g.UniqueGeneIndex)
+            .UsePropertyAccessMode(PropertyAccessMode.Property);
     }
 }

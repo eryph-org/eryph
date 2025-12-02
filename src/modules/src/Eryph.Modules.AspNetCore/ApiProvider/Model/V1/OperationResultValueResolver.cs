@@ -9,6 +9,7 @@ using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Json;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.StateDb.Model;
 using SimpleInjector;
 
@@ -46,6 +47,10 @@ public class OperationResultValueResolver(
 
         return result switch
         {
+            DeployCatletSpecificationCommandResponse deployResponse => new CatletOperationResult
+            {
+                CatletId = deployResponse.CatletId.ToString(),
+            },
             ExpandNewCatletConfigCommandResponse expandResponse => new CatletConfigOperationResult
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),
@@ -53,6 +58,14 @@ public class OperationResultValueResolver(
             PopulateCatletConfigVariablesCommandResponse populateResponse => new CatletConfigOperationResult
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(populateResponse.Config),
+            },
+            ValidateCatletSpecificationCommandResponse validateSpecificationResponse => new CatletSpecificationOperationResult
+            {
+                Configuration = CatletConfigJsonSerializer.SerializeToElement(
+                    validateSpecificationResponse.BuiltConfig),
+                Genes = validateSpecificationResponse.ResolvedGenes.ToDictionary(
+                    k => k.Key.ToString(),
+                    v => v.Value.ToString()),
             },
             _ => null,
         };

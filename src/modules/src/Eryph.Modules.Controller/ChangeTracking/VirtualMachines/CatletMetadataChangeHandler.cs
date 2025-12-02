@@ -1,8 +1,6 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.IO.Abstractions;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration.Model;
@@ -52,6 +50,8 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
             Metadata = CatletMetadataContentJsonSerializer.SerializeToElement(metadata.Metadata),
             IsDeprecated = metadata.IsDeprecated,
             SecretDataHidden = metadata.SecretDataHidden,
+            SpecificationId = metadata.SpecificationId,
+            SpecificationVersionId = metadata.SpecificationVersionId,
         };
 
         var json = CatletMetadataConfigModelJsonSerializer.Serialize(metadataConfig);

@@ -21,14 +21,15 @@ internal class ProjectChangeInterceptor : ChangeInterceptorBase<ProjectChange>
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        return dbContext.ChangeTracker.Entries<Project>().ToList()
+        return dbContext.ChangeTracker.Entries<Project>()
+            .ToSeq().Strict()
             .Map(e => e.Entity.Id)
-            .Concat(dbContext.ChangeTracker.Entries<ProjectRoleAssignment>().ToList()
+            .Concat(dbContext.ChangeTracker.Entries<ProjectRoleAssignment>()
+                .ToSeq().Strict()
                 .Map(pra => pra.Entity.ProjectId))
-            .ToList()
             .Distinct()
             .Map(projectId => new ProjectChange(projectId))
-            .ToSeq()
+            .ToSeq().Strict()
             .AsTask();
     }
 }

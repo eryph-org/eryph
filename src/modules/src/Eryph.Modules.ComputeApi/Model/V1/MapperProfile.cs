@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using AutoMapper;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
@@ -22,7 +23,17 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()
                 .ForMember(x => x.ProviderName, x => x.MapFrom(y => y.NetworkProvider));
 
-            CreateMap<StateDb.Model.Catlet, Catlet>();
+            CreateMap<StateDb.Model.Catlet, Catlet>()
+                .ForMember(
+                    c => c.Specification,
+                    o => o.MapFrom((c, _, _, context) =>
+                        c.SpecificationId.HasValue && c.SpecificationVersionId.HasValue
+                            ? new CatletSpecificationInfo
+                            {
+                                SpecificationId = context.Mapper.Map<string>(c.SpecificationId),
+                                SpecificationVersionId = context.Mapper.Map<string>(c.SpecificationVersionId),
+                            }
+                            : null));
             CreateMap<StateDb.Model.CatletDrive, CatletDrive>()
                 .ForMember(
                     d => d.AttachedDiskId,
@@ -125,6 +136,29 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.Gene, Gene>()
                 .Include<StateDb.Model.Gene, GeneWithUsage>();
             CreateMap<StateDb.Model.Gene, GeneWithUsage>();
+
+            CreateMap<StateDb.Model.CatletSpecification, CatletSpecification>()
+                .ForMember(
+                    s => s.Latest,
+                    o => o.MapFrom(s => s.Versions.OrderByDescending(v => v.CreatedAt).FirstOrDefault()));
+            CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersionInfo>();
+            CreateMap<StateDb.Model.CatletSpecificationVersion, CatletSpecificationVersion>()
+                .ForMember(
+                    v => v.Configuration,
+                    o => o.MapFrom(s => new CatletSpecificationConfig
+                    {
+                        ContentType = s.ContentType,
+                        Content = s.Configuration,
+                    }));
+            CreateMap<StateDb.Model.CatletSpecificationVersionVariant, CatletSpecificationVersionVariant>()
+                .ForMember(v => v.BuiltConfig, o => o.MapFrom(s => MapToJsonElement(s.BuiltConfig)));
+            CreateMap<StateDb.Model.CatletSpecificationVersionVariantGene, CatletSpecificationVersionVariantGene>();
+        }
+
+        private static JsonElement MapToJsonElement(string json)
+        {
+            using var jsonDocument = JsonDocument.Parse(json);
+            return jsonDocument.RootElement.Clone();
         }
     }
 }

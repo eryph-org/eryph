@@ -40,7 +40,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     VmId = table.Column<Guid>(type: "TEXT", nullable: false),
                     SecretDataHidden = table.Column<bool>(type: "INTEGER", nullable: false),
                     IsDeprecated = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MetadataJson = table.Column<string>(type: "TEXT", nullable: false)
+                    MetadataJson = table.Column<string>(type: "TEXT", nullable: false),
+                    SpecificationId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    SpecificationVersionId = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -152,6 +154,28 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     table.PrimaryKey("PK_CatletFarms", x => x.Id);
                     table.ForeignKey(
                         name: "FK_CatletFarms_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CatletSpecifications",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Environment = table.Column<string>(type: "TEXT", nullable: false),
+                    Architectures = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletSpecifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CatletSpecifications_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
                         principalColumn: "Id",
@@ -334,7 +358,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     MinimumMemory = table.Column<long>(type: "INTEGER", nullable: false),
                     MaximumMemory = table.Column<long>(type: "INTEGER", nullable: false),
                     SecureBootTemplate = table.Column<string>(type: "TEXT", nullable: true),
-                    Features = table.Column<string>(type: "TEXT", nullable: false)
+                    Features = table.Column<string>(type: "TEXT", nullable: false),
+                    SpecificationId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    SpecificationVersionId = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -349,6 +375,29 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         name: "FK_Catlets_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CatletSpecificationVersions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SpecificationId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ContentType = table.Column<string>(type: "TEXT", nullable: false),
+                    Configuration = table.Column<string>(type: "TEXT", nullable: false),
+                    Architectures = table.Column<string>(type: "TEXT", nullable: false),
+                    Comment = table.Column<string>(type: "TEXT", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletSpecificationVersions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CatletSpecificationVersions_CatletSpecifications_SpecificationId",
+                        column: x => x.SpecificationId,
+                        principalTable: "CatletSpecifications",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -550,6 +599,26 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CatletSpecificationVersionVariant",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SpecificationVersionId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Architecture = table.Column<string>(type: "TEXT", nullable: false),
+                    BuiltConfig = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletSpecificationVersionVariant", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CatletSpecificationVersionVariant_CatletSpecificationVersions_SpecificationVersionId",
+                        column: x => x.SpecificationVersionId,
+                        principalTable: "CatletSpecificationVersions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "IpPools",
                 columns: table => new
                 {
@@ -568,6 +637,29 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         name: "FK_IpPools_Subnet_SubnetId",
                         column: x => x.SubnetId,
                         principalTable: "Subnet",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CatletSpecificationVersionVariantGenes",
+                columns: table => new
+                {
+                    SpecificationVersionVariantId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UniqueGeneIndex = table.Column<string>(type: "TEXT", nullable: false),
+                    GeneType = table.Column<int>(type: "INTEGER", nullable: false),
+                    Hash = table.Column<string>(type: "TEXT", nullable: false),
+                    GeneSet = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Architecture = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletSpecificationVersionVariantGenes", x => new { x.SpecificationVersionVariantId, x.UniqueGeneIndex });
+                    table.ForeignKey(
+                        name: "FK_CatletSpecificationVersionVariantGenes_CatletSpecificationVersionVariant_SpecificationVersionVariantId",
+                        column: x => x.SpecificationVersionVariantId,
+                        principalTable: "CatletSpecificationVersionVariant",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -633,6 +725,32 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Catlets_SpecificationId",
+                table: "Catlets",
+                column: "SpecificationId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecifications_ProjectId",
+                table: "CatletSpecifications",
+                column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecificationVersions_SpecificationId",
+                table: "CatletSpecificationVersions",
+                column: "SpecificationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecificationVersionVariant_SpecificationVersionId",
+                table: "CatletSpecificationVersionVariant",
+                column: "SpecificationVersionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletSpecificationVersionVariantGenes_UniqueGeneIndex",
+                table: "CatletSpecificationVersionVariantGenes",
+                column: "UniqueGeneIndex");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
                 table: "Genes",
                 columns: new[] { "UniqueGeneIndex", "LastSeenAgent" },
@@ -668,6 +786,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_Logs_TaskId",
                 table: "Logs",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Metadata_SpecificationId",
+                table: "Metadata",
+                column: "SpecificationId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_MetadataGenes_UniqueGeneIndex",
@@ -778,6 +902,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletNetworkAdapters");
 
             migrationBuilder.DropTable(
+                name: "CatletSpecificationVersionVariantGenes");
+
+            migrationBuilder.DropTable(
                 name: "Genes");
 
             migrationBuilder.DropTable(
@@ -808,6 +935,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "VirtualDisks");
 
             migrationBuilder.DropTable(
+                name: "CatletSpecificationVersionVariant");
+
+            migrationBuilder.DropTable(
                 name: "IpPools");
 
             migrationBuilder.DropTable(
@@ -820,6 +950,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "OperationTasks");
 
             migrationBuilder.DropTable(
+                name: "CatletSpecificationVersions");
+
+            migrationBuilder.DropTable(
                 name: "Subnet");
 
             migrationBuilder.DropTable(
@@ -830,6 +963,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "Operations");
+
+            migrationBuilder.DropTable(
+                name: "CatletSpecifications");
 
             migrationBuilder.DropTable(
                 name: "VirtualNetworks");

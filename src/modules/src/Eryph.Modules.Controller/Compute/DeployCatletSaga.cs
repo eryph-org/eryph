@@ -1,9 +1,10 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
-using Eryph.Core;
 using Eryph.Core.Genetics;
-using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
@@ -13,17 +14,10 @@ using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using IdGen;
 using JetBrains.Annotations;
-using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -33,8 +27,10 @@ internal class DeployCatletSaga(
     IWorkflow workflow,
     IBus bus,
     IInventoryLockManager lockManager,
-    ICatletDataService vmDataService,
-    ICatletMetadataService metadataService)
+    ICatletDataService catletDataService,
+    ICatletMetadataService metadataService,
+    IStateStoreRepository<Catlet> catletRepository,
+    IStateStoreRepository<Project> projectRepository)
     : OperationTaskWorkflowSaga<DeployCatletCommand, EryphSagaData<DeployCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletVMCommand>>,
@@ -49,12 +45,37 @@ internal class DeployCatletSaga(
         Data.Data.ProjectId = message.ProjectId;
         Data.Data.AgentName = message.AgentName;
         Data.Data.Architecture = message.Architecture;
-        Data.Data.Config = message.Config;
-        Data.Data.ConfigYaml = message.ConfigYaml;
+        Data.Data.ContentType = message.ContentType;
+        Data.Data.OriginalConfig = message.OriginalConfig;
         Data.Data.ResolvedGenes = message.ResolvedGenes;
+        Data.Data.SpecificationId = message.SpecificationId;
+        Data.Data.SpecificationVersionId = message.SpecificationVersionId;
 
         if (!message.CatletId.HasValue)
         {
+            var project = await projectRepository.GetByIdAsync(Data.Data.ProjectId);
+            if (project is null)
+            {
+                await Fail($"The project {Data.Data.ProjectId} does not exist..");
+                return;
+            }
+
+            Data.Data.Config = message.Config.CloneWith(c =>
+            {
+                c.Project = project.Name;
+            });
+
+            if (Data.Data.SpecificationId.HasValue)
+            {
+                var deployedCatlet = await catletRepository.GetBySpecAsync(
+                    new CatletSpecs.GetBySpecificationId(Data.Data.SpecificationId.Value));
+                if (deployedCatlet is not null)
+                {
+                    await Fail($"The specification {Data.Data.SpecificationId} is already deployed as catlet {deployedCatlet.Id}.");
+                    return;
+                }
+            }
+            
             Data.Data.CatletId = Guid.NewGuid();
             Data.Data.MetadataId = Guid.NewGuid();
             await StartNewTask(new CreateCatletVMCommand
@@ -72,7 +93,7 @@ internal class DeployCatletSaga(
 
         Data.Data.CatletId = message.CatletId.Value;
 
-        var catlet = await vmDataService.Get(Data.Data.CatletId);
+        var catlet = await catletDataService.Get(Data.Data.CatletId);
         if (catlet is null)
         {
             await Fail($"The catlet {Data.Data.CatletId} was not found.");
@@ -81,6 +102,10 @@ internal class DeployCatletSaga(
 
         Data.Data.MetadataId = catlet.MetadataId;
         Data.Data.VmId = catlet.VmId;
+        Data.Data.Config = message.Config.CloneWith(c =>
+        {
+            c.Project = catlet.Project.Name;
+        });
 
         await StartNewTask(new UpdateCatletNetworksCommand
         {
@@ -109,7 +134,7 @@ internal class DeployCatletSaga(
                 Config = Data.Data.Config,
                 Architecture = Data.Data.Architecture,
                 PinnedGenes = Data.Data.ResolvedGenes,
-                ConfigYaml = Data.Data.ConfigYaml!.ReplaceLineEndings("\n"),
+                OriginalConfig = Data.Data.OriginalConfig!.ReplaceLineEndings("\n"),
             };
 
             await metadataService.AddMetadata(
@@ -121,9 +146,11 @@ internal class DeployCatletSaga(
                     Metadata = catletMetadata,
                     IsDeprecated = false,
                     SecretDataHidden = false,
+                    SpecificationId = Data.Data.SpecificationId,
+                    SpecificationVersionId = Data.Data.SpecificationVersionId,
                 });
 
-            await vmDataService.Add(new Catlet
+            await catletDataService.Add(new Catlet
             {
                 ProjectId = Data.Data.ProjectId,
                 Id = Data.Data.CatletId,
@@ -138,6 +165,8 @@ internal class DeployCatletSaga(
                 // information which we save right now is incomplete.
                 LastSeen = DateTimeOffset.MinValue,
                 LastSeenState = DateTimeOffset.MinValue,
+                SpecificationId = Data.Data.SpecificationId,
+                SpecificationVersionId = Data.Data.SpecificationVersionId,
             });
 
             await StartNewTask(new UpdateCatletNetworksCommand
@@ -160,7 +189,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.CatletNetworksUpdated;
 
-            var catlet = await vmDataService.Get(Data.Data.CatletId);
+            var catlet = await catletDataService.Get(Data.Data.CatletId);
             if (catlet is null)
             {
                 await Fail($"The catlet {Data.Data.CatletId} was not found.");
@@ -241,7 +270,7 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.NetworksUpdated;
 
-            var catlet = await vmDataService.Get(Data.Data.CatletId);
+            var catlet = await catletDataService.Get(Data.Data.CatletId);
             if (catlet is null)
             {
                 await Fail($"The catlet {Data.Data.CatletId} was not found.");
@@ -258,7 +287,17 @@ internal class DeployCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<SyncVmNetworkPortsCommand> message)
     {
-        return FailOrRun(message, Complete);
+        if (Data.Data.State >= DeployCatletSagaState.NetworkPortsSynced)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async () =>
+        {
+            Data.Data.State = DeployCatletSagaState.NetworkPortsSynced;
+            await Complete(new DeployCatletCommandResponse
+            {
+                CatletId = Data.Data.CatletId,
+            });
+        });
     }
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<DeployCatletSagaData>> config)

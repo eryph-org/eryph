@@ -485,6 +485,8 @@ internal static class Program
                 ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
                 ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
                 ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
+                ["changeTracking:catletSpecificationsConfigPath"] = ZeroConfig.GetCatletSpecificationsConfigPath(),
+                ["changeTracking:catletSpecificationVersionsConfigPath"] = ZeroConfig.GetCatletSpecificationVersionsConfigPath(),
             });
         });
 

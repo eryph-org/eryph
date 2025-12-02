@@ -1,8 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using Dbosoft.Functional;
+﻿using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
@@ -14,6 +13,10 @@ using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using System;
+using System.Threading.Tasks;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -32,10 +35,19 @@ internal class ExpandNewCatletConfigSaga(
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
+        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+            Some: n => ProjectName.New(n),
+            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
+
         await StartNewTask(new BuildCatletSpecificationCommand
         {
             AgentName = Data.Data.AgentName,
-            ConfigYaml = CatletConfigYamlSerializer.Serialize(message.Config),
+            ContentType = "application/yaml",
+            Configuration = CatletConfigYamlSerializer.Serialize(
+                message.Config.CloneWith(c =>
+                {
+                    c.Project = null;
+                })),
             Architecture = Data.Data.Architecture,
         });
     }
@@ -49,8 +61,13 @@ internal class ExpandNewCatletConfigSaga(
         {
             Data.Data.State = ExpandNewCatletConfigSagaState.SpecificationBuilt;
 
+            var configWithProject = response.BuiltConfig.CloneWith(c =>
+            {
+                c.Project = Data.Data.ProjectName!.Value;
+            });
+
             var configWithSystemVariables = CatletSystemDataFeeding.FeedSystemVariables(
-                response.BuiltConfig, "#catletId", "#vmId");
+                configWithProject, "#catletId", "#vmId");
 
             var substitutionResult = CatletConfigVariableSubstitutions
                 .SubstituteVariables(configWithSystemVariables)

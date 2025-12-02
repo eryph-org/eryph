@@ -136,6 +136,8 @@ namespace Eryph.Modules.Controller.Inventory
                 Metadata = existingMetadata.Metadata,
                 IsDeprecated = existingMetadata.IsDeprecated,
                 SecretDataHidden = existingMetadata.SecretDataHidden,
+                // We intentionally do not copy the specification information as a copied VM
+                // should no longer be associated with the original catlet's specification.
             });
 
 
@@ -171,6 +173,8 @@ namespace Eryph.Modules.Controller.Inventory
                 vmInfo, host, timestamp, existingMetadata.CatletId, project);
             newCatlet.MetadataId = existingMetadata.Id;
             newCatlet.IsDeprecated = existingMetadata.IsDeprecated;
+            newCatlet.SpecificationId = existingMetadata.SpecificationId;
+            newCatlet.SpecificationVersionId = existingMetadata.SpecificationVersionId;
 
             await _vmDataService.Add(newCatlet);
         }
@@ -192,8 +196,8 @@ namespace Eryph.Modules.Controller.Inventory
             await _stateStore.LoadCollectionAsync(existingCatlet, x => x.ReportedNetworks);
             await _stateStore.LoadCollectionAsync(existingCatlet, x => x.NetworkAdapters);
 
-            var convertedVmInfo = await VirtualMachineInfoToCatlet(vmInfo,
-                host, timestamp, existingCatlet.Id, existingCatlet.Project);
+            var convertedVmInfo = await VirtualMachineInfoToCatlet(
+                vmInfo, host, timestamp, existingCatlet.Id, existingCatlet.Project);
 
             existingCatlet.LastSeen = timestamp;
             existingCatlet.Name = convertedVmInfo.Name;
@@ -259,7 +263,7 @@ namespace Eryph.Modules.Controller.Inventory
             VirtualMachineData vmInfo,
             CatletFarm hostMachine,
             DateTimeOffset timestamp,
-            Guid machineId,
+            Guid catletId,
             Project project) =>
             from _ in Task.FromResult(unit)
             from drives in vmInfo.Drives.ToSeq()
@@ -267,7 +271,7 @@ namespace Eryph.Modules.Controller.Inventory
                 .SequenceSerial()
             select new Catlet
             {
-                Id = machineId,
+                Id = catletId,
                 Project = project,
                 ProjectId = project.Id,
                 VmId = vmInfo.VmId,
@@ -293,13 +297,13 @@ namespace Eryph.Modules.Controller.Inventory
                 NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
                 {
                     Id = a.Id,
-                    CatletId = machineId,
+                    CatletId = catletId,
                     Name = a.AdapterName,
                     SwitchName = a.VirtualSwitchName,
                     MacAddress = a.MacAddress,
                 }).ToList(),
                 Drives = drives.ToList(),
-                ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? []).ToList()
+                ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(catletId) ?? []).ToList()
             };
 
         private async Task<CatletDrive> VirtualMachineDriveDataToCatletDrive(

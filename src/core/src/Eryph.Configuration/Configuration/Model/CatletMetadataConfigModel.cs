@@ -20,4 +20,8 @@ public class CatletMetadataConfigModel
     public bool SecretDataHidden { get; set; }
 
     public JsonElement? Metadata { get; set; }
+
+    public Guid? SpecificationId { get; set; }
+
+    public Guid? SpecificationVersionId { get; set; }
 }

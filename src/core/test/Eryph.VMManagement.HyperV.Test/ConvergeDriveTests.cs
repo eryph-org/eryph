@@ -1,5 +1,6 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Resources.Disks;
 using Eryph.VmManagement.Converging;
@@ -27,7 +28,12 @@ public class ConvergeDriveTests
     {
         _fixture.Config.Drives =
         [
-            new CatletDriveConfig { Name = "sda" , Size = configSize }
+            new CatletDriveConfig
+            {
+                Name = "sda",
+                Store = EryphConstants.DefaultDataStoreName,
+                Size = configSize
+            }
         ];
         _fixture.StorageSettings = _fixture.StorageSettings with
         {
@@ -116,7 +122,12 @@ public class ConvergeDriveTests
     {
         _fixture.Config.Drives =
         [
-            new CatletDriveConfig { Name = "sda" , Size = 150 }
+            new CatletDriveConfig
+            {
+                Name = "sda",
+                Store = EryphConstants.DefaultDataStoreName,
+                Size = 150
+            }
         ];
         _fixture.StorageSettings = _fixture.StorageSettings with
         {
@@ -209,7 +220,12 @@ public class ConvergeDriveTests
     {
         _fixture.Config.Drives =
         [
-            new CatletDriveConfig { Name = "sdb", Type = driveType }
+            new CatletDriveConfig
+            {
+                Type = driveType,
+                Name = "sdb",
+                Store = EryphConstants.DefaultDataStoreName,
+            }
         ];
         _fixture.StorageSettings = _fixture.StorageSettings with
         {
@@ -327,7 +343,12 @@ public class ConvergeDriveTests
     {
         _fixture.Config.Drives =
         [
-            new CatletDriveConfig { Name = "sda", Source = "gene:testorg/testset/testtag:sda" }
+            new CatletDriveConfig
+            {
+                Name = "sda",
+                Store = EryphConstants.DefaultDataStoreName,
+                Source = "gene:testorg/testset/testtag:sda"
+            }
         ];
         _fixture.ResolvedGenes =
         [
@@ -466,8 +487,10 @@ public class ConvergeDriveTests
         [
             new CatletDriveConfig
             {
-                Name = "sda", Source = "gene:testorg/testset/testtag:sda",
-                Type =driveType
+                Type = driveType,
+                Name = "sda",
+                Source = "gene:testorg/testset/testtag:sda",
+                Store = EryphConstants.DefaultDataStoreName,
             }
         ];
 

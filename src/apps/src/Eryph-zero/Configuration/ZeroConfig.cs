@@ -52,6 +52,29 @@ namespace Eryph.Runtime.Zero.Configuration
             return metadataConfigPath;
         }
 
+        public static string GetCatletsConfigPath()
+        {
+            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+            var vmConfigPath = Path.Combine(privateConfigPath, "catlets");
+
+            return vmConfigPath;
+        }
+
+        public static string GetCatletSpecificationsConfigPath()
+        {
+            var catletsConfigPath = GetCatletsConfigPath();
+            var specificationsConfigPath = Path.Combine(catletsConfigPath, "specs");
+
+            return specificationsConfigPath;
+        }
+
+        public static string GetCatletSpecificationVersionsConfigPath()
+        {
+            var catletsConfigPath = GetCatletsConfigPath();
+            var specificationVersionsConfigPath = Path.Combine(catletsConfigPath, "specversions");
+
+            return specificationVersionsConfigPath;
+        }
 
         public static string GetNetworksConfigPath()
         {
@@ -106,6 +129,9 @@ namespace Eryph.Runtime.Zero.Configuration
             Config.EnsurePath(GetVMConfigPath());
             Config.EnsurePath(GetMetadataConfigPath());
             Config.EnsurePath(GetStorageConfigPath());
+            Config.EnsurePath(GetCatletsConfigPath());
+            Config.EnsurePath(GetCatletSpecificationsConfigPath());
+            Config.EnsurePath(GetCatletSpecificationVersionsConfigPath());
             Config.EnsurePath(GetNetworksConfigPath());
             Config.EnsurePath(GetVmHostAgentConfigPath());
             Config.EnsurePath(GetProjectsConfigPath());

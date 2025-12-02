@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -15,6 +14,8 @@ public class DestroyResourcesSagaData : TaskWorkflowSagaData
     public ISet<Guid> PendingDisks { get; set;  } = new HashSet<Guid>();
 
     public ISet<Guid> PendingNetworks { get; set; } = new HashSet<Guid>();
+
+    public ISet<Guid> PendingCatletSpecifications { get; set; } = new HashSet<Guid>();
 
     public ISet<Resource> DestroyedResources { get; set; } = new HashSet<Resource>();
     

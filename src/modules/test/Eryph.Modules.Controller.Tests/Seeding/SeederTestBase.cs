@@ -39,6 +39,8 @@ public abstract class SeederTestBase : StateDbTestBase
         ProjectNetworkPortsConfigPath = @"Z:\projects\ports",
         NetworksConfigPath = @"Z:\networks",
         VirtualMachinesConfigPath = @"Z:\vms\md",
+        CatletSpecificationsConfigPath = @"Z:\catlets\specs",
+        CatletSpecificationVersionsConfigPath = @"Z:\catlets\specversions",
     };
 
     protected SeederTestBase(
@@ -119,5 +121,7 @@ public abstract class SeederTestBase : StateDbTestBase
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectNetworksConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectNetworkPortsConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.VirtualMachinesConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.CatletSpecificationsConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.CatletSpecificationVersionsConfigPath);
     }
 }
