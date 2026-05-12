@@ -4,5 +4,5 @@ internal static class ComputeApiVersion
 {
     public const int Major = 1;
 
-    public const int Minor = 1;
+    public const int Minor = 2;
 }

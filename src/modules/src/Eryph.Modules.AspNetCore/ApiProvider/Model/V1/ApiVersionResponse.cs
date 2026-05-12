@@ -11,6 +11,6 @@ public class ApiVersionResponse
     public required ApiVersion LatestVersion { get; init; } = new()
     {
         Major = 1,
-        Minor = 3,
+        Minor = 2,
     };
 }

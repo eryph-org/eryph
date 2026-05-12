@@ -1,5 +1,6 @@
 ﻿using Ardalis.Specification;
 using Eryph.CatletManagement;
+using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore;
@@ -8,7 +9,6 @@ using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading;
@@ -18,7 +18,6 @@ using Catlet = Eryph.StateDb.Model.Catlet;
 namespace Eryph.Modules.ComputeApi.Handlers;
 
 internal class GetCatletConfigurationHandler(
-    IApiResultFactory resultFactory,
     IStateStore stateStore)
     : IGetRequestHandler<Catlet, CatletConfiguration>
 {
@@ -43,29 +42,27 @@ internal class GetCatletConfigurationHandler(
         if (catlet == null)
             return new NotFoundResult();
 
-        if (catlet.IsDeprecated)
-        {
-            return resultFactory.Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The catlet cannot be managed because it has been created with an old version of eryph.");
-        }
-
         var networkPorts = await stateStore.Read<CatletNetworkPort>().ListAsync(
             new CatletNetworkPortSpecs.GetByCatletMetadataId(catlet.MetadataId),
             cancellationToken);
 
         var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(
             catlet.MetadataId, cancellationToken);
-        if (metadata is null || metadata.IsDeprecated || metadata.Metadata is null)
+        if (metadata is null)
             throw new InvalidOperationException(
-                $"The metadata for catlet {catletIdResult.Id} is missing or incomplete.");
+                $"The metadata for catlet {catletIdResult.Id} is missing.");
 
-        var config = CatletConfigGenerator.Generate(catlet, networkPorts.ToSeq().Strict(), metadata.Metadata.Config);
+        // Deprecated catlets carry only partial metadata salvaged from v0.4 records
+        // (typically just Parent and Architecture). Variables and fodder were never
+        // recovered, so we omit them rather than emit defaults that pretend completeness.
+        var originalConfig = metadata.Metadata?.Config ?? new CatletConfig();
+
+        var config = CatletConfigGenerator.Generate(catlet, networkPorts.ToSeq().Strict(), originalConfig);
 
         // Variables and fodder cannot change after the first deployment. Hence, we
         // take them from metadata.
-        config.Variables = metadata.Metadata.Config.Variables;
-        config.Fodder = metadata.Metadata.Config.Fodder;
+        config.Variables = originalConfig.Variables;
+        config.Fodder = originalConfig.Fodder;
 
         var sanitizedConfig = CatletConfigRedactor.RedactSecrets(config);
         var trimmedConfig = CatletConfigNormalizer.Trim(sanitizedConfig);
