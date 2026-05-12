@@ -71,6 +71,8 @@ jobs:
       command: test
       projects: '**/test/**/*.csproj'
       arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build --filter "Category!=Docker"'
+    env:
+      ERYPH_AUTOMAPPER_LICENSE: $(automapperLicense)
 
   - task: DotNetCoreCLI@2
     displayName: publish zero app
@@ -142,6 +144,7 @@ jobs:
     vmImage: ubuntu-22.04
 
   variables:
+   - group: 'eryph'
    - name: buildConfiguration
      value: 'Release'
 
@@ -153,7 +156,7 @@ jobs:
       projects: '**/*.csproj'
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
-      
+
   - task: DotNetCoreCLI@2
     displayName: dotnet build
     inputs:
@@ -168,3 +171,5 @@ jobs:
       # We exclude projects which require Windows to avoid errors
       projects: '**/test/**/!(*VmHostAgent*|*VmManagement*).csproj'
       arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build --filter "Category=Docker"'
+    env:
+      ERYPH_AUTOMAPPER_LICENSE: $(automapperLicense)

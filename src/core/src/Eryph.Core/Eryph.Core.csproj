@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="AutoMapper" Version="15.1.1" />
     <PackageReference Include="Dbosoft.Functional" Version="3.2.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.9.1-ci.3" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.1-ci.3" />
