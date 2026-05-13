@@ -30,6 +30,12 @@ public class ExpandCatletConfig(
     {
         var config = CatletConfigJsonSerializer.Deserialize(request.Body.Configuration);
 
+        // Force the expansion into the catlet's project. The base endpoint already
+        // checked the caller has write access to that project; ignoring whatever
+        // project the payload contains prevents a caller from expanding configs in
+        // the context of a project they do not own.
+        config.Project = model.Project.Name;
+
         return new ExpandNewCatletConfigCommand
         {
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),

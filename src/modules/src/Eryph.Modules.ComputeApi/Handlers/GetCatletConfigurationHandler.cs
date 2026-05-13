@@ -52,6 +52,13 @@ internal class GetCatletConfigurationHandler(
             throw new InvalidOperationException(
                 $"The metadata for catlet {catletIdResult.Id} is missing.");
 
+        // Only deprecated (v0.4) catlets may have incomplete metadata. For modern
+        // catlets a null Metadata is state corruption and must surface as an error
+        // rather than silently produce a partial config.
+        if (!metadata.IsDeprecated && metadata.Metadata is null)
+            throw new InvalidOperationException(
+                $"The metadata for catlet {catletIdResult.Id} is incomplete.");
+
         // Deprecated catlets carry only partial metadata salvaged from v0.4 records
         // (typically just Parent and Architecture). Variables and fodder were never
         // recovered, so we omit them rather than emit defaults that pretend completeness.
