@@ -24,9 +24,11 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
         _queue = queue;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken) 
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        Console.WriteLine($"#CTDIAG# BG ExecuteAsync starting for {typeof(TChange).Name}");
         _queue.Enable();
+        Console.WriteLine($"#CTDIAG# BG queue enabled for {typeof(TChange).Name}");
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -57,6 +59,7 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
 
     private async Task HandleChangeAsync(ChangeTrackingQueueItem<TChange> queueItem)
     {
+        Console.WriteLine($"#CTDIAG# BG HandleChangeAsync invoking handler for {typeof(TChange).Name} tx={queueItem.TransactionId}");
         _logger.LogDebug("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
 
         try
@@ -64,9 +67,11 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
             var handler = scope.GetInstance<IChangeHandler<TChange>>();
             await handler.HandleChangeAsync(queueItem.Changes);
+            Console.WriteLine($"#CTDIAG# BG HandleChangeAsync done for {typeof(TChange).Name} tx={queueItem.TransactionId}");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"#CTDIAG# BG HandleChangeAsync FAILED for {typeof(TChange).Name}: {ex.GetType().Name} {ex.Message}");
             // We need to catch all exceptions here. Otherwise, the background
             // service will stop when an exception occurs. We always want to write
             // as many of the changes as possible to the filesystem.
