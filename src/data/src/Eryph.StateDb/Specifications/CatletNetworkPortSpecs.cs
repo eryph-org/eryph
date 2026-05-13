@@ -46,7 +46,7 @@ public sealed class CatletNetworkPortSpecs
     {
         public GetUnused(Guid catletMetadataId, Seq<string> usedPortNames)
         {
-            var values = usedPortNames.ToArray();
+            IEnumerable<string> values = usedPortNames.ToArray();
             Query.Where(p => p.CatletMetadataId == catletMetadataId
                              && !values.Contains(p.Name))
                 .Include(p => p.FloatingPort!);
