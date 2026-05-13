@@ -3,9 +3,13 @@ using System.IO.Abstractions;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Serializers;
+using Eryph.Resources.Machines;
 using Eryph.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -81,10 +85,53 @@ internal class CatletMetadataSeeder : SeederBase
             IsDeprecated = true,
             SecretDataHidden = root.TryGetProperty("SecureDataHidden", out var secretDataHidden)
                                && secretDataHidden.GetBoolean(),
+            Metadata = SalvageContent(root),
         };
-            
+
         await _metadataService.AddMetadata(metadata, cancellationToken);
     }
+
+    /// <summary>
+    /// Salvage what we can from a v0.4 metadata document so the
+    /// read-only endpoints can still report at least the parent of
+    /// deprecated catlets. The result is intentionally incomplete:
+    /// <see cref="CatletMetadataContent.PinnedGenes"/> are not recoverable
+    /// because v0.4 never persisted gene hashes, so deprecated catlets
+    /// remain locked for write operations.
+    /// </summary>
+    private static CatletMetadataContent SalvageContent(JsonElement root)
+    {
+        return new CatletMetadataContent
+        {
+            Architecture = SalvageArchitecture(root),
+            Config = new CatletConfig
+            {
+                Parent = SalvageString(root, "Parent"),
+            },
+            ContentType = "",
+            OriginalConfig = "",
+        };
+    }
+
+    private static Architecture SalvageArchitecture(JsonElement root)
+    {
+        var rawArchitecture = SalvageString(root, "Architecture");
+        if (string.IsNullOrEmpty(rawArchitecture))
+            return Architecture.New(EryphConstants.DefaultArchitecture);
+
+        // The v0.4 metadata may contain an architecture value which the
+        // current validation rejects. Fall back to the default rather
+        // than aborting the entire seeding pass for a single bad record.
+        return Architecture.NewEither(rawArchitecture).IfLeft(
+            _ => Architecture.New(EryphConstants.DefaultArchitecture));
+    }
+
+    private static string? SalvageString(JsonElement root, string propertyName) =>
+        root.TryGetProperty(propertyName, out var element)
+        && element.ValueKind == JsonValueKind.String
+        && !string.IsNullOrWhiteSpace(element.GetString())
+            ? element.GetString()
+            : null;
 
     private async Task SeedMetadata(
         JsonDocument document,

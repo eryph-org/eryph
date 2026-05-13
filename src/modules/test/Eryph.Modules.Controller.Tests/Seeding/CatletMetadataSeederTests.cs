@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.Serializers;
 using Eryph.Serializers;
 using Xunit.Abstractions;
@@ -111,7 +113,13 @@ public abstract class CatletMetadataSeederTests(
             metadata.IsDeprecated.Should().BeTrue();
             metadata.SecretDataHidden.Should().BeTrue();
             metadata.Genes.Should().BeEmpty();
-            metadata.Metadata.Should().BeNull();
+            metadata.Metadata.Should().NotBeNull();
+            metadata.Metadata!.Architecture.Value.Should().Be(EryphConstants.DefaultArchitecture);
+            metadata.Metadata.Config.Should().NotBeNull();
+            metadata.Metadata.Config.Parent.Should().BeNull();
+            metadata.Metadata.PinnedGenes.Should().BeEmpty();
+            metadata.Metadata.ContentType.Should().BeEmpty();
+            metadata.Metadata.OriginalConfig.Should().BeEmpty();
         });
 
         var backupContent = await MockFileSystem.File.ReadAllTextAsync(
@@ -127,9 +135,75 @@ public abstract class CatletMetadataSeederTests(
         configModel.VmId.Should().Be(vmId);
         configModel.IsDeprecated.Should().BeTrue();
         configModel.SecretDataHidden.Should().BeTrue();
-        configModel.Metadata.Should().BeNull();
+        configModel.Metadata.Should().NotBeNull();
         configModel.SpecificationId.Should().BeNull();
         configModel.SpecificationVersionId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Deprecated_metadata_salvages_parent_and_architecture()
+    {
+        var metadataId = Guid.Parse("0b8e3f55-22a8-4f7b-9f5a-5d11d1f4f9aa");
+        var catletId = Guid.Parse("ab02c8ca-2c70-4f4d-a4d6-ab1b3a90c9aa");
+        var vmId = Guid.Parse("a4b1f8d2-7d8a-4a2a-9f6e-9f9f9e0aabba");
+        var json = $$"""
+                     {
+                       "Id": "{{ metadataId }}",
+                       "VMId": "{{ vmId }}",
+                       "MachineId": "{{ catletId }}",
+                       "Architecture": "hyperv/amd64",
+                       "Parent": "dbosoft/ubuntu-22.04/starter",
+                       "SecureDataHidden": false
+                     }
+                     """;
+
+        await MockFileSystem.File.WriteAllTextAsync(
+            Path.Combine(ChangeTrackingConfig.VirtualMachinesConfigPath, $"{metadataId}.json"),
+            json);
+
+        await ExecuteSeeder();
+
+        await WithScope(async stateStore =>
+        {
+            var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(metadataId);
+            metadata.Should().NotBeNull();
+            metadata!.IsDeprecated.Should().BeTrue();
+            metadata.Metadata.Should().NotBeNull();
+            metadata.Metadata!.Architecture.Value.Should().Be("hyperv/amd64");
+            metadata.Metadata.Config.Parent.Should().Be("dbosoft/ubuntu-22.04/starter");
+        });
+    }
+
+    [Fact]
+    public async Task Deprecated_metadata_with_invalid_architecture_falls_back_to_default()
+    {
+        var metadataId = Guid.Parse("d59a52f0-6e36-4f6d-b3f9-1c8b3f2c1aaa");
+        var catletId = Guid.Parse("c5e72f8a-bd05-4c25-b21a-2c8b3f2c2aaa");
+        var vmId = Guid.Parse("ec9a37ee-2c0e-4c0e-9f8a-3c8b3f2c3aaa");
+        var json = $$"""
+                     {
+                       "Id": "{{ metadataId }}",
+                       "VMId": "{{ vmId }}",
+                       "MachineId": "{{ catletId }}",
+                       "Architecture": "not-a-real-arch",
+                       "Parent": "some/parent/tag"
+                     }
+                     """;
+
+        await MockFileSystem.File.WriteAllTextAsync(
+            Path.Combine(ChangeTrackingConfig.VirtualMachinesConfigPath, $"{metadataId}.json"),
+            json);
+
+        await ExecuteSeeder();
+
+        await WithScope(async stateStore =>
+        {
+            var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(metadataId);
+            metadata.Should().NotBeNull();
+            metadata!.Metadata.Should().NotBeNull();
+            metadata.Metadata!.Architecture.Value.Should().Be(EryphConstants.DefaultArchitecture);
+            metadata.Metadata.Config.Parent.Should().Be("some/parent/tag");
+        });
     }
 
     private async Task ExecuteSeeder()
