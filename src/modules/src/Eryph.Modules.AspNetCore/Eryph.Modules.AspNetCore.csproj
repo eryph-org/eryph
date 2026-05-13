@@ -1,6 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Eryph.Modules.AspNetCore</RootNamespace>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -10,7 +10,7 @@
   <ItemGroup>
     <!--<FrameworkReference Include="Microsoft.AspNetCore.App" />-->
     <PackageReference Include="Ardalis.ApiEndpoints" Version="4.1.0" />
-    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.0" />
 
     <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.1-ci.3" />
     <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.9.1-ci.3" />
@@ -22,7 +22,7 @@
     <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc.Core" Version="5.5.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="7.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />

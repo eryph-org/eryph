@@ -2,4 +2,13 @@
   <PropertyGroup>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <!--
+    System.Text.Json 6.0.0 (GHSA-8g4q-xg66-9fp4) is pulled in transitively by Rebus,
+    but on .NET (Core) it ships in-box and the package version is never loaded at
+    runtime. Suppress the audit advisory rather than fighting NuGet's resolution.
+  -->
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-8g4q-xg66-9fp4" />
+  </ItemGroup>
 </Project>

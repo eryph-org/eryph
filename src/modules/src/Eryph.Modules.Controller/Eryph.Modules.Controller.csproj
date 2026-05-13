@@ -1,6 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
@@ -24,11 +24,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageReference Include="Quartz" Version="3.13.1" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
-    <PackageReference Include="System.IO.Hashing" Version="8.0.0" />
+    <PackageReference Include="System.IO.Hashing" Version="10.0.0" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.2.1" />
     <PackageReference Include="IdGen" Version="3.0.7" />
   </ItemGroup>
