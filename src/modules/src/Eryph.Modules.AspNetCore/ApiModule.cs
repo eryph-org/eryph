@@ -76,7 +76,10 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
             services.TryAddSingleton<IPolicyEvaluator, DisableAuthenticationPolicyEvaluator>();
 #endif
 
-        services.AddAutoMapper(typeof(TModule).Assembly, typeof(MapperProfile).Assembly);
+        services.AddAutoMapper(
+            cfg => cfg.LicenseKey = AutoMapperLicense.Key,
+            typeof(TModule).Assembly,
+            typeof(MapperProfile).Assembly);
     }
 
     public void Configure(IApplicationBuilder app)

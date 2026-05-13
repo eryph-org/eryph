@@ -4,12 +4,14 @@ using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
 using AutoMapper;
+using Eryph.Core;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Data.Planned;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Management.Infrastructure;
 
 namespace Eryph.VmManagement;
@@ -52,6 +54,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
 
             var config = new MapperConfiguration(cfg =>
             {
+                cfg.LicenseKey = AutoMapperLicense.Key;
                 cfg.CreateProfile("Powershell", c =>
                 {
                     c.CreateMap<CommandInfo, PowershellCommand>();
@@ -133,7 +136,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                     c.AddCimInstanceMapping<CimHgsKeyProtector>();
                     c.IgnoreUnmapped(_logger);
                 });
-            });
+            }, NullLoggerFactory.Instance);
 
             try
             {
