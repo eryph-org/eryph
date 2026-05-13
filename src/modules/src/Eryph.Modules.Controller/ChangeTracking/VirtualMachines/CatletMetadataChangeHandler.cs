@@ -36,7 +36,6 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
 
         var metadata = await _stateStore.For<CatletMetadata>()
             .GetByIdAsync(metadataId, cancellationToken);
-        System.Console.WriteLine($"#CTDIAG# HANDLER CatletMetadata {metadataId} => {(metadata is null ? "NULL (delete file)" : "exists (write file)")}");
         if (metadata is null)
         {
             _fileSystem.File.Delete(path);
