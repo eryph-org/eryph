@@ -119,17 +119,11 @@ internal class CatletMetadataSeeder : SeederBase
         if (string.IsNullOrEmpty(rawArchitecture))
             return Architecture.New(EryphConstants.DefaultArchitecture);
 
-        try
-        {
-            return Architecture.New(rawArchitecture);
-        }
-        catch
-        {
-            // The v0.4 metadata may contain an architecture value which the
-            // current validation rejects. Fall back to the default rather
-            // than aborting the entire seeding pass for a single bad record.
-            return Architecture.New(EryphConstants.DefaultArchitecture);
-        }
+        // The v0.4 metadata may contain an architecture value which the
+        // current validation rejects. Fall back to the default rather
+        // than aborting the entire seeding pass for a single bad record.
+        return Architecture.NewEither(rawArchitecture).IfLeft(
+            _ => Architecture.New(EryphConstants.DefaultArchitecture));
     }
 
     private static string? SalvageString(JsonElement root, string propertyName) =>
