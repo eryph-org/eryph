@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,14 +13,13 @@ namespace Eryph.Modules.Controller.ChangeTracking;
 /// Base class for change interceptors that detect changes in the database.
 /// </summary>
 /// <remarks>
-/// We use both <see cref="CreatedSavepointAsync(DbTransaction, TransactionEventData, CancellationToken)"/>
-/// and <see cref="TransactionCommittingAsync(DbTransaction, TransactionEventData, InterceptionResult, CancellationToken)"/>
-/// to detect changes. EF Core will implicitly create a savepoint when
-/// <c>SaveChangesAsync()</c> is called. We must detect changes when a savepoint
-/// is created. Otherwise, we would miss deleted entities as EF Core seems
-/// to remove them from the change tracker after the <c>SaveChangesAsync()</c>.
+/// Changes are captured in <see cref="ISaveChangesInterceptor.SavingChangesAsync"/>
+/// while the EF change tracker is still fully populated (including deleted
+/// entries, which EF removes from the tracker once <c>SaveChanges</c> has run).
+/// Enqueueing is deferred until <see cref="TransactionCommittedAsync"/> so that
+/// downstream handlers only see changes that were actually committed.
 /// </remarks>
-internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
+internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor, ISaveChangesInterceptor
 {
     private readonly IChangeTrackingQueue<TChange> _queue;
     private readonly ILogger _logger;
@@ -38,40 +37,20 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         DbContext dbContext,
         CancellationToken cancellationToken = default);
 
-    public override async Task CreatedSavepointAsync(
-        DbTransaction transaction,
-        TransactionEventData eventData,
+    public async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
         if (eventData.Context is null)
-        {
-            await base.CreatedSavepointAsync(transaction, eventData, cancellationToken);
-            return;
-        }
+            return result;
 
+        var transactionId = eventData.Context.Database.CurrentTransaction?.TransactionId ?? Guid.Empty;
         var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
-            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
+            .MapT(changes => new ChangeTrackingQueueItem<TChange>(transactionId, changes));
 
         _changes = _changes.Union(currentChanges);
-
-        await base.CreatedSavepointAsync(transaction, eventData, cancellationToken);
-    }
-
-    public override async ValueTask<InterceptionResult> TransactionCommittingAsync(
-        DbTransaction transaction,
-        TransactionEventData eventData,
-        InterceptionResult result,
-        CancellationToken cancellationToken = default)
-    {
-        if (eventData.Context is null)
-            return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
-
-        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
-            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
-
-        _changes = _changes.Union(currentChanges);
-
-        return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
+        return result;
     }
 
     public override async Task TransactionCommittedAsync(
@@ -85,7 +64,26 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
                 item.TransactionId, item.Changes);
             await _queue.EnqueueAsync(item, cancellationToken);
         }
+
+        _changes = HashSet<ChangeTrackingQueueItem<TChange>>.Empty;
     }
+
+    int ISaveChangesInterceptor.SavedChanges(SaveChangesCompletedEventData eventData, int result) => result;
+
+    InterceptionResult<int> ISaveChangesInterceptor.SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result) => throw new NotSupportedException();
+
+    void ISaveChangesInterceptor.SaveChangesFailed(DbContextErrorEventData eventData) { }
+
+    Task ISaveChangesInterceptor.SaveChangesFailedAsync(
+        DbContextErrorEventData eventData,
+        CancellationToken cancellationToken) => Task.CompletedTask;
+
+    ValueTask<int> ISaveChangesInterceptor.SavedChangesAsync(
+        SaveChangesCompletedEventData eventData,
+        int result,
+        CancellationToken cancellationToken) => ValueTask.FromResult(result);
 
     public override void CreatedSavepoint(
         DbTransaction transaction,
