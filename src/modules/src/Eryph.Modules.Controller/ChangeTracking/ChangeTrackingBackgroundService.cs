@@ -24,11 +24,19 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
         _queue = queue;
     }
 
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        // Enable the queue synchronously during StartAsync so producers
+        // can never observe a disabled queue. The Host awaits StartAsync
+        // before returning, but does not wait for ExecuteAsync to actually
+        // begin running, so enabling inside ExecuteAsync races with the
+        // first SaveChanges on busy hosts (e.g. CI agents).
+        _queue.Enable();
+        return base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogWarning("CTDIAG BG ExecuteAsync starting for {TChange}", typeof(TChange).Name);
-        _queue.Enable();
-        _logger.LogWarning("CTDIAG BG queue enabled for {TChange}", typeof(TChange).Name);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -59,7 +67,6 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
 
     private async Task HandleChangeAsync(ChangeTrackingQueueItem<TChange> queueItem)
     {
-        _logger.LogWarning("CTDIAG BG dequeued change for {TChange} tx={Tx}", typeof(TChange).Name, queueItem.TransactionId);
         _logger.LogDebug("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
 
         try
@@ -67,7 +74,6 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
             var handler = scope.GetInstance<IChangeHandler<TChange>>();
             await handler.HandleChangeAsync(queueItem.Changes);
-            _logger.LogWarning("CTDIAG BG handler completed for {TChange} tx={Tx}", typeof(TChange).Name, queueItem.TransactionId);
         }
         catch (Exception ex)
         {

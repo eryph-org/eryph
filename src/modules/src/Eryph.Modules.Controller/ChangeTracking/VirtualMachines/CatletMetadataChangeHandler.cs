@@ -16,18 +16,15 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
     private readonly ChangeTrackingConfig _config;
     private readonly IFileSystem _fileSystem;
     private readonly IStateStore _stateStore;
-    private readonly Microsoft.Extensions.Logging.ILogger<CatletMetadataChangeHandler> _logger;
 
     public CatletMetadataChangeHandler(
         ChangeTrackingConfig config,
         IFileSystem fileSystem,
-        IStateStore stateStore,
-        Microsoft.Extensions.Logging.ILogger<CatletMetadataChangeHandler> logger)
+        IStateStore stateStore)
     {
         _config = config;
         _fileSystem = fileSystem;
         _stateStore = stateStore;
-        _logger = logger;
     }
 
     public async Task HandleChangeAsync(
@@ -39,7 +36,6 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
 
         var metadata = await _stateStore.For<CatletMetadata>()
             .GetByIdAsync(metadataId, cancellationToken);
-        Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(_logger, "CTDIAG HANDLER metadata id={Id} found={Found}", metadataId, metadata is not null);
         if (metadata is null)
         {
             _fileSystem.File.Delete(path);
