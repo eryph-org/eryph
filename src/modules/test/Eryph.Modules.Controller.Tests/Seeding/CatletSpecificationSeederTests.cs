@@ -3,6 +3,7 @@ using Eryph.Core.Genetics;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Seeding;
@@ -90,6 +91,8 @@ public abstract class CatletSpecificationSeederTests(
     {
         using var host = CreateHost();
         await host.StartAsync();
+        var container = host.Services.GetRequiredService<SimpleInjector.Container>();
+        await WaitForChangeTrackingIdleAsync(container, TimeSpan.FromSeconds(10));
         await host.StopAsync();
     }
 
