@@ -43,17 +43,14 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         TransactionEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("CTDIAG savepoint {TChange} ctx={Ctx} tx={Tx}", typeof(TChange).Name, eventData.Context is not null, eventData.TransactionId);
         if (eventData.Context is null)
         {
             await base.CreatedSavepointAsync(transaction, eventData, cancellationToken);
             return;
         }
 
-        var detected = await DetectChanges(eventData.Context, cancellationToken);
-        _logger.LogWarning("CTDIAG savepoint detected {Count} for {TChange} -- entries={Entries}", detected.Count, typeof(TChange).Name, string.Join(",", detected));
-        var currentChanges = detected
-            .Map(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
+        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
+            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
 
         _changes = _changes.Union(currentChanges);
 
@@ -66,14 +63,11 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         InterceptionResult result,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("CTDIAG committing {TChange} ctx={Ctx} tx={Tx}", typeof(TChange).Name, eventData.Context is not null, eventData.TransactionId);
         if (eventData.Context is null)
             return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
 
-        var detected = await DetectChanges(eventData.Context, cancellationToken);
-        _logger.LogWarning("CTDIAG committing detected {Count} for {TChange} -- entries={Entries}", detected.Count, typeof(TChange).Name, string.Join(",", detected));
-        var currentChanges = detected
-            .Map(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
+        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
+            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
 
         _changes = _changes.Union(currentChanges);
 
@@ -85,12 +79,11 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         TransactionEndEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("CTDIAG committed {TChange} _changes={Count} tx={Tx}", typeof(TChange).Name, _changes.Count, eventData.TransactionId);
         foreach (var item in _changes)
         {
-            _logger.LogWarning("CTDIAG enqueueing {TChange} tx={Tx} change={Change}", typeof(TChange).Name, item.TransactionId, item.Changes);
+            _logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
+                item.TransactionId, item.Changes);
             await _queue.EnqueueAsync(item, cancellationToken);
-            _logger.LogWarning("CTDIAG enqueued {TChange} tx={Tx}", typeof(TChange).Name, item.TransactionId);
         }
     }
 
