@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,15 +13,14 @@ namespace Eryph.Modules.Controller.ChangeTracking;
 /// Base class for change interceptors that detect changes in the database.
 /// </summary>
 /// <remarks>
-/// Changes are captured from multiple hooks so we always observe the change
-/// tracker while it is still fully populated, regardless of provider/version
-/// quirks. <see cref="ISaveChangesInterceptor.SavingChangesAsync"/> is the
-/// primary capture point (always fires before EF clears deleted entries);
-/// <see cref="CreatedSavepointAsync"/> and <see cref="TransactionCommittingAsync"/>
-/// stay as defensive fallbacks. Enqueueing is deferred until
-/// <see cref="TransactionCommittedAsync"/> so handlers only see committed work.
+/// We use both <see cref="CreatedSavepointAsync(DbTransaction, TransactionEventData, CancellationToken)"/>
+/// and <see cref="TransactionCommittingAsync(DbTransaction, TransactionEventData, InterceptionResult, CancellationToken)"/>
+/// to detect changes. EF Core will implicitly create a savepoint when
+/// <c>SaveChangesAsync()</c> is called. We must detect changes when a savepoint
+/// is created. Otherwise, we would miss deleted entities as EF Core seems
+/// to remove them from the change tracker after the <c>SaveChangesAsync()</c>.
 /// </remarks>
-internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor, ISaveChangesInterceptor
+internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
 {
     private readonly IChangeTrackingQueue<TChange> _queue;
     private readonly ILogger _logger;
@@ -39,27 +38,23 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         DbContext dbContext,
         CancellationToken cancellationToken = default);
 
-    public async ValueTask<InterceptionResult<int>> SavingChangesAsync(
-        DbContextEventData eventData,
-        InterceptionResult<int> result,
-        CancellationToken cancellationToken = default)
-    {
-        if (eventData.Context is not null)
-        {
-            var transactionId = eventData.Context.Database.CurrentTransaction?.TransactionId ?? Guid.Empty;
-            await CaptureChangesAsync(eventData.Context, transactionId, cancellationToken);
-        }
-
-        return result;
-    }
-
     public override async Task CreatedSavepointAsync(
         DbTransaction transaction,
         TransactionEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is not null)
-            await CaptureChangesAsync(eventData.Context, eventData.TransactionId, cancellationToken);
+        _logger.LogWarning("CTDIAG CreatedSavepointAsync fired for {TChange}, ctx={HasContext}", typeof(TChange).Name, eventData.Context is not null);
+        if (eventData.Context is null)
+        {
+            await base.CreatedSavepointAsync(transaction, eventData, cancellationToken);
+            return;
+        }
+
+        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
+            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
+
+        _logger.LogWarning("CTDIAG CreatedSavepointAsync captured {Count} for {TChange}", currentChanges.Count, typeof(TChange).Name);
+        _changes = _changes.Union(currentChanges);
 
         await base.CreatedSavepointAsync(transaction, eventData, cancellationToken);
     }
@@ -70,8 +65,15 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         InterceptionResult result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is not null)
-            await CaptureChangesAsync(eventData.Context, eventData.TransactionId, cancellationToken);
+        _logger.LogWarning("CTDIAG TransactionCommittingAsync fired for {TChange}, ctx={HasContext}", typeof(TChange).Name, eventData.Context is not null);
+        if (eventData.Context is null)
+            return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
+
+        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
+            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
+
+        _logger.LogWarning("CTDIAG TransactionCommittingAsync captured {Count} for {TChange}", currentChanges.Count, typeof(TChange).Name);
+        _changes = _changes.Union(currentChanges);
 
         return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
     }
@@ -81,46 +83,14 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         TransactionEndEventData eventData,
         CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("CTDIAG TransactionCommittedAsync fired for {TChange}, _changes count={Count}", typeof(TChange).Name, _changes.Count);
         foreach (var item in _changes)
         {
             _logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
                 item.TransactionId, item.Changes);
             await _queue.EnqueueAsync(item, cancellationToken);
         }
-
-        _changes = HashSet<ChangeTrackingQueueItem<TChange>>.Empty;
     }
-
-    private async Task CaptureChangesAsync(
-        DbContext context,
-        Guid transactionId,
-        CancellationToken cancellationToken)
-    {
-        var currentChanges = await DetectChanges(context, cancellationToken)
-            .MapT(changes => new ChangeTrackingQueueItem<TChange>(transactionId, changes));
-
-        _changes = _changes.Union(currentChanges);
-    }
-
-    InterceptionResult<int> ISaveChangesInterceptor.SavingChanges(
-        DbContextEventData eventData,
-        InterceptionResult<int> result) => result;
-
-    int ISaveChangesInterceptor.SavedChanges(
-        SaveChangesCompletedEventData eventData,
-        int result) => result;
-
-    void ISaveChangesInterceptor.SaveChangesFailed(
-        DbContextErrorEventData eventData) { }
-
-    Task ISaveChangesInterceptor.SaveChangesFailedAsync(
-        DbContextErrorEventData eventData,
-        CancellationToken cancellationToken) => Task.CompletedTask;
-
-    ValueTask<int> ISaveChangesInterceptor.SavedChangesAsync(
-        SaveChangesCompletedEventData eventData,
-        int result,
-        CancellationToken cancellationToken) => ValueTask.FromResult(result);
 
     public override void CreatedSavepoint(
         DbTransaction transaction,

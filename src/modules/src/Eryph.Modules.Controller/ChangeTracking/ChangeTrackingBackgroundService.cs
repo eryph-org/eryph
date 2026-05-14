@@ -24,9 +24,11 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
         _queue = queue;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken) 
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogWarning("CTDIAG BG ExecuteAsync starting for {TChange}", typeof(TChange).Name);
         _queue.Enable();
+        _logger.LogWarning("CTDIAG BG queue enabled for {TChange}", typeof(TChange).Name);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -57,6 +59,7 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
 
     private async Task HandleChangeAsync(ChangeTrackingQueueItem<TChange> queueItem)
     {
+        _logger.LogWarning("CTDIAG BG dequeued change for {TChange} tx={Tx}", typeof(TChange).Name, queueItem.TransactionId);
         _logger.LogDebug("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
 
         try
@@ -64,6 +67,7 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
             var handler = scope.GetInstance<IChangeHandler<TChange>>();
             await handler.HandleChangeAsync(queueItem.Changes);
+            _logger.LogWarning("CTDIAG BG handler completed for {TChange} tx={Tx}", typeof(TChange).Name, queueItem.TransactionId);
         }
         catch (Exception ex)
         {
