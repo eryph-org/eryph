@@ -32,16 +32,19 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
         // begin running, so enabling inside ExecuteAsync races with the
         // first SaveChanges on busy hosts (e.g. CI agents).
         _queue.Enable();
+        _logger.LogWarning("CTDIAG BG StartAsync enabled queue for {TChange}", typeof(TChange).Name);
         return base.StartAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogWarning("CTDIAG BG ExecuteAsync running for {TChange}", typeof(TChange).Name);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 var queueItem = await _queue.DequeueAsync(stoppingToken);
+                _logger.LogWarning("CTDIAG BG dequeued {TChange} tx={Tx}", typeof(TChange).Name, queueItem.TransactionId);
                 await HandleChangeAsync(queueItem);
             }
             catch (OperationCanceledException)
@@ -56,11 +59,11 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
 
     private async Task FlushQueue()
     {
-        _logger.LogInformation("Going to flush {Count} remaining queue item(s).",
-            _queue.GetCount());
+        _logger.LogWarning("CTDIAG BG flushing {Count} items for {TChange}", _queue.GetCount(), typeof(TChange).Name);
         while (_queue.GetCount() > 0)
         {
             var queueItem = await _queue.DequeueAsync();
+            _logger.LogWarning("CTDIAG BG flush dequeued {TChange} tx={Tx}", typeof(TChange).Name, queueItem.TransactionId);
             await HandleChangeAsync(queueItem);
         }
     }
@@ -74,9 +77,11 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
             var handler = scope.GetInstance<IChangeHandler<TChange>>();
             await handler.HandleChangeAsync(queueItem.Changes);
+            _logger.LogWarning("CTDIAG BG handler completed {TChange} tx={Tx}", typeof(TChange).Name, queueItem.TransactionId);
         }
         catch (Exception ex)
         {
+            _logger.LogWarning("CTDIAG BG handler FAILED {TChange}: {Ex}", typeof(TChange).Name, ex.GetType().Name + ": " + ex.Message);
             // We need to catch all exceptions here. Otherwise, the background
             // service will stop when an exception occurs. We always want to write
             // as many of the changes as possible to the filesystem.

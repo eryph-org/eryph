@@ -18,15 +18,18 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
     private readonly ChangeTrackingConfig _config;
     private readonly IFileSystem _fileSystem;
     private readonly IStateStore _stateStore;
+    private readonly Microsoft.Extensions.Logging.ILogger<CatletSpecificationVersionChangeHandler> _logger;
 
     public CatletSpecificationVersionChangeHandler(
         ChangeTrackingConfig config,
         IFileSystem fileSystem,
-        IStateStore stateStore)
+        IStateStore stateStore,
+        Microsoft.Extensions.Logging.ILogger<CatletSpecificationVersionChangeHandler> logger)
     {
         _config = config;
         _fileSystem = fileSystem;
         _stateStore = stateStore;
+        _logger = logger;
     }
 
     public async Task HandleChangeAsync(
@@ -39,6 +42,7 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
         var specificationVersion
             = await _stateStore.For<CatletSpecificationVersion>()
             .GetByIdAsync(id, cancellationToken);
+        Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(_logger, "CTDIAG VersionHandler id={Id} found={Found}", id, specificationVersion is not null);
         if (specificationVersion is null)
         {
             _fileSystem.File.Delete(path);
@@ -78,5 +82,6 @@ internal class CatletSpecificationVersionChangeHandler : IChangeHandler<CatletSp
 
         var json = CatletSpecificationVersionConfigModelJsonSerializer.Serialize(versionConfig);
         await _fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
+        Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(_logger, "CTDIAG VersionHandler wrote file id={Id} path={Path}", id, path);
     }
 }

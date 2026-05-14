@@ -6,8 +6,10 @@ using Eryph.Modules.Controller.Seeding;
 using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
 using Eryph.StateDb.TestBase;
+using MartinCostello.Logging.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Moq;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -48,7 +50,7 @@ public abstract class ChangeTrackingTestBase(
         var builder = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
-                services.AddLogging();
+                services.AddLogging(b => b.AddXUnit(outputHelper).SetMinimumLevel(LogLevel.Warning));
                 services.AddSimpleInjector(container, options =>
                 {
                     options.AddLogging();
