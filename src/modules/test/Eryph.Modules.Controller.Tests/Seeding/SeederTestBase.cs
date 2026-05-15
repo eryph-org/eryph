@@ -2,6 +2,7 @@
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Seeding;
+using Eryph.Modules.Controller.Tests.ChangeTracking;
 using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
 using Eryph.StateDb.TestBase;
@@ -109,6 +110,7 @@ public abstract class SeederTestBase : StateDbTestBase
 
             await dbTransaction.CommitAsync();
         }
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(host, TimeSpan.FromSeconds(10));
         await host.StopAsync();
     }
 

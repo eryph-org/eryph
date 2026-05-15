@@ -154,10 +154,17 @@ namespace Eryph.Modules.Controller
         [UsedImplicitly]
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
-            options.AddSeeding(_changeTrackingConfig);
-            
+            // Change tracking must be registered before seeding so its
+            // hosted services run StartAsync (which enables the queues)
+            // before SeedFromConfigHandler.StartAsync saves any changes.
+            // Otherwise seeded changes would be enqueued against a disabled
+            // queue and silently dropped, and seed-derived data (e.g. the
+            // v0.4 -> v2 metadata salvage in CatletMetadataSeeder) would
+            // never be persisted back to disk.
             if(_changeTrackingConfig.TrackChanges)
                 options.AddChangeTracking();
+
+            options.AddSeeding(_changeTrackingConfig);
 
             options.AddStartupHandler<SyncNetworksHandler>();
             options.AddStartupHandler<StartBusModuleHandler>();

@@ -320,9 +320,13 @@ internal static class Program
                                 options.AddStartupHandler<DatabaseResetHandler>();
 
                                 container.RegisterInstance(changeTrackingConfig);
-                                options.AddSeeding(changeTrackingConfig);
+                                // Change tracking must be registered before seeding so its
+                                // hosted services enable their queues in StartAsync before
+                                // SeedFromConfigHandler saves any changes. Otherwise seeded
+                                // changes would hit a disabled queue and be dropped.
                                 if (changeTrackingConfig.TrackChanges)
                                     options.AddChangeTracking();
+                                options.AddSeeding(changeTrackingConfig);
                             });
                         })
                         // The logger must not be disposed here as it is used for error reporting

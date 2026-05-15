@@ -14,6 +14,7 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.Serializers;
 using Eryph.Serializers;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Seeding;
@@ -210,6 +211,7 @@ public abstract class CatletMetadataSeederTests(
     {
         using var host = CreateHost();
         await host.StartAsync();
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(host, TimeSpan.FromSeconds(10));
         await host.StopAsync();
     }
 

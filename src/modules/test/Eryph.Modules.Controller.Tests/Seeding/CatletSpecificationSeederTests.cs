@@ -1,8 +1,10 @@
 ﻿using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
+using Eryph.Modules.Controller.Tests.ChangeTracking;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Seeding;
@@ -90,6 +92,7 @@ public abstract class CatletSpecificationSeederTests(
     {
         using var host = CreateHost();
         await host.StartAsync();
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(host, TimeSpan.FromSeconds(10));
         await host.StopAsync();
     }
 

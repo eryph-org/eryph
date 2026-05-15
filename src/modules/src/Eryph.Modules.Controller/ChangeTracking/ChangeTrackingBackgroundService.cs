@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -24,9 +24,19 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
         _queue = queue;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken) 
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
+        // Enable the queue synchronously during StartAsync so producers
+        // can never observe a disabled queue. The Host awaits StartAsync
+        // before returning, but does not wait for ExecuteAsync to actually
+        // begin running, so enabling inside ExecuteAsync races with the
+        // first SaveChanges on busy hosts (e.g. CI agents).
         _queue.Enable();
+        return base.StartAsync(cancellationToken);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
         while (!stoppingToken.IsCancellationRequested)
         {
             try

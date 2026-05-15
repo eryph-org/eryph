@@ -96,7 +96,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
         {
             try
             {
-                using var certificate = new X509Certificate2(Convert.FromBase64String(certificateData));
+                using var certificate = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateData));
                 return certificate.GetRSAPublicKey();
             }
             catch (Exception)

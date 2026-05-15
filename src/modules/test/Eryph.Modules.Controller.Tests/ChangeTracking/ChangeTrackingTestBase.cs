@@ -77,11 +77,19 @@ public abstract class ChangeTrackingTestBase(
             // should also use transactions for the tests. The behavior
             // for deleted entities changes when using transactions.
             await using var dbTransaction = await dbContext.Database.BeginTransactionAsync();
-            
+
             await action(stateStore);
-            
+
             await dbTransaction.CommitAsync();
         }
+
+        // Wait for the change-tracking background services to drain their
+        // queues before tearing the host down. Without this, host.StopAsync
+        // can race against a BackgroundService whose ExecuteAsync has not
+        // yet been scheduled by the thread pool, causing the test to assert
+        // before the change handler runs.
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(host, TimeSpan.FromSeconds(10));
+
         await host.StopAsync();
     }
 
