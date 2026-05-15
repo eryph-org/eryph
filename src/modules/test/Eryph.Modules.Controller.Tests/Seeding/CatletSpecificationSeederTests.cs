@@ -1,5 +1,6 @@
 ﻿using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
+using Eryph.Modules.Controller.Tests.ChangeTracking;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -92,7 +93,7 @@ public abstract class CatletSpecificationSeederTests(
         using var host = CreateHost();
         await host.StartAsync();
         var container = host.Services.GetRequiredService<SimpleInjector.Container>();
-        await WaitForChangeTrackingIdleAsync(container, TimeSpan.FromSeconds(10));
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(container, TimeSpan.FromSeconds(10));
         await host.StopAsync();
     }
 

@@ -2,11 +2,6 @@
 using System.IO.Abstractions.TestingHelpers;
 using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
-using Eryph.Modules.Controller.ChangeTracking.Catlets;
-using Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
-using Eryph.Modules.Controller.ChangeTracking.Projects;
-using Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
-using Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
 using Eryph.Modules.Controller.Seeding;
 using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
@@ -93,43 +88,10 @@ public abstract class ChangeTrackingTestBase(
         // can race against a BackgroundService whose ExecuteAsync has not
         // yet been scheduled by the thread pool, causing the test to assert
         // before the change handler runs.
-        await WaitForChangeTrackingIdleAsync(container, TimeSpan.FromSeconds(10));
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(container, TimeSpan.FromSeconds(10));
 
         await host.StopAsync();
     }
-
-    private static async Task WaitForChangeTrackingIdleAsync(Container container, TimeSpan timeout)
-    {
-        var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
-        {
-            if (AllQueuesEmpty(container))
-            {
-                // Brief grace period for any in-flight handler to complete
-                await Task.Delay(20);
-                if (AllQueuesEmpty(container))
-                    return;
-            }
-            await Task.Delay(10);
-        }
-
-        throw new TimeoutException(
-            "Change tracking queues did not drain in time. Counts: " +
-            $"VN={container.GetInstance<IChangeTrackingQueue<VirtualNetworkChange>>().GetCount()}, " +
-            $"NP={container.GetInstance<IChangeTrackingQueue<NetworkProvidersChange>>().GetCount()}, " +
-            $"Pr={container.GetInstance<IChangeTrackingQueue<ProjectChange>>().GetCount()}, " +
-            $"CM={container.GetInstance<IChangeTrackingQueue<CatletMetadataChange>>().GetCount()}, " +
-            $"CS={container.GetInstance<IChangeTrackingQueue<CatletSpecificationChange>>().GetCount()}, " +
-            $"CSV={container.GetInstance<IChangeTrackingQueue<CatletSpecificationVersionChange>>().GetCount()}");
-    }
-
-    private static bool AllQueuesEmpty(Container c) =>
-        c.GetInstance<IChangeTrackingQueue<VirtualNetworkChange>>().GetCount() == 0
-        && c.GetInstance<IChangeTrackingQueue<NetworkProvidersChange>>().GetCount() == 0
-        && c.GetInstance<IChangeTrackingQueue<ProjectChange>>().GetCount() == 0
-        && c.GetInstance<IChangeTrackingQueue<CatletMetadataChange>>().GetCount() == 0
-        && c.GetInstance<IChangeTrackingQueue<CatletSpecificationChange>>().GetCount() == 0
-        && c.GetInstance<IChangeTrackingQueue<CatletSpecificationVersionChange>>().GetCount() == 0;
 
     public override async Task InitializeAsync()
     {
