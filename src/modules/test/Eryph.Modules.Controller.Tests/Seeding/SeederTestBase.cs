@@ -110,7 +110,7 @@ public abstract class SeederTestBase : StateDbTestBase
 
             await dbTransaction.CommitAsync();
         }
-        await ChangeTrackingTestHelpers.WaitForIdleAsync(container, TimeSpan.FromSeconds(10));
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(host, TimeSpan.FromSeconds(10));
         await host.StopAsync();
     }
 

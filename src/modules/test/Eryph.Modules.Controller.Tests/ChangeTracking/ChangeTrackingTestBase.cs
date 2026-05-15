@@ -88,7 +88,7 @@ public abstract class ChangeTrackingTestBase(
         // can race against a BackgroundService whose ExecuteAsync has not
         // yet been scheduled by the thread pool, causing the test to assert
         // before the change handler runs.
-        await ChangeTrackingTestHelpers.WaitForIdleAsync(container, TimeSpan.FromSeconds(10));
+        await ChangeTrackingTestHelpers.WaitForIdleAsync(host, TimeSpan.FromSeconds(10));
 
         await host.StopAsync();
     }
