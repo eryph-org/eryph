@@ -42,23 +42,30 @@ public static class GeneSetTagManifestUtils
         from genes in geneReferences
             .Map(geneReference => GetGene(geneSetId, geneType, geneReference))
             .Sequence()
-        select genes.ToHashMap();
+        select genes.Somes().ToHashMap();
 
-    private static Either<Error, (UniqueGeneIdentifier, GeneHash)> GetGene(
+    private static Either<Error, Option<(UniqueGeneIdentifier, GeneHash)>> GetGene(
         GeneSetIdentifier geneSetId,
         GeneType geneType,
         GeneReferenceData geneReference) =>
-        from geneName in GeneName.NewEither(geneReference.Name)
-            .MapLeft(e =>
-                Error.New(
-                    $"The name '{geneReference.Name}' of a {geneType} gene of the gene set {geneSetId} is invalid.",
-                    e))
-        from architecture in Optional(geneReference.Architecture).Match(
+        // Genes for architectures which this version of eryph does not understand
+        // are ignored instead of treated as invalid. This allows the gene pool to be
+        // extended with additional architectures (e.g. new hypervisors) without
+        // breaking existing clients. The genes which we do understand are still
+        // validated strictly.
+        Optional(geneReference.Architecture).Match(
                 Some: Architecture.NewEither,
                 None: () => Architecture.New(EryphConstants.AnyArchitecture))
-            .MapLeft(e => Error.New($"The architecture of the {geneType} gene {geneName} of the gene set {geneSetId} is invalid.", e))
-        let uniqueGeneId = new UniqueGeneIdentifier(geneType, new GeneIdentifier(geneSetId, geneName), architecture)
-        from geneHash in GeneHash.NewEither(geneReference.Hash)
-            .MapLeft(e => Error.New($"The hash of the gene {uniqueGeneId} is invalid.", e))
-        select (uniqueGeneId, geneHash);
+            .Match(
+                Right: architecture =>
+                    from geneName in GeneName.NewEither(geneReference.Name)
+                        .MapLeft(e =>
+                            Error.New(
+                                $"The name '{geneReference.Name}' of a {geneType} gene of the gene set {geneSetId} is invalid.",
+                                e))
+                    let uniqueGeneId = new UniqueGeneIdentifier(geneType, new GeneIdentifier(geneSetId, geneName), architecture)
+                    from geneHash in GeneHash.NewEither(geneReference.Hash)
+                        .MapLeft(e => Error.New($"The hash of the gene {uniqueGeneId} is invalid.", e))
+                    select Some((uniqueGeneId, geneHash)),
+                Left: _ => Right<Error, Option<(UniqueGeneIdentifier, GeneHash)>>(None));
 }

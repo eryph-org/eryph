@@ -88,7 +88,15 @@ public class GeneSetTagManifestUtilsTests
                 Name = "sdc",
                 Architecture = "any",
                 Hash = ComputeHash("sdc-any"),
-            }
+            },
+            // Gene for a hypervisor which this version of eryph does not understand.
+            // It must be ignored to allow future extensions of the gene pool.
+            new GeneReferenceData()
+            {
+                Name = "sda",
+                Architecture = "kvm/amd64",
+                Hash = ComputeHash("sda-kvm-amd64"),
+            },
         ],
     };
 
@@ -128,6 +136,9 @@ public class GeneSetTagManifestUtilsTests
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("sdb-hyperv-any")));
         dictionary.Should().ContainKey(UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdc[any]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("sdc-any")));
+
+        // The gene for the unsupported 'kvm' hypervisor must be ignored.
+        dictionary.Keys.Should().NotContain(k => k.Architecture.Hypervisor.Value == "kvm");
     }
 
     private static string ComputeHash(string value) =>
