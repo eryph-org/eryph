@@ -15,6 +15,14 @@ internal static class ComponentRegistrationSpecs
             Query.Where(x => x.ComponentId == componentId);
         }
     }
+
+    public sealed class GetActive : Specification<ComponentRegistration>
+    {
+        public GetActive()
+        {
+            Query.Where(x => x.Status == ComponentRegistrationStatus.Active);
+        }
+    }
 }
 
 internal static class ConfigRecordSpecs

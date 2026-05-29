@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
@@ -22,4 +23,7 @@ internal interface IComponentRegistryService
     /// can never regress the recorded state.
     /// </summary>
     Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version, CancellationToken cancellationToken);
+
+    /// <summary>The components currently considered alive (status Active).</summary>
+    Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken);
 }

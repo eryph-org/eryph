@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
@@ -84,4 +85,7 @@ internal sealed class ComponentRegistryService(
         registration.AppliedConfigVersions[domain] = version;
         await repository.UpdateAsync(registration, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken) =>
+        await repository.ListAsync(new ComponentRegistrationSpecs.GetActive(), cancellationToken);
 }

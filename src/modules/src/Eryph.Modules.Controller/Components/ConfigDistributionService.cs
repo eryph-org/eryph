@@ -53,6 +53,44 @@ internal sealed class ConfigDistributionService(
         return bundles;
     }
 
+    /// <summary>
+    /// Re-evaluates a domain against its source. Creates the record on first use,
+    /// bumps the version when the payload changed, and returns the new bundle — or
+    /// <c>null</c> when the content is unchanged (so callers can skip publishing).
+    /// </summary>
+    public async Task<ConfigBundle?> RefreshAsync(ConfigDomain domain, CancellationToken cancellationToken)
+    {
+        var source = sources.FirstOrDefault(s => s.Domain == domain);
+        if (source is null)
+            return null;
+
+        var payload = await source.BuildPayloadAsync(cancellationToken);
+        var record = await records.GetBySpecAsync(new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
+
+        if (record is null)
+        {
+            record = new ConfigRecord
+            {
+                Id = Guid.NewGuid(),
+                Domain = domain,
+                Version = 1,
+                Payload = payload,
+                LastUpdated = DateTimeOffset.UtcNow,
+            };
+            await records.AddAsync(record, cancellationToken);
+            return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
+        }
+
+        if (record.Payload == payload)
+            return null;
+
+        record.Version++;
+        record.Payload = payload;
+        record.LastUpdated = DateTimeOffset.UtcNow;
+        await records.UpdateAsync(record, cancellationToken);
+        return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
+    }
+
     private async Task<ConfigRecord?> GetOrCreateRecordAsync(ConfigDomain domain, CancellationToken cancellationToken)
     {
         var record = await records.GetBySpecAsync(new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
