@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.IdentityDb.Specifications;
+using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 
 namespace Eryph.Modules.Identity.Services
@@ -19,6 +21,11 @@ namespace Eryph.Modules.Identity.Services
         protected override async ValueTask PopulateApplicationFromDescriptor(ClientApplicationEntity application, ClientApplicationDescriptor descriptor,
             CancellationToken cancellationToken)
         {
+            // Register the client's public key as a JSON Web Key Set so OpenIddict can natively
+            // validate incoming client assertions (private_key_jwt). The base64 X.509 certificate
+            // remains the stored source of truth and is preserved across updates (see Get/Update).
+            descriptor.JsonWebKeySet = CreateJsonWebKeySet(descriptor.Certificate);
+
             await base.PopulateApplicationFromDescriptor(application, descriptor, cancellationToken);
             application.Certificate = descriptor.Certificate;
 
@@ -34,7 +41,7 @@ namespace Eryph.Modules.Identity.Services
 
         protected override void InitializeDescriptor(ClientApplicationDescriptor descriptor)
         {
-            descriptor.Type = OpenIddictConstants.ClientTypes.Confidential;
+            descriptor.ClientType = OpenIddictConstants.ClientTypes.Confidential;
 
             //// as openiddict does automatically assumes that a client key is required for confidential clients
             //// we have to set a secure random string as client secret to avoid client to be filtered out
@@ -54,6 +61,19 @@ namespace Eryph.Modules.Identity.Services
         protected override ISpecification<ClientApplicationEntity> GetListSpec(Guid tenantId)
         {
             return new ClientSpecs.GetAll(tenantId);
+        }
+
+        private static JsonWebKeySet? CreateJsonWebKeySet(string? certificateBase64)
+        {
+            if (string.IsNullOrWhiteSpace(certificateBase64))
+                return null;
+
+            using var certificate = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64));
+            var key = JsonWebKeyConverter.ConvertFromX509SecurityKey(new X509SecurityKey(certificate), representAsRsaKey: true);
+
+            var keySet = new JsonWebKeySet();
+            keySet.Keys.Add(key);
+            return keySet;
         }
     }
 }

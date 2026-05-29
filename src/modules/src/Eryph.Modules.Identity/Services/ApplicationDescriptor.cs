@@ -42,7 +42,7 @@ public class ApplicationDescriptor : OpenIddictApplicationDescriptor, ICloneable
             ClientSecret = ClientSecret,
             ConsentType = ConsentType,
             DisplayName = DisplayName,
-            Type = Type,
+            ClientType = ClientType,
             IdentityApplicationType = IdentityApplicationType,
             TenantId = TenantId,
         };
