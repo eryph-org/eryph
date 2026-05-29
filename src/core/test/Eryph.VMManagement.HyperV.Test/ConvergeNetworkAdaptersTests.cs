@@ -629,6 +629,30 @@ public class ConvergeNetworkAdaptersTests
     }
 
     [Fact]
+    public async Task Converge_AdapterAttachedToNetworkButSettingsMissing_Fails()
+    {
+        // eth0 is attached to a network but no network settings were generated for it.
+        // This must fail rather than silently converging eth0 as a disconnected adapter.
+        _fixture.Config.Networks =
+        [
+            new CatletNetworkConfig
+            {
+                AdapterName = "eth0",
+            },
+        ];
+        _fixture.Config.NetworkAdapters =
+        [
+            new CatletNetworkAdapterConfig { Name = "eth0" },
+        ];
+        _fixture.NetworkSettings = [];
+
+        var convergeTask = new ConvergeNetworkAdapters(_fixture.Context);
+        var result = await convergeTask.Converge(_vmInfo);
+
+        result.Should().BeLeft().Which.Message.Should().Contain("eth0");
+    }
+
+    [Fact]
     public async Task Converge_AdapterNotConfigured_RemovesAdapter()
     {
         bool adapterRemoved = false;

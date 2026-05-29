@@ -51,7 +51,18 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .Find(s => CatletNetworkAdapterName.NewOption(s.AdapterName) == adapterName)
             .Match(
                 Some: settings => PrepareConnectedAdapterConfig(adapterName, settings),
-                None: () => PrepareDisconnectedAdapterConfig(adapterName));
+                // An adapter is only converged as disconnected when it is not attached
+                // to any network. When it is attached to a network but has no network
+                // settings, the settings generation is incomplete. We fail instead of
+                // silently disconnecting the adapter.
+                None: () => IsAttachedToNetwork(adapterName)
+                    ? Left<Error, PhysicalAdapterConfig>(Error.New(
+                        $"Could not find the network settings for adapter '{adapterName}' which is attached to a network."))
+                    : PrepareDisconnectedAdapterConfig(adapterName));
+
+    private bool IsAttachedToNetwork(CatletNetworkAdapterName adapterName) =>
+        Context.Config.Networks.ToSeq()
+            .Exists(n => CatletNetworkAdapterName.NewOption(n.AdapterName) == adapterName);
 
     private Either<Error, PhysicalAdapterConfig> PrepareConnectedAdapterConfig(
         CatletNetworkAdapterName adapterName,
