@@ -13,6 +13,7 @@ using Eryph.ModuleCore;
 using Eryph.ModuleCore.Configuration;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller.ChangeTracking;
+using Eryph.Modules.Controller.Components;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Inventory;
 using Eryph.Modules.Controller.Networks;
@@ -127,6 +128,11 @@ namespace Eryph.Modules.Controller
             var agentLocator = Lifestyle.Singleton.CreateRegistration<ComponentRegistryAgentLocator>(container);
             container.AddRegistration(typeof(IPlacementCalculator), agentLocator);
             container.AddRegistration(typeof(IStorageManagementAgentLocator), agentLocator);
+
+            // Component registration + configuration distribution (controller is the authority).
+            container.Register<IComponentRegistryService, ComponentRegistryService>(Lifestyle.Scoped);
+            container.Register<ConfigDistributionService>(Lifestyle.Scoped);
+            container.Collection.Append(typeof(IConfigSource), typeof(ProjectsConfigSource), Lifestyle.Scoped);
 
             //use network services from host
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());

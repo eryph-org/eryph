@@ -8,7 +8,9 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
+using Eryph.Messages.Components;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Networks;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.HostAgent.Inventory;
@@ -85,6 +87,14 @@ namespace Eryph.Modules.HostAgent
             options.AddHostedService<VmRemovalWatcherService>();
             options.AddHostedService<VmStateChangeWatcherService>();
             options.AddHostedService<DiskStoresChangeWatcherService>();
+
+            // Opt in to controller-driven configuration distribution. The agent
+            // registers as a component on its own inbound queue and applies the
+            // configuration domains it is entitled to via its IConfigRealizers.
+            options.AddComponentRegistration(
+                ComponentType.VMHostAgent,
+                $"{QueueNames.VMHostAgent}.{Environment.MachineName}");
+
             options.AddLogging();
         }
 
@@ -92,6 +102,9 @@ namespace Eryph.Modules.HostAgent
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.RegisterInstance(_inventoryConfig);
+
+            // Realizers for the configuration domains this agent consumes.
+            container.Collection.Append(typeof(IConfigRealizer), typeof(ProjectsConfigDemoRealizer), Lifestyle.Scoped);
 
             container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
