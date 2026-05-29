@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20260529123422_AddComponentRegistry")]
+    [Migration("20260529181931_AddComponentRegistry")]
     partial class AddComponentRegistry
     {
         /// <inheritdoc />
@@ -228,10 +228,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("AppliedConfigVersionsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CapabilitiesJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

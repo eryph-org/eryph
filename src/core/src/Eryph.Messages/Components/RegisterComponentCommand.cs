@@ -26,9 +26,6 @@ public class RegisterComponentCommand
     /// <summary>The bus queue the controller routes configuration to.</summary>
     public string InboundQueue { get; set; } = "";
 
-    /// <summary>Derived capabilities the component advertises (e.g. datastores, switches).</summary>
-    public Dictionary<string, string> Capabilities { get; set; } = new();
-
     /// <summary>Config versions the component already has, so the controller can send only deltas.</summary>
     public Dictionary<ConfigDomain, long> KnownConfigVersions { get; set; } = new();
 }

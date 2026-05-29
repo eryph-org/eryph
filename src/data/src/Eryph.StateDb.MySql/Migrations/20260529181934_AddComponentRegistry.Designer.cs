@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20260529123440_AddComponentRegistry")]
+    [Migration("20260529181934_AddComponentRegistry")]
     partial class AddComponentRegistry
     {
         /// <inheritdoc />
@@ -233,10 +233,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("AppliedConfigVersionsJson")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("CapabilitiesJson")
                         .IsRequired()
                         .HasColumnType("longtext");
 

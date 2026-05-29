@@ -25,8 +25,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     RegisteredAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastHeartbeat = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    AppliedConfigVersionsJson = table.Column<string>(type: "TEXT", nullable: false),
-                    CapabilitiesJson = table.Column<string>(type: "TEXT", nullable: false)
+                    AppliedConfigVersionsJson = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

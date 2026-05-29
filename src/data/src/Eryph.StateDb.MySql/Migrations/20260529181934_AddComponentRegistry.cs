@@ -29,8 +29,6 @@ namespace Eryph.StateDb.MySql.Migrations
                     RegisteredAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     LastHeartbeat = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     AppliedConfigVersionsJson = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    CapabilitiesJson = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>

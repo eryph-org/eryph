@@ -228,10 +228,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CapabilitiesJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("ComponentId")
                         .HasColumnType("TEXT");
 

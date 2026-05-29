@@ -414,12 +414,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<ComponentRegistration>()
             .Property(x => x.AppliedConfigVersionsJson);
 
-        modelBuilder.Entity<ComponentRegistration>()
-            .Ignore(x => x.Capabilities);
-
-        modelBuilder.Entity<ComponentRegistration>()
-            .Property(x => x.CapabilitiesJson);
-
         modelBuilder.Entity<ConfigRecord>()
             .HasKey(x => x.Id);
 

@@ -32,7 +32,6 @@ internal sealed class ComponentRegistryService(
                 Status = ComponentRegistrationStatus.Active,
                 RegisteredAt = DateTimeOffset.UtcNow,
                 LastHeartbeat = DateTimeOffset.UtcNow,
-                Capabilities = new(command.Capabilities),
                 AppliedConfigVersions = new(command.KnownConfigVersions),
             };
             await repository.AddAsync(registration, cancellationToken);
@@ -45,7 +44,6 @@ internal sealed class ComponentRegistryService(
         existing.InboundQueue = command.InboundQueue;
         existing.Status = ComponentRegistrationStatus.Active;
         existing.LastHeartbeat = DateTimeOffset.UtcNow;
-        existing.Capabilities = new(command.Capabilities);
         foreach (var (domain, version) in command.KnownConfigVersions)
         {
             if (!existing.AppliedConfigVersions.TryGetValue(domain, out var current) || version > current)

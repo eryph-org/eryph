@@ -89,9 +89,8 @@ namespace Eryph.Modules.HostAgent
             options.AddHostedService<DiskStoresChangeWatcherService>();
 
             // Opt in to controller-driven configuration distribution. The agent
-            // registers as a component on its own inbound queue and advertises its
-            // datastore/environment settings to the controller for transparency.
-            options.AddComponentRegistration<HostAgentCapabilitiesProvider>(
+            // registers as a live component on its own inbound queue.
+            options.AddComponentRegistration(
                 ComponentType.VMHostAgent,
                 $"{QueueNames.VMHostAgent}.{Environment.MachineName}");
 

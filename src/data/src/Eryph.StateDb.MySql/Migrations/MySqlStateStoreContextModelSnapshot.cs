@@ -233,10 +233,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("CapabilitiesJson")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<Guid>("ComponentId")
                         .HasColumnType("char(36)");
 
