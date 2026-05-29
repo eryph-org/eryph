@@ -73,6 +73,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<Gene> Genes { get; set; }
 
+    public DbSet<ComponentRegistration> ComponentRegistrations { get; set; }
+
+    public DbSet<ConfigRecord> ConfigRecords { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // The change tracking in the controller module uses transaction
@@ -396,5 +400,31 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<CatletSpecificationVersionVariantGene>()
             .Property(g => g.UniqueGeneIndex)
             .UsePropertyAccessMode(PropertyAccessMode.Property);
+
+        modelBuilder.Entity<ComponentRegistration>()
+            .HasKey(x => x.Id);
+
+        modelBuilder.Entity<ComponentRegistration>()
+            .HasIndex(x => x.ComponentId)
+            .IsUnique();
+
+        modelBuilder.Entity<ComponentRegistration>()
+            .Ignore(x => x.AppliedConfigVersions);
+
+        modelBuilder.Entity<ComponentRegistration>()
+            .Property(x => x.AppliedConfigVersionsJson);
+
+        modelBuilder.Entity<ComponentRegistration>()
+            .Ignore(x => x.Capabilities);
+
+        modelBuilder.Entity<ComponentRegistration>()
+            .Property(x => x.CapabilitiesJson);
+
+        modelBuilder.Entity<ConfigRecord>()
+            .HasKey(x => x.Id);
+
+        modelBuilder.Entity<ConfigRecord>()
+            .HasIndex(x => x.Domain)
+            .IsUnique();
     }
 }
