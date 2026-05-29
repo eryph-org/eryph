@@ -352,6 +352,9 @@ public class ConvergeNetworkAdaptersTests
 
         result.Should().BeRight();
         adapterAdded.Should().BeTrue();
+        // The existing connected adapter eth0 already has the correct port, so its
+        // OVS port name must not be rewritten.
+        _portManagerMock.Verify(m => m.SetPortName("eth0Id", It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -533,6 +536,96 @@ public class ConvergeNetworkAdaptersTests
 
         result.Should().BeRight();
         adapterDisconnected.Should().BeTrue();
+        // A disconnected adapter has no OVS port, so the port manager must not be touched.
+        _portManagerMock.Verify(m => m.GetPortName(It.IsAny<string>()), Times.Never);
+        _portManagerMock.Verify(m => m.SetPortName(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Converge_NetworkAddedToDisconnectedAdapter_ConnectsAdapter()
+    {
+        var macAddress = EryphMacAddress.New("00:02:04:06:08:10").Value;
+
+        // The adapter currently exists in Hyper-V but is not connected to any switch.
+        var disconnectedAdapter = _fixture.Engine.ToPsObject(new VMNetworkAdapter
+        {
+            Id = "eth0Id",
+            Name = "eth0",
+            MacAddress = macAddress,
+            SwitchName = "",
+            Connected = false,
+            DhcpGuard = OnOffState.Off,
+            RouterGuard = OnOffState.Off,
+            MacAddressSpoofing = OnOffState.Off,
+        });
+
+        _fixture.Config.Networks =
+        [
+            new CatletNetworkConfig
+            {
+                AdapterName = "eth0",
+            },
+        ];
+        _fixture.Config.NetworkAdapters =
+        [
+            new CatletNetworkAdapterConfig { Name = "eth0" },
+        ];
+        _fixture.NetworkSettings =
+        [
+            new MachineNetworkSettings
+            {
+                AdapterName = "eth0",
+                // The MAC address is preserved when the adapter is attached to a network.
+                MacAddress = macAddress,
+                PortName = "port0",
+                NetworkProviderName = "default",
+            },
+        ];
+
+        _fixture.Engine.GetObjectCallback = (_, command) =>
+        {
+            if (command.ToString().StartsWith("Get-VMNetworkAdapter"))
+            {
+                return Seq1(_fixture.Engine.ConvertPsObject(disconnectedAdapter));
+            }
+
+            if (command.ToString().StartsWith("Get-VM"))
+            {
+                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
+            }
+
+            return Error.New($"Unexpected command: {command}.");
+        };
+
+        var adapterConnected = false;
+        _fixture.Engine.RunCallback = command =>
+        {
+            if (command.ToString().StartsWith("Connect-VMNetworkAdapter"))
+            {
+                command.ShouldBeCommand("Connect-VMNetworkAdapter")
+                    .ShouldBeParam("VMNetworkAdapter", disconnectedAdapter.PsObject)
+                    .ShouldBeParam("SwitchName", EryphConstants.OverlaySwitchName)
+                    .ShouldBeComplete();
+                adapterConnected = true;
+                return unit;
+            }
+
+            return Error.New($"Unexpected command {command}");
+        };
+
+        // The adapter has no OVS port yet.
+        _portManagerMock.Setup(m => m.GetPortName("eth0Id"))
+            .Returns(RightAsync<Error, Option<string>>(Some("")));
+        _portManagerMock.Setup(m => m.SetPortName("eth0Id", "port0"))
+            .Returns(RightAsync<Error, Unit>(unit))
+            .Verifiable();
+
+        var convergeTask = new ConvergeNetworkAdapters(_fixture.Context);
+        var result = await convergeTask.Converge(_vmInfo);
+
+        result.Should().BeRight();
+        adapterConnected.Should().BeTrue();
+        _portManagerMock.Verify();
     }
 
     [Fact]

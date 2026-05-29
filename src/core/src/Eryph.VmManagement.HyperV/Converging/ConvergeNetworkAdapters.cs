@@ -77,7 +77,14 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         from adapterConfig in Context.Config.NetworkAdapters.ToSeq()
             .Find(a => CatletNetworkAdapterName.NewOption(a.Name) == adapterName)
             .ToEither(Error.New($"Could not find the configuration for adapter '{adapterName}'."))
-        from macAddress in EryphMacAddress.NewEither(adapterConfig.MacAddress)
+        // The MAC address is assigned when the catlet config is instantiated. It
+        // should always be present here. We guard explicitly so a missing MAC does
+        // not surface as a confusing 'invalid MAC address' error.
+        from rawMacAddress in Optional(adapterConfig.MacAddress).Filter(notEmpty)
+            .ToEither(() => Error.New(
+                $"The adapter '{adapterName}' is not attached to any network and has no MAC address. "
+                + "The catlet configuration might not have been instantiated correctly."))
+        from macAddress in EryphMacAddress.NewEither(rawMacAddress)
             .MapLeft(e => Error.New(
                 $"The MAC address of the adapter '{adapterName}' which is not attached to any network is invalid.", e))
         select new PhysicalAdapterConfig(
@@ -177,8 +184,11 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
     private EitherAsync<Error, Unit> UpdateAdapter(
         PhysicalAdapterConfig adapterConfig,
         TypedPsObject<VMNetworkAdapter> adapter) =>
-        // A disconnected adapter has no OVS port. We leave any existing port name
-        // untouched as the port is gone once the adapter is disconnected.
+        // A disconnected adapter has no OVS port. Any stale OVS port name (WMI
+        // metadata) is left in place: it is deterministic per adapter
+        // (ovs_<catletId>_<adapter>), so the same name is reapplied when a network
+        // is attached again. While disconnected the adapter is on no switch, hence
+        // the leftover name is inert.
         from _1 in adapterConfig.PortName.Match(
             Some: portName =>
                 from currentPortName in Context.PortManager.GetPortName(adapter.Value.Id)
