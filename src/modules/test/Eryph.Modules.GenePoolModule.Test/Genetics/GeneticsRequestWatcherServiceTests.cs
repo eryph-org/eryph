@@ -74,9 +74,12 @@ public class GeneticsRequestWatcherServiceTests
         }
         finally
         {
-            // Unblock the workers so the background service can shut down.
+            // Unblock the workers so the background service can shut down, and make
+            // sure it actually stops (workers must observe cancellation and exit).
             provider.ReleaseAll();
-            await service.StopAsync(CancellationToken.None);
+            var stopped = service.StopAsync(CancellationToken.None);
+            (await Task.WhenAny(stopped, Task.Delay(TimeSpan.FromSeconds(10))))
+                .Should().BeSameAs(stopped, "the background service should shut down its workers cleanly");
         }
     }
 
@@ -122,7 +125,10 @@ public class GeneticsRequestWatcherServiceTests
         public void RegisterGene(UniqueGeneIdentifier geneId) =>
             _started[geneId.Value] = new TaskCompletionSource();
 
-        public Task Started(UniqueGeneIdentifier geneId) => _started[geneId.Value].Task;
+        public Task Started(UniqueGeneIdentifier geneId) => Gate(geneId).Task;
+
+        private TaskCompletionSource Gate(UniqueGeneIdentifier geneId) =>
+            _started.GetOrAdd(geneId.Value, _ => new TaskCompletionSource());
 
         public void ReleaseAll() => _release.TrySetResult();
 
@@ -134,7 +140,7 @@ public class GeneticsRequestWatcherServiceTests
             {
                 var current = Interlocked.Increment(ref _current);
                 UpdateMax(current);
-                _started[uniqueGeneId.Value].TrySetResult();
+                Gate(uniqueGeneId).TrySetResult();
                 try
                 {
                     await _release.Task.ConfigureAwait(false);

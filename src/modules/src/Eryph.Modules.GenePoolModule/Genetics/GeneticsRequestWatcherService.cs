@@ -26,7 +26,8 @@ internal class GeneticsRequestWatcherService(
         // consumed by multiple workers in parallel.
         var workers = Enumerable
             .Range(0, GenePoolConstants.MaxConcurrentGeneRequests)
-            .Select(_ => RunWorker(stoppingToken));
+            .Select(_ => RunWorker(stoppingToken))
+            .ToArray();
         await Task.WhenAll(workers);
     }
 

@@ -167,7 +167,11 @@ internal sealed class GeneRequestRegistry(
         }
 
         // Update the number of pending tasks for the remaining tasks in the queue.
-        // We skip the first entry in the queue as it will be picked up for processing.
+        // Completing this request frees up exactly one worker, which will pick up
+        // the first queued entry next. We therefore skip that first entry and report
+        // the number of queued tasks ahead of each remaining task. With multiple
+        // workers other genes may still be processed in parallel, so this count is
+        // the queue position and not the total number of in-flight tasks.
         foreach (var (tasks, index) in tasksToUpdate.Select((t, i) => (t, i)))
         {
             var message = $"Waiting for {index + 1} other task(s)...";
