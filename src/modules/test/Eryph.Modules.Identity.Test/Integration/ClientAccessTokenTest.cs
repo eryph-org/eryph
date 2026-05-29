@@ -79,7 +79,19 @@ public class ClientAccessTokenTest(
             .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<string> GetClientAccessToken(string keyString, string certString, bool legacyFormat = false)
+    [Fact]
+    public async Task Client_Gets_No_Access_Token_when_no_certificate_registered()
+    {
+        // A confidential client provisioned without a certificate has no registered key, so a
+        // client_assertion cannot be validated and must be rejected. This is the native-validation
+        // equivalent of the explicit certificate-presence gate the 4.x workaround enforced.
+        var act = () => GetClientAccessToken(TestClientData.KeyFileString1, certString: null);
+
+        (await act.Should().ThrowAsync<HttpRequestException>())
+            .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private async Task<string> GetClientAccessToken(string keyString, string? certString, bool legacyFormat = false)
     {
         using var keyPair = RSA.Create();
         keyPair.ImportFromPem(keyString);
@@ -145,7 +157,7 @@ public class ClientAccessTokenTest(
             ["client_id"] = clientId,
             ["client_assertion_type"] = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
             ["client_assertion"] = assertion,
-            ["scopes"] = string.Join(",", scopes),
+            ["scope"] = string.Join(" ", scopes),
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)

@@ -84,6 +84,11 @@ namespace Eryph.Modules.Identity.Services
                 var key = JsonWebKeyConverter.ConvertFromX509SecurityKey(
                     new X509SecurityKey(certificate), representAsRsaKey: true);
 
+                // Pin the key to signature use and RS256 so it can only ever validate the RS256
+                // client assertions the eryph clients produce (defense-in-depth against algorithm agility).
+                key.Use = JsonWebKeyUseNames.Sig;
+                key.Alg = SecurityAlgorithms.RsaSha256;
+
                 var keySet = new JsonWebKeySet();
                 keySet.Keys.Add(key);
                 return keySet;
