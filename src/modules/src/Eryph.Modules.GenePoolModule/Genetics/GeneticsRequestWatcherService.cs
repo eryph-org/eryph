@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
@@ -18,6 +19,18 @@ internal class GeneticsRequestWatcherService(
     ILogger logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Run multiple workers so that requests for different genes can be
+        // downloaded concurrently. Requests for the same gene are deduplicated
+        // by the GeneRequestRegistry, and DequeueGeneRequest supports being
+        // consumed by multiple workers in parallel.
+        var workers = Enumerable
+            .Range(0, GenePoolConstants.MaxConcurrentGeneRequests)
+            .Select(_ => RunWorker(stoppingToken));
+        await Task.WhenAll(workers);
+    }
+
+    private async Task RunWorker(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {

@@ -4,6 +4,14 @@ public static class GenePoolConstants
 {
     public const string PartClientName = "gene_part_client";
 
+    /// <summary>
+    /// The maximum number of genes which are downloaded/provided concurrently.
+    /// Requests for different genes are processed in parallel up to this limit,
+    /// while multiple requests for the same gene are still deduplicated and
+    /// served by a single download (see <see cref="GeneRequestRegistry"/>).
+    /// </summary>
+    public const int MaxConcurrentGeneRequests = 3;
+
     public static GenePoolSettings ProductionGenePool => new (
         "eryph-genepool",
         new("https://genepool-api.eryph.io/"),
