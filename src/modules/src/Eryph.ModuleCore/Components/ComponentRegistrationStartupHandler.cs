@@ -10,9 +10,10 @@ using Rebus.Bus;
 namespace Eryph.ModuleCore.Components;
 
 /// <summary>
-/// Registers this module as a live component with the controller on startup,
-/// announcing the configuration versions it already holds so the controller can
-/// send only what is missing.
+/// On startup, registers this module as a live component with the controller and
+/// then requests its configuration. Registration is the service-catalog/liveness
+/// signal; the config request is the explicit pull, announcing the versions the
+/// component already holds so the controller returns only what is missing.
 /// </summary>
 internal sealed class ComponentRegistrationStartupHandler(
     IBus bus,
@@ -33,6 +34,15 @@ internal sealed class ComponentRegistrationStartupHandler(
             ComponentType = identity.ComponentType,
             InstanceId = identity.InstanceId,
             MachineName = identity.MachineName,
+            InboundQueue = identity.InboundQueue,
+            KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
+        });
+
+        // Pull the current configuration from the controller.
+        await bus.Advanced.Routing.Send(QueueNames.Controllers, new RequestConfigCommand
+        {
+            ComponentId = identity.ComponentId,
+            ComponentType = identity.ComponentType,
             InboundQueue = identity.InboundQueue,
             KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
         });

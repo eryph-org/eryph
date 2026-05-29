@@ -3,20 +3,17 @@ using System.Threading.Tasks;
 using Eryph.Messages.Components;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Components;
 
 /// <summary>
-/// Persists a component's registration and replies with the configuration
-/// snapshot it is entitled to and does not yet hold, routed to its inbound queue.
+/// Persists a component's registration (the service catalog + liveness). The
+/// component requests its configuration separately via <see cref="RequestConfigCommand"/>.
 /// </summary>
 [UsedImplicitly]
 internal sealed class RegisterComponentCommandHandler(
-    IBus bus,
     IComponentRegistryService registry,
-    ConfigDistributionService distribution,
     ILogger<RegisterComponentCommandHandler> logger)
     : IHandleMessages<RegisterComponentCommand>
 {
@@ -26,18 +23,5 @@ internal sealed class RegisterComponentCommandHandler(
         logger.LogInformation(
             "Registered component {ComponentType} ({ComponentId}) on queue {Queue}.",
             message.ComponentType, message.ComponentId, message.InboundQueue);
-
-        var bundles = await distribution.BuildSnapshotAsync(
-            message.ComponentType, message.KnownConfigVersions, CancellationToken.None);
-
-        // Only send a snapshot when the component is entitled to (and missing) config.
-        if (bundles.Count == 0)
-            return;
-
-        await bus.Advanced.Routing.Send(message.InboundQueue, new ConfigSnapshotCommand
-        {
-            ComponentId = message.ComponentId,
-            Bundles = bundles,
-        });
     }
 }
