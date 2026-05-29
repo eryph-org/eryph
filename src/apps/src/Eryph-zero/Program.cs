@@ -20,6 +20,7 @@ using Eryph.AnsiConsole.JsonLines;
 using Eryph.AnsiConsole.Sys;
 using Eryph.App;
 using Eryph.Core;
+using Eryph.Core.Settings;
 using Eryph.Core.VmAgent;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Startup;
@@ -206,6 +207,21 @@ internal static class Program
         syncNetworkConfigCommand.SetHandler(SyncNetworkConfig,
             nonInteractiveOption, jsonOption);
         networksCommand.AddCommand(syncNetworkConfigCommand);
+
+        var controllerSettingsCommand = new Command("controllersettings");
+        rootCommand.AddCommand(controllerSettingsCommand);
+
+        var getControllerSettingsCommand = new Command("get");
+        getControllerSettingsCommand.AddOption(outFileOption);
+        getControllerSettingsCommand.AddOption(jsonOption);
+        getControllerSettingsCommand.SetHandler(GetControllerSettings, outFileOption, jsonOption);
+        controllerSettingsCommand.AddCommand(getControllerSettingsCommand);
+
+        var importControllerSettingsCommand = new Command("import");
+        importControllerSettingsCommand.AddOption(inFileOption);
+        importControllerSettingsCommand.AddOption(jsonOption);
+        importControllerSettingsCommand.SetHandler(ImportControllerSettings, inFileOption, jsonOption);
+        controllerSettingsCommand.AddCommand(importControllerSettingsCommand);
 
         var driverCommand = new Command("driver");
         rootCommand.AddCommand(driverCommand);
@@ -1114,6 +1130,29 @@ internal static class Program
         Run(from _1 in AdminGuard.ensureElevated()
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
             from _2 in  WriteResult<SimpleConsoleRuntime>(outFile, yaml)
+            select unit,
+            SimpleConsoleRuntime.New(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+
+    private static Task<int> GetControllerSettings(FileSystemInfo? outFile, bool json) =>
+        Run(from _1 in AdminGuard.ensureElevated()
+            from yaml in new ControllerSettingsManager().GetCurrentConfigurationYaml().ToAff(e => e)
+            from _2 in WriteResult<SimpleConsoleRuntime>(outFile, yaml)
+            select unit,
+            SimpleConsoleRuntime.New(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+
+    private static Task<int> ImportControllerSettings(FileSystemInfo? inFile, bool json) =>
+        Run(from _1 in AdminGuard.ensureElevated()
+            from configString in ReadInput(inFile)
+            from _2 in AnsiConsole<SimpleConsoleRuntime>.writeLine("Updating controller settings...")
+            // Validate the input by deserializing it; SaveConfiguration re-serializes the parsed model.
+            from settings in Try(() => ControllerSettingsYamlSerializer.Deserialize(configString))
+                .ToEitherAsync().ToAff(e => e)
+            from _3 in new ControllerSettingsManager().SaveConfiguration(settings).ToAff(e => e)
+            from _4 in AnsiConsole<SimpleConsoleRuntime>.writeLine(
+                "Controller settings imported. They are applied to components as they (re)register.")
+            from _5 in WriteResultToConsole<SimpleConsoleRuntime>(null)
             select unit,
             SimpleConsoleRuntime.New(
                 json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
