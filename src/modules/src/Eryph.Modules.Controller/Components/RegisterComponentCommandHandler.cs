@@ -30,6 +30,10 @@ internal sealed class RegisterComponentCommandHandler(
         var bundles = await distribution.BuildSnapshotAsync(
             message.ComponentType, message.KnownConfigVersions, CancellationToken.None);
 
+        // Only send a snapshot when the component is entitled to (and missing) config.
+        if (bundles.Count == 0)
+            return;
+
         await bus.Advanced.Routing.Send(message.InboundQueue, new ConfigSnapshotCommand
         {
             ComponentId = message.ComponentId,

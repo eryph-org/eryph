@@ -9,6 +9,8 @@ namespace Eryph.Messages.Components;
 /// </summary>
 public enum ConfigDomain
 {
-    /// <summary>Projects and their role assignments. Already DB-authoritative; the pilot domain.</summary>
-    Projects,
+    // No cluster-config domains are distributed yet. Domains are added as they are
+    // implemented; the first planned downward domain is the controller-owned
+    // datastore/environment name catalog. (Projects is deliberately not a domain:
+    // its only consumer is networking, which is co-hosted with the controller.)
 }

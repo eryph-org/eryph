@@ -18,14 +18,11 @@ internal sealed class ConfigDistributionService(
     IStateStoreRepository<ConfigRecord> records,
     IEnumerable<IConfigSource> sources)
 {
-    // Pilot entitlement: the host agent receives the Projects domain purely to
-    // exercise the distribution mechanism end-to-end. Real per-component
-    // entitlements are defined as each domain's consumer and realizer land.
+    // Which configuration domains each component type is entitled to receive.
+    // Empty until the first downward domain (datastore/environment name catalog)
+    // is implemented; entries are added together with their realizer + consumer.
     private static readonly IReadOnlyDictionary<ComponentType, ConfigDomain[]> Entitlements =
-        new Dictionary<ComponentType, ConfigDomain[]>
-        {
-            [ComponentType.VMHostAgent] = [ConfigDomain.Projects],
-        };
+        new Dictionary<ComponentType, ConfigDomain[]>();
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>
         Entitlements.TryGetValue(componentType, out var domains) ? domains : [];

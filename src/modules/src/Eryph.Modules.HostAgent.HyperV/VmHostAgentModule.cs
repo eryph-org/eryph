@@ -89,9 +89,9 @@ namespace Eryph.Modules.HostAgent
             options.AddHostedService<DiskStoresChangeWatcherService>();
 
             // Opt in to controller-driven configuration distribution. The agent
-            // registers as a component on its own inbound queue and applies the
-            // configuration domains it is entitled to via its IConfigRealizers.
-            options.AddComponentRegistration(
+            // registers as a component on its own inbound queue and advertises its
+            // datastore/environment settings to the controller for transparency.
+            options.AddComponentRegistration<HostAgentCapabilitiesProvider>(
                 ComponentType.VMHostAgent,
                 $"{QueueNames.VMHostAgent}.{Environment.MachineName}");
 
@@ -102,9 +102,6 @@ namespace Eryph.Modules.HostAgent
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.RegisterInstance(_inventoryConfig);
-
-            // Realizers for the configuration domains this agent consumes.
-            container.Collection.Append(typeof(IConfigRealizer), typeof(ProjectsConfigDemoRealizer), Lifestyle.Scoped);
 
             container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
