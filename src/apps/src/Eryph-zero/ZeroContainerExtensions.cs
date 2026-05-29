@@ -13,6 +13,7 @@ using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.Configuration.Networks;
+using Eryph.Runtime.Zero.Configuration.Settings;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
@@ -45,6 +46,7 @@ namespace Eryph.Runtime.Zero
             container.RegisterInstance<IEryphOvnPathProvider>(new EryphOvnPathProvider());
 
             container.Register<INetworkProviderManager, NetworkProviderManager>();
+            container.Register<IControllerSettingsManager, ControllerSettingsManager>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
 

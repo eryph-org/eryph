@@ -46,7 +46,6 @@ namespace Eryph.Modules.Controller
     {
         private readonly ChangeTrackingConfig _changeTrackingConfig = new();
         private readonly InventoryConfig _inventoryConfig = new();
-        private readonly PlacementConfigOptions _placementConfigOptions = new();
 
         public string Name => "Eryph.Controller";
 
@@ -57,9 +56,6 @@ namespace Eryph.Modules.Controller
 
              configuration.GetSection("Inventory")
                  .Bind(_inventoryConfig);
-
-             configuration.GetSection("Placement")
-                 .Bind(_placementConfigOptions);
         }
 
         [UsedImplicitly]
@@ -136,8 +132,8 @@ namespace Eryph.Modules.Controller
             // Component registration + configuration distribution (controller is the authority).
             container.Register<IComponentRegistryService, ComponentRegistryService>(Lifestyle.Scoped);
             container.Register<ConfigDistributionService>(Lifestyle.Scoped);
-            container.RegisterInstance(_placementConfigOptions);
-            container.Register<IPlacementConfigProvider, FilePlacementConfigProvider>(Lifestyle.Scoped);
+            // Controller settings (incl. the Placement section) are owned by the host.
+            container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());
             container.Collection.Register<IConfigSource>([typeof(PlacementConfigSource)]);
 
             //use network services from host
@@ -184,10 +180,6 @@ namespace Eryph.Modules.Controller
 
             options.AddStartupHandler<SyncNetworksHandler>();
             options.AddStartupHandler<StartBusModuleHandler>();
-
-            // Re-publish placement config to subscribers when the operator edits it.
-            options.AddHostedService<PlacementConfigWatcher>();
-
             options.AddLogging();
         }
 

@@ -33,6 +33,7 @@ using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
+using Eryph.Runtime.Zero.Configuration.Settings;
 using Eryph.Runtime.Zero.Startup;
 using Eryph.StateDb.Sqlite;
 using Eryph.VmManagement;
@@ -289,6 +290,7 @@ internal static class Program
                     container.RegisterSingleton<System.IO.Abstractions.IFileSystem, FileSystem>();
                     container.Register<IHostSettingsProvider, HostSettingsProvider>();
                     container.Register<INetworkProviderManager, NetworkProviderManager>();
+                    container.Register<IControllerSettingsManager, ControllerSettingsManager>();
                     container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
 
                     container.AddStateDbDataServices();
@@ -491,7 +493,6 @@ internal static class Program
                 ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
                 ["changeTracking:catletSpecificationsConfigPath"] = ZeroConfig.GetCatletSpecificationsConfigPath(),
                 ["changeTracking:catletSpecificationVersionsConfigPath"] = ZeroConfig.GetCatletSpecificationVersionsConfigPath(),
-                ["placement:configPath"] = ZeroConfig.GetPlacementConfigPath(),
             });
         });
 
