@@ -9,6 +9,7 @@ using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.Identity.Events;
 using Eryph.Modules.Identity.Events.Validations;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
@@ -22,7 +23,6 @@ using Microsoft.Extensions.Hosting;
 using OpenIddict.EntityFrameworkCore.Models;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
-using static Eryph.Modules.Identity.Events.ClientAssertionFilters;
 using static OpenIddict.Server.OpenIddictServerHandlers.Exchange;
 
 namespace Eryph.Modules.Identity;
@@ -120,27 +120,16 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                 options.UseAspNetCore()
                     .EnableTokenEndpointPassthrough();
 
-                services.AddScoped<RequireClientAssertion>();
-                services.AddScoped<RequireNoClientAssertion>();
+                // Client assertions (private_key_jwt) are validated natively by OpenIddict since v5:
+                // the client's public key is registered as a JsonWebKeySet on the application
+                // (see ClientService) and the server validates incoming assertions automatically.
+                // The 4.x manual workaround for https://github.com/openiddict/openiddict-core/issues/1251
+                // is therefore no longer required.
 
-                // openiddict currently does not support client_assertion (see https://github.com/openiddict/openiddict-core/issues/1251)
-                // we require client assertion only for client applications (see entity ApplicationEntity and ClientApplicationEntity)
-                // as workaround we handle client_assertion manually in ValidateClientAssertionClientType and ValidateClientAssertion
-
-                // replace ValidateClientType Descriptor to filter for client_assertion
-                options.RemoveEventHandler(ValidateClientType.Descriptor);
-                options.AddEventHandler(ValidateClientTypeEvents.BuildInValidateClientType.Descriptor);
-                options.AddEventHandler(ValidateClientTypeEvents.ValidateClientAssertionClientType.Descriptor);
-
-                // replace ValidateClientSecret Descriptor to filter for client_assertion
-                options.RemoveEventHandler(ValidateClientSecret.Descriptor);
-                options.AddEventHandler(ValidateClientSecretEvents.BuildInValidateClientSecret.Descriptor);
-                options.AddEventHandler(ValidateClientSecretEvents.ValidateClientAssertion.Descriptor);
-
-                // replace ValidateClientCredentialsParameters Descriptor to filter for client_assertion
-                options.RemoveEventHandler(ValidateClientCredentialsParameters.Descriptor);
-                options.AddEventHandler(ValidateClientCredentialsEvents.BuildInValidateClientAssertionParameters.Descriptor);
-                options.AddEventHandler(ValidateClientCredentialsEvents.ValidateClientAssertionParameters.Descriptor);
+                // Advertise to clients that this server expects the issuer as the client-assertion
+                // audience (OpenIddict 7.0+ behaviour). Older clients that don't read this flag keep
+                // using the legacy token-endpoint audience against older servers.
+                options.AddEventHandler(AdvertiseClientAssertionAudience.Descriptor);
 
                 // replace built-in scope permission validation with hierarchy-aware validation
                 options.RemoveEventHandler(ValidateScopePermissions.Descriptor);
