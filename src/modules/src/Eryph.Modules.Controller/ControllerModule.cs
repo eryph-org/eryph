@@ -132,8 +132,8 @@ namespace Eryph.Modules.Controller
             // Component registration + configuration distribution (controller is the authority).
             container.Register<IComponentRegistryService, ComponentRegistryService>(Lifestyle.Scoped);
             container.Register<ConfigDistributionService>(Lifestyle.Scoped);
-            // No config sources yet; domains register their IConfigSource as they are implemented.
-            container.Collection.Register<IConfigSource>(Array.Empty<Type>());
+            container.Register<IPlacementConfigProvider, DefaultPlacementConfigProvider>(Lifestyle.Scoped);
+            container.Collection.Register<IConfigSource>([typeof(PlacementConfigSource)]);
 
             //use network services from host
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());

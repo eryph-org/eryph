@@ -19,10 +19,12 @@ internal sealed class ConfigDistributionService(
     IEnumerable<IConfigSource> sources)
 {
     // Which configuration domains each component type is entitled to receive.
-    // Empty until the first downward domain (datastore/environment name catalog)
-    // is implemented; entries are added together with their realizer + consumer.
     private static readonly IReadOnlyDictionary<ComponentType, ConfigDomain[]> Entitlements =
-        new Dictionary<ComponentType, ConfigDomain[]>();
+        new Dictionary<ComponentType, ConfigDomain[]>
+        {
+            // Host agents need the placement vocabulary (datastore/environment names).
+            [ComponentType.VMHostAgent] = [ConfigDomain.PlacementConfig],
+        };
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>
         Entitlements.TryGetValue(componentType, out var domains) ? domains : [];

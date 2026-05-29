@@ -9,8 +9,11 @@ namespace Eryph.Messages.Components;
 /// </summary>
 public enum ConfigDomain
 {
-    // No cluster-config domains are distributed yet. Domains are added as they are
-    // implemented; the first planned downward domain is the controller-owned
-    // datastore/environment name catalog. (Projects is deliberately not a domain:
-    // its only consumer is networking, which is co-hosted with the controller.)
+    /// <summary>
+    /// Controller-owned placement settings the agents need to participate in
+    /// placement — the datastore and environment name catalog (the cluster
+    /// vocabulary). Paths stay agent-local; capability matching and placement
+    /// decisions are runtime, not distributed config.
+    /// </summary>
+    PlacementConfig,
 }

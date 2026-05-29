@@ -23,7 +23,8 @@ public static class ComponentRegistrationExtensions
     public static void AddComponentRegistration(
         this SimpleInjectorAddOptions options,
         ComponentType componentType,
-        string inboundQueue)
+        string inboundQueue,
+        params Type[] configRealizers)
     {
         var container = options.Container;
 
@@ -31,8 +32,8 @@ public static class ComponentRegistrationExtensions
         container.RegisterSingleton<IComponentConfigState, ComponentConfigState>();
         container.Register<ConfigApplier>(Lifestyle.Scoped);
 
-        // Realizers are appended by the module per domain it consumes; none yet.
-        container.Collection.Register<IConfigRealizer>(Array.Empty<Type>());
+        // One realizer per configuration domain the module consumes (may be empty).
+        container.Collection.Register<IConfigRealizer>(configRealizers);
 
         container.Collection.Append(
             typeof(IHandleMessages<ConfigSnapshotCommand>),
