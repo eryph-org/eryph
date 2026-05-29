@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
@@ -31,17 +32,30 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         select unit;
 
     private Either<Error, Seq<PhysicalAdapterConfig>> PrepareAdapterConfigs() =>
-        from adapterConfigs in Context.Config.Networks.ToSeq()
+        // The adapters are driven by the union of the configured networks and
+        // the configured network adapters. Adapters which are not attached to
+        // any network are converged as disconnected Hyper-V adapters.
+        from adapterNames in (Context.Config.Networks.ToSeq().Map(n => n.AdapterName)
+                + Context.Config.NetworkAdapters.ToSeq().Map(a => a.Name))
+            .Map(CatletNetworkAdapterName.NewEither)
+            .Sequence()
+            .Map(names => names.Distinct())
+        from adapterConfigs in adapterNames
             .Map(PrepareAdapterConfig)
             .Sequence()
         select adapterConfigs;
 
     private Either<Error, PhysicalAdapterConfig> PrepareAdapterConfig(
-        CatletNetworkConfig networkConfig) =>
-        from adapterName in CatletNetworkAdapterName.NewEither(networkConfig.AdapterName)
-        from settings in Context.NetworkSettings.ToSeq()
+        CatletNetworkAdapterName adapterName) =>
+        Context.NetworkSettings.ToSeq()
             .Find(s => CatletNetworkAdapterName.NewOption(s.AdapterName) == adapterName)
-            .ToEither(Error.New($"Could not find network settings for adapter {networkConfig.AdapterName}"))
+            .Match(
+                Some: settings => PrepareConnectedAdapterConfig(adapterName, settings),
+                None: () => PrepareDisconnectedAdapterConfig(adapterName));
+
+    private Either<Error, PhysicalAdapterConfig> PrepareConnectedAdapterConfig(
+        CatletNetworkAdapterName adapterName,
+        MachineNetworkSettings settings) =>
         from switchName in Context.HostInfo.FindSwitchName(settings.NetworkProviderName)
             .ToEither(Error.New($"Could not find network provider '{settings.NetworkProviderName}' on host."))
         select new PhysicalAdapterConfig(
@@ -53,6 +67,28 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             settings.MacAddressSpoofing,
             settings.DhcpGuard,
             settings.RouterGuard);
+
+    // An adapter which is not attached to any network is converged as a
+    // disconnected Hyper-V adapter. It has no virtual switch and no OVS port.
+    // The MAC address is taken from the catlet config (it is generated during
+    // instantiation and persisted as part of the inventoried catlet config).
+    private Either<Error, PhysicalAdapterConfig> PrepareDisconnectedAdapterConfig(
+        CatletNetworkAdapterName adapterName) =>
+        from adapterConfig in Context.Config.NetworkAdapters.ToSeq()
+            .Find(a => CatletNetworkAdapterName.NewOption(a.Name) == adapterName)
+            .ToEither(Error.New($"Could not find the configuration for adapter '{adapterName}'."))
+        from macAddress in EryphMacAddress.NewEither(adapterConfig.MacAddress)
+            .MapLeft(e => Error.New(
+                $"The MAC address of the adapter '{adapterName}' which is not attached to any network is invalid.", e))
+        select new PhysicalAdapterConfig(
+            adapterName.Value,
+            None,
+            macAddress.Value,
+            None,
+            None,
+            None,
+            None,
+            None);
 
     private EitherAsync<Error, Seq<TypedPsObject<VMNetworkAdapter>>> GetVmAdapters(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
@@ -111,39 +147,66 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         PhysicalAdapterConfig adapterConfig,
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _1 in Context.ReportProgressAsync($"Add Network Adapter: {adapterConfig.AdapterName}")
-        let command = PsCommandBuilder.Create()
+        let baseCommand = PsCommandBuilder.Create()
             .AddCommand("Add-VMNetworkAdapter")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("Name", adapterConfig.AdapterName)
             .AddParameter("StaticMacAddress", adapterConfig.MacAddress)
-            .AddParameter("SwitchName", adapterConfig.SwitchName)
+        // When the adapter is not attached to any network, it is created as a
+        // disconnected adapter, i.e. without a virtual switch.
+        let command = adapterConfig.SwitchName
+            .Map(switchName => baseCommand.AddParameter("SwitchName", switchName))
+            .IfNone(baseCommand)
             .AddParameter("Passthru")
         from optionalCreatedAdapter in Context.Engine.GetObjectAsync<VMNetworkAdapter>(command)
         from createdAdapter in optionalCreatedAdapter.ToEitherAsync(
             Error.New("Failed to create network adapter"))
-        // Sometimes, it takes a moment until we can actually read the OVS port name
-        // from a newly created adapter. In the end, we need to access the
-        // Msvm_EthernetPortAllocationSettingData for that adapter via WMI.
-        from _2 in WaitForPortName(createdAdapter.Value.Id).Run().ToEitherAsync()
-        from _3 in Context.PortManager.SetPortName(createdAdapter.Value.Id, adapterConfig.PortName)
-        from _4 in ConvergeSecuritySettings(createdAdapter, adapterConfig)
+        // A disconnected adapter has no OVS port.
+        from _2 in adapterConfig.PortName.Match(
+            // Sometimes, it takes a moment until we can actually read the OVS port name
+            // from a newly created adapter. In the end, we need to access the
+            // Msvm_EthernetPortAllocationSettingData for that adapter via WMI.
+            Some: portName =>
+                from __ in WaitForPortName(createdAdapter.Value.Id).Run().ToEitherAsync()
+                from ___ in Context.PortManager.SetPortName(createdAdapter.Value.Id, portName)
+                select unit,
+            None: () => RightAsync<Error, Unit>(unit))
+        from _3 in ConvergeSecuritySettings(createdAdapter, adapterConfig)
         select unit;
 
     private EitherAsync<Error, Unit> UpdateAdapter(
         PhysicalAdapterConfig adapterConfig,
         TypedPsObject<VMNetworkAdapter> adapter) =>
-        from currentPortName in Context.PortManager.GetPortName(adapter.Value.Id)
-        from _1 in currentPortName == adapterConfig.PortName
-            ? RightAsync<Error, Unit>(unit)
-            : Context.PortManager.SetPortName(adapter.Value.Id, adapterConfig.PortName)
+        // A disconnected adapter has no OVS port. We leave any existing port name
+        // untouched as the port is gone once the adapter is disconnected.
+        from _1 in adapterConfig.PortName.Match(
+            Some: portName =>
+                from currentPortName in Context.PortManager.GetPortName(adapter.Value.Id)
+                from __ in currentPortName == portName
+                    ? RightAsync<Error, Unit>(unit)
+                    : Context.PortManager.SetPortName(adapter.Value.Id, portName)
+                select unit,
+            None: () => RightAsync<Error, Unit>(unit))
         from _2 in adapter.Value.MacAddress == adapterConfig.MacAddress
             ? RightAsync<Error, Unit>(unit)
             : UpdateMacAddress(adapter, adapterConfig.MacAddress)
         from _3 in ConvergeSecuritySettings(adapter, adapterConfig)
-        from _4 in adapter.Value.Connected && adapter.Value.SwitchName == adapterConfig.SwitchName
-            ? RightAsync<Error, Unit>(unit)
-            : ConnectAdapter(adapter, adapterConfig)
+        from _4 in ConvergeConnection(adapter, adapterConfig)
         select unit;
+
+    private EitherAsync<Error, Unit> ConvergeConnection(
+        TypedPsObject<VMNetworkAdapter> adapter,
+        PhysicalAdapterConfig adapterConfig) =>
+        adapterConfig.SwitchName.Match(
+            Some: switchName =>
+                adapter.Value.Connected && adapter.Value.SwitchName == switchName
+                    ? RightAsync<Error, Unit>(unit)
+                    : ConnectAdapter(adapter, switchName, adapterConfig.NetworkName),
+            // The adapter is not attached to any network. Disconnect it from
+            // its virtual switch if necessary.
+            None: () => adapter.Value.Connected
+                ? DisconnectAdapter(adapter)
+                : RightAsync<Error, Unit>(unit));
 
     private EitherAsync<Error, Unit> UpdateMacAddress(
         TypedPsObject<VMNetworkAdapter> adapter,
@@ -163,11 +226,11 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         let currentMacAddressSpoofing = adapter.Value.MacAddressSpoofing == OnOffState.On
         let currentRouterGuard = adapter.Value.RouterGuard == OnOffState.On
         let currentDhcpGuard = adapter.Value.DhcpGuard == OnOffState.On
-        let changedMacAddressSpoofing = Optional(adapterConfig.MacAddressSpoofing)
+        let changedMacAddressSpoofing = adapterConfig.MacAddressSpoofing
             .Filter(v => v != currentMacAddressSpoofing)
-        let changedDhcpGuard = Optional(adapterConfig.DhcpGuard)
+        let changedDhcpGuard = adapterConfig.DhcpGuard
             .Filter(v => v != currentDhcpGuard)
-        let changedRouterGuard = Optional(adapterConfig.RouterGuard)
+        let changedRouterGuard = adapterConfig.RouterGuard
             .Filter(v => v != currentRouterGuard)
         from __ in changedMacAddressSpoofing.IsSome || changedDhcpGuard.IsSome || changedRouterGuard.IsSome
             ? UpdateSecuritySettings(
@@ -204,13 +267,24 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
 
     private EitherAsync<Error, Unit> ConnectAdapter(
         TypedPsObject<VMNetworkAdapter> adapter,
-        PhysicalAdapterConfig adapterConfig) =>
+        string switchName,
+        Option<string> networkName) =>
         from _ in Context.ReportProgressAsync(
-            $"Connected Network Adapter {adapter.Value.Name} to network {adapterConfig.NetworkName}")
+            $"Connected Network Adapter {adapter.Value.Name} to network {networkName.IfNone("")}")
         let command = PsCommandBuilder.Create()
             .AddCommand("Connect-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
-            .AddParameter("SwitchName", adapterConfig.SwitchName)
+            .AddParameter("SwitchName", switchName)
+        from __ in Context.Engine.RunAsync(command)
+        select unit;
+
+    private EitherAsync<Error, Unit> DisconnectAdapter(
+        TypedPsObject<VMNetworkAdapter> adapter) =>
+        from _ in Context.ReportProgressAsync(
+            $"Disconnected Network Adapter {adapter.Value.Name}")
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Disconnect-VMNetworkAdapter")
+            .AddParameter("VMNetworkAdapter", adapter.PsObject)
         from __ in Context.Engine.RunAsync(command)
         select unit;
 
@@ -228,11 +302,15 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
 
     private sealed record PhysicalAdapterConfig(
         string AdapterName,
-        string SwitchName,
+        // The switch, port name and network name are not set for adapters
+        // which are not attached to any network (disconnected adapters).
+        Option<string> SwitchName,
         string MacAddress,
-        string PortName,
-        string NetworkName,
-        bool MacAddressSpoofing,
-        bool DhcpGuard,
-        bool RouterGuard);
+        Option<string> PortName,
+        Option<string> NetworkName,
+        // The security settings are only managed for adapters which are
+        // attached to a network. For disconnected adapters they are None.
+        Option<bool> MacAddressSpoofing,
+        Option<bool> DhcpGuard,
+        Option<bool> RouterGuard);
 }
