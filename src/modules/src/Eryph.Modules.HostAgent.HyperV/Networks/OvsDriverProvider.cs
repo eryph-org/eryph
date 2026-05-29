@@ -28,6 +28,7 @@ namespace Eryph.Modules.HostAgent.Networks;
 
 public class OvsDriverProvider<RT> where RT : struct,
     HasCancel<RT>,
+    HasDirectory<RT>,
     HasDism<RT>,
     HasFile<RT>,
     HasHostNetworkCommands<RT>,
@@ -36,13 +37,17 @@ public class OvsDriverProvider<RT> where RT : struct,
     HasProcessRunner<RT>,
     HasRegistry<RT>
 {
-    public static Aff<RT, Unit> ensureDriver(string ovsRunDir, bool allowInstall, bool allowUpgrade) =>
+    public static Aff<RT, Unit> ensureDriver(
+        string ovnRunDir,
+        string ovnDataDir,
+        bool allowInstall,
+        bool allowUpgrade) =>
         from hostNetworkCommands in default(RT).HostNetworkCommands
         from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
         from _ in match(extensionInfo,
             Some: ei => logInformation("OVS Hyper-V switch extension {ExtensionVersion} is installed", ei.Version),
             None: () => logInformation("OVS Hyper-V switch extension is not installed"))
-        let infPath = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
+        let infPath = Path.Combine(ovnRunDir, "driver", "dbo_ovse.inf")
         from infVersion in getDriverVersionFromInfFile(infPath)
         from isDriverTestSigningEnabled in isDriverTestSigningEnabled()
         from isDriverPackageTestSigned in isDriverPackageTestSigned(infPath)
@@ -73,8 +78,13 @@ public class OvsDriverProvider<RT> where RT : struct,
                       // installation of the new driver might fail with error code 0x80070430.
                       from ___ in waitUntilDriverServiceHasStopped()
                       from ____ in removeAllDriverPackages()
-                      from _____ in installDriver(infPath)
-                      from ______ in match(overlaySwitchId,
+                      // The OVN/OVS database schemas are tied to the binaries shipped in
+                      // the package. On any version change we drop the databases so the new
+                      // binaries start from a clean state. The network plan realizer rebuilds
+                      // the OVN configuration from eryph's state on the next sync.
+                      from _____ in dropOvnDatabaseFiles(ovnDataDir)
+                      from ______ in installDriver(infPath)
+                      from _______ in match(overlaySwitchId,
                           Some: switchId =>
                               from _ in hostNetworkCommands.EnableSwitchExtension(switchId)
                               // We suspect that the switch extension might not be enabled
@@ -92,6 +102,16 @@ public class OvsDriverProvider<RT> where RT : struct,
             None: () => canInstall
                 ? installDriver(infPath)
                 : FailAff<RT, Unit>(Error.New("OVS Hyper-V switch extension is missing")))
+        select unit;
+
+    public static Aff<RT, Unit> dropOvnDatabaseFiles(string ovnDataDir) =>
+        from exists in Directory<RT>.exists(ovnDataDir)
+        from _ in exists
+            ? from __ in logInformation("Dropping OVN database files at {Path}...", ovnDataDir)
+              from ___ in Directory<RT>.delete(ovnDataDir, recursive: true)
+              from ____ in logInformation("Successfully dropped OVN database files")
+              select unit
+            : logInformation("No OVN database files to drop at {Path}.", ovnDataDir)
         select unit;
 
     public static Aff<RT, Unit> installDriver(string infPath) =>

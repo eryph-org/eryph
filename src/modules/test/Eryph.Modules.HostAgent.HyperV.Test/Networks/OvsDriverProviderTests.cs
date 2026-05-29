@@ -23,6 +23,7 @@ public class OvsDriverProviderTests
 {
     private readonly RT _runtime;
 
+    private readonly Mock<DirectoryIO> _directoryMock = new();
     private readonly Mock<DismIO> _dismMock = new();
     private readonly Mock<FileIO> _fileMock = new();
     private readonly Mock<IHostNetworkCommands<RT>> _hostNetworkCommandsMock = new();
@@ -30,12 +31,16 @@ public class OvsDriverProviderTests
     private readonly Mock<ProcessRunnerIO> _processRunnerIOMock = new();
     private readonly Mock<RegistryIO> _registryIOMock = new();
 
+    private const string OvnRunDir = @"Z:\ovnrundir";
+    private const string OvnDataDir = @"Z:\ovndatadir";
+
     private static readonly Guid SwitchId = Guid.NewGuid();
 
     public OvsDriverProviderTests()
     {
         _runtime = new(new(
             new CancellationTokenSource(),
+            _directoryMock.Object,
             _dismMock.Object,
             _fileMock.Object,
             _hostNetworkCommandsMock.Object,
@@ -55,17 +60,18 @@ public class OvsDriverProviderTests
         _processRunnerIOMock.Setup(m => m.RunProcess(
                 "netcfg.exe",
                 @"/l ""dbo_ovse.inf"" /c s /i DBO_OVSE",
-                @"Z:\ovsrundir\driver",
+                @"Z:\ovnrundir\driver",
                 false))
             .ReturnsAsync(new ProcessRunnerResult(0, ""))
             .Verifiable();
 
-        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
 
         VerifyMocks();
+        VerifyOvnDataNotDropped();
     }
 
     [Fact]
@@ -75,13 +81,14 @@ public class OvsDriverProviderTests
         ArrangeNoDriverInstalled();
         ArrangeDriverPackage("1.0.0.0", false);
 
-        var result = await ensureDriver(@"Z:\ovsrundir", false, true)
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, false, true)
             .Run(_runtime);
 
         result.Should().BeFail()
             .Which.Message.Should().Contain("OVS Hyper-V switch extension is missing");
 
         _processRunnerIOMock.VerifyNoOtherCalls();
+        VerifyOvnDataNotDropped();
     }
 
     [Fact]
@@ -91,13 +98,14 @@ public class OvsDriverProviderTests
         ArrangeNoDriverInstalled();
         ArrangeDriverPackage("1.0.0.0", true);
 
-        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, true, true)
             .Run(_runtime);
 
         result.Should().BeFail()
             .Which.Message.Should().Contain("OVS Hyper-V switch extension is missing");
 
         _processRunnerIOMock.VerifyNoOtherCalls();
+        VerifyOvnDataNotDropped();
     }
 
     [Fact]
@@ -107,21 +115,26 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("1.0.0.0", false);
 
-        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
 
         _processRunnerIOMock.VerifyNoOtherCalls();
         _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(It.IsAny<Guid>()), Times.Never);
+        VerifyOvnDataNotDropped();
     }
 
-    [Fact]
-    public async Task EnsureDriver_DriverUpgradeNecessaryAndUpgradeAllowed_DriverIsUpgraded()
+    [Theory]
+    [InlineData("1.0.0.0", "2.0.0.0")]
+    [InlineData("2.0.0.0", "1.0.0.0")]
+    public async Task EnsureDriver_DriverVersionDiffersAndUpgradeAllowed_DriverIsReplacedAndOvnDataIsDropped(
+        string installedVersion, string packageVersion)
     {
         ArrangeIsTestSigningEnabled(false);
-        ArrangeInstalledDriver("1.0.0.0");
-        ArrangeDriverPackage("2.0.0.0", false);
+        ArrangeInstalledDriver(installedVersion);
+        ArrangeDriverPackage(packageVersion, false);
+        ArrangeOvnDataDirExists(true);
 
         Guid otherSwitchId = Guid.NewGuid();
 
@@ -164,7 +177,7 @@ public class OvsDriverProviderTests
         _processRunnerIOMock.Setup(m => m.RunProcess(
                 "netcfg.exe",
                 @"/l ""dbo_ovse.inf"" /c s /i DBO_OVSE",
-                @"Z:\ovsrundir\driver",
+                @"Z:\ovnrundir\driver",
                 false))
             .ReturnsAsync(new ProcessRunnerResult(0, ""))
             .Verifiable();
@@ -173,13 +186,53 @@ public class OvsDriverProviderTests
             .Returns(SuccessAff<RT, Unit>(unit))
             .Verifiable();
 
-        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
 
         VerifyMocks();
         _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(otherSwitchId), Times.Never);
+        _directoryMock.Verify(m => m.Delete(OvnDataDir, true), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnsureDriver_DriverUpgradeNecessaryAndOvnDataMissing_NoDeleteAttempted()
+    {
+        ArrangeIsTestSigningEnabled(false);
+        ArrangeInstalledDriver("1.0.0.0");
+        ArrangeDriverPackage("2.0.0.0", false);
+        ArrangeOvnDataDirExists(false);
+
+        _hostNetworkCommandsMock.Setup(m => m.GetSwitchExtensions())
+            .Returns(SuccessAff<RT, Seq<VMSwitchExtension>>(Seq<VMSwitchExtension>()));
+
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "netcfg.exe", "/u DBO_OVSE", "", false))
+            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+
+        _processRunnerIOMock.SetupSequence(m => m.RunProcess(
+                "sc.exe", "query type=driver", "", false))
+            .ReturnsAsync(new ProcessRunnerResult(exitCode: 0, output: "lorem\nipsum"));
+
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "pnputil.exe", It.IsAny<string>(), "", false))
+            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "netcfg.exe",
+                @"/l ""dbo_ovse.inf"" /c s /i DBO_OVSE",
+                @"Z:\ovnrundir\driver",
+                false))
+            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, true, true)
+            .Run(_runtime);
+
+        result.Should().BeSuccess();
+
+        _directoryMock.Verify(m => m.Exists(OvnDataDir), Times.Once);
+        _directoryMock.Verify(m => m.Delete(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
     }
 
     [Fact]
@@ -189,13 +242,14 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("2.0.0.0", false);
 
-        var result = await ensureDriver(@"Z:\ovsrundir", true, false)
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, true, false)
             .Run(_runtime);
 
         result.Should().BeSuccess();
 
         _processRunnerIOMock.VerifyNoOtherCalls();
         _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(It.IsAny<Guid>()), Times.Never);
+        VerifyOvnDataNotDropped();
     }
 
     [Fact]
@@ -205,13 +259,14 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("2.0.0.0", true);
 
-        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(OvnRunDir, OvnDataDir, true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
 
         _processRunnerIOMock.VerifyNoOtherCalls();
         _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(It.IsAny<Guid>()), Times.Never);
+        VerifyOvnDataNotDropped();
     }
 
 
@@ -221,6 +276,20 @@ public class OvsDriverProviderTests
                 @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control",
                 "SystemStartOptions"))
             .Returns(isEnabled ? "LOREM TESTSIGNING IPSUM" : "LOREM IPSUM");
+    }
+
+    private void ArrangeOvnDataDirExists(bool exists)
+    {
+        _directoryMock.Setup(m => m.Exists(OvnDataDir)).Returns(exists);
+        if (exists)
+        {
+            _directoryMock.Setup(m => m.Delete(OvnDataDir, true)).Verifiable();
+        }
+    }
+
+    private void VerifyOvnDataNotDropped()
+    {
+        _directoryMock.Verify(m => m.Delete(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
     }
 
     private void ArrangeInstalledDriver(string version)
@@ -255,7 +324,7 @@ public class OvsDriverProviderTests
 
     private void ArrangeDriverPackage(string version, bool isTestSigned)
     {
-        _fileMock.Setup(m => m.ReadAllBytes(Path.Combine(@"Z:\ovsrundir", "driver", "dbo_ovse.inf"),
+        _fileMock.Setup(m => m.ReadAllBytes(Path.Combine(@"Z:\ovnrundir", "driver", "dbo_ovse.inf"),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Encoding.ASCII.GetBytes($"""
                 DriverVer = 4/2/2020,{version}
@@ -269,7 +338,7 @@ public class OvsDriverProviderTests
                && chain[1] is PsCommandBuilder.ParameterPart
                {
                    Parameter: "FilePath",
-                   Value: @"Z:\ovsrundir\driver\dbo_ovse.cat",
+                   Value: @"Z:\ovnrundir\driver\dbo_ovse.cat",
                };
         };
 
@@ -289,6 +358,7 @@ public class OvsDriverProviderTests
     }
 
     public readonly struct TestRuntime(TestRuntimeEnv env) :
+        HasDirectory<RT>,
         HasDism<RT>,
         HasFile<RT>,
         HasHostNetworkCommands<RT>,
@@ -301,6 +371,7 @@ public class OvsDriverProviderTests
 
         public RT LocalCancel => new(new TestRuntimeEnv(
             new CancellationTokenSource(),
+            Env.Directory,
             Env.Dism,
             Env.File,
             Env.HostNetworkCommands,
@@ -313,6 +384,8 @@ public class OvsDriverProviderTests
 
         public CancellationTokenSource CancellationTokenSource => Env.CancellationTokenSource;
 
+        public Eff<RT, DirectoryIO> DirectoryEff => Eff<RT, DirectoryIO>(rt => rt.Env.Directory);
+
         public Eff<RT, DismIO> DismEff => Eff<RT, DismIO>(rt => rt.Env.Dism);
 
         public Encoding Encoding => Encoding.UTF8;
@@ -323,9 +396,9 @@ public class OvsDriverProviderTests
             Eff<RT, IHostNetworkCommands<RT>>(rt => rt.Env.HostNetworkCommands);
 
         public Eff<RT, ILogger> Logger(string category) => Eff<RT, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
-        
+
         public Eff<RT, ILogger<T>> Logger<T>() => Eff<RT, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
-        
+
         public Eff<RT, IPowershellEngine> Powershell => Eff<RT, IPowershellEngine>(rt => rt.Env.PowershellEngine);
 
         public Eff<RT, ProcessRunnerIO> ProcessRunnerEff => Eff<RT, ProcessRunnerIO>(rt => rt.Env.ProcessRunner);
@@ -335,6 +408,7 @@ public class OvsDriverProviderTests
 
     public class TestRuntimeEnv(
         CancellationTokenSource cancellationTokenSource,
+        DirectoryIO directory,
         DismIO dism,
         FileIO file,
         IHostNetworkCommands<RT> hostNetworkCommands,
@@ -344,7 +418,9 @@ public class OvsDriverProviderTests
         RegistryIO registry)
     {
         public CancellationTokenSource CancellationTokenSource { get; } = cancellationTokenSource;
-        
+
+        public DirectoryIO Directory { get; } = directory;
+
         public DismIO Dism { get; } = dism;
 
         public FileIO File { get; } = file;

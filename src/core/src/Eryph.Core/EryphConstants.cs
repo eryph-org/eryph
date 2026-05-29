@@ -32,6 +32,22 @@ namespace Eryph.Core
 
         public static readonly string DefaultEastWestNetwork = "172.31.255.0/24";
 
+        /// <summary>
+        /// Network identifiers used by the OVN cluster topology.
+        /// </summary>
+        /// <remarks>
+        /// Today these are single-host defaults — every chassis registers as
+        /// <see cref="LocalChassisName"/> and the network plan binds gateway
+        /// router ports to the chassis group <see cref="LocalChassisGroupName"/>.
+        /// Multi-host enrollment will replace the chassis lookup with per-host
+        /// IDs read from state; the chassis group name stays as the default.
+        /// </remarks>
+        public static class Networking
+        {
+            public static readonly string LocalChassisName = "local";
+            public static readonly string LocalChassisGroupName = "local";
+        }
+
         public static readonly string HgsGuardianName = "eryph-hgs-guardian";
 
         public static readonly TimeSpan OperationTimeout = TimeSpan.FromMinutes(5);

@@ -44,6 +44,7 @@ public class UpdateProjectNetworkPlanCommandHandler(
             cancelSource =>
                 from _ in SuccessAff(unit)
                 let networkPlanRealizer = new NetworkPlanRealizer(
+                    systemEnvironment,
                     new OVNControlTool(systemEnvironment, ovnSettings.NorthDBConnection),
                     logger)
                 from appliedPlan in networkPlanRealizer.ApplyNetworkPlan(networkPlan, cancelSource.Token).ToAff(e => e)

@@ -28,7 +28,7 @@ public class ZeroStartupModule
     [UsedImplicitly]
     public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
     {
-        container.RegisterSingleton(serviceProvider.GetRequiredService<IEryphOvsPathProvider>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<IEryphOvnPathProvider>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<IHostSettingsProvider>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<INetworkProviderManager>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>);
@@ -50,7 +50,7 @@ public class ZeroStartupModule
         // This handler must be executed first as it ensures that Hyper-V is
         // available and responds to WMI queries. Otherwise, other code can
         // fail during service start after a reboot.
-        options.AddStartupHandler<EnsureHyperVAndOvsStartupHandler>();
+        options.AddStartupHandler<EnsureHyperVAndOvnStartupHandler>();
         options.AddStartupHandler<EnsureConfigurationStartupHandler>();
         options.AddStartupHandler<SystemClientStartupHandler>();
         options.AddHostedService<SslEndpointService>();

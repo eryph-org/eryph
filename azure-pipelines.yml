@@ -25,13 +25,13 @@ jobs:
       arguments: 'install --global azuresigntool'
       
   - task: AzureCLI@2
-    displayName: download signed ovs package
+    displayName: download signed OVN package
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       azureSubscription: 'WebApps (releases)'
       scriptType: 'batch'
       scriptLocation: 'inlineScript'
-      inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovspackage.zip --container-name=internal --name=ovs/3.3.90.1/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
+      inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovnpackage.zip --container-name=internal --name=ovs/3.3.90.1/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
     
   - task: gitversion/setup@3.1.11
     displayName: Install GitVersion
@@ -120,9 +120,9 @@ jobs:
         AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvm -tr http://timestamp.acs.microsoft.com/ -kvc "codesigning-2025" -v eryph-uninstaller.exe
 
   - task: CopyFiles@2
-    displayName: copy ovs package to zero build
+    displayName: copy OVN package to zero build
     inputs:
-      Contents: 'ovspackage.zip'
+      Contents: 'ovnpackage.zip'
       TargetFolder: '$(Build.ArtifactStagingDirectory)\zero_build'
 
   - task: ArchiveFiles@2

@@ -217,7 +217,7 @@ internal class ProjectNetworkPlanBuilder(
                 portInfo.Port.MacAddress,
                 parsedExternalIp,
                 externalNetwork,
-                chassisGroup: "local")
+                chassisGroup: EryphConstants.Networking.LocalChassisGroupName)
             .AddNATRule(
                 $"project-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
                 "snat",

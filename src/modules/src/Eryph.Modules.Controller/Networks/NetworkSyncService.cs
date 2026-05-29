@@ -26,7 +26,8 @@ namespace Eryph.Modules.Controller.Networks;
 
 internal class NetworkSyncService(
     Container container,
-    INetworkProviderManager providerManager)
+    INetworkProviderManager providerManager,
+    IClusterTopologyProvider clusterTopologyProvider)
     : INetworkSyncService
 {
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
@@ -36,6 +37,7 @@ internal class NetworkSyncService(
 
     private Aff<Unit> SyncNetworks(
         NetworkProvidersConfiguration providersConfiguration) =>
+        from _0 in ApplyClusterPlan()
         from _1 in RealizeProviderNetworks(providersConfiguration)
         from _2 in RealizeProjectNetworks(providersConfiguration)
         from applyResult in ApplyNetworkPlans(providersConfiguration)
@@ -51,6 +53,27 @@ internal class NetworkSyncService(
             Seq: errors => FailAff<Unit>(
                 Error.New("Failed to apply network plans for projects.", Error.Many(errors))))
         select unit;
+
+    private Aff<Unit> ApplyClusterPlan() =>
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
+            scope =>
+                from _ in unitAff
+                let sysEnv = scope.GetInstance<ISystemEnvironment>()
+                let ovnSettings = scope.GetInstance<IOVNSettings>()
+                let northboundTool = new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection)
+                let realizer = new ClusterPlanNorthboundRealizer(sysEnv, northboundTool)
+                let clusterPlan = BuildClusterPlan(
+                    clusterTopologyProvider.ChassisGroupName,
+                    clusterTopologyProvider.GetChassis())
+                from _2 in realizer.ApplyClusterPlan(clusterPlan).ToAff(e => e)
+                select unit);
+
+    internal static ClusterPlan BuildClusterPlan(
+        string chassisGroupName,
+        Seq<(string ChassisName, short Priority)> chassis) =>
+        chassis.Fold(
+            new ClusterPlan().AddChassisGroup(chassisGroupName),
+            (plan, c) => plan.AddChassis(chassisGroupName, c.ChassisName, c.Priority));
 
     private Aff<Unit> RealizeProviderNetworks(
         NetworkProvidersConfiguration providerConfig) =>
@@ -136,6 +159,7 @@ internal class NetworkSyncService(
                 let planBuilder = scope.GetInstance<IProjectNetworkPlanBuilder>()
                 let logger = scope.GetInstance<ILogger>()
                 let networkPlanRealizer = new NetworkPlanRealizer(
+                    sysEnv,
                     new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection),
                     logger)
                 from networkPlan in planBuilder.GenerateNetworkPlan(projectId, providerConfig).ToAff(e => e)

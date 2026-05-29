@@ -39,18 +39,18 @@ internal static class DriverCommands
                     new Text($"{p.Driver} - {p.Version} {p.OriginalFileName}"),
                     new Padding(2, 0, 0 ,0)))
             ]))
-        from ovsPackageLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
-        from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide(ovsPackageLogger))
-        let packageInfFile = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
+        from ovnPackageLogger in default(DriverCommandsRuntime).Logger<OVNPackage>()
+        from ovnRunDir in Eff(() => OVNPackage.UnpackAndProvide(ovnPackageLogger))
+        let packageInfFile = Path.Combine(ovnRunDir, "driver", "dbo_ovse.inf")
         from packageDriverVersion in getDriverVersionFromInfFile(
             packageInfFile)
         from _5 in writeLine(
-            $"Driver version in OVS package: {packageDriverVersion}")
+            $"Driver version in OVN package: {packageDriverVersion}")
         from isDriverPackageTestSigned in
             isDriverPackageTestSigned(
                 packageInfFile)
         from _6 in isDriverPackageTestSigned
-            ? writeLine($"Driver in OVS package is test signed")
+            ? writeLine($"Driver in OVN package is test signed")
             : SuccessEff(unit)
         from isDriverTestSigningEnabled in isDriverTestSigningEnabled()
         from _7 in writeLine(
@@ -58,13 +58,14 @@ internal static class DriverCommands
         select unit;
 
     public static Task<Fin<Unit>> EnsureDriver(
-        string ovsRunDir,
+        string ovnRunDir,
+        string ovnDataDir,
         bool canInstall,
         bool canUpgrade,
         ILoggerFactory loggerFactory)
     {
         return Run(ensureDriver(
-            ovsRunDir, canInstall, canUpgrade),
+            ovnRunDir, ovnDataDir, canInstall, canUpgrade),
             loggerFactory);
     }
 

@@ -27,6 +27,7 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     HasHostNetworkCommands<ConsoleRuntime>,
     HasNetworkProviderManager<ConsoleRuntime>,
     HasLogger<ConsoleRuntime>,
+    HasDirectory<ConsoleRuntime>,
     HasFile<ConsoleRuntime>,
     HasProcessRunner<ConsoleRuntime>,
     HasRegistry<ConsoleRuntime>,
@@ -70,6 +71,8 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
         Eff<ConsoleRuntime, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
 
     public Encoding Encoding => Encoding.UTF8;
+
+    public Eff<ConsoleRuntime, DirectoryIO> DirectoryEff => SuccessEff(LanguageExt.Sys.Live.DirectoryIO.Default);
 
     public Eff<ConsoleRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
 

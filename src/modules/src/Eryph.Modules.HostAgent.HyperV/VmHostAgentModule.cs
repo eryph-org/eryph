@@ -77,7 +77,7 @@ namespace Eryph.Modules.HostAgent
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
             options.AddHostedService<SyncService>();
-            options.AddHostedService<OVSChassisService>();
+            options.AddHostedService<OVNChassisService>();
             options.AddStartupHandler<StartBusModuleHandler>();
             // Remove this hosted service to avoid triggering the inventory
             // based on WMI events.
