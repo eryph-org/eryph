@@ -42,7 +42,7 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<ICryptoIOServices, WindowsCryptoIOServices>();
             container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
             container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
-            container.RegisterInstance<IEryphOvsPathProvider>(new EryphOvsPathProvider());
+            container.RegisterInstance<IEryphOvnPathProvider>(new EryphOvnPathProvider());
 
             container.Register<INetworkProviderManager, NetworkProviderManager>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
@@ -76,7 +76,7 @@ namespace Eryph.Runtime.Zero
 
         public static Container UseOvn(this Container container, IServiceProvider serviceProvider)
         {
-            container.RegisterInstance(serviceProvider.GetRequiredService<IEryphOvsPathProvider>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<IEryphOvnPathProvider>());
 
             var configuration = serviceProvider.GetRequiredService<IConfiguration>();
             var ovnSettings = new LocalOVSWithOVNSettings();
@@ -84,7 +84,7 @@ namespace Eryph.Runtime.Zero
                 "Ovn:Logging:File:Level") ?? OvsLogLevel.Off;
             container.RegisterInstance<IOVNSettings>(ovnSettings);
             container.RegisterInstance<IOvsSettings>(ovnSettings);
-            container.RegisterSingleton<ISystemEnvironment, EryphOvsEnvironment>();
+            container.RegisterSingleton<ISystemEnvironment, EryphOvnEnvironment>();
 
             return container;
         }

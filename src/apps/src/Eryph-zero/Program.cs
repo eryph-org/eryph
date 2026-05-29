@@ -284,7 +284,7 @@ internal static class Program
                 if (warmupMode)
                 {
                     container.UseSqlLite();
-                    container.RegisterInstance<IEryphOvsPathProvider>(new EryphOvsPathProvider());
+                    container.RegisterInstance<IEryphOvnPathProvider>(new EryphOvnPathProvider());
 
                     container.RegisterSingleton<System.IO.Abstractions.IFileSystem, FileSystem>();
                     container.Register<IHostSettingsProvider, HostSettingsProvider>();
@@ -315,7 +315,7 @@ internal static class Program
                                 
                                 options.RegisterSqliteStateStore();
 
-                                options.AddStartupHandler<EnsureHyperVAndOvsStartupHandler>();
+                                options.AddStartupHandler<EnsureHyperVAndOvnStartupHandler>();
                                 options.AddStartupHandler<EnsureConfigurationStartupHandler>();
                                 options.AddStartupHandler<DatabaseResetHandler>();
 
@@ -616,9 +616,11 @@ internal static class Program
                             dataBackupCreated = true;
                             return Unit.Default;
                         }).ToEither()
-                        from ovsRootPath in Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
+                        from ovnRootPath in Try(() => OVNPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVNPackage>()))
                             .ToEitherAsync()
-                        from _ in DriverCommands.EnsureDriver(ovsRootPath, true, true, loggerFactory).Map(r => r.ToEither()).ToAsync()
+                        from _ in DriverCommands.EnsureDriver(
+                                ovnRootPath, OVNPackage.GetOvnDataPath(), true, true, loggerFactory)
+                            .Map(r => r.ToEither()).ToAsync()
                         from uCopy in CopyService() 
                         from __ in Try(() => { RegisterUninstaller(targetDir); return unit; })
                             .ToEitherAsync()
@@ -831,8 +833,7 @@ internal static class Program
                 var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "eryph");
 
-                var ovsDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "openvswitch");
+                var ovnDataDir = OVNPackage.GetOvnDataPath();
 
                 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
                 var sysEnv = new WindowsSystemEnvironment(loggerFactory);
@@ -868,14 +869,14 @@ internal static class Program
 
                     _ = await unInstallService.IfLeft(l => l.Throw());
 
-                    var ovsPath = OVSPackage.GetCurrentOVSPath();
+                    var ovnPath = OVNPackage.GetCurrentOvnPath();
 
-                    if (ovsPath != null)
+                    if (ovnPath != null)
                     {
-                        var ovsEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsPath), loggerFactory);
-                        var ovsControl = new OVSControl(ovsEnv);
-                        await using var ovsDbNode = new OVSDbNode(ovsEnv, new LocalOVSWithOVNSettings(), loggerFactory);
-                        await using var ovsVSwitchNode = new OVSSwitchNode(ovsEnv, new LocalOVSWithOVNSettings(), loggerFactory);
+                        var ovnEnv = new EryphOvnEnvironment(new EryphOvnPathProvider(ovnPath), loggerFactory);
+                        var ovsControl = new OVSControl(ovnEnv);
+                        await using var ovsDbNode = new OVSDbNode(ovnEnv, new LocalOVSWithOVNSettings(), loggerFactory);
+                        await using var ovsVSwitchNode = new OVSSwitchNode(ovnEnv, new LocalOVSWithOVNSettings(), loggerFactory);
                         var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                         // ReSharper disable AccessToDisposedClosure
 
@@ -916,15 +917,15 @@ internal static class Program
 
                     }
 
-                    if (Directory.Exists(ovsDataDir))
+                    if (Directory.Exists(ovnDataDir))
                     {
                         try
                         {
-                            Directory.Delete(ovsDataDir, true);
+                            Directory.Delete(ovnDataDir, true);
                         }
                         catch (Exception ex)
                         {
-                            Log.Logger.Warning(ex, "The OVS data files cleanup failed. If necessary, delete the OVS data files manually from '{OvsPath}'.", ovsDataDir);
+                            Log.Logger.Warning(ex, "The OVN data files cleanup failed. If necessary, delete the OVN data files manually from '{OvnPath}'.", ovnDataDir);
                         }
                     }
 
@@ -1126,13 +1127,13 @@ internal static class Program
         using var psEngine = new PowershellEngine(
             nullLoggerFactory.CreateLogger(""),
             psEngineLock);
-        var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
-        var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
+        var ovnRunDir = OVNPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVNPackage>());
+        var sysEnv = new EryphOvnEnvironment(new EryphOvnPathProvider(ovnRunDir), nullLoggerFactory);
 
         return await Run(
             from _1 in AdminGuard.ensureElevated()
             from configString in ReadInput(inFile)
-            from _2 in ensureDriver(ovsRunDir, true, false)
+            from _2 in ensureDriver(ovnRunDir, OVNPackage.GetOvnDataPath(), true, false)
             from _3 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
@@ -1175,14 +1176,14 @@ internal static class Program
         using var psEngine = new PowershellEngine(
             nullLoggerFactory.CreateLogger(""),
             psEngineLock);
-        var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
-        var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
+        var ovnRunDir = OVNPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVNPackage>());
+        var sysEnv = new EryphOvnEnvironment(new EryphOvnPathProvider(ovnRunDir), nullLoggerFactory);
 
         return await Run(
             from _1 in AdminGuard.ensureElevated()
             from _2 in AnsiConsole<ConsoleRuntime>.writeLine(
                 "Going to sync network state with the current configuration...")
-            from _3 in ensureDriver(ovsRunDir, true, false)
+            from _3 in ensureDriver(ovnRunDir, OVNPackage.GetOvnDataPath(), true, false)
             from _4 in isAgentRunning()
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()

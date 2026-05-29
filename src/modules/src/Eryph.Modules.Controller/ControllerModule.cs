@@ -115,6 +115,7 @@ namespace Eryph.Modules.Controller
             container.AddStateDbDataServices();
 
             container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
+            container.RegisterSingleton<IClusterTopologyProvider, SingleHostClusterTopologyProvider>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
