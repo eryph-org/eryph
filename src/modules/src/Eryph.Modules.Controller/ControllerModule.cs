@@ -115,15 +115,18 @@ namespace Eryph.Modules.Controller
             container.AddStateDbDataServices();
 
             container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
-            container.RegisterSingleton<IClusterTopologyProvider, SingleHostClusterTopologyProvider>();
+            container.RegisterSingleton<IComponentRegistry, SingleHostComponentRegistry>();
+            container.RegisterSingleton<IClusterTopologyProvider, ComponentRegistryClusterTopologyProvider>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
             container.RegisterSingleton<IStorageIdentifierGenerator, StorageIdentifierGenerator>();
 
-            //use placement calculator of Host
-            container.RegisterInstance(serviceProvider.GetRequiredService<IPlacementCalculator>());
-            container.RegisterInstance(serviceProvider.GetRequiredService<IStorageManagementAgentLocator>());
+            // Placement and storage-agent location resolve through the component registry
+            // (single instance shared across both interfaces).
+            var agentLocator = Lifestyle.Singleton.CreateRegistration<ComponentRegistryAgentLocator>(container);
+            container.AddRegistration(typeof(IPlacementCalculator), agentLocator);
+            container.AddRegistration(typeof(IStorageManagementAgentLocator), agentLocator);
 
             //use network services from host
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());

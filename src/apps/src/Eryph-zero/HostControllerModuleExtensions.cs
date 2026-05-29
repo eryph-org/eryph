@@ -25,8 +25,8 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
-            container.Register<IPlacementCalculator, ZeroAgentLocator>();
-            container.Register<IStorageManagementAgentLocator, ZeroAgentLocator>();
+            // Placement and storage-agent location are now provided by the controller
+            // module itself (via IComponentRegistry); the host no longer supplies them.
 
             return builder;
         }
