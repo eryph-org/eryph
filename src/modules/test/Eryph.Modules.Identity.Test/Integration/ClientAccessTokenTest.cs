@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
@@ -80,6 +81,25 @@ public class ClientAccessTokenTest(
     }
 
     [Fact]
+    public async Task Client_With_Multiple_Roles_Gets_A_Role_Claim_Per_Role()
+    {
+        var roleA = Guid.NewGuid();
+        var roleB = Guid.NewGuid();
+
+        var token = await GetClientAccessToken(
+            TestClientData.KeyFileString1, TestClientData.CertificateString1, roles: [roleA, roleB]);
+
+        var roleClaims = new JwtSecurityTokenHandler().ReadJwtToken(token).Claims
+            .Where(c => c.Type == OpenIddictConstants.Claims.Role)
+            .Select(c => c.Value)
+            .ToList();
+
+        // Each role must be its own claim (a single comma-joined claim would not parse as a GUID
+        // in UserInfoProvider and the client would lose all its roles).
+        roleClaims.Should().BeEquivalentTo([roleA.ToString(), roleB.ToString()]);
+    }
+
+    [Fact]
     public async Task Client_Gets_No_Access_Token_when_no_certificate_registered()
     {
         // A confidential client provisioned without a certificate has no registered key, so a
@@ -91,7 +111,8 @@ public class ClientAccessTokenTest(
             .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<string> GetClientAccessToken(string keyString, string? certString, bool legacyFormat = false)
+    private async Task<string> GetClientAccessToken(
+        string keyString, string? certString, bool legacyFormat = false, Guid[]? roles = null)
     {
         using var keyPair = RSA.Create();
         keyPair.ImportFromPem(keyString);
@@ -115,13 +136,18 @@ public class ClientAccessTokenTest(
                         Resources = { "test_audience" }
                     }).GetAwaiter().GetResult();
 
-                    var clientService = scope.GetRequiredService<IClientService>();
-                    clientService.Add(new ClientApplicationDescriptor
+                    var clientDescriptor = new ClientApplicationDescriptor
                     {
                         ClientId = "test-client",
                         Certificate = certString,
                         Scopes = { "test_scope" }
-                    }, false, CancellationToken.None).GetAwaiter().GetResult();
+                    };
+                    if (roles is not null)
+                        clientDescriptor.AppRoles.UnionWith(roles);
+
+                    var clientService = scope.GetRequiredService<IClientService>();
+                    clientService.Add(clientDescriptor, false, CancellationToken.None)
+                        .GetAwaiter().GetResult();
                 });
             })
             .CreateDefaultClient();
