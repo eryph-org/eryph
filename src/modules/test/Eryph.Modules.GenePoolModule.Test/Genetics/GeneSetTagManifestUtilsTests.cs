@@ -141,6 +141,31 @@ public class GeneSetTagManifestUtilsTests
         dictionary.Keys.Should().NotContain(k => k.Architecture.Hypervisor.Value == "kvm");
     }
 
+    [Theory]
+    [InlineData("hyperv/x86")]
+    [InlineData("hyperv/a/b/c")]
+    [InlineData("hyperv/")]
+    [InlineData("/amd64")]
+    [InlineData("hyperv")]
+    public void GetGenes_MalformedArchitecture_ReturnsError(string architecture)
+    {
+        var manifest = new GenesetTagManifestData
+        {
+            Geneset = "acme/acme-os/1.0",
+            VolumeGenes =
+            [
+                new GeneReferenceData
+                {
+                    Name = "sda",
+                    Architecture = architecture,
+                    Hash = ComputeHash("sda"),
+                },
+            ],
+        };
+
+        GeneSetTagManifestUtils.GetGenes(manifest).Should().BeLeft();
+    }
+
     private static string ComputeHash(string value) =>
         $"sha256:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant()}";
 }
