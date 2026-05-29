@@ -66,7 +66,20 @@ public class ClientAccessTokenTest(
             .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private async Task<string> GetClientAccessToken(string keyString, string certString)
+    [Fact]
+    public async Task Client_Gets_No_Access_Token_with_legacy_token_endpoint_audience()
+    {
+        // OpenIddict 7 adopts the security change that rejects the pre-7.0 token-endpoint
+        // assertion audience (and the plain JWT type). A client that still sends the legacy
+        // format must be rejected, confirming the server enforces the issuer audience.
+        var act = () => GetClientAccessToken(
+            TestClientData.KeyFileString1, TestClientData.CertificateString1, legacyFormat: true);
+
+        (await act.Should().ThrowAsync<HttpRequestException>())
+            .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private async Task<string> GetClientAccessToken(string keyString, string certString, bool legacyFormat = false)
     {
         using var keyPair = RSA.Create();
         keyPair.ImportFromPem(keyString);
@@ -101,7 +114,7 @@ public class ClientAccessTokenTest(
             })
             .CreateDefaultClient();
             
-        return await RequestAccessTokenWithKey(httpClient, "test-client", rsaParameters, ["test_scope"]);
+        return await RequestAccessTokenWithKey(httpClient, "test-client", rsaParameters, ["test_scope"], legacyFormat);
     }
 
     // Mirrors the behaviour of the updated Eryph.IdentityModel client library against an
@@ -109,7 +122,8 @@ public class ClientAccessTokenTest(
     // document) as the audience and the standardized "client-authentication+jwt" token type.
     // Once the new client library is published, this can be replaced by a call to it.
     private static async Task<string> RequestAccessTokenWithKey(
-        HttpClient httpClient, string clientId, RSAParameters rsaParameters, string[] scopes)
+        HttpClient httpClient, string clientId, RSAParameters rsaParameters, string[] scopes,
+        bool legacyFormat = false)
     {
         var discovery = await httpClient.GetStringAsync(httpClient.BaseAddress + ".well-known/openid-configuration");
         using var configuration = JsonDocument.Parse(discovery);
@@ -120,7 +134,10 @@ public class ClientAccessTokenTest(
         // The server must advertise that the issuer is expected as the client-assertion audience.
         root.GetProperty("eryph_client_assertion_audience").GetString().Should().Be("issuer");
 
-        var assertion = CreateClientAssertion(clientId, issuer!, rsaParameters);
+        // legacyFormat reproduces a pre-OpenIddict-7 client: token-endpoint audience + plain JWT type.
+        var assertion = legacyFormat
+            ? CreateClientAssertion(clientId, tokenEndpoint!, rsaParameters, tokenType: null)
+            : CreateClientAssertion(clientId, issuer!, rsaParameters, tokenType: "client-authentication+jwt");
 
         var properties = new Dictionary<string, string>
         {
@@ -144,7 +161,8 @@ public class ClientAccessTokenTest(
         return token.RootElement.GetProperty("access_token").GetString();
     }
 
-    private static string CreateClientAssertion(string clientId, string audience, RSAParameters rsaParameters)
+    private static string CreateClientAssertion(
+        string clientId, string audience, RSAParameters rsaParameters, string? tokenType)
     {
         var tokenHandler = new JwtSecurityTokenHandler { TokenLifetimeInMinutes = 5 };
         var securityToken = tokenHandler.CreateJwtSecurityToken(
@@ -157,7 +175,8 @@ public class ClientAccessTokenTest(
             ]),
             signingCredentials: new SigningCredentials(new RsaSecurityKey(rsaParameters), "RS256"));
 
-        securityToken.Header["typ"] = "client-authentication+jwt";
+        if (!string.IsNullOrEmpty(tokenType))
+            securityToken.Header["typ"] = tokenType;
 
         return tokenHandler.WriteToken(securityToken);
     }

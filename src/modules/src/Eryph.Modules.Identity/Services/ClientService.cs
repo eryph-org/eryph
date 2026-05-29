@@ -68,12 +68,26 @@ namespace Eryph.Modules.Identity.Services
             if (string.IsNullOrWhiteSpace(certificateBase64))
                 return null;
 
-            using var certificate = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64));
-            var key = JsonWebKeyConverter.ConvertFromX509SecurityKey(new X509SecurityKey(certificate), representAsRsaKey: true);
+            X509Certificate2 certificate;
+            try
+            {
+                certificate = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64));
+            }
+            catch (Exception ex) when (ex is FormatException or CryptographicException)
+            {
+                throw new InvalidOperationException(
+                    "The client certificate must be a base64-encoded X.509 certificate.", ex);
+            }
 
-            var keySet = new JsonWebKeySet();
-            keySet.Keys.Add(key);
-            return keySet;
+            using (certificate)
+            {
+                var key = JsonWebKeyConverter.ConvertFromX509SecurityKey(
+                    new X509SecurityKey(certificate), representAsRsaKey: true);
+
+                var keySet = new JsonWebKeySet();
+                keySet.Keys.Add(key);
+                return keySet;
+            }
         }
     }
 }
