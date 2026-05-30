@@ -61,6 +61,12 @@ internal sealed class EndpointsConfigSource(
                 endpoints[child.Key] = child.Value;
         }
 
+        // The resolvers treat "default" as the fallback base for unknown and for relative
+        // endpoints. If nothing set it explicitly, derive it from "base" so consumers always
+        // have a base to fall back to; an explicitly configured "default" is left untouched.
+        if (!endpoints.ContainsKey("default") && endpoints.TryGetValue("base", out var baseEndpoint))
+            endpoints["default"] = baseEndpoint;
+
         return JsonSerializer.Serialize(endpoints);
     }
 }

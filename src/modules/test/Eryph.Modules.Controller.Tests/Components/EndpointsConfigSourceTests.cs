@@ -130,4 +130,31 @@ public class EndpointsConfigSourceTests
         result["compute"].Should().Be("https://public/compute");      // override wins
         result["base"].Should().Be("https://public/");                // override only
     }
+
+    [Fact]
+    public async Task Derives_default_from_base_when_no_explicit_default()
+    {
+        var source = Create([], overrides: new() { ["base"] = "https://host:8443/" });
+
+        var result = await Build(source);
+
+        // The resolvers fall back to "default" for unknown/relative endpoints; with only
+        // "base" configured it must be derived so consumers always have a base.
+        result["default"].Should().Be("https://host:8443/");
+        result["base"].Should().Be("https://host:8443/");
+    }
+
+    [Fact]
+    public async Task Explicit_default_is_not_overridden_by_base()
+    {
+        var source = Create([], overrides: new()
+        {
+            ["base"] = "https://host:8443/",
+            ["default"] = "https://explicit-default/",
+        });
+
+        var result = await Build(source);
+
+        result["default"].Should().Be("https://explicit-default/");
+    }
 }
