@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb.MySql\Eryph.StateDb.MySql.csproj" />
   </ItemGroup>
 </Project>

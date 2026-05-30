@@ -69,6 +69,8 @@ namespace Eryph.Controller
                     Directory.CreateDirectory(locksPath);
                     container.RegisterInstance<IDistributedLockProvider>(
                         new FileDistributedSynchronizationProvider(new DirectoryInfo(locksPath)));
+
+                    container.UseOvn();
                 };
             }
         }
