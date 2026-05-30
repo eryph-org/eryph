@@ -24,6 +24,7 @@ namespace Eryph.Identity
 
             await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
+                .ConfigureIdentityComponent()
                 .UseAspNetCoreWithDefaults((module, webHostBuilder) => { })
                 .RunModule<IdentityModule>();
         }

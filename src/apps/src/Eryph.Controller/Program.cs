@@ -59,10 +59,11 @@ namespace Eryph.Controller
                         { "changeTracking:catletSpecificationVersionsConfigPath", AppConfigPaths.GetCatletSpecificationVersionsConfigPath() },
 
                         // Operator-set deployment endpoints distributed via the Endpoints
-                        // config domain. The identity URL is the canonical issuer the other
-                        // components must use (must be the public/LB address, not a bind guess).
+                        // config domain (the override layer). 'identity' is intentionally NOT
+                        // overridden here so it is sourced from what the identity component
+                        // advertises on registration; an operator override would win if set
+                        // (required behind a load balancer for the canonical issuer URL).
                         { "endpoints:base", "https://localhost:8443/" },
-                        { "endpoints:identity", "https://localhost:8443/identity" },
                         { "endpoints:compute", "https://localhost:8443/compute" },
                     }))
                 .AddNetworkModule()

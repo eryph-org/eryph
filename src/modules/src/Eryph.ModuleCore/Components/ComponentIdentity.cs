@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using Eryph.Messages.Components;
@@ -13,13 +14,17 @@ namespace Eryph.ModuleCore.Components;
 /// </summary>
 public sealed class ComponentIdentity
 {
-    public ComponentIdentity(ComponentType componentType, string inboundQueue)
+    public ComponentIdentity(
+        ComponentType componentType,
+        string inboundQueue,
+        IReadOnlyDictionary<string, string>? advertisedEndpoints = null)
     {
         ComponentType = componentType;
         InboundQueue = inboundQueue;
         MachineName = Environment.MachineName;
         ComponentId = CreateStableId(componentType, MachineName);
         InstanceId = Guid.NewGuid();
+        AdvertisedEndpoints = advertisedEndpoints ?? new Dictionary<string, string>();
     }
 
     public Guid ComponentId { get; }
@@ -31,6 +36,12 @@ public sealed class ComponentIdentity
     public string InboundQueue { get; }
 
     public string MachineName { get; }
+
+    /// <summary>
+    /// Service endpoints this component hosts and advertises to the controller (logical
+    /// name → URL). Empty for components that host nothing.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> AdvertisedEndpoints { get; }
 
     private static Guid CreateStableId(ComponentType componentType, string machineName)
     {

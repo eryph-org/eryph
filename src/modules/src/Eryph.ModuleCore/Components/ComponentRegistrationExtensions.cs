@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Startup;
 using Rebus.Handlers;
@@ -24,11 +25,12 @@ public static class ComponentRegistrationExtensions
         this SimpleInjectorAddOptions options,
         ComponentType componentType,
         string inboundQueue,
+        IReadOnlyDictionary<string, string>? advertisedEndpoints,
         params Type[] configRealizers)
     {
         var container = options.Container;
 
-        container.RegisterSingleton(() => new ComponentIdentity(componentType, inboundQueue));
+        container.RegisterSingleton(() => new ComponentIdentity(componentType, inboundQueue, advertisedEndpoints));
         container.RegisterSingleton<IComponentConfigState, ComponentConfigState>();
         container.Register<ConfigApplier>(Lifestyle.Scoped);
 

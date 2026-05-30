@@ -36,6 +36,7 @@ internal sealed class ComponentRegistrationStartupHandler(
             MachineName = identity.MachineName,
             InboundQueue = identity.InboundQueue,
             KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
+            AdvertisedEndpoints = identity.AdvertisedEndpoints.ToDictionary(kv => kv.Key, kv => kv.Value),
         });
 
         // Pull the current configuration from the controller.

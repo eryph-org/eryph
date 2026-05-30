@@ -94,6 +94,8 @@ namespace Eryph.Modules.HostAgent
             options.AddComponentRegistration(
                 ComponentType.VMHostAgent,
                 $"{QueueNames.VMHostAgent}.{Environment.MachineName}",
+                // The host-agent hosts no service endpoints, so it advertises none.
+                advertisedEndpoints: null,
                 typeof(PlacementConfigRealizer),
                 typeof(NetworkProvidersConfigRealizer),
                 typeof(EndpointsConfigRealizer));

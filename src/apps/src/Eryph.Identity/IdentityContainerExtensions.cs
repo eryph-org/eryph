@@ -36,18 +36,25 @@ namespace Eryph.Identity
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(GetOwnEndpoints()));
         }
 
+        /// <summary>The identity component's own public URL (config/env, default for dev).</summary>
+        public static string GetIdentityUrl()
+        {
+            var baseUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_BASEURL")
+                          ?? "http://localhost:8080/";
+            return Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL")
+                   ?? $"{baseUrl}identity";
+        }
+
         private static Dictionary<string, string> GetOwnEndpoints()
         {
             var baseUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_BASEURL")
                           ?? "http://localhost:8080/";
-            var identityUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL")
-                              ?? $"{baseUrl}identity";
 
             return new Dictionary<string, string>
             {
                 ["base"] = baseUrl,
                 ["default"] = baseUrl,
-                ["identity"] = identityUrl,
+                ["identity"] = GetIdentityUrl(),
             };
         }
     }

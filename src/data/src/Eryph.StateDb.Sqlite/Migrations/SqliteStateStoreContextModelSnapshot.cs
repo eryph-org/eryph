@@ -224,6 +224,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AdvertisedEndpointsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("AppliedConfigVersionsJson")
                         .IsRequired()
                         .HasColumnType("TEXT");

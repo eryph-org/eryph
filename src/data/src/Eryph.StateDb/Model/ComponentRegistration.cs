@@ -45,4 +45,16 @@ public class ComponentRegistration
 
     /// <summary>The config version this component has applied per domain.</summary>
     public Dictionary<ConfigDomain, long> AppliedConfigVersions { get; set; } = new();
+
+    internal string AdvertisedEndpointsJson
+    {
+        get => JsonSerializer.Serialize(AdvertisedEndpoints);
+        set => AdvertisedEndpoints = string.IsNullOrEmpty(value)
+            ? new Dictionary<string, string>()
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(value)
+              ?? new Dictionary<string, string>();
+    }
+
+    /// <summary>Service endpoints this component hosts and advertises (logical name → URL).</summary>
+    public Dictionary<string, string> AdvertisedEndpoints { get; set; } = new();
 }
