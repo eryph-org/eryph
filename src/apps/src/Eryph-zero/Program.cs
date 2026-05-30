@@ -413,12 +413,22 @@ internal static class Program
                     .ConfigureEryphAppConfiguration(args)
                     .ConfigureAppConfiguration((_, config) =>
                     {
-                        config.AddInMemoryCollection(new Dictionary<string, string>
+                        var settings = new Dictionary<string, string>
                         {
                             { "bus:type", "inmemory" },
                             { "databus:type", "inmemory" },
                             { "store:type", "inmemory" },
-                        });
+                        };
+                        // Feed the determined deployment endpoints into the controller's
+                        // "endpoints" config section so the Endpoints config domain is
+                        // authoritative here too (EndpointsConfigSource override layer), the
+                        // same way the standalone controller is configured — instead of relying
+                        // only on the in-process EndpointResolver. (Fully removing the shared
+                        // cross-wired resolver is part of the deferred distributed-consumption
+                        // work, since ASP.NET/SSL/JWT consumers read endpoints at startup.)
+                        foreach (var endpoint in endpoints)
+                            settings[$"endpoints:{endpoint.Key}"] = endpoint.Value;
+                        config.AddInMemoryCollection(settings);
                     })
                     .ConfigureChangeTracking()
                     .HostModule<ZeroStartupModule>()
