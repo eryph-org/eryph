@@ -23,7 +23,7 @@ namespace Eryph.Identity
             // store are Windows-specific today (CNG machine key + LocalMachine store), exactly
             // as eryph-zero uses them; a cross-platform key store is future work.
             container.RegisterSingleton<ICertificateKeyService, WindowsCertificateKeyService>();
-            container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
+            container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
             container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
             container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
 
@@ -39,16 +39,24 @@ namespace Eryph.Identity
         /// <summary>The identity component's own public URL (config/env, default for dev).</summary>
         public static string GetIdentityUrl()
         {
+            return Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL")
+                   ?? $"{GetBaseUrl()}identity";
+        }
+
+        /// <summary>
+        /// The base URL the identity host listens on, always normalized to end with '/'
+        /// so callers can safely append path segments (e.g. "{baseUrl}identity").
+        /// </summary>
+        private static string GetBaseUrl()
+        {
             var baseUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_BASEURL")
                           ?? "http://localhost:8080/";
-            return Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL")
-                   ?? $"{baseUrl}identity";
+            return baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/";
         }
 
         private static Dictionary<string, string> GetOwnEndpoints()
         {
-            var baseUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_BASEURL")
-                          ?? "http://localhost:8080/";
+            var baseUrl = GetBaseUrl();
 
             return new Dictionary<string, string>
             {

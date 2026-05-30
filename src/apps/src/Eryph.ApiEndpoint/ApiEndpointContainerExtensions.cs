@@ -46,6 +46,10 @@ namespace Eryph.ApiEndpoint
         {
             var baseUrl = Environment.GetEnvironmentVariable("ERYPH_API_BASEURL")
                           ?? "http://localhost:8081/";
+            // Normalize so appending a path segment ("{baseUrl}compute") can't yield
+            // a malformed URL when the env value is supplied without a trailing '/'.
+            if (!baseUrl.EndsWith('/'))
+                baseUrl += "/";
             var computeUrl = Environment.GetEnvironmentVariable("ERYPH_COMPUTE_URL")
                              ?? $"{baseUrl}compute";
             // The identity issuer used as the JWT authority. In a real deployment this is the
