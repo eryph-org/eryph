@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -27,8 +28,10 @@ namespace Eryph.Agent
             var entryAssembly = Assembly.GetEntryAssembly()!;
             var fileVersionInfo = FileVersionInfo.GetVersionInfo(entryAssembly.Location);
             ProductVersion = fileVersionInfo.ProductVersion ?? "unknown";
-            // Truncated to 24 characters for compatibility with AutoRest.
-            ApplicationId = $"agent-{ProductVersion}"[..24];
+            // Truncated to at most 24 characters for compatibility with AutoRest (the version
+            // may be shorter than 24 chars, e.g. when ProductVersion is missing).
+            var applicationId = $"agent-{ProductVersion}";
+            ApplicationId = applicationId[..Math.Min(24, applicationId.Length)];
         }
 
         public string Name { get; }

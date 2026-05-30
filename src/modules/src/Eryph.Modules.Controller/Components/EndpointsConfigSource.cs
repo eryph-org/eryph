@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,7 +43,10 @@ internal sealed class EndpointsConfigSource(
         {
             var registry = scope.GetInstance<IComponentRegistryService>();
             var components = await registry.GetActiveAsync(cancellationToken);
-            foreach (var component in components)
+            // Order deterministically so a duplicate advertised endpoint name resolves the same
+            // way every build (GetActiveAsync gives no ordering guarantee) — otherwise the payload
+            // could flap and bump the version with no real change.
+            foreach (var component in components.OrderBy(c => c.ComponentId))
             {
                 foreach (var endpoint in component.AdvertisedEndpoints)
                     endpoints[endpoint.Key] = endpoint.Value;

@@ -34,6 +34,7 @@ internal sealed class ComponentRegistrationStartupHandler(
             ComponentType = identity.ComponentType,
             InstanceId = identity.InstanceId,
             MachineName = identity.MachineName,
+            Version = identity.Version,
             InboundQueue = identity.InboundQueue,
             KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
             AdvertisedEndpoints = identity.AdvertisedEndpoints.ToDictionary(kv => kv.Key, kv => kv.Value),

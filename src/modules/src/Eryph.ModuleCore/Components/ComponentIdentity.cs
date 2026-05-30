@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using Eryph.Messages.Components;
@@ -30,6 +32,7 @@ public sealed class ComponentIdentity
         MachineName = GetFullyQualifiedDomainName();
         ComponentId = CreateStableId(componentType, MachineName);
         InstanceId = Guid.NewGuid();
+        Version = GetComponentVersion();
         AdvertisedEndpoints = advertisedEndpoints ?? new Dictionary<string, string>();
     }
 
@@ -43,11 +46,23 @@ public sealed class ComponentIdentity
 
     public string MachineName { get; }
 
+    /// <summary>The running build version of this component (entry assembly), for the catalog.</summary>
+    public string Version { get; }
+
     /// <summary>
     /// Service endpoints this component hosts and advertises to the controller (logical
     /// name → URL). Empty for components that host nothing.
     /// </summary>
     public IReadOnlyDictionary<string, string> AdvertisedEndpoints { get; }
+
+    private static string GetComponentVersion()
+    {
+        var entry = Assembly.GetEntryAssembly();
+        if (entry is null)
+            return "";
+        var productVersion = FileVersionInfo.GetVersionInfo(entry.Location).ProductVersion;
+        return productVersion ?? entry.GetName().Version?.ToString() ?? "";
+    }
 
     private static Guid CreateStableId(ComponentType componentType, string fullyQualifiedDomainName)
     {

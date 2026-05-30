@@ -5,8 +5,9 @@ namespace Eryph.Messages.Components;
 /// <summary>
 /// A component's acknowledgement that it applied (or failed to apply) a
 /// configuration bundle. The controller records the applied version on the
-/// registration, guarded by <see cref="Timestamp"/> so a late ack cannot
-/// regress newer state.
+/// registration monotonically per domain (a lower or equal <see cref="Version"/>
+/// is ignored), so a late ack cannot regress newer state. <see cref="Timestamp"/>
+/// is informational only.
 /// </summary>
 [SendMessageTo(MessageRecipient.Controllers)]
 public class ConfigAppliedEvent
