@@ -32,8 +32,9 @@ internal sealed class ConfigDistributionService(
         new Dictionary<ComponentType, ConfigDomain[]>
         {
             // Host agents need the placement vocabulary (datastore/environment names)
-            // and the network-provider configuration to realize host networking.
-            [ComponentType.VMHostAgent] = [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders],
+            // and the network-provider configuration to realize host networking, plus
+            // the deployment endpoints (e.g. the identity issuer) to reach other components.
+            [ComponentType.VMHostAgent] = [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders, ConfigDomain.Endpoints],
         };
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>

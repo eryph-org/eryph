@@ -95,7 +95,8 @@ namespace Eryph.Modules.HostAgent
                 ComponentType.VMHostAgent,
                 $"{QueueNames.VMHostAgent}.{Environment.MachineName}",
                 typeof(PlacementConfigRealizer),
-                typeof(NetworkProvidersConfigRealizer));
+                typeof(NetworkProvidersConfigRealizer),
+                typeof(EndpointsConfigRealizer));
 
             options.AddLogging();
         }
@@ -120,6 +121,11 @@ namespace Eryph.Modules.HostAgent
             // Holds the controller-distributed placement vocabulary applied by
             // PlacementConfigRealizer and enforced by the provisioning handlers.
             container.RegisterSingleton<IPlacementConfigProvider, PlacementConfigProvider>();
+
+            // Holds the controller-distributed deployment endpoints applied by
+            // EndpointsConfigRealizer (the identity issuer etc.). Registered as the
+            // concrete type so it does not collide with a host-provided IEndpointResolver.
+            container.RegisterSingleton<DistributedEndpointResolver>();
 
             container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterSingleton<IFileSystemService, FileSystemService>();

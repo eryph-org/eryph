@@ -57,6 +57,13 @@ namespace Eryph.Controller
                         { "changeTracking:virtualMachinesConfigPath", AppConfigPaths.GetMetadataConfigPath() },
                         { "changeTracking:catletSpecificationsConfigPath", AppConfigPaths.GetCatletSpecificationsConfigPath() },
                         { "changeTracking:catletSpecificationVersionsConfigPath", AppConfigPaths.GetCatletSpecificationVersionsConfigPath() },
+
+                        // Operator-set deployment endpoints distributed via the Endpoints
+                        // config domain. The identity URL is the canonical issuer the other
+                        // components must use (must be the public/LB address, not a bind guess).
+                        { "endpoints:base", "https://localhost:8443/" },
+                        { "endpoints:identity", "https://localhost:8443/identity" },
+                        { "endpoints:compute", "https://localhost:8443/compute" },
                     }))
                 .AddNetworkModule()
                 .AddControllerModule()

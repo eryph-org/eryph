@@ -32,4 +32,14 @@ public enum ConfigDomain
     /// network provider settings so a host's networking can be rebuilt from it.
     /// </summary>
     NetworkProviders,
+
+    /// <summary>
+    /// The deployment's service endpoints (identity, compute API, base) so a component
+    /// can reach the others without eryph-zero's in-process endpoint resolver. The
+    /// controller is the single distribution authority; the canonical value per logical
+    /// endpoint is the operator override when set, otherwise the address advertised by
+    /// the component that hosts it. Today only the operator override (controller config)
+    /// is sourced — the advertisement path lands with the standalone API/identity host.
+    /// </summary>
+    Endpoints,
 }
