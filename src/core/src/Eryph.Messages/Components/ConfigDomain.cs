@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Eryph.Messages.Components;
 
 /// <summary>
@@ -7,6 +9,12 @@ namespace Eryph.Messages.Components;
 /// components. New domains are added as later phases bring them under the
 /// controller's authority.
 /// </summary>
+/// <remarks>
+/// Serialized by name (not ordinal) on the wire and in the
+/// <c>ConfigRecord</c>/<c>ComponentRegistration</c> payloads, so storage stays
+/// readable and is not invalidated by reordering the enum.
+/// </remarks>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ConfigDomain
 {
     /// <summary>

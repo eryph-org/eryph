@@ -15,7 +15,19 @@ internal interface IComponentRegistryService
 {
     Task<ComponentRegistration> UpsertAsync(RegisterComponentCommand command, CancellationToken cancellationToken);
 
-    Task RecordHeartbeatAsync(Guid componentId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Refreshes liveness from a periodic heartbeat and reconciles the recorded
+    /// applied-config state with what the component reports. The heartbeat is the
+    /// component's authoritative current state: a restart (signalled by a new
+    /// <paramref name="instanceId"/>) resets <paramref name="appliedConfigVersions"/>,
+    /// so this overwrites rather than merges. Does nothing if the component is not
+    /// registered.
+    /// </summary>
+    Task RecordHeartbeatAsync(
+        Guid componentId,
+        Guid instanceId,
+        IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Records that a component applied a configuration version. Monotonic per

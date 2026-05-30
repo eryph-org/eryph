@@ -55,7 +55,11 @@ internal sealed class ComponentRegistryService(
         return existing;
     }
 
-    public async Task RecordHeartbeatAsync(Guid componentId, CancellationToken cancellationToken)
+    public async Task RecordHeartbeatAsync(
+        Guid componentId,
+        Guid instanceId,
+        IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions,
+        CancellationToken cancellationToken)
     {
         var registration = await repository.GetBySpecAsync(
             new ComponentRegistrationSpecs.GetByComponentId(componentId), cancellationToken);
@@ -64,6 +68,11 @@ internal sealed class ComponentRegistryService(
 
         registration.LastHeartbeat = DateTimeOffset.UtcNow;
         registration.Status = ComponentRegistrationStatus.Active;
+        registration.InstanceId = instanceId;
+        // The heartbeat reports the component's current applied state verbatim. On a
+        // restart the component reports an empty/reset set, which must be reflected so
+        // the controller's view does not lag behind reality.
+        registration.AppliedConfigVersions = new Dictionary<ConfigDomain, long>(appliedConfigVersions);
         await repository.UpdateAsync(registration, cancellationToken);
     }
 

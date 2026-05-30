@@ -92,9 +92,12 @@ public class CertificateGenerator : ICertificateGenerator
 
         var notBefore = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(1));
         var notAfter = DateTimeOffset.UtcNow.AddDays(validDays);
-        // The signed certificate must not outlive its issuer.
-        if (notAfter > issuerCertificate.NotAfter)
-            notAfter = issuerCertificate.NotAfter;
+        // The signed certificate must not outlive its issuer. Compare in UTC:
+        // X509Certificate2.NotAfter is a local-kind DateTime, so a naive comparison
+        // against the UTC notAfter would be off by the host's UTC offset.
+        var issuerNotAfter = issuerCertificate.NotAfter.ToUniversalTime();
+        if (notAfter > issuerNotAfter)
+            notAfter = issuerNotAfter;
 
         return request.Create(issuerCertificate, notBefore, notAfter, serialNumber);
     }

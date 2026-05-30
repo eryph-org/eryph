@@ -15,5 +15,9 @@ internal sealed class ComponentHeartbeatCommandHandler(
     : IHandleMessages<ComponentHeartbeatCommand>
 {
     public Task Handle(ComponentHeartbeatCommand message) =>
-        registry.RecordHeartbeatAsync(message.ComponentId, CancellationToken.None);
+        registry.RecordHeartbeatAsync(
+            message.ComponentId,
+            message.InstanceId,
+            message.AppliedConfigVersions,
+            CancellationToken.None);
 }
