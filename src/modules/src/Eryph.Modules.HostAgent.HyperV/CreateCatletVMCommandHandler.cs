@@ -29,6 +29,7 @@ namespace Eryph.Modules.HostAgent
         private readonly IHostInfoProvider _hostInfoProvider;
         private readonly IHostSettingsProvider _hostSettingsProvider;
         private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
+        private readonly IPlacementConfigProvider _placementConfigProvider;
 
         public CreateCatletVMCommandHandler(
             IPowershellEngine engine,
@@ -36,16 +37,19 @@ namespace Eryph.Modules.HostAgent
             ILogger log,
             IHostInfoProvider hostInfoProvider,
             IHostSettingsProvider hostSettingsProvider,
-            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
+            IPlacementConfigProvider placementConfigProvider)
             : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
             _hostSettingsProvider = hostSettingsProvider;
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
+            _placementConfigProvider = placementConfigProvider;
         }
 
         protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(
             CreateCatletVMCommand command) =>
+            from _placement in ValidatePlacement(command.Config)
             from hostSettings in _hostSettingsProvider.GetHostSettings()
             from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             from plannedStorageSettings in VMStorageSettings.FromCatletConfig(command.Config, vmHostAgentConfig)
@@ -59,6 +63,29 @@ namespace Eryph.Modules.HostAgent
                 Inventory = inventory,
                 Timestamp = timestamp,
             };
+
+        // The controller owns the datastore/environment vocabulary; reject placement on a
+        // name it does not distribute (the agent's local path mapping is checked afterwards
+        // by VMStorageSettings.FromCatletConfig). The default datastore/environment is always
+        // allowed.
+        private EitherAsync<Error, Unit> ValidatePlacement(CatletConfig config)
+        {
+            var placement = _placementConfigProvider.Current;
+            var dataStore = string.IsNullOrWhiteSpace(config.Store)
+                ? EryphConstants.DefaultDataStoreName : config.Store;
+            var environment = string.IsNullOrWhiteSpace(config.Environment)
+                ? EryphConstants.DefaultEnvironmentName : config.Environment;
+
+            if (!PlacementConfigValidation.IsDataStoreAllowed(placement, dataStore))
+                return LeftAsync<Error, Unit>(Error.New(
+                    $"The data store '{dataStore}' is not part of the controller placement configuration."));
+
+            if (!PlacementConfigValidation.IsEnvironmentAllowed(placement, environment))
+                return LeftAsync<Error, Unit>(Error.New(
+                    $"The environment '{environment}' is not part of the controller placement configuration."));
+
+            return RightAsync<Error, Unit>(unit);
+        }
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(
             VMStorageSettings storageSettings,

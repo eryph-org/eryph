@@ -116,6 +116,10 @@ namespace Eryph.Modules.HostAgent
             container.RegisterSingleton<IOVSService<OVSDbNode>, OVSNodeService<OVSDbNode>>();
             container.RegisterSingleton<IOVSService<OVSSwitchNode>, OVSNodeService<OVSSwitchNode>>();
 
+            // Holds the controller-distributed placement vocabulary applied by
+            // PlacementConfigRealizer and enforced by the provisioning handlers.
+            container.RegisterSingleton<IPlacementConfigProvider, PlacementConfigProvider>();
+
             container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
             container.RegisterInstance(serviceProvider.GetRequiredService<IAgentControlService>());

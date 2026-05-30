@@ -16,6 +16,8 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.HostAgent;
 
 [UsedImplicitly]
@@ -23,7 +25,8 @@ internal class CreateVirtualDiskVMCommandHandler(
     ITaskMessaging messaging,
     IPowershellEngine engine,
     IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
+    IPlacementConfigProvider placementConfigProvider)
     : IHandleMessages<OperationTask<CreateVirtualDiskVMCommand>>
 {
     public Task Handle(OperationTask<CreateVirtualDiskVMCommand> message) =>
@@ -31,6 +34,7 @@ internal class CreateVirtualDiskVMCommandHandler(
 
     private EitherAsync<Error, CreateVirtualDiskVMCommandResponse> HandleCommand(
         CreateVirtualDiskVMCommand command) =>
+        from _placement in ValidatePlacement(command.DataStore.Value, command.Environment.Value)
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let storageNames = new StorageNames()
@@ -54,4 +58,22 @@ internal class CreateVirtualDiskVMCommandHandler(
         {
             DiskInfo = storageSettings.CreateDiskInfo(),
         };
+
+    // The controller owns the datastore/environment vocabulary; reject a name it does not
+    // distribute before resolving the local path. The default datastore/environment is
+    // always allowed.
+    private EitherAsync<Error, Unit> ValidatePlacement(string dataStore, string environment)
+    {
+        var placement = placementConfigProvider.Current;
+
+        if (!PlacementConfigValidation.IsDataStoreAllowed(placement, dataStore))
+            return LeftAsync<Error, Unit>(Error.New(
+                $"The data store '{dataStore}' is not part of the controller placement configuration."));
+
+        if (!PlacementConfigValidation.IsEnvironmentAllowed(placement, environment))
+            return LeftAsync<Error, Unit>(Error.New(
+                $"The environment '{environment}' is not part of the controller placement configuration."));
+
+        return RightAsync<Error, Unit>(unit);
+    }
 }
