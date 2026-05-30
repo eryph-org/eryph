@@ -21,6 +21,8 @@ public static class AppConfigPaths
 
     public static string GetNetworksConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "networks"));
 
+    public static string GetVmHostAgentConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "agentsettings"));
+
     public static string GetProjectsConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "projects"));
 
     public static string GetProjectNetworksConfigPath() => Ensure(Path.Combine(GetProjectsConfigPath(), "networks"));
