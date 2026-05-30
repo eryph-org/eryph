@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Eryph.AppCore;
 using Eryph.Modules.Controller;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -41,6 +42,21 @@ namespace Eryph.Controller
                         // in-memory for this milestone.
                         { "store:type", "inmemory" },
                         { "databus:type", "inmemory" },
+
+                        // Seed the (owned) state DB from the on-disk config under this
+                        // component's config root, mirroring eryph-zero's change-tracking
+                        // setup. Without seedDatabase the network-providers seeder is
+                        // skipped, so the default project's network realization fails to
+                        // find its provider subnet.
+                        { "changeTracking:trackChanges", bool.TrueString },
+                        { "changeTracking:seedDatabase", bool.TrueString },
+                        { "changeTracking:networksConfigPath", AppConfigPaths.GetNetworksConfigPath() },
+                        { "changeTracking:projectsConfigPath", AppConfigPaths.GetProjectsConfigPath() },
+                        { "changeTracking:projectNetworksConfigPath", AppConfigPaths.GetProjectNetworksConfigPath() },
+                        { "changeTracking:projectNetworkPortsConfigPath", AppConfigPaths.GetProjectNetworkPortsConfigPath() },
+                        { "changeTracking:virtualMachinesConfigPath", AppConfigPaths.GetMetadataConfigPath() },
+                        { "changeTracking:catletSpecificationsConfigPath", AppConfigPaths.GetCatletSpecificationsConfigPath() },
+                        { "changeTracking:catletSpecificationVersionsConfigPath", AppConfigPaths.GetCatletSpecificationVersionsConfigPath() },
                     }))
                 .AddNetworkModule()
                 .AddControllerModule()

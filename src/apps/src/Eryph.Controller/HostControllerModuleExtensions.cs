@@ -50,6 +50,10 @@ namespace Eryph.Controller
                     options.AddStartupHandler<MigrateStateDbHandler>();
                     options.RegisterMySqlStateStore();
 
+                    // Change tracking (mirroring DB changes back to the on-disk config) is
+                    // wired by ControllerModule itself when changeTracking:trackChanges is
+                    // set — which Program.cs does — so it must not be added again here.
+
                     next(context, options);
                 };
             }
