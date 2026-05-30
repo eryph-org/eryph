@@ -41,9 +41,14 @@ namespace Eryph.Controller
             });
         }
 
-        /// <summary>The MariaDB connection string, from env or a localhost dev default.</summary>
+        /// <summary>
+        /// The MariaDB connection string, supplied via the <c>ERYPH_STATEDB_CONNECTIONSTRING</c>
+        /// environment variable. No credentialed default is hardcoded.
+        /// </summary>
         public static string GetStateDbConnectionString() =>
             Environment.GetEnvironmentVariable("ERYPH_STATEDB_CONNECTIONSTRING")
-            ?? "Server=localhost;Port=3306;Database=eryph;Uid=root;Pwd=eryph;";
+            ?? throw new InvalidOperationException(
+                "The state database connection string must be provided via the "
+                + "ERYPH_STATEDB_CONNECTIONSTRING environment variable.");
     }
 }

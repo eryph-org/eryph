@@ -38,7 +38,9 @@ namespace Eryph.ApiEndpoint
 
         public static string GetStateDbConnectionString() =>
             Environment.GetEnvironmentVariable("ERYPH_STATEDB_CONNECTIONSTRING")
-            ?? "Server=localhost;Port=3306;Database=eryph;Uid=root;Pwd=eryph;";
+            ?? throw new InvalidOperationException(
+                "The state database connection string must be provided via the "
+                + "ERYPH_STATEDB_CONNECTIONSTRING environment variable.");
 
         private static Dictionary<string, string> GetEndpoints()
         {
