@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,13 +27,14 @@ internal sealed class PlacementConfigSource(
                 Right: settings => JsonSerializer.Serialize(settings.Placement),
                 Left: error =>
                 {
-                    // Don't distribute a silently-empty placement vocabulary: log the
-                    // read failure so an operator can see why agents got nothing, and
-                    // fall back to an empty config (a later refresh recovers once the
-                    // settings file is readable again).
+                    // Never distribute a silently-empty placement vocabulary — that would make
+                    // agents reject every non-default datastore/environment. Fail the round
+                    // instead (mirrors NetworkProvidersConfigSource); agents keep their current
+                    // copy until the controller settings are readable again.
                     logger.LogError(
-                        "Failed to read controller settings for {Domain}: {Error}. Distributing empty placement config.",
+                        "Failed to read controller settings for {Domain}: {Error}.",
                         ConfigDomain.PlacementConfig, error.Message);
-                    return JsonSerializer.Serialize(new PlacementConfig());
+                    throw new InvalidOperationException(
+                        $"Cannot distribute placement configuration: {error.Message}");
                 });
 }

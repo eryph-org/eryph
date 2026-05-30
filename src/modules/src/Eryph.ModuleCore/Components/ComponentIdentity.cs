@@ -84,6 +84,11 @@ public sealed class ComponentIdentity
         var hostName = ipProperties.HostName;
         var domainName = ipProperties.DomainName;
 
+        // Fall back to the machine name if the host name is unavailable, so the derived
+        // ComponentId stays well-formed and stable rather than becoming ".domain".
+        if (string.IsNullOrWhiteSpace(hostName))
+            return Environment.MachineName;
+
         if (string.IsNullOrEmpty(domainName)
             || hostName.EndsWith("." + domainName, StringComparison.OrdinalIgnoreCase))
             return hostName;

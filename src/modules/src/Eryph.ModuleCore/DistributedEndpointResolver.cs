@@ -26,9 +26,10 @@ namespace Eryph.ModuleCore
             var isDefault = false;
             if (endpoints.TryGetValue(name, out var endpointString))
             {
-                endpoint = endpointString.StartsWith("http")
-                    ? new Uri(endpointString, UriKind.Absolute)
-                    : new Uri(endpointString, UriKind.Relative);
+                var isAbsolute =
+                    endpointString.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || endpointString.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                endpoint = new Uri(endpointString, isAbsolute ? UriKind.Absolute : UriKind.Relative);
             }
 
             if (endpoint is null)

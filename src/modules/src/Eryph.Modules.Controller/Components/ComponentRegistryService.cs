@@ -40,6 +40,7 @@ internal sealed class ComponentRegistryService(
             return registration;
         }
 
+        existing.ComponentType = command.ComponentType;
         existing.InstanceId = command.InstanceId;
         existing.MachineName = command.MachineName;
         existing.Version = command.Version;
