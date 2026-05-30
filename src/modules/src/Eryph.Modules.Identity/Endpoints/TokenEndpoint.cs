@@ -60,8 +60,11 @@ namespace Eryph.Modules.Identity.Endpoints
                 if(application.TenantId != default)
                     identity.SetClaim("tid", application.TenantId.ToString());
 
+                // AppRoles is stored as a comma-separated list of role ids; emit one role claim per
+                // id (consumers parse each role claim value as a single GUID, see UserInfoProvider).
                 if (application.AppRoles is { Length: > 0 })
-                    identity.SetClaims(Claims.Role, ImmutableArray.Create(application.AppRoles));
+                    identity.SetClaims(Claims.Role,
+                        application.AppRoles.Split(',', StringSplitOptions.RemoveEmptyEntries).ToImmutableArray());
 
                 // Note: In the original OAuth 2.0 specification, the client credentials grant
                 // doesn't return an identity token, which is an OpenID Connect concept.
