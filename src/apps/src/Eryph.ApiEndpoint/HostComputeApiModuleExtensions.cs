@@ -12,8 +12,9 @@ namespace Eryph.ApiEndpoint
 {
     /// <summary>
     /// Hosts the compute API as a standalone runtime: the shared MariaDB state store (read side)
-    /// and the RabbitMQ transport. The compute API dispatches operations to the controller over a
-    /// one-way bus client (configured by the ApiModule base), so it needs only the transport here.
+    /// and the RabbitMQ transport. The compute API module registers as a component and runs a
+    /// bidirectional bus endpoint on its own inbound queue (configured by the ApiModule base from
+    /// the transport supplied here), so this host only needs to provide the transport.
     /// </summary>
     internal static class HostComputeApiModuleExtensions
     {

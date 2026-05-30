@@ -1,12 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Asp.Versioning;
 using Dbosoft.Hosuto.Modules;
+using Dbosoft.Rebus;
+using Dbosoft.Rebus.Configuration;
 using Eryph.Core;
+using Eryph.Messages.Components;
 using Eryph.ModuleCore.Authorization;
+using Eryph.ModuleCore.Components;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
+using Eryph.Rebus;
+using Rebus.Config;
+using Rebus.Handlers;
+using Rebus.Subscriptions;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.Identity.Events.Validations;
@@ -38,6 +47,18 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 #pragma warning restore S2325
     {
         options.AddAspNetCore().AddControllerActivation();
+
+        // Register as a deployment component and advertise the identity endpoint. Wired in the
+        // module so every packaging (eryph-zero in-memory, standalone RabbitMQ) registers
+        // identically; the host only supplies the transport.
+        options.AddComponentRegistration(
+            ComponentType.Identity,
+            $"{QueueNames.IdentityServices}.{Environment.MachineName}",
+            new Dictionary<string, string>
+            {
+                ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),
+            });
+
         options.AddLogging();
     }
 
@@ -175,6 +196,22 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
+
+        // The identity component runs a bidirectional bus endpoint on its own inbound queue
+        // (from the registered ComponentIdentity) so it can register/heartbeat and receive
+        // config. The host supplies the transport (in-memory for eryph-zero, RabbitMQ for split).
+        // The module has no Rebus handlers of its own; AddComponentRegistration appends the
+        // config-distribution handlers into this collection.
+        container.Collection.Register(typeof(IHandleMessages<>), typeof(IdentityModule).Assembly);
+        container.ConfigureRebus(configurer => configurer
+            .Serialization(s => s.UseEryphSettings())
+            .Transport(t =>
+                container.GetInstance<IRebusTransportConfigurer>()
+                    .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
+            .Options(x => x.SetNumberOfWorkers(2))
+            .Subscriptions(s =>
+                container.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
+            .Start());
     }
 
     public static void ConfigureIdentityScopes(AuthorizationOptions options, string authority)

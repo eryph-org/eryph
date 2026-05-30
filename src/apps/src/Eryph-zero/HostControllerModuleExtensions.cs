@@ -16,7 +16,7 @@ namespace Eryph.Runtime.Zero
 {
     public static class HostControllerModuleExtensions
     {
-        public static IModulesHostBuilder AddControllerModule(this IModulesHostBuilder builder, Container container)
+        public static IModulesHostBuilder AddControllerModule(this IModulesHostBuilder builder)
         {
             builder.HostModule<ControllerModule>();
             builder.ConfigureFrameworkServices((_, services) =>

@@ -18,7 +18,7 @@ namespace Eryph.Runtime.Zero
 {
     public static class HostIdentityModuleExtensions
     {
-        public static IModulesHostBuilder AddIdentityModule(this IModulesHostBuilder builder, Container container)
+        public static IModulesHostBuilder AddIdentityModule(this IModulesHostBuilder builder)
         {
             builder.HostModule<IdentityModule>();
 
@@ -27,11 +27,6 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityModuleFilters>();
                 services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityModuleFilters>();
             });
-
-            container.Register<ITokenCertificateManager, TokenCertificateManager>();
-
-            container
-                .Register<IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
 
             return builder;
         }
@@ -46,6 +41,10 @@ namespace Eryph.Runtime.Zero
                 return (context, container) =>
                 {
                     next(context, container);
+
+                    // The identity module configures its own bus + component registration; the
+                    // host only supplies the transport (in-memory for the single-process zero).
+                    container.UseInMemoryBus(context.ModulesHostServices);
 
                     container.RegisterSingleton<IClientConfigService, ClientConfigService>();
                     container.RegisterDecorator(typeof(IClientService),

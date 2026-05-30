@@ -16,5 +16,6 @@
     <ProjectReference Include="..\..\..\data\src\Eryph.IdentityDb\Eryph.IdentityDb.csproj" />
     <ProjectReference Include="..\Eryph.Modules.AspNetCore\Eryph.Modules.AspNetCore.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Security.Cryptography\Eryph.Security.Cryptography.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
   </ItemGroup>
 </Project>
