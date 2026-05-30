@@ -52,12 +52,19 @@ namespace Eryph.Agent
     }
 
     /// <summary>
-    /// Split-runtime placeholder for <see cref="INetworkSyncService"/>. In eryph-zero the
-    /// host-agent resolves the controller's in-process network sync service directly; in a
-    /// split deployment those operations belong to the controller and must travel over the
-    /// bus. Until that path exists, the agent's named-pipe sync commands
-    /// (REBUILD_NETWORKS / VALIDATE_CHANGES) report that they are not available locally.
-    /// This is never invoked during normal boot, registration, or config application.
+    /// Network synchronization is not a host-agent responsibility in the split runtime, so
+    /// this is only a placeholder that lets the named-pipe <c>SyncService</c> resolve.
+    /// <para>
+    /// Network realization (programming OVN) is owned by the controller; its cross-module
+    /// result is propagated to agents by the configuration-distribution system (the
+    /// NetworkProviders config domain), not by this service. The only genuinely per-agent
+    /// network operation — stopping/starting the local OVN SB controller (<c>ovn-controller</c>)
+    /// on shutdown — goes through <see cref="IAgentControlService"/> and the agent's local
+    /// chassis service, not through <see cref="INetworkSyncService"/>.
+    /// </para>
+    /// Consequently the cross-module <c>REBUILD_NETWORKS</c>/<c>VALIDATE_CHANGES</c> pipe
+    /// commands are controller concerns and report as unavailable on the agent; this service
+    /// is never invoked during boot, registration, or config application.
     /// </summary>
     internal sealed class UnavailableNetworkSyncService : INetworkSyncService
     {
