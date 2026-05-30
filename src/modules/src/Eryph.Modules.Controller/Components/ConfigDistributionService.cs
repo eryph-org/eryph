@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.DistributedLock;
 using Eryph.Messages.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -15,18 +16,23 @@ namespace Eryph.Modules.Controller.Components;
 /// per domain on first use.
 /// </summary>
 /// <remarks>
-/// The read-then-insert in <c>EnsureCurrentRecordAsync</c> is not
-/// guarded by an optimistic-concurrency token. This is safe today because the
-/// controller dispatches bus messages serially within a single process. When the
-/// in-memory bus is replaced by a real broker (a later cluster phase), two
-/// concurrent first-touches of the same domain could both insert and collide on the
-/// unique <c>ConfigRecord.Domain</c> index — that phase must add retry-on-conflict
-/// or a concurrency token here.
+/// The read-modify-write in <c>EnsureCurrentRecordAsync</c> is serialized per domain by a
+/// distributed lock. The controller processes bus messages on multiple Rebus workers (and a
+/// cluster may run multiple controllers), so without it two concurrent first-touches of the
+/// same domain could both observe no record and insert, colliding on the unique
+/// <c>ConfigRecord.Domain</c> index, or lose a concurrent version bump. The lock is held for
+/// the remainder of the message unit of work.
 /// </remarks>
 internal sealed class ConfigDistributionService(
     IStateStoreRepository<ConfigRecord> records,
-    IEnumerable<IConfigSource> sources)
+    IEnumerable<IConfigSource> sources,
+    IDistributedLockScopeHolder lockHolder)
 {
+    // A first-touch/version-bump touches only the state DB and should be near-instant; a long
+    // wait means contention or a stuck unit of work, so fail (and let the bus retry) rather
+    // than block a worker indefinitely.
+    private static readonly TimeSpan LockTimeout = TimeSpan.FromMinutes(1);
+
     // Which configuration domains each component type is entitled to receive.
     private static readonly IReadOnlyDictionary<ComponentType, ConfigDomain[]> Entitlements =
         new Dictionary<ComponentType, ConfigDomain[]>
@@ -96,6 +102,12 @@ internal sealed class ConfigDistributionService(
             return (null, false);
 
         var payload = await source.BuildPayloadAsync(cancellationToken);
+
+        // Serialize the read-modify-write for this domain so concurrent workers/controllers
+        // cannot both insert (unique-index collision) or lose a version bump. Held until the
+        // message unit of work completes.
+        await lockHolder.AcquireLock($"config-domain-{domain}", LockTimeout);
+
         var record = await records.GetBySpecAsync(new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
 
         if (record is null)

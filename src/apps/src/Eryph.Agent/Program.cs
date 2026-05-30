@@ -19,16 +19,24 @@ namespace Eryph.Agent
                 .WriteTo.Console()
                 .CreateLogger();
 
-            var container = new Container();
-            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-            container.Options.EnableAutoVerification = false;
-            container.Bootstrap();
+            try
+            {
+                var container = new Container();
+                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                container.Options.EnableAutoVerification = false;
+                container.Bootstrap();
 
-            await ModulesHost.CreateDefaultBuilder(args)
-                .UseSimpleInjector(container)
-                .AddVmHostAgentModule()
-                .UseSerilog()
-                .RunConsoleAsync().ConfigureAwait(false);
+                await ModulesHost.CreateDefaultBuilder(args)
+                    .UseSimpleInjector(container)
+                    .AddVmHostAgentModule()
+                    .UseSerilog()
+                    .RunConsoleAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                // Flush any log events buffered by Serilog before the process exits.
+                Log.CloseAndFlush();
+            }
         }
     }
 }

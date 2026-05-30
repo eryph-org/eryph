@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Eryph.Core;
 using Eryph.Core.Settings;
+using Eryph.DistributedLock;
 using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
@@ -35,8 +36,13 @@ public class ConfigDistributionServiceTests
             .Returns(RightAsync<Error, ControllerSettings>(settings));
 
         var source = new PlacementConfigSource(settingsManager.Object, NullLogger<PlacementConfigSource>.Instance);
-        return new ConfigDistributionService(records.Object, new IConfigSource[] { source });
+        return new ConfigDistributionService(records.Object, new IConfigSource[] { source }, NoOpLock());
     }
+
+    // The distributed lock only serializes concurrent access; for single-threaded unit tests a
+    // no-op holder (AcquireLock returns a completed ValueTask by default) is sufficient.
+    private static IDistributedLockScopeHolder NoOpLock() =>
+        new Mock<IDistributedLockScopeHolder>().Object;
 
     /// <summary>A config source whose payload the test controls directly.</summary>
     private sealed class StubSource(ConfigDomain domain, string payload) : IConfigSource
@@ -50,7 +56,7 @@ public class ConfigDistributionServiceTests
     private static ConfigDistributionService CreateService(
         Mock<IStateStoreRepository<ConfigRecord>> records,
         params IConfigSource[] sources) =>
-        new(records.Object, sources);
+        new(records.Object, sources, NoOpLock());
 
     [Fact]
     public async Task BuildSnapshot_for_entitled_component_returns_placement_bundle_from_settings()
