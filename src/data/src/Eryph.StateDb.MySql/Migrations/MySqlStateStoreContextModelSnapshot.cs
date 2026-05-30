@@ -240,8 +240,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid>("ComponentId")
                         .HasColumnType("char(36)");
 
-                    b.Property<int>("ComponentType")
-                        .HasColumnType("int");
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("InboundQueue")
                         .IsRequired()
@@ -260,8 +261,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<DateTimeOffset>("RegisteredAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Version")
                         .HasColumnType("longtext");
@@ -280,8 +282,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<int>("Domain")
-                        .HasColumnType("int");
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
 
                     b.Property<DateTimeOffset>("LastUpdated")
                         .HasColumnType("datetime(6)");

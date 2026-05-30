@@ -14,7 +14,8 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "AdvertisedEndpointsJson",
                 table: "ComponentRegistrations",
                 type: "longtext",
-                nullable: false)
+                nullable: false,
+                defaultValue: "")
                 .Annotation("MySql:CharSet", "utf8mb4");
         }
 

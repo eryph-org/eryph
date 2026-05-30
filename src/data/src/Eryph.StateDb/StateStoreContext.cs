@@ -408,6 +408,16 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasIndex(x => x.ComponentId)
             .IsUnique();
 
+        // Store enums by name (not ordinal) so reordering/adding enum values cannot
+        // reinterpret existing rows — matching the by-name promise of the message contracts.
+        modelBuilder.Entity<ComponentRegistration>()
+            .Property(x => x.ComponentType)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<ComponentRegistration>()
+            .Property(x => x.Status)
+            .HasConversion<string>();
+
         modelBuilder.Entity<ComponentRegistration>()
             .Ignore(x => x.AppliedConfigVersions);
 
@@ -422,6 +432,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<ConfigRecord>()
             .HasKey(x => x.Id);
+
+        modelBuilder.Entity<ConfigRecord>()
+            .Property(x => x.Domain)
+            .HasConversion<string>();
 
         modelBuilder.Entity<ConfigRecord>()
             .HasIndex(x => x.Domain)

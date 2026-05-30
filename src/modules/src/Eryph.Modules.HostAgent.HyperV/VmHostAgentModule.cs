@@ -157,7 +157,9 @@ namespace Eryph.Modules.HostAgent
             container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationTaskHandler<>), Lifestyle.Scoped);
             container.AddRebusOperationsHandlers();
 
-            var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
+            // Use the registered component inbound queue as the single source of truth for the
+            // bus endpoint name (it must match what AddComponentRegistration announced).
+            var localName = container.GetInstance<ComponentIdentity>().InboundQueue;
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())
                 .Transport(t =>

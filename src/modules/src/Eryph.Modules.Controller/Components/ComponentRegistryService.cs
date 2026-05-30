@@ -97,6 +97,10 @@ internal sealed class ComponentRegistryService(
         await repository.UpdateAsync(registration, cancellationToken);
     }
 
+    // KNOWN GAP: there is no heartbeat-timeout transition yet — LastHeartbeat is recorded but
+    // nothing moves a silent component to Stale/Dead, so a crashed component stays Active and the
+    // controller keeps pushing config to its (dead) queue. Harmless in single-process eryph-zero;
+    // for a real broker this needs a periodic job that ages out registrations past a threshold.
     public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken) =>
         await repository.ListAsync(new ComponentRegistrationSpecs.GetActive(), cancellationToken);
 }

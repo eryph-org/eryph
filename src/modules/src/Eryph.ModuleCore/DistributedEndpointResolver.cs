@@ -43,8 +43,11 @@ namespace Eryph.ModuleCore
             if (endpoint.IsAbsoluteUri || isDefault)
                 return endpoint;
 
-            var defaultEndpoint = new Uri(endpoints["default"]);
-            return new Uri(defaultEndpoint, endpoint);
+            // A named endpoint was found but is relative; resolve it against the default base.
+            if (!endpoints.TryGetValue("default", out var defaultBase))
+                throw new InvalidOperationException(
+                    $"Endpoint '{name}' is relative but no default endpoint has been distributed yet.");
+            return new Uri(new Uri(defaultBase), endpoint);
         }
     }
 }
