@@ -43,7 +43,7 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
         // controller so the deployment has a complete, mandatory service catalog.
         options.AddComponentRegistration(
             ComponentType.ComputeApi,
-            $"{QueueNames.ApiServices}.{Environment.MachineName}",
+            $"{QueueNames.ApiServices}.{ComponentIdentity.GetLocalHostId()}",
             new Dictionary<string, string>
             {
                 ["compute"] = endpointResolver.GetEndpoint("compute").ToString(),

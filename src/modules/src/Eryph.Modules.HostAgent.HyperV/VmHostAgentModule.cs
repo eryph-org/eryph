@@ -93,7 +93,7 @@ namespace Eryph.Modules.HostAgent
             // vocabulary and the network-provider configuration via its realizers.
             options.AddComponentRegistration(
                 ComponentType.VMHostAgent,
-                $"{QueueNames.VMHostAgent}.{Environment.MachineName}",
+                $"{QueueNames.VMHostAgent}.{ComponentIdentity.GetLocalHostId()}",
                 // The host-agent hosts no service endpoints, so it advertises none.
                 advertisedEndpoints: null,
                 typeof(PlacementConfigRealizer),

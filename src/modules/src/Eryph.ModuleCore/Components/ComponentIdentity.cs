@@ -55,6 +55,15 @@ public sealed class ComponentIdentity
     /// </summary>
     public IReadOnlyDictionary<string, string> AdvertisedEndpoints { get; }
 
+    /// <summary>
+    /// A globally-unique, stable identifier for the local host: the lower-cased
+    /// fully-qualified domain name (DNS is case-insensitive). This is the same host
+    /// identity <see cref="ComponentId"/> is derived from; components also use it to suffix
+    /// their inbound queue so queue names are unique across hosts on a shared broker — the
+    /// short machine name is not (two hosts can share it in different DNS domains).
+    /// </summary>
+    public static string GetLocalHostId() => GetFullyQualifiedDomainName().ToLowerInvariant();
+
     private static string GetComponentVersion()
     {
         var entry = Assembly.GetEntryAssembly();

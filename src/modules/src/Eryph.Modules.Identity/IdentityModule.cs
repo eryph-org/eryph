@@ -53,7 +53,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         // identically; the host only supplies the transport.
         options.AddComponentRegistration(
             ComponentType.Identity,
-            $"{QueueNames.IdentityServices}.{Environment.MachineName}",
+            $"{QueueNames.IdentityServices}.{ComponentIdentity.GetLocalHostId()}",
             new Dictionary<string, string>
             {
                 ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),

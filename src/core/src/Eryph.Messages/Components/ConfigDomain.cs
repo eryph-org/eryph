@@ -38,8 +38,8 @@ public enum ConfigDomain
     /// can reach the others without eryph-zero's in-process endpoint resolver. The
     /// controller is the single distribution authority; the canonical value per logical
     /// endpoint is the operator override when set, otherwise the address advertised by
-    /// the component that hosts it. Today only the operator override (controller config)
-    /// is sourced — the advertisement path lands with the standalone API/identity host.
+    /// the component that hosts it on registration. Both sources are aggregated: the
+    /// controller starts from the advertised endpoints and overlays operator overrides.
     /// </summary>
     Endpoints,
 }

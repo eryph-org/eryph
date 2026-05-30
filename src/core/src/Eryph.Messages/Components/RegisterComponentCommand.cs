@@ -6,7 +6,8 @@ namespace Eryph.Messages.Components;
 /// <summary>
 /// Sent by a component to the controller on startup to register as alive and
 /// announce the configuration versions it already holds. The controller persists
-/// the registration and replies with the configuration the component is missing.
+/// the registration; the component pulls any missing configuration separately via
+/// <see cref="RequestConfigCommand"/> (registration itself carries no config reply).
 /// </summary>
 [SendMessageTo(MessageRecipient.Controllers)]
 public class RegisterComponentCommand
