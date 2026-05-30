@@ -31,8 +31,9 @@ internal sealed class ConfigDistributionService(
     private static readonly IReadOnlyDictionary<ComponentType, ConfigDomain[]> Entitlements =
         new Dictionary<ComponentType, ConfigDomain[]>
         {
-            // Host agents need the placement vocabulary (datastore/environment names).
-            [ComponentType.VMHostAgent] = [ConfigDomain.PlacementConfig],
+            // Host agents need the placement vocabulary (datastore/environment names)
+            // and the network-provider configuration to realize host networking.
+            [ComponentType.VMHostAgent] = [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders],
         };
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,6 +78,27 @@ public class ConfigDistributionServiceTests
         var payload = JsonSerializer.Deserialize<PlacementConfig>(bundles[0].Payload)!;
         payload.Datastores.Should().BeEquivalentTo(new[] { "ds1" });
         payload.Environments.Should().BeEquivalentTo(new[] { "env1" });
+    }
+
+    [Fact]
+    public async Task BuildSnapshot_returns_every_entitled_domain_that_has_a_source()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecord?)null);
+        records.Setup(r => r.AddAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecord record, CancellationToken _) => record);
+
+        // The host agent is entitled to both placement and network-provider config.
+        var service = CreateService(records,
+            new StubSource(ConfigDomain.PlacementConfig, """{"p":1}"""),
+            new StubSource(ConfigDomain.NetworkProviders, "network_providers: []"));
+
+        var bundles = await service.BuildSnapshotAsync(
+            ComponentType.VMHostAgent, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+
+        bundles.Select(b => b.Domain).Should().BeEquivalentTo(
+            [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders]);
     }
 
     [Fact]

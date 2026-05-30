@@ -24,4 +24,12 @@ public enum ConfigDomain
     /// decisions are runtime, not distributed config.
     /// </summary>
     PlacementConfig,
+
+    /// <summary>
+    /// Controller-owned network-provider configuration (the provider/bridge/subnet/
+    /// IP-pool definitions, today the host-local <c>p_networks.yml</c>). The controller
+    /// is the authority; entitled agents persist the distributed copy to their local
+    /// network provider settings so a host's networking can be rebuilt from it.
+    /// </summary>
+    NetworkProviders,
 }

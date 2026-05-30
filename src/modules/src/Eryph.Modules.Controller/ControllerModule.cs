@@ -134,7 +134,8 @@ namespace Eryph.Modules.Controller
             container.Register<ConfigDistributionService>(Lifestyle.Scoped);
             // Controller settings (incl. the Placement section) are owned by the host.
             container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());
-            container.Collection.Register<IConfigSource>([typeof(PlacementConfigSource)]);
+            container.Collection.Register<IConfigSource>(
+                [typeof(PlacementConfigSource), typeof(NetworkProvidersConfigSource)]);
 
             //use network services from host
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());

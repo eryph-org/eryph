@@ -90,11 +90,12 @@ namespace Eryph.Modules.HostAgent
 
             // Opt in to controller-driven configuration distribution. The agent
             // registers on its own inbound queue and subscribes to the placement
-            // configuration (datastore/environment name catalog) via its realizer.
+            // vocabulary and the network-provider configuration via its realizers.
             options.AddComponentRegistration(
                 ComponentType.VMHostAgent,
                 $"{QueueNames.VMHostAgent}.{Environment.MachineName}",
-                typeof(PlacementConfigRealizer));
+                typeof(PlacementConfigRealizer),
+                typeof(NetworkProvidersConfigRealizer));
 
             options.AddLogging();
         }
