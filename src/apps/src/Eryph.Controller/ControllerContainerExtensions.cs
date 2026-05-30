@@ -2,6 +2,7 @@ using System;
 using Dbosoft.Rebus.Operations;
 using Eryph.AppCore;
 using Eryph.Core;
+using Eryph.ModuleCore.Networks;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.MySql;
@@ -21,6 +22,11 @@ namespace Eryph.Controller
         {
             container.Register<IControllerSettingsManager, ControllerSettingsManager>();
             container.Register<INetworkProviderManager, NetworkProviderManager>();
+
+            // Bridges the OVN control plane to the host-agent chassis. In the split runtime
+            // the controller has no in-process chassis, so this stays recipient-less (the
+            // network module resolves it from the cross-wired host service provider).
+            container.RegisterSingleton<IAgentControlService, AgentControlService>();
 
             container.RegisterInstance<IStateStoreContextConfigurer>(
                 new MySqlStateStoreContextConfigurer(GetStateDbConnectionString()));

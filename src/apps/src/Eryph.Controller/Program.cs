@@ -42,6 +42,7 @@ namespace Eryph.Controller
                         { "store:type", "inmemory" },
                         { "databus:type", "inmemory" },
                     }))
+                .AddNetworkModule()
                 .AddControllerModule()
                 .UseSerilog()
                 .RunConsoleAsync().ConfigureAwait(false);
