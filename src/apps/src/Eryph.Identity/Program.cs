@@ -11,8 +11,9 @@ namespace Eryph.Identity
         public static async Task Main(string[] args)
         {
             // Logging uses the ASP.NET Core host defaults (UseAspNetCoreWithDefaults). Serilog is
-            // intentionally not wired here: .UseSerilog() returns IHostBuilder and breaks the
-            // RunModule chain — it lands with the move to the RunConsoleAsync host pattern.
+            // intentionally not referenced here: wiring it via .UseSerilog() returns IHostBuilder
+            // and breaks the RunModule chain. It can be added (with its packages) once the host
+            // moves to the RunConsoleAsync pattern.
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
             container.Options.EnableAutoVerification = false;

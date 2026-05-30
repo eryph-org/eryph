@@ -69,9 +69,17 @@ internal sealed class ComponentRegistryService(
         if (registration is null)
             return;
 
+        // Ignore heartbeats that do not belong to the currently-registered instance.
+        // Registration is the authority for the live InstanceId; on a brokered transport a
+        // delayed heartbeat from a previous process instance can arrive after a newer
+        // registration, and applying it would revert the catalog (InstanceId + applied-config
+        // state) to the stale instance. A restart re-registers with its new InstanceId first,
+        // so the matching heartbeat still resets applied state as intended.
+        if (registration.InstanceId != instanceId)
+            return;
+
         registration.LastHeartbeat = DateTimeOffset.UtcNow;
         registration.Status = ComponentRegistrationStatus.Active;
-        registration.InstanceId = instanceId;
         // The heartbeat reports the component's current applied state verbatim. On a
         // restart the component reports an empty/reset set, which must be reflected so
         // the controller's view does not lag behind reality.
