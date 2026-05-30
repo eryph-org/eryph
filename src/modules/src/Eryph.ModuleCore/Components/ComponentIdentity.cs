@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
 using Eryph.Messages.Components;
@@ -9,9 +10,14 @@ namespace Eryph.ModuleCore.Components;
 /// <summary>
 /// The identity a module uses when registering with the controller.
 /// <see cref="ComponentId"/> is stable across restarts (derived deterministically
-/// from the component type and machine name, not a random per-run value);
-/// <see cref="InstanceId"/> identifies this particular run.
+/// from the component type and the host's fully-qualified domain name, not a random
+/// per-run value); <see cref="InstanceId"/> identifies this particular run.
 /// </summary>
+/// <remarks>
+/// Identity is domain-name based (FQDN) rather than the short machine name: the FQDN is
+/// globally unique across a multi-host deployment and aligns with how certificate/mTLS
+/// identities name hosts, which is the foundation for component authentication.
+/// </remarks>
 public sealed class ComponentIdentity
 {
     public ComponentIdentity(
@@ -21,7 +27,7 @@ public sealed class ComponentIdentity
     {
         ComponentType = componentType;
         InboundQueue = inboundQueue;
-        MachineName = Environment.MachineName;
+        MachineName = GetFullyQualifiedDomainName();
         ComponentId = CreateStableId(componentType, MachineName);
         InstanceId = Guid.NewGuid();
         AdvertisedEndpoints = advertisedEndpoints ?? new Dictionary<string, string>();
@@ -43,12 +49,30 @@ public sealed class ComponentIdentity
     /// </summary>
     public IReadOnlyDictionary<string, string> AdvertisedEndpoints { get; }
 
-    private static Guid CreateStableId(ComponentType componentType, string machineName)
+    private static Guid CreateStableId(ComponentType componentType, string fullyQualifiedDomainName)
     {
-        var name = $"eryph-component:{componentType}:{machineName}";
+        var name = $"eryph-component:{componentType}:{fullyQualifiedDomainName.ToLowerInvariant()}";
         var hash = SHA1.HashData(Encoding.UTF8.GetBytes(name));
         var guidBytes = new byte[16];
         Array.Copy(hash, guidBytes, 16);
         return new Guid(guidBytes);
+    }
+
+    /// <summary>
+    /// The host's fully-qualified domain name (host + DNS domain). Falls back to the short
+    /// host name when the machine is not domain-joined (e.g. a workgroup dev box), which keeps
+    /// the identity stable in that environment.
+    /// </summary>
+    private static string GetFullyQualifiedDomainName()
+    {
+        var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+        var hostName = ipProperties.HostName;
+        var domainName = ipProperties.DomainName;
+
+        if (string.IsNullOrEmpty(domainName)
+            || hostName.EndsWith("." + domainName, StringComparison.OrdinalIgnoreCase))
+            return hostName;
+
+        return $"{hostName}.{domainName}";
     }
 }
