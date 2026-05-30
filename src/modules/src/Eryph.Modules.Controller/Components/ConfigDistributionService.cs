@@ -14,6 +14,15 @@ namespace Eryph.Modules.Controller.Components;
 /// the versioned bundles to send it, materializing a <see cref="ConfigRecord"/>
 /// per domain on first use.
 /// </summary>
+/// <remarks>
+/// The read-then-insert in <c>EnsureCurrentRecordAsync</c> is not
+/// guarded by an optimistic-concurrency token. This is safe today because the
+/// controller dispatches bus messages serially within a single process. When the
+/// in-memory bus is replaced by a real broker (a later cluster phase), two
+/// concurrent first-touches of the same domain could both insert and collide on the
+/// unique <c>ConfigRecord.Domain</c> index — that phase must add retry-on-conflict
+/// or a concurrency token here.
+/// </remarks>
 internal sealed class ConfigDistributionService(
     IStateStoreRepository<ConfigRecord> records,
     IEnumerable<IConfigSource> sources)
@@ -41,7 +50,9 @@ internal sealed class ConfigDistributionService(
         var bundles = new List<ConfigBundle>();
         foreach (var domain in GetEntitledDomains(componentType))
         {
-            var record = await GetOrCreateRecordAsync(domain, cancellationToken);
+            // Re-evaluate the source on every pull so a request always reflects the
+            // current controller settings — not a record frozen at first use.
+            var (record, _) = await EnsureCurrentRecordAsync(domain, cancellationToken);
             if (record is null)
                 continue;
 
@@ -54,15 +65,33 @@ internal sealed class ConfigDistributionService(
     }
 
     /// <summary>
-    /// Re-evaluates a domain against its source. Creates the record on first use,
-    /// bumps the version when the payload changed, and returns the new bundle — or
-    /// <c>null</c> when the content is unchanged (so callers can skip publishing).
+    /// Re-evaluates a domain against its source and returns the new bundle when the
+    /// payload changed — or <c>null</c> when nothing changed (so the push path can
+    /// skip publishing). The pull path uses <see cref="EnsureCurrentRecordAsync"/>
+    /// directly because it must send the current record even when this call did not
+    /// change it.
     /// </summary>
     public async Task<ConfigBundle?> RefreshAsync(ConfigDomain domain, CancellationToken cancellationToken)
     {
+        var (record, changed) = await EnsureCurrentRecordAsync(domain, cancellationToken);
+        if (record is null || !changed)
+            return null;
+
+        return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
+    }
+
+    /// <summary>
+    /// Materializes the record from its source: creates it on first use, bumps the
+    /// version when the payload changed, and otherwise leaves it untouched. Returns
+    /// the current record (reflecting the latest source) and whether this call
+    /// changed it, or <c>(null, false)</c> when no source owns the domain.
+    /// </summary>
+    private async Task<(ConfigRecord? Record, bool Changed)> EnsureCurrentRecordAsync(
+        ConfigDomain domain, CancellationToken cancellationToken)
+    {
         var source = sources.FirstOrDefault(s => s.Domain == domain);
         if (source is null)
-            return null;
+            return (null, false);
 
         var payload = await source.BuildPayloadAsync(cancellationToken);
         var record = await records.GetBySpecAsync(new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
@@ -78,39 +107,16 @@ internal sealed class ConfigDistributionService(
                 LastUpdated = DateTimeOffset.UtcNow,
             };
             await records.AddAsync(record, cancellationToken);
-            return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
+            return (record, true);
         }
 
         if (record.Payload == payload)
-            return null;
+            return (record, false);
 
         record.Version++;
         record.Payload = payload;
         record.LastUpdated = DateTimeOffset.UtcNow;
         await records.UpdateAsync(record, cancellationToken);
-        return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
-    }
-
-    private async Task<ConfigRecord?> GetOrCreateRecordAsync(ConfigDomain domain, CancellationToken cancellationToken)
-    {
-        var record = await records.GetBySpecAsync(new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
-        if (record is not null)
-            return record;
-
-        var source = sources.FirstOrDefault(s => s.Domain == domain);
-        if (source is null)
-            return null;
-
-        var payload = await source.BuildPayloadAsync(cancellationToken);
-        record = new ConfigRecord
-        {
-            Id = Guid.NewGuid(),
-            Domain = domain,
-            Version = 1,
-            Payload = payload,
-            LastUpdated = DateTimeOffset.UtcNow,
-        };
-        await records.AddAsync(record, cancellationToken);
-        return record;
+        return (record, true);
     }
 }

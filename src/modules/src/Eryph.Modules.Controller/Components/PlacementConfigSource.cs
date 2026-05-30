@@ -5,6 +5,7 @@ using Eryph.Core;
 using Eryph.Core.Settings;
 using Eryph.Messages.Components;
 using LanguageExt;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Components;
 
@@ -13,7 +14,8 @@ namespace Eryph.Modules.Controller.Components;
 /// Placement section of the controller settings.
 /// </summary>
 internal sealed class PlacementConfigSource(
-    IControllerSettingsManager settingsManager)
+    IControllerSettingsManager settingsManager,
+    ILogger<PlacementConfigSource> logger)
     : IConfigSource
 {
     public ConfigDomain Domain => ConfigDomain.PlacementConfig;
@@ -22,5 +24,15 @@ internal sealed class PlacementConfigSource(
         settingsManager.GetCurrentConfiguration()
             .Match(
                 Right: settings => JsonSerializer.Serialize(settings.Placement),
-                Left: _ => JsonSerializer.Serialize(new PlacementConfig()));
+                Left: error =>
+                {
+                    // Don't distribute a silently-empty placement vocabulary: log the
+                    // read failure so an operator can see why agents got nothing, and
+                    // fall back to an empty config (a later refresh recovers once the
+                    // settings file is readable again).
+                    logger.LogError(
+                        "Failed to read controller settings for {Domain}: {Error}. Distributing empty placement config.",
+                        ConfigDomain.PlacementConfig, error.Message);
+                    return JsonSerializer.Serialize(new PlacementConfig());
+                });
 }
