@@ -49,8 +49,12 @@ namespace Eryph.Modules.Controller
 
         public string Name => "Eryph.Controller";
 
+        private readonly IConfiguration _configuration;
+
         public ControllerModule(IConfiguration configuration)
         {
+             _configuration = configuration;
+
              configuration.GetSection("ChangeTracking")
                 .Bind(_changeTrackingConfig);
 
@@ -140,6 +144,9 @@ namespace Eryph.Modules.Controller
             container.Register<ConfigDistributionService>(Lifestyle.Scoped);
             // Controller settings (incl. the Placement section) are owned by the host.
             container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());
+            // EndpointsConfigSource reads the operator endpoint overrides from the host
+            // configuration; register it explicitly rather than relying on auto cross-wiring.
+            container.RegisterInstance(_configuration);
             container.Collection.Register<IConfigSource>(
                 [typeof(PlacementConfigSource), typeof(NetworkProvidersConfigSource), typeof(EndpointsConfigSource)]);
 

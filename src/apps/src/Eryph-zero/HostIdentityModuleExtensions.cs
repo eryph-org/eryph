@@ -40,11 +40,12 @@ namespace Eryph.Runtime.Zero
             {
                 return (context, container) =>
                 {
-                    next(context, container);
-
-                    // The identity module configures its own bus + component registration; the
-                    // host only supplies the transport (in-memory for the single-process zero).
+                    // The identity module configures its own bus + component registration in
+                    // ConfigureContainer (invoked by next()), so the transport must be registered
+                    // BEFORE next() — matching the standalone identity host filter.
                     container.UseInMemoryBus(context.ModulesHostServices);
+
+                    next(context, container);
 
                     container.RegisterSingleton<IClientConfigService, ClientConfigService>();
                     container.RegisterDecorator(typeof(IClientService),
