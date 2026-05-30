@@ -1,9 +1,8 @@
-﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.Modules.ComputeApi;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Eryph.ApiEndpoint
 {
@@ -12,12 +11,14 @@ namespace Eryph.ApiEndpoint
         public static async Task Main(string[] args)
         {
             var container = new Container();
+            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+            container.Options.EnableAutoVerification = false;
             container.Bootstrap();
 
             await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
-                .UseAspNetCore((module, webHostBuilder) => { })
-                .HostModule<ComputeApiModule>()
+                .UseAspNetCoreWithDefaults((module, webHostBuilder) => { })
+                .AddComputeApiModule()
                 .RunConsoleAsync();
         }
     }
