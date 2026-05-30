@@ -157,14 +157,15 @@ namespace Eryph.Modules.HostAgent
             container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationTaskHandler<>), Lifestyle.Scoped);
             container.AddRebusOperationsHandlers();
 
-            // Use the registered component inbound queue as the single source of truth for the
-            // bus endpoint name (it must match what AddComponentRegistration announced).
-            var localName = container.GetInstance<ComponentIdentity>().InboundQueue;
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())
+                // Use the registered component inbound queue as the single source of truth for
+                // the bus endpoint name (it must match what AddComponentRegistration announced).
+                // Resolved inside the transport lambda (which runs at bus start) so it does not
+                // trigger premature container verification during ConfigureContainer.
                 .Transport(t =>
                     container.GetService<IRebusTransportConfigurer>()
-                        .Configure(t, localName))
+                        .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
                 .Options(x =>
                 {
                     x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength:5);
