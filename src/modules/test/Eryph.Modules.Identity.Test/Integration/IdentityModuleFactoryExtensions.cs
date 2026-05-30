@@ -106,10 +106,12 @@ public static class IdentityModuleFactoryExtensions
         {
             return (context, container) =>
             {
-                next(context, container);
-
+                // Register the transport BEFORE the module configures its bus (the module starts
+                // Rebus inside ConfigureContainer), matching the production identity host filter.
                 container.RegisterInstance(context.ModulesHostServices.GetRequiredService<InMemNetwork>());
                 container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
+
+                next(context, container);
             };
         }
     }

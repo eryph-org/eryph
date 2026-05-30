@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Modules.Identity;
-using Serilog;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
@@ -11,12 +10,9 @@ namespace Eryph.Identity
     {
         public static async Task Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
-
+            // Logging uses the ASP.NET Core host defaults (UseAspNetCoreWithDefaults). Serilog is
+            // intentionally not wired here: .UseSerilog() returns IHostBuilder and breaks the
+            // RunModule chain — it lands with the move to the RunConsoleAsync host pattern.
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
             container.Options.EnableAutoVerification = false;
