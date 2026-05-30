@@ -1,7 +1,0 @@
-placement:
-  datastores:
-  - default
-  - fast
-  environments:
-  - default
-  - staging

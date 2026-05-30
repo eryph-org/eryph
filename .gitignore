@@ -264,3 +264,6 @@ __pycache__/
 
 # Internal-only docs (non-public architecture/planning context)
 docs/internal/
+
+# Local standalone-run scratch dir (pids, generated settings, planning notes)
+.run/
