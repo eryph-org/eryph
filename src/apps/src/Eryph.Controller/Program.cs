@@ -33,10 +33,7 @@ namespace Eryph.Controller
             container.Bootstrap();
 
             await ModulesHost.CreateDefaultBuilder(args)
-                // Single-module host: share the root container so the bootstrap's
-                // transport/store/config registrations are visible to the module
-                // (eryph-zero instead registers these per-module via filters).
-                .UseSimpleInjector(container, false)
+                .UseSimpleInjector(container)
                 .ConfigureAppConfiguration((_, config) =>
                     config.AddInMemoryCollection(new Dictionary<string, string>
                     {
@@ -45,7 +42,7 @@ namespace Eryph.Controller
                         { "store:type", "inmemory" },
                         { "databus:type", "inmemory" },
                     }))
-                .HostModule<ControllerModule>()
+                .AddControllerModule()
                 .UseSerilog()
                 .RunConsoleAsync().ConfigureAwait(false);
         }

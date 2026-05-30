@@ -1,31 +1,30 @@
-﻿using System;
-using Dbosoft.Rebus.Configuration;
+using System;
 using Dbosoft.Rebus.Operations;
+using Eryph.AppCore;
 using Eryph.Core;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.MySql;
-using Rebus.Sagas;
-using Rebus.Timeouts;
 using SimpleInjector;
 
 namespace Eryph.Controller
 {
     internal static class ControllerContainerExtensions
     {
+        /// <summary>
+        /// Root-container registrations that the controller module resolves through the
+        /// cross-wired service provider. Module-container-resolved dependencies (bus
+        /// transport, Rebus stores, the state-store context + migration) are registered
+        /// via the host filters in <see cref="HostControllerModuleExtensions"/>.
+        /// </summary>
         public static void Bootstrap(this Container container)
         {
-            container
-                .UseRabbitMq()
-                .UseMySql();
+            container.Register<IControllerSettingsManager, ControllerSettingsManager>();
+            container.Register<INetworkProviderManager, NetworkProviderManager>();
 
-            // Controller-owned config managers (shared standalone implementations).
-            // Cross-wired so ControllerModule can resolve them from the service provider.
-            container.Register<IControllerSettingsManager, AppCore.ControllerSettingsManager>();
-            container.Register<INetworkProviderManager, AppCore.NetworkProviderManager>();
+            container.RegisterInstance<IStateStoreContextConfigurer>(
+                new MySqlStateStoreContextConfigurer(GetStateDbConnectionString()));
 
-            // Rebus operations workflow config (cross-wired to the MS service provider,
-            // which ControllerModule resolves it from). Mirrors eryph-zero.
             container.RegisterInstance(new WorkflowOptions
             {
                 DispatchMode = WorkflowEventDispatchMode.Publish,
@@ -36,29 +35,9 @@ namespace Eryph.Controller
             });
         }
 
-        public static Container UseRabbitMq(this Container container)
-        {
-            container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
-
-            return container;
-        }
-
-        public static Container UseMySql(this Container container)
-        {
-            // State database on MariaDB. Connection string via env var so the same
-            // binary can target different brokers/databases per deployment.
-            var connectionString = Environment.GetEnvironmentVariable("ERYPH_STATEDB_CONNECTIONSTRING")
-                ?? "Server=localhost;Port=3306;Database=eryph;Uid=root;Pwd=eryph;";
-            container.RegisterInstance<IStateStoreContextConfigurer>(
-                new MySqlStateStoreContextConfigurer(connectionString));
-
-            // Phase-1 milestone: in-memory Rebus stores (saga/timeout) selected via the
-            // 'store:type=inmemory' configuration. Durable MariaDB-backed Rebus stores
-            // are a later milestone.
-            container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
-            container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
-
-            return container;
-        }
+        /// <summary>The MariaDB connection string, from env or a localhost dev default.</summary>
+        public static string GetStateDbConnectionString() =>
+            Environment.GetEnvironmentVariable("ERYPH_STATEDB_CONNECTIONSTRING")
+            ?? "Server=localhost;Port=3306;Database=eryph;Uid=root;Pwd=eryph;";
     }
 }
