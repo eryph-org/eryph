@@ -8,7 +8,9 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
+using Eryph.Messages.Components;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Networks;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.HostAgent.Inventory;
@@ -85,6 +87,26 @@ namespace Eryph.Modules.HostAgent
             options.AddHostedService<VmRemovalWatcherService>();
             options.AddHostedService<VmStateChangeWatcherService>();
             options.AddHostedService<DiskStoresChangeWatcherService>();
+
+            // Opt in to controller-driven configuration distribution. The agent
+            // registers on its own inbound queue and subscribes to the placement
+            // vocabulary and the network-provider configuration via its realizers.
+            options.AddComponentRegistration(
+                ComponentType.VMHostAgent,
+                // The agent's inbound queue suffix must equal the agent name the controller uses
+                // to route operations to it ({QueueNames.VMHostAgent}.{AgentName}). That name is
+                // Environment.MachineName everywhere in the controller — placement, the compute
+                // sagas, and the VM/disk inventory it stores — so the queue stays on the machine
+                // name. Unifying the agent identity on the FQDN belongs to the deferred multi-host
+                // slice, where routing switches to the registered InboundQueue from the component
+                // catalog instead of a name constructed from the machine name.
+                $"{QueueNames.VMHostAgent}.{Environment.MachineName}",
+                // The host-agent hosts no service endpoints, so it advertises none.
+                advertisedEndpoints: null,
+                typeof(PlacementConfigRealizer),
+                typeof(NetworkProvidersConfigRealizer),
+                typeof(EndpointsConfigRealizer));
+
             options.AddLogging();
         }
 
@@ -104,6 +126,15 @@ namespace Eryph.Modules.HostAgent
             container.RegisterSingleton<IOVSService<OVNChassisNode>, OVSNodeService<OVNChassisNode>>();
             container.RegisterSingleton<IOVSService<OVSDbNode>, OVSNodeService<OVSDbNode>>();
             container.RegisterSingleton<IOVSService<OVSSwitchNode>, OVSNodeService<OVSSwitchNode>>();
+
+            // Holds the controller-distributed placement vocabulary applied by
+            // PlacementConfigRealizer and enforced by the provisioning handlers.
+            container.RegisterSingleton<IPlacementConfigProvider, PlacementConfigProvider>();
+
+            // Holds the controller-distributed deployment endpoints applied by
+            // EndpointsConfigRealizer (the identity issuer etc.). Registered as the
+            // concrete type so it does not collide with a host-provided IEndpointResolver.
+            container.RegisterSingleton<DistributedEndpointResolver>();
 
             container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
@@ -133,12 +164,15 @@ namespace Eryph.Modules.HostAgent
             container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationTaskHandler<>), Lifestyle.Scoped);
             container.AddRebusOperationsHandlers();
 
-            var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())
+                // Use the registered component inbound queue as the single source of truth for
+                // the bus endpoint name (it must match what AddComponentRegistration announced).
+                // Resolved inside the transport lambda (which runs at bus start) so it does not
+                // trigger premature container verification during ConfigureContainer.
                 .Transport(t =>
                     container.GetService<IRebusTransportConfigurer>()
-                        .Configure(t, localName))
+                        .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
                 .Options(x =>
                 {
                     x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength:5);

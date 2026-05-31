@@ -92,6 +92,13 @@ namespace Eryph.Runtime.Zero.Configuration
             return projectsConfigPath;
         }
 
+        public static string GetControllerSettingsPath()
+        {
+            // Operator-editable controller settings (e.g. placement: datastore/environment names).
+            var privateConfigPath = GetPrivateConfigPath();
+            return Path.Combine(privateConfigPath, "controller");
+        }
+
         public static string GetProjectNetworksConfigPath()
         {
             var projectsConfigPath = GetProjectsConfigPath();

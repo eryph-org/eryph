@@ -1,20 +1,42 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.Modules.HostAgent;
+using Microsoft.Extensions.Hosting;
+using Serilog;
 using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Eryph.Agent
 {
     internal class Program
     {
-        private static Task Main(string[] args)
+        private static async Task Main(string[] args)
         {
-            var container = new Container();
-            container.Bootstrap();
+            // Use Serilog (like eryph-zero / the standalone controller) instead of the host's
+            // default logging, which hits a Microsoft.Extensions.Logging version seam on .NET 10.
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-            return ModulesHost.CreateDefaultBuilder(args)
-                .UseSimpleInjector(container)
-                .RunModule<VmHostAgentModule>();
+            try
+            {
+                var container = new Container();
+                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                container.Options.EnableAutoVerification = false;
+                container.Bootstrap();
+
+                await ModulesHost.CreateDefaultBuilder(args)
+                    .UseSimpleInjector(container)
+                    .AddVmHostAgentModule()
+                    .UseSerilog()
+                    .RunConsoleAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                // Flush any log events buffered by Serilog before the process exits.
+                Log.CloseAndFlush();
+            }
         }
     }
 }

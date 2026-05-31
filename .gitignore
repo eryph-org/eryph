@@ -261,3 +261,9 @@ __pycache__/
 *.pyc
 /docker/docker-compose-services/store/mysql
 /store/mysql
+
+# Internal-only docs (non-public architecture/planning context)
+docs/internal/
+
+# Local standalone-run scratch dir (pids, generated settings, planning notes)
+.run/

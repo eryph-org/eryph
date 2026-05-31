@@ -17,7 +17,7 @@ namespace Eryph.StateDb.MySql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -221,6 +221,87 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("CatletSpecificationVersionVariantGenes");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.ComponentRegistration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("AdvertisedEndpointsJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("AppliedConfigVersionsJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("ComponentId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("InboundQueue")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("InstanceId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTimeOffset>("LastHeartbeat")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("MachineName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset>("RegisteredAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Version")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComponentId")
+                        .IsUnique();
+
+                    b.ToTable("ComponentRegistrations");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.ConfigRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTimeOffset>("LastUpdated")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Domain")
+                        .IsUnique();
+
+                    b.ToTable("ConfigRecords");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>

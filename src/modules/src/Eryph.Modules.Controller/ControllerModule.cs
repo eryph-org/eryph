@@ -13,6 +13,7 @@ using Eryph.ModuleCore;
 using Eryph.ModuleCore.Configuration;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller.ChangeTracking;
+using Eryph.Modules.Controller.Components;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Inventory;
 using Eryph.Modules.Controller.Networks;
@@ -48,8 +49,12 @@ namespace Eryph.Modules.Controller
 
         public string Name => "Eryph.Controller";
 
+        private readonly IConfiguration _configuration;
+
         public ControllerModule(IConfiguration configuration)
         {
+             _configuration = configuration;
+
              configuration.GetSection("ChangeTracking")
                 .Bind(_changeTrackingConfig);
 
@@ -115,15 +120,35 @@ namespace Eryph.Modules.Controller
             container.AddStateDbDataServices();
 
             container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
-            container.RegisterSingleton<IClusterTopologyProvider, SingleHostClusterTopologyProvider>();
+            // KNOWN LIMITATION (deferred to the multi-host placement slice): the registry is
+            // single-host (derives the agent from Environment.MachineName / local chassis). It is
+            // correct for the all-in-one and the current single-host split dev runtime, but real
+            // multi-host placement must derive host agents from the ComponentRegistration catalog
+            // (IComponentRegistryService) instead. Not wired yet — same category as the documented
+            // network-sync accepted workaround.
+            container.RegisterSingleton<IComponentRegistry, SingleHostComponentRegistry>();
+            container.RegisterSingleton<IClusterTopologyProvider, ComponentRegistryClusterTopologyProvider>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
             container.RegisterSingleton<IStorageIdentifierGenerator, StorageIdentifierGenerator>();
 
-            //use placement calculator of Host
-            container.RegisterInstance(serviceProvider.GetRequiredService<IPlacementCalculator>());
-            container.RegisterInstance(serviceProvider.GetRequiredService<IStorageManagementAgentLocator>());
+            // Placement and storage-agent location resolve through the component registry
+            // (single instance shared across both interfaces).
+            var agentLocator = Lifestyle.Singleton.CreateRegistration<ComponentRegistryAgentLocator>(container);
+            container.AddRegistration(typeof(IPlacementCalculator), agentLocator);
+            container.AddRegistration(typeof(IStorageManagementAgentLocator), agentLocator);
+
+            // Component registration + configuration distribution (controller is the authority).
+            container.Register<IComponentRegistryService, ComponentRegistryService>(Lifestyle.Scoped);
+            container.Register<ConfigDistributionService>(Lifestyle.Scoped);
+            // Controller settings (incl. the Placement section) are owned by the host.
+            container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());
+            // EndpointsConfigSource reads the operator endpoint overrides from the host
+            // configuration; register it explicitly rather than relying on auto cross-wiring.
+            container.RegisterInstance(_configuration);
+            container.Collection.Register<IConfigSource>(
+                [typeof(PlacementConfigSource), typeof(NetworkProvidersConfigSource), typeof(EndpointsConfigSource)]);
 
             //use network services from host
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());

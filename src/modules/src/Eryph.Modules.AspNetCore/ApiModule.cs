@@ -9,6 +9,7 @@ using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Components;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
@@ -88,7 +89,7 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
     }
 
     [UsedImplicitly]
-    public void AddSimpleInjector(SimpleInjectorAddOptions options)
+    public virtual void AddSimpleInjector(SimpleInjectorAddOptions options)
     {
         options.AddAspNetCore().AddControllerActivation();
         options.AddLogging();
@@ -155,8 +156,12 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
         {
             return configurer
                 .Serialization(s => s.UseEryphSettings())
+                // Bidirectional endpoint on the component's own inbound queue (registration is
+                // mandatory for every API), so the controller can route configuration to it.
+                // This is uniform across packagings — eryph-zero included — not a split-only path.
                 .Transport(t =>
-                    container.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
+                    container.GetRequiredService<IRebusTransportConfigurer>()
+                        .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
                 .Options(x =>
                 {
                     x.RetryStrategy();

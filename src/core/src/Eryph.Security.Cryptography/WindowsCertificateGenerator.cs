@@ -21,7 +21,36 @@ public class WindowsCertificateGenerator : CertificateGenerator
     {
         var certificate = base.GenerateSelfSignedCertificate(
             subjectName, friendlyName, keyPair, validDays, extensions);
-        
+
+        certificate.FriendlyName = friendlyName;
+        return certificate;
+    }
+
+    public override X509Certificate2 GenerateCaCertificate(
+        X500DistinguishedName subjectName,
+        string friendlyName,
+        RSA keyPair,
+        int validDays,
+        IReadOnlyList<X509Extension> extensions)
+    {
+        var certificate = base.GenerateCaCertificate(
+            subjectName, friendlyName, keyPair, validDays, extensions);
+
+        certificate.FriendlyName = friendlyName;
+        return certificate;
+    }
+
+    public override X509Certificate2 IssueCertificate(
+        X500DistinguishedName subjectName,
+        string friendlyName,
+        RSA subjectKey,
+        X509Certificate2 issuerCertificate,
+        int validDays,
+        IReadOnlyList<X509Extension> extensions)
+    {
+        var certificate = base.IssueCertificate(
+            subjectName, friendlyName, subjectKey, issuerCertificate, validDays, extensions);
+
         certificate.FriendlyName = friendlyName;
         return certificate;
     }
