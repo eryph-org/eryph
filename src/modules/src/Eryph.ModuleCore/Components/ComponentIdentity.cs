@@ -33,7 +33,11 @@ public sealed class ComponentIdentity
         ComponentId = CreateStableId(componentType, MachineName);
         InstanceId = Guid.NewGuid();
         Version = GetComponentVersion();
-        AdvertisedEndpoints = advertisedEndpoints ?? new Dictionary<string, string>();
+        // Defensive copy so a caller cannot mutate what the component advertises after
+        // construction; endpoint names are compared case-insensitively, as they are downstream.
+        AdvertisedEndpoints = advertisedEndpoints is null
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(advertisedEndpoints, StringComparer.OrdinalIgnoreCase);
     }
 
     public Guid ComponentId { get; }

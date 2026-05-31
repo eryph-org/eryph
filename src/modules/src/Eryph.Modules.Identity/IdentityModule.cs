@@ -201,8 +201,9 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         // The identity component runs a bidirectional bus endpoint on its own inbound queue
         // (from the registered ComponentIdentity) so it can register/heartbeat and receive
         // config. The host supplies the transport (in-memory for eryph-zero, RabbitMQ for split).
-        // The module has no Rebus handlers of its own; AddComponentRegistration appends the
-        // config-distribution handlers into this collection.
+        // This scan registers any IHandleMessages<> in the identity module's own assembly; the
+        // config-distribution handlers (ConfigSnapshotCommand/PushConfigCommand) are registered
+        // separately by AddComponentRegistration against their closed-generic handler services.
         container.Collection.Register(typeof(IHandleMessages<>), typeof(IdentityModule).Assembly);
         container.ConfigureRebus(configurer => configurer
             .Serialization(s => s.UseEryphSettings())
