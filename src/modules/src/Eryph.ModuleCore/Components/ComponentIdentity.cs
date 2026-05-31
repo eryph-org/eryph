@@ -30,7 +30,7 @@ public sealed class ComponentIdentity
         ComponentType = componentType;
         InboundQueue = inboundQueue;
         MachineName = GetFullyQualifiedDomainName();
-        ComponentId = CreateStableId(componentType, MachineName);
+        ComponentId = DeriveComponentId(componentType, MachineName);
         InstanceId = Guid.NewGuid();
         Version = GetComponentVersion();
         // Defensive copy so a caller cannot mutate what the component advertises after
@@ -77,7 +77,13 @@ public sealed class ComponentIdentity
         return productVersion ?? entry.GetName().Version?.ToString() ?? "";
     }
 
-    private static Guid CreateStableId(ComponentType componentType, string fullyQualifiedDomainName)
+    /// <summary>
+    /// Derives the stable component id from the component type and host FQDN. This is the same
+    /// value a component computes for itself and that the enrollment service derives server-side,
+    /// so the identity bound into an issued certificate cannot be independently spoofed by the
+    /// requester. Deterministic and case-insensitive in the FQDN.
+    /// </summary>
+    public static Guid DeriveComponentId(ComponentType componentType, string fullyQualifiedDomainName)
     {
         var name = $"eryph-component:{componentType}:{fullyQualifiedDomainName.ToLowerInvariant()}";
         // SHA-256 (not SHA-1) so the derivation isn't flagged by security tooling; the id only
