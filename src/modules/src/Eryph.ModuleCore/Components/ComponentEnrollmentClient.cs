@@ -64,8 +64,18 @@ public sealed class ComponentEnrollmentClient(
             }
             catch (Exception ex)
             {
-                // The identity service may still be starting, or be briefly unavailable. Never fail
-                // the component on the first attempt — back off and keep trying.
+                if (!blocking)
+                {
+                    // A still-valid certificate is already in place (this is a renewal). Do not loop
+                    // here — the hosted service retries on its next interval. Only the initial
+                    // enrollment (no usable certificate yet) blocks and retries until it succeeds.
+                    logger.LogWarning(
+                        ex, "Component certificate renewal attempt failed; will retry on the next check.");
+                    return;
+                }
+
+                // No usable certificate: the identity service may still be starting or be briefly
+                // unavailable. Never fail the component on the first attempt — back off and keep trying.
                 logger.LogWarning(
                     ex,
                     "Component enrollment attempt {Attempt} failed; retrying in {Delay}. "

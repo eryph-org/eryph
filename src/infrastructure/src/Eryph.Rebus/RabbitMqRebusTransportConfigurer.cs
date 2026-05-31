@@ -60,24 +60,12 @@ namespace Eryph.Rebus
                     ServerName = connectionFactory.HostName,
                     Certs = [_clientCertificate],
                     // Validate the broker against the distributed CA trust bundle rather than the
-                    // machine trust store.
-                    CertificateValidationCallback = (_, certificate, _, _) =>
-                        certificate is not null && ChainsToTrustedRoot(certificate),
+                    // machine trust store (and still require a matching host name and serverAuth).
+                    CertificateValidationCallback = (_, certificate, chain, errors) =>
+                        TrustEvaluation.IsTrustedServerCertificate(certificate, chain, errors, _caTrustBundle),
                 };
                 return connectionFactory;
             });
-        }
-
-        private bool ChainsToTrustedRoot(X509Certificate certificate)
-        {
-            using var serverCertificate = X509CertificateLoader.LoadCertificate(
-                certificate.Export(X509ContentType.Cert));
-            using var chain = new X509Chain();
-            chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-            foreach (var ca in _caTrustBundle)
-                chain.ChainPolicy.CustomTrustStore.Add(ca);
-            chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-            return chain.Build(serverCertificate);
         }
 
         private void WaitForConnection()

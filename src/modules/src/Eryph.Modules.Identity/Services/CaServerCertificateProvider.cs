@@ -16,7 +16,9 @@ public sealed class CaServerCertificateProvider(
 {
     public IssuedCertificate GetServerCertificate(string dnsName)
     {
-        var key = certificateKeyService.GenerateRsaKey(2048);
+        // CopyWithPrivateKey binds an independent copy of the key into the returned certificate, so
+        // the source key can be disposed once the bound leaf has been created.
+        using var key = certificateKeyService.GenerateRsaKey(2048);
         var issued = certificateAuthority.IssueServerCertificate(dnsName, key);
 
         // The server presents the leaf, so it needs the private key bound; the issuing chain is

@@ -24,7 +24,8 @@ public static class ComponentEnrollment
         string certificateDirectory,
         string trustAnchorBundlePath,
         TimeSpan renewalLeadTime,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken = default)
     {
         var store = new FileComponentCertificateStore(certificateDirectory, renewalLeadTime);
 
@@ -37,8 +38,9 @@ public static class ComponentEnrollment
                 loggerFactory.CreateLogger<ComponentEnrollmentClient>());
 
             // Block here until enrolled: the bus cannot connect without the certificate, and the
-            // client retries through the identity service still starting.
-            client.EnsureEnrolledAsync(CancellationToken.None).GetAwaiter().GetResult();
+            // client retries through the identity service still starting. The token lets the host
+            // abort a stuck startup cleanly.
+            client.EnsureEnrolledAsync(cancellationToken).GetAwaiter().GetResult();
         }
 
         var clientCertificate = store.LoadClientCertificate()
@@ -57,22 +59,12 @@ public static class ComponentEnrollment
 
         var handler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (_, certificate, _, _) =>
-                certificate is not null && ChainsToTrustedRoot(certificate, trustAnchors),
+            // Reuse the shared mTLS validation: rejects host-name mismatch, builds the chain through
+            // the presented intermediates to the pre-provisioned root, and requires serverAuth.
+            ServerCertificateCustomValidationCallback = (_, certificate, chain, errors) =>
+                TrustEvaluation.IsTrustedServerCertificate(certificate, chain, errors, trustAnchors),
         };
 
         return new HttpClient(handler);
-    }
-
-    private static bool ChainsToTrustedRoot(X509Certificate2 certificate, X509Certificate2Collection roots)
-    {
-        if (roots.Count == 0)
-            return false;
-
-        using var chain = new X509Chain();
-        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        chain.ChainPolicy.CustomTrustStore.AddRange(roots);
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        return chain.Build(certificate);
     }
 }

@@ -22,6 +22,10 @@ public class Enroll(IComponentEnrollmentService enrollmentService)
         .WithRequest<ComponentEnrollmentRequest>
         .WithActionResult<ComponentEnrollmentResult>
 {
+    // SECURITY: this anonymous endpoint authenticates only via the enrollment policy (a shared
+    // secret by default). Before it is exposed on a reachable interface, the host must apply rate
+    // limiting to this route (ASP.NET Core rate limiter) to bound brute-force attempts against the
+    // secret. The constant-time secret comparison alone does not limit attempt volume.
     [AllowAnonymous]
     [HttpPost("~/components/enroll")]
     [SwaggerOperation(
@@ -35,6 +39,9 @@ public class Enroll(IComponentEnrollmentService enrollmentService)
         [FromBody] ComponentEnrollmentRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (request is null)
+            return Task.FromResult<ActionResult<ComponentEnrollmentResult>>(BadRequest());
+
         try
         {
             var result = enrollmentService.Enroll(request);
