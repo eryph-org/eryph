@@ -31,6 +31,7 @@ public class ZeroStartupModule
         container.RegisterSingleton(serviceProvider.GetRequiredService<IEryphOvnPathProvider>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<IHostSettingsProvider>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<INetworkProviderManager>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<IControllerSettingsManager>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>);
 
         container.RegisterSingleton<IClientConfigService, ClientConfigService>();

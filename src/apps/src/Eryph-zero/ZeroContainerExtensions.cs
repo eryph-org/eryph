@@ -5,7 +5,9 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
+using Eryph.IdentityDb;
 using Eryph.ModuleCore.Networks;
+using Eryph.Modules.Identity.Services;
 using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.HostAgent;
 using Eryph.Rebus;
@@ -13,6 +15,7 @@ using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.Configuration.Networks;
+using Eryph.Runtime.Zero.Configuration.Settings;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
@@ -44,7 +47,14 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
             container.RegisterInstance<IEryphOvnPathProvider>(new EryphOvnPathProvider());
 
+            // Identity token-signing certificate manager + in-memory identity store. Owned by
+            // the root bootstrap (like the standalone IdentityContainerExtensions), so the identity
+            // host filter only wires the module, not these services.
+            container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
+            container.Register<Eryph.IdentityDb.IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
+
             container.Register<INetworkProviderManager, NetworkProviderManager>();
+            container.Register<IControllerSettingsManager, ControllerSettingsManager>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
 

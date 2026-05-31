@@ -3,18 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Eryph.Core;
+using Eryph.Messages.Components;
 using Eryph.ModuleCore.Authorization;
+using Eryph.ModuleCore.Components;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
+using Eryph.Rebus;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 using IEndpointResolver = Eryph.ModuleCore.IEndpointResolver;
 
@@ -29,6 +33,22 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
     public override string ApiName => "Compute Api";
         
     public override string AudienceName => EryphConstants.Authorization.Audiences.ComputeApi;
+
+    public override void AddSimpleInjector(SimpleInjectorAddOptions options)
+    {
+        base.AddSimpleInjector(options);
+
+        // Register as a deployment component and advertise the compute endpoint. Uniform
+        // across packagings (eryph-zero included): every component registers with the
+        // controller so the deployment has a complete, mandatory service catalog.
+        options.AddComponentRegistration(
+            ComponentType.ComputeApi,
+            $"{QueueNames.ApiServices}.{ComponentIdentity.GetLocalHostId()}",
+            new Dictionary<string, string>
+            {
+                ["compute"] = endpointResolver.GetEndpoint("compute").ToString(),
+            });
+    }
 
     public override void ConfigureServices(
         IServiceProvider serviceProvider,

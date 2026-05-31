@@ -7,6 +7,7 @@ using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.Core.Network;
+using Eryph.Messages.Components;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.ModuleCore.Networks;
 using Eryph.Rebus;
@@ -33,7 +34,31 @@ internal class NetworkSyncService(
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
         from providerConfig in providerManager.GetCurrentConfiguration()
         from _ in SyncNetworks(providerConfig).Run().ToEitherAsync()
+        from _2 in PublishNetworkProvidersConfigChange().ToAsync()
         select Unit.Default;
+
+    // After (re)realizing the network configuration, re-evaluate the distributed
+    // NetworkProviders domain and push it to registered agents so a config change
+    // propagates without requiring an agent restart. The handler bumps the version
+    // and publishes only when the content actually changed, so an unchanged sync
+    // (e.g. on startup) is a no-op. Best-effort: a failed publish must never fail
+    // the network sync itself.
+    private async Task<Either<Error, Unit>> PublishNetworkProvidersConfigChange()
+    {
+        try
+        {
+            await container.GetInstance<IBus>().Advanced.Routing.Send(
+                QueueNames.Controllers,
+                new RefreshConfigDomainCommand { Domain = ConfigDomain.NetworkProviders });
+        }
+        catch (Exception ex)
+        {
+            container.GetInstance<ILogger<NetworkSyncService>>().LogWarning(
+                ex, "Failed to publish network provider configuration change to subscribers.");
+        }
+
+        return Right<Error, Unit>(unit);
+    }
 
     private Aff<Unit> SyncNetworks(
         NetworkProvidersConfiguration providersConfiguration) =>

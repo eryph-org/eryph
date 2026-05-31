@@ -20,6 +20,7 @@ using Eryph.AnsiConsole.JsonLines;
 using Eryph.AnsiConsole.Sys;
 using Eryph.App;
 using Eryph.Core;
+using Eryph.Core.Settings;
 using Eryph.Core.VmAgent;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Startup;
@@ -33,6 +34,7 @@ using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
+using Eryph.Runtime.Zero.Configuration.Settings;
 using Eryph.Runtime.Zero.Startup;
 using Eryph.StateDb.Sqlite;
 using Eryph.VmManagement;
@@ -206,6 +208,21 @@ internal static class Program
             nonInteractiveOption, jsonOption);
         networksCommand.AddCommand(syncNetworkConfigCommand);
 
+        var controllerSettingsCommand = new Command("controllersettings");
+        rootCommand.AddCommand(controllerSettingsCommand);
+
+        var getControllerSettingsCommand = new Command("get");
+        getControllerSettingsCommand.AddOption(outFileOption);
+        getControllerSettingsCommand.AddOption(jsonOption);
+        getControllerSettingsCommand.SetHandler(GetControllerSettings, outFileOption, jsonOption);
+        controllerSettingsCommand.AddCommand(getControllerSettingsCommand);
+
+        var importControllerSettingsCommand = new Command("import");
+        importControllerSettingsCommand.AddOption(inFileOption);
+        importControllerSettingsCommand.AddOption(jsonOption);
+        importControllerSettingsCommand.SetHandler(ImportControllerSettings, inFileOption, jsonOption);
+        controllerSettingsCommand.AddCommand(importControllerSettingsCommand);
+
         var driverCommand = new Command("driver");
         rootCommand.AddCommand(driverCommand);
 
@@ -289,6 +306,7 @@ internal static class Program
                     container.RegisterSingleton<System.IO.Abstractions.IFileSystem, FileSystem>();
                     container.Register<IHostSettingsProvider, HostSettingsProvider>();
                     container.Register<INetworkProviderManager, NetworkProviderManager>();
+                    container.Register<IControllerSettingsManager, ControllerSettingsManager>();
                     container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
 
                     container.AddStateDbDataServices();
@@ -395,21 +413,31 @@ internal static class Program
                     .ConfigureEryphAppConfiguration(args)
                     .ConfigureAppConfiguration((_, config) =>
                     {
-                        config.AddInMemoryCollection(new Dictionary<string, string>
+                        var settings = new Dictionary<string, string>
                         {
                             { "bus:type", "inmemory" },
                             { "databus:type", "inmemory" },
                             { "store:type", "inmemory" },
-                        });
+                        };
+                        // Feed the determined deployment endpoints into the controller's
+                        // "endpoints" config section so the Endpoints config domain is
+                        // authoritative here too (EndpointsConfigSource override layer), the
+                        // same way the standalone controller is configured — instead of relying
+                        // only on the in-process EndpointResolver. (Fully removing the shared
+                        // cross-wired resolver is part of the deferred distributed-consumption
+                        // work, since ASP.NET/SSL/JWT consumers read endpoints at startup.)
+                        foreach (var endpoint in endpoints)
+                            settings[$"endpoints:{endpoint.Key}"] = endpoint.Value;
+                        config.AddInMemoryCollection(settings);
                     })
                     .ConfigureChangeTracking()
                     .HostModule<ZeroStartupModule>()
                     .AddVmHostAgentModule()
                     .AddGenePoolModule()
                     .AddNetworkModule()
-                    .AddControllerModule(container)
+                    .AddControllerModule()
                     .AddComputeApiModule()
-                    .AddIdentityModule(container)
+                    .AddIdentityModule()
                     .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                     .ConfigureServices(c => c.AddSingleton(_genepoolSettings))
                     .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
@@ -1112,6 +1140,29 @@ internal static class Program
         Run(from _1 in AdminGuard.ensureElevated()
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
             from _2 in  WriteResult<SimpleConsoleRuntime>(outFile, yaml)
+            select unit,
+            SimpleConsoleRuntime.New(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+
+    private static Task<int> GetControllerSettings(FileSystemInfo? outFile, bool json) =>
+        Run(from _1 in AdminGuard.ensureElevated()
+            from yaml in new ControllerSettingsManager().GetCurrentConfigurationYaml().ToAff(e => e)
+            from _2 in WriteResult<SimpleConsoleRuntime>(outFile, yaml)
+            select unit,
+            SimpleConsoleRuntime.New(
+                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+
+    private static Task<int> ImportControllerSettings(FileSystemInfo? inFile, bool json) =>
+        Run(from _1 in AdminGuard.ensureElevated()
+            from configString in ReadInput(inFile)
+            from _2 in AnsiConsole<SimpleConsoleRuntime>.writeLine("Updating controller settings...")
+            // Validate the input by deserializing it; SaveConfiguration re-serializes the parsed model.
+            from settings in Try(() => ControllerSettingsYamlSerializer.Deserialize(configString))
+                .ToEitherAsync().ToAff(e => e)
+            from _3 in new ControllerSettingsManager().SaveConfiguration(settings).ToAff(e => e)
+            from _4 in AnsiConsole<SimpleConsoleRuntime>.writeLine(
+                "Controller settings imported. They are applied to components as they (re)register.")
+            from _5 in WriteResultToConsole<SimpleConsoleRuntime>(null)
             select unit,
             SimpleConsoleRuntime.New(
                 json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
