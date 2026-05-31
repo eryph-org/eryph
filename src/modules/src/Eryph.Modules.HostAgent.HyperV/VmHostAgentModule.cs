@@ -93,7 +93,14 @@ namespace Eryph.Modules.HostAgent
             // vocabulary and the network-provider configuration via its realizers.
             options.AddComponentRegistration(
                 ComponentType.VMHostAgent,
-                $"{QueueNames.VMHostAgent}.{ComponentIdentity.GetLocalHostId()}",
+                // The agent's inbound queue suffix must equal the agent name the controller uses
+                // to route operations to it ({QueueNames.VMHostAgent}.{AgentName}). That name is
+                // Environment.MachineName everywhere in the controller — placement, the compute
+                // sagas, and the VM/disk inventory it stores — so the queue stays on the machine
+                // name. Unifying the agent identity on the FQDN belongs to the deferred multi-host
+                // slice, where routing switches to the registered InboundQueue from the component
+                // catalog instead of a name constructed from the machine name.
+                $"{QueueNames.VMHostAgent}.{Environment.MachineName}",
                 // The host-agent hosts no service endpoints, so it advertises none.
                 advertisedEndpoints: null,
                 typeof(PlacementConfigRealizer),
