@@ -63,8 +63,11 @@ namespace Eryph.Controller
             {
                 return (context, container) =>
                 {
-                    next(context, container);
-
+                    // The controller module configures and starts its Rebus bus in
+                    // ConfigureContainer (invoked by next()), resolving the transport, saga and
+                    // timeout configurers during configuration. Register the host-provided bus
+                    // primitives, the distributed lock provider and the OVN environment BEFORE
+                    // next() so they are available when the module builds the bus.
                     container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
                     container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
                     container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
@@ -75,6 +78,8 @@ namespace Eryph.Controller
                         new FileDistributedSynchronizationProvider(new DirectoryInfo(locksPath)));
 
                     container.UseOvn();
+
+                    next(context, container);
                 };
             }
         }

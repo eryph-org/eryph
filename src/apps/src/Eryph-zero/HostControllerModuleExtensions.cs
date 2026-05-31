@@ -52,14 +52,18 @@ namespace Eryph.Runtime.Zero
             {
                 return (context, container) =>
                 {
-                    next(context, container);
-
+                    // The controller module configures and starts its Rebus bus in
+                    // ConfigureContainer (invoked by next()). Register the in-memory transport,
+                    // the OVN environment and the distributed lock provider BEFORE next() so they
+                    // are available when the module builds the bus.
                     container.UseInMemoryBus(context.ModulesHostServices);
                     container.UseOvn(context.ModulesHostServices);
 
                     container.RegisterInstance<IDistributedLockProvider>(
                         new FileDistributedSynchronizationProvider(
                             new DirectoryInfo(ZeroConfig.GetLocksConfigPath())));
+
+                    next(context, container);
                 };
             }
         }
