@@ -1,4 +1,4 @@
-using System;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Eryph.ModuleCore.Components;
 
@@ -23,4 +23,14 @@ public interface IComponentCertificateStore
 
     /// <summary>Persists the enrolled certificate, its PKCS#8 private key, chain and trust bundle.</summary>
     void Save(byte[] pkcs8PrivateKey, ComponentEnrollmentResult result);
+
+    /// <summary>
+    /// The component's mTLS client certificate (leaf + private key), usable for TLS, or
+    /// <see langword="null"/> when not enrolled. The issuing intermediate(s) are included so the
+    /// certificate can present a full chain.
+    /// </summary>
+    X509Certificate2? LoadClientCertificate();
+
+    /// <summary>The trusted CA roots (the bundle) used to validate the broker and peers.</summary>
+    X509Certificate2Collection LoadCaTrustBundle();
 }

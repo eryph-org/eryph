@@ -76,5 +76,9 @@ public class ComponentEnrollmentClientTests
         public bool HasCurrentCertificate() => Current;
         public bool HasValidCertificate() => Current;
         public void Save(byte[] pkcs8PrivateKey, ComponentEnrollmentResult result) => SaveCount++;
+
+        public System.Security.Cryptography.X509Certificates.X509Certificate2? LoadClientCertificate() => null;
+
+        public System.Security.Cryptography.X509Certificates.X509Certificate2Collection LoadCaTrustBundle() => [];
     }
 }

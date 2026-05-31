@@ -35,6 +35,29 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         File.WriteAllText(BundlePath, ConcatPem(result.CaTrustBundle));
     }
 
+    public X509Certificate2? LoadClientCertificate()
+    {
+        if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
+            return null;
+
+        using var fromPem = X509Certificate2.CreateFromPemFile(LeafPath, KeyPath);
+        // Re-import via PKCS#12 so the private key is usable by the TLS stack (a certificate
+        // produced directly from PEM is not reliably usable for TLS handshakes on Windows).
+        // Ephemeral so no key is left behind in a machine store.
+        return X509CertificateLoader.LoadPkcs12(
+            fromPem.Export(X509ContentType.Pkcs12),
+            password: null,
+            keyStorageFlags: X509KeyStorageFlags.EphemeralKeySet);
+    }
+
+    public X509Certificate2Collection LoadCaTrustBundle()
+    {
+        var bundle = new X509Certificate2Collection();
+        if (File.Exists(BundlePath))
+            bundle.ImportFromPemFile(BundlePath);
+        return bundle;
+    }
+
     private bool TryLoadLeaf(out DateTime notAfterUtc)
     {
         notAfterUtc = default;
