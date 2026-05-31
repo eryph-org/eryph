@@ -76,7 +76,9 @@ public sealed class ComponentIdentity
     private static Guid CreateStableId(ComponentType componentType, string fullyQualifiedDomainName)
     {
         var name = $"eryph-component:{componentType}:{fullyQualifiedDomainName.ToLowerInvariant()}";
-        var hash = SHA1.HashData(Encoding.UTF8.GetBytes(name));
+        // SHA-256 (not SHA-1) so the derivation isn't flagged by security tooling; the id only
+        // needs to be deterministic and collision-resistant, so the first 16 bytes form the Guid.
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(name));
         var guidBytes = new byte[16];
         Array.Copy(hash, guidBytes, 16);
         return new Guid(guidBytes);

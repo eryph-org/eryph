@@ -44,7 +44,8 @@ internal sealed class ConfigDistributionService(
         };
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>
-        Entitlements.TryGetValue(componentType, out var domains) ? domains : [];
+        // Return a fresh array so a caller cannot mutate the shared entitlement definition.
+        Entitlements.TryGetValue(componentType, out var domains) ? [.. domains] : [];
 
     /// <summary>
     /// Builds the snapshot bundles a component is entitled to and does not already
