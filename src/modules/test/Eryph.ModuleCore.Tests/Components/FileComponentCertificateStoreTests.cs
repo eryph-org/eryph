@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Eryph.ModuleCore.Tests.Components;
 
-public class FileComponentCertificateStoreTests : IDisposable
+public sealed class FileComponentCertificateStoreTests : IDisposable
 {
     private readonly string _dir =
         Path.Combine(Path.GetTempPath(), "eryph-cert-store-test-" + Guid.NewGuid().ToString("N"));
