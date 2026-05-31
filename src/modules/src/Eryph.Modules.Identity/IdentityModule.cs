@@ -13,6 +13,7 @@ using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
 using Eryph.Rebus;
+using Microsoft.Extensions.Logging;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Subscriptions;
@@ -211,6 +212,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
             .Options(x => x.SetNumberOfWorkers(2))
             .Subscriptions(s =>
                 container.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
+            .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
             .Start());
     }
 
