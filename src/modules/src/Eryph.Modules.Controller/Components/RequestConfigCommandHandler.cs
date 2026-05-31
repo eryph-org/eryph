@@ -9,8 +9,7 @@ namespace Eryph.Modules.Controller.Components;
 
 /// <summary>
 /// Answers a component's startup config request: builds the role-scoped snapshot of
-/// the domains it is entitled to and is missing, and routes it to the component's
-/// inbound queue.
+/// the domains it is entitled to and is missing, and replies to the requester.
 /// </summary>
 [UsedImplicitly]
 internal sealed class RequestConfigCommandHandler(
@@ -26,7 +25,11 @@ internal sealed class RequestConfigCommandHandler(
         if (bundles.Count == 0)
             return;
 
-        await bus.Advanced.Routing.Send(message.InboundQueue, new ConfigSnapshotCommand
+        // Reply to the request's return address (the sender's own input queue) instead of a
+        // queue named in the message: trusting a message field would let any bus actor have an
+        // entitled snapshot delivered to an arbitrary queue. The controller-driven push path
+        // (RefreshConfigDomainCommandHandler) uses the queue persisted at registration.
+        await bus.Reply(new ConfigSnapshotCommand
         {
             ComponentId = message.ComponentId,
             Bundles = bundles,

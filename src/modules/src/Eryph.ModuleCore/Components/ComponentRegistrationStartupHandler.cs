@@ -40,12 +40,13 @@ internal sealed class ComponentRegistrationStartupHandler(
             AdvertisedEndpoints = identity.AdvertisedEndpoints.ToDictionary(kv => kv.Key, kv => kv.Value),
         });
 
-        // Pull the current configuration from the controller.
+        // Pull the current configuration from the controller. The controller replies to this
+        // message's return address (this component's own input queue), so no destination queue
+        // is carried in the request.
         await bus.Advanced.Routing.Send(QueueNames.Controllers, new RequestConfigCommand
         {
             ComponentId = identity.ComponentId,
             ComponentType = identity.ComponentType,
-            InboundQueue = identity.InboundQueue,
             KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
         });
     }
