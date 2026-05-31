@@ -34,9 +34,17 @@ public class ComponentCertificateAuthority(
     {
         var subjectName = BuildCaSubjectName();
 
-        var certificates = storeService.GetFromMyStore(subjectName);
-        if (certificates.Count == 1 && IsUsableCa(certificates[0]))
-            return certificates[0];
+        // Sign with the newest CA that is safely within its lifetime. Older, still-valid
+        // generations are deliberately left in the store: they remain part of the trust bundle
+        // (GetTrustedCaCertificates) until they expire, which is what lets a CA rollover happen
+        // without a flag-day. Only when no usable CA exists (first use, or the CA expired) do we
+        // start a fresh generation.
+        var signingCa = storeService.GetFromMyStore(subjectName)
+            .Where(IsUsableForSigning)
+            .OrderByDescending(c => c.NotBefore)
+            .FirstOrDefault();
+        if (signingCa is not null)
+            return signingCa;
 
         RemoveCertificate(subjectName, CaKeyName);
 
@@ -53,11 +61,25 @@ public class ComponentCertificateAuthority(
         return caCertificate;
     }
 
+    public IReadOnlyList<X509Certificate2> GetTrustedCaCertificates()
+    {
+        // Ensure an active CA exists, then return every CA generation that is still valid so the
+        // distributed trust bundle and the broker's CA file can validate leaves from any of them.
+        GetCaCertificate();
+        return storeService.GetFromMyStore(BuildCaSubjectName())
+            .Where(IsValidCa)
+            .OrderByDescending(c => c.NotBefore)
+            .ToList();
+    }
+
+    // Leaves are short-lived (~90 days) and auto-renewed at roughly half their life. This bounds
+    // the exposure of a compromised key and keeps the renewal path exercised routinely, while
+    // still tolerating an Identity outage of several weeks before any component cert expires.
     public X509Certificate2 IssueComponentCertificate(
         string componentId,
         string fqdn,
         RSA subjectPublicKey,
-        int validDays = 365)
+        int validDays = 90)
     {
         if (string.IsNullOrWhiteSpace(componentId))
             throw new ArgumentException("The component id must be provided.", nameof(componentId));
@@ -103,10 +125,20 @@ public class ComponentCertificateAuthority(
         return nameBuilder.Build();
     }
 
-    private static bool IsUsableCa(X509Certificate2 certificate) =>
+    // For signing we require a private key and comfortable remaining lifetime (don't issue
+    // leaves from a CA about to expire). For trust we accept any CA that has not yet expired,
+    // since a leaf is always clamped to its issuer's lifetime and so never outlives its CA.
+    private static bool IsUsableForSigning(X509Certificate2 certificate) =>
         certificate.HasPrivateKey
         && certificate.NotAfter > DateTime.UtcNow.AddDays(30)
-        && certificate.Extensions.OfType<X509BasicConstraintsExtension>()
+        && IsCa(certificate);
+
+    private static bool IsValidCa(X509Certificate2 certificate) =>
+        certificate.NotAfter > DateTime.UtcNow
+        && IsCa(certificate);
+
+    private static bool IsCa(X509Certificate2 certificate) =>
+        certificate.Extensions.OfType<X509BasicConstraintsExtension>()
             .Any(e => e.CertificateAuthority);
 
     private void RemoveCertificate(X500DistinguishedName subjectName, string keyName)

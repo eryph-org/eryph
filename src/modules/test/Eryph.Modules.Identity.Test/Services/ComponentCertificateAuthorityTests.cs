@@ -70,6 +70,45 @@ public class ComponentCertificateAuthorityTests
         var san = issued.Extensions.Single(e => e.Oid?.Value == "2.5.29.17").Format(false);
         san.Should().Contain(fqdn);
         san.Should().Contain(componentId);
+
+        // Short-lived (~90 days) so renewal stays a routine, exercised path.
+        (issued.NotAfter.ToUniversalTime() - DateTime.UtcNow).TotalDays.Should().BeInRange(85, 95);
+    }
+
+    [Fact]
+    public void GetTrustedCaCertificates_returns_the_active_ca()
+    {
+        var sut = CreateCa();
+        var ca = sut.GetCaCertificate();
+
+        var bundle = sut.GetTrustedCaCertificates();
+
+        bundle.Should().ContainSingle().Which.Thumbprint.Should().Be(ca.Thumbprint);
+    }
+
+    [Fact]
+    public void GetCaCertificate_does_not_remove_other_valid_ca_generations()
+    {
+        var store = new InMemoryCertificateStore();
+        var sut = new ComponentCertificateAuthority(store, new CertificateGenerator(), new InMemoryKeyService());
+
+        // First generation (managed by the service).
+        sut.GetCaCertificate();
+
+        // Simulate a second, still-valid CA generation under the same subject (as a future
+        // rollover would add). The service must keep both as trust anchors, not wipe one.
+        var subject = new X500DistinguishedNameBuilder();
+        subject.AddOrganizationName("eryph");
+        subject.AddOrganizationalUnitName("component-ca");
+        subject.AddCommonName("eryph-component-ca");
+        using var secondKey = RSA.Create(2048);
+        var secondGeneration = new CertificateGenerator().GenerateCaCertificate(
+            subject.Build(), "eryph component CA", secondKey, 3650, []);
+        store.AddToMyStore(secondGeneration);
+
+        sut.GetCaCertificate();
+
+        sut.GetTrustedCaCertificates().Should().HaveCount(2);
     }
 
     private sealed class InMemoryCertificateStore : ICertificateStoreService

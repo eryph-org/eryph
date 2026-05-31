@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
@@ -12,10 +13,18 @@ namespace Eryph.Modules.Identity.Services;
 public interface IComponentCertificateAuthority
 {
     /// <summary>
-    /// The component CA certificate including its private key (used to sign issued component
-    /// certificates). Created on first use and reused afterwards.
+    /// The active component CA certificate (the newest usable generation), including its
+    /// private key — used to sign issued component certificates. Created on first use.
     /// </summary>
     X509Certificate2 GetCaCertificate();
+
+    /// <summary>
+    /// All CA certificates that components and the broker should currently trust — the trust
+    /// bundle. Today this is the single active CA; once CA-rollover tooling exists it also
+    /// includes the previous generation during its grace window, so leaves signed by the old
+    /// and the new CA validate simultaneously and rollover needs no flag-day outage.
+    /// </summary>
+    IReadOnlyList<X509Certificate2> GetTrustedCaCertificates();
 
     /// <summary>
     /// Issues a component client certificate for the given component identity, signed by the
@@ -26,10 +35,11 @@ public interface IComponentCertificateAuthority
     /// (<c>urn:eryph:component:{componentId}</c>) so the authenticated identity is unambiguous.</param>
     /// <param name="fqdn">The component host's fully-qualified domain name (subject CN + DNS SAN).</param>
     /// <param name="subjectPublicKey">The component's public key, taken from its enrollment request.</param>
-    /// <param name="validDays">Requested validity in days; clamped to the CA's remaining lifetime.</param>
+    /// <param name="validDays">Requested validity in days (default ~90, auto-renewed at half
+    /// life); clamped to the CA's remaining lifetime.</param>
     X509Certificate2 IssueComponentCertificate(
         string componentId,
         string fqdn,
         RSA subjectPublicKey,
-        int validDays = 365);
+        int validDays = 90);
 }
