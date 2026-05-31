@@ -43,14 +43,18 @@ public class ComponentEnrollmentServiceTests
         result.ComponentId.Should().Be(
             ComponentIdentity.DeriveComponentId(ComponentType.VMHostAgent, "agent1.eryph.local"));
         result.CaTrustBundle.Should().NotBeEmpty();
+        result.IssuingChain.Should().NotBeEmpty("the component must receive the intermediate to present");
 
         using var leaf = X509CertificateLoader.LoadCertificate(result.Certificate);
-        using var ca = X509CertificateLoader.LoadCertificate(result.CaTrustBundle[0]);
         using var chain = new X509Chain();
         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        chain.ChainPolicy.CustomTrustStore.Add(ca);
+        foreach (var rootDer in result.CaTrustBundle)
+            chain.ChainPolicy.CustomTrustStore.Add(X509CertificateLoader.LoadCertificate(rootDer));
+        foreach (var intermediateDer in result.IssuingChain)
+            chain.ChainPolicy.ExtraStore.Add(X509CertificateLoader.LoadCertificate(intermediateDer));
         chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        chain.Build(leaf).Should().BeTrue("the issued leaf must chain to a CA in the returned bundle");
+        chain.Build(leaf).Should().BeTrue(
+            "the issued leaf must chain through the intermediate to a root in the returned bundle");
     }
 
     [Fact]

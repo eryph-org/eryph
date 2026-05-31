@@ -40,8 +40,11 @@ public sealed class ComponentEnrollmentService(
             throw new ComponentEnrollmentException("The enrollment request public key is invalid.", ex);
         }
 
-        var leaf = certificateAuthority.IssueComponentCertificate(
+        var issued = certificateAuthority.IssueComponentCertificate(
             componentId.ToString(), request.Fqdn, subjectKey);
+        var issuingChain = issued.IssuingChain
+            .Select(certificate => certificate.Export(X509ContentType.Cert))
+            .ToList();
         var trustBundle = certificateAuthority.GetTrustedCaCertificates()
             .Select(certificate => certificate.Export(X509ContentType.Cert))
             .ToList();
@@ -53,7 +56,8 @@ public sealed class ComponentEnrollmentService(
         return new ComponentEnrollmentResult
         {
             ComponentId = componentId,
-            Certificate = leaf.Export(X509ContentType.Cert),
+            Certificate = issued.Leaf.Export(X509ContentType.Cert),
+            IssuingChain = issuingChain,
             CaTrustBundle = trustBundle,
         };
     }

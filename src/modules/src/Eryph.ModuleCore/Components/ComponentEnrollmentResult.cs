@@ -16,8 +16,12 @@ public sealed class ComponentEnrollmentResult
     /// <summary>The issued leaf certificate, DER-encoded (public part only).</summary>
     public byte[] Certificate { get; init; } = [];
 
-    /// <summary>The CA trust bundle (all currently trusted CA certificates, each DER-encoded). A
-    /// bundle rather than a single anchor so a CA rollover can keep old and new CAs trusted at
-    /// once.</summary>
+    /// <summary>The issuing intermediate CA certificate(s), each DER-encoded, that the component
+    /// presents alongside its leaf so a relying party can build a chain to a trusted root.</summary>
+    public IReadOnlyList<byte[]> IssuingChain { get; init; } = [];
+
+    /// <summary>The CA trust bundle: the currently trusted root CA certificate(s), each
+    /// DER-encoded. A bundle rather than a single anchor so a CA rollover can keep old and new
+    /// roots trusted at once.</summary>
     public IReadOnlyList<byte[]> CaTrustBundle { get; init; } = [];
 }
