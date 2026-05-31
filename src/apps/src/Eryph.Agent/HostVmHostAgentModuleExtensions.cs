@@ -1,9 +1,11 @@
 using System;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Dbosoft.Rebus.Configuration;
+using Eryph.Messages.Components;
+using Eryph.ModuleCore.Components;
 using Eryph.Modules.HostAgent;
-using Eryph.Rebus;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SimpleInjector;
 
 namespace Eryph.Agent
@@ -37,12 +39,19 @@ namespace Eryph.Agent
                 {
                     // The module configures and starts its bus inside ConfigureContainer
                     // (run by next), so the transport must be registered first.
-                    container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
+                    RegisterTransport(context, container);
                     container.UseOvn();
 
                     next(context, container);
                 };
             }
+
+            private static void RegisterTransport(IModuleContext<VmHostAgentModule> context, Container container) =>
+                ComponentMtlsTransport.Register(
+                    container,
+                    context.ModulesHostServices.GetRequiredService<IConfiguration>(),
+                    context.ModulesHostServices.GetRequiredService<ILoggerFactory>(),
+                    ComponentType.VMHostAgent);
         }
     }
 }
