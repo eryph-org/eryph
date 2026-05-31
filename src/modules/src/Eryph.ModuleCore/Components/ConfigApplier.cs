@@ -24,6 +24,19 @@ internal sealed class ConfigApplier(
 {
     public async Task ApplyAsync(ConfigBundle bundle)
     {
+        // Bundles can arrive out of order or duplicated (broker redelivery, or a snapshot and a
+        // targeted push racing). Skip any bundle that is not newer than what we already applied so
+        // a delayed older version cannot revert in-memory config (e.g. the endpoint resolver or
+        // placement provider) to stale data. The applied-version state is monotonic and the
+        // controller's RecordApplied is too, so re-acknowledging a stale bundle is unnecessary.
+        if (state.GetApplied().TryGetValue(bundle.Domain, out var applied) && bundle.Version <= applied)
+        {
+            logger.LogDebug(
+                "Skipping configuration {Domain} version {Version}; already applied version {Applied}.",
+                bundle.Domain, bundle.Version, applied);
+            return;
+        }
+
         var success = true;
         var error = "";
 

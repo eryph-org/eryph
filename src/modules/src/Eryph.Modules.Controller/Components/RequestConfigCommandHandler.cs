@@ -19,6 +19,12 @@ internal sealed class RequestConfigCommandHandler(
 {
     public async Task Handle(RequestConfigCommand message)
     {
+        // NOTE (pre-auth trust boundary): the requester's ComponentType is taken from the message
+        // and not yet verified against an authenticated identity, so the entitlement is only as
+        // trustworthy as the bus. Binding the request to an authenticated component — so a bus
+        // actor cannot claim a more privileged ComponentType — is part of the component
+        // authentication phase; deriving it from the registration would not help until then,
+        // since an unauthenticated actor could forge the registration too.
         var bundles = await distribution.BuildSnapshotAsync(
             message.ComponentType, message.KnownConfigVersions, CancellationToken.None);
 
