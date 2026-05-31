@@ -28,6 +28,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenIddict.EntityFrameworkCore.Models;
@@ -41,6 +42,10 @@ namespace Eryph.Modules.Identity;
 public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 {
     public override string Path => endpointResolver.GetEndpoint("identity").ToString();
+
+    // Operator-provisioned component enrollment secret (the default SharedSecretEnrollmentPolicy).
+    // Provisioned out-of-band by the deployment tooling; unset means enrollment is denied.
+    private const string ComponentEnrollmentSecretConfigKey = "identity:componentEnrollment:secret";
 
 #pragma warning disable S2325
     // ReSharper disable once UnusedMember.Global
@@ -181,11 +186,29 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     {
         container.Register(sp.GetRequiredService<ICertificateKeyService>);
         container.Register(sp.GetRequiredService<ICertificateGenerator>);
+        container.Register(sp.GetRequiredService<ICertificateStoreService>);
         container.Register(sp.GetRequiredService<IEndpointResolver>);
         container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
+
+        // Component PKI + enrollment. The CA issues component mTLS and server-TLS certificates from
+        // a single root; the enrollment service issues to authorized requests. The policy is the
+        // swappable seam (default = operator-provisioned shared secret read from configuration; if
+        // unset, enrollment is denied). These are stateless over the certificate store, so they are
+        // registered transient to match the (transient) cross-wired certificate services. Loggers
+        // are built from the cross-wired ILoggerFactory.
+        container.Register<IComponentCertificateAuthority, ComponentCertificateAuthority>();
+        container.Register<IComponentEnrollmentPolicy>(() =>
+            new SharedSecretEnrollmentPolicy(
+                sp.GetRequiredService<IConfiguration>()[ComponentEnrollmentSecretConfigKey],
+                container.GetInstance<ILoggerFactory>().CreateLogger<SharedSecretEnrollmentPolicy>()));
+        container.Register<IComponentEnrollmentService>(() =>
+            new ComponentEnrollmentService(
+                container.GetInstance<IComponentCertificateAuthority>(),
+                container.GetInstance<IComponentEnrollmentPolicy>(),
+                container.GetInstance<ILoggerFactory>().CreateLogger<ComponentEnrollmentService>()));
 
         // The identity component runs a bidirectional bus endpoint on its own inbound queue
         // (from the registered ComponentIdentity) so it can register/heartbeat and receive
