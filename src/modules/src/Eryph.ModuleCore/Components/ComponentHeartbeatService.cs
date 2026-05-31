@@ -39,6 +39,10 @@ internal sealed class ComponentHeartbeatService(
             try { await _loop; }
             catch (OperationCanceledException) { }
         }
+
+        // The loop has finished; dispose the CTS so its wait handle is not leaked for the
+        // remainder of the process lifetime.
+        _stopping.Dispose();
     }
 
     private async Task RunAsync(CancellationToken cancellationToken)

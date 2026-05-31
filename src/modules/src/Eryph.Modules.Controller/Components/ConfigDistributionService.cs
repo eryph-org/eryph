@@ -101,13 +101,14 @@ internal sealed class ConfigDistributionService(
         if (source is null)
             return (null, false);
 
-        var payload = await source.BuildPayloadAsync(cancellationToken);
-
-        // Serialize the read-modify-write for this domain so concurrent workers/controllers
-        // cannot both insert (unique-index collision) or lose a version bump. Held until the
-        // message unit of work completes.
+        // Serialize the whole build-read-modify-write for this domain so concurrent
+        // workers/controllers cannot both insert (unique-index collision), lose a version
+        // bump, or overwrite a newer payload with an older one. The payload is built under the
+        // lock too: a slower builder acquiring the lock later would otherwise revert the record
+        // to its stale payload. Held until the message unit of work completes.
         await lockHolder.AcquireLock($"config-domain-{domain}", LockTimeout);
 
+        var payload = await source.BuildPayloadAsync(cancellationToken);
         var record = await records.GetBySpecAsync(new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
 
         if (record is null)
