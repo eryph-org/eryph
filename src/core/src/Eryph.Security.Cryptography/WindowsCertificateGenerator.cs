@@ -54,4 +54,19 @@ public class WindowsCertificateGenerator : CertificateGenerator
         certificate.FriendlyName = friendlyName;
         return certificate;
     }
+
+    public override X509Certificate2 IssueIntermediateCaCertificate(
+        X500DistinguishedName subjectName,
+        string friendlyName,
+        RSA subjectKey,
+        X509Certificate2 issuerCertificate,
+        int validDays,
+        IReadOnlyList<X509Extension> extensions)
+    {
+        var certificate = base.IssueIntermediateCaCertificate(
+            subjectName, friendlyName, subjectKey, issuerCertificate, validDays, extensions);
+
+        certificate.FriendlyName = friendlyName;
+        return certificate;
+    }
 }
