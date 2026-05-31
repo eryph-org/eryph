@@ -1,10 +1,12 @@
 using System;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Dbosoft.Rebus.Configuration;
+using Eryph.Messages.Components;
+using Eryph.ModuleCore.Components;
 using Eryph.Modules.ComputeApi;
-using Eryph.Rebus;
 using Eryph.StateDb.MySql;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -49,7 +51,11 @@ namespace Eryph.ApiEndpoint
             {
                 return (context, container) =>
                 {
-                    container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
+                    ComponentMtlsTransport.Register(
+                        container,
+                        context.ModulesHostServices.GetRequiredService<IConfiguration>(),
+                        context.ModulesHostServices.GetRequiredService<ILoggerFactory>(),
+                        ComponentType.ComputeApi);
                     next(context, container);
                 };
             }
