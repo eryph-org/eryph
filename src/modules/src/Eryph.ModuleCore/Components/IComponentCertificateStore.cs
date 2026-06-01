@@ -27,9 +27,9 @@ public interface IComponentCertificateStore
     void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey, ComponentEnrollmentResult result);
 
     /// <summary>
-    /// The component's mTLS client certificate (leaf + private key), usable for TLS, or
-    /// <see langword="null"/> when not enrolled. The issuing intermediate(s) are included so the
-    /// certificate can present a full chain.
+    /// The component's mTLS client certificate as the leaf plus its private key, usable for TLS, or
+    /// <see langword="null"/> when not enrolled. This is the leaf only; the issuing chain is carried by
+    /// the PKCS#12 at <see cref="GetClientCertificatePfxPath"/> (what the bus transport actually uses).
     /// </summary>
     X509Certificate2? LoadClientCertificate();
 

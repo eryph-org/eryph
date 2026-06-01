@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,7 +9,7 @@ using SimpleInjector.Lifestyles;
 
 namespace Eryph.ModuleCore.Startup;
 
-internal class StartupHandlerService<THandler>(Container container) : IHostedService
+internal class StartupHandlerService<THandler>(Container container) : IHostedService, IDisposable
     where THandler : class, IStartupHandler
 {
     // Cancelled on host shutdown so any background work a handler starts (e.g. a retry loop) stops
@@ -36,4 +37,8 @@ internal class StartupHandlerService<THandler>(Container container) : IHostedSer
         _stopping.Cancel();
         return Task.CompletedTask;
     }
+
+    // Disposed by the host after StopAsync (background work has observed the cancellation by then);
+    // releases the CancellationTokenSource's wait handle so it does not leak across host start/stop.
+    public void Dispose() => _stopping.Dispose();
 }
