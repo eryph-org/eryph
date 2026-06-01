@@ -16,7 +16,7 @@ public class ComponentEnrollmentClientTests
             new ComponentIdentity(ComponentType.VMHostAgent, "q"),
             new ComponentEnrollmentClientOptions
             {
-                EnrollmentSecret = "secret",
+                Token = "token",
                 InitialRetryDelay = TimeSpan.Zero,
                 MaxRetryDelay = TimeSpan.Zero,
             },
@@ -75,7 +75,7 @@ public class ComponentEnrollmentClientTests
 
         public bool HasCurrentCertificate() => Current;
         public bool HasValidCertificate() => Current;
-        public void Save(byte[] pkcs8PrivateKey, ComponentEnrollmentResult result) => SaveCount++;
+        public void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey, ComponentEnrollmentResult result) => SaveCount++;
 
         public System.Security.Cryptography.X509Certificates.X509Certificate2? LoadClientCertificate() => null;
 

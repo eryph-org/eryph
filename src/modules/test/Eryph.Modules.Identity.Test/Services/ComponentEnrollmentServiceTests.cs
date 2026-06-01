@@ -36,7 +36,6 @@ public class ComponentEnrollmentServiceTests
             ComponentType = ComponentType.VMHostAgent,
             Fqdn = "agent1.eryph.local",
             PublicKey = NewPublicKey(),
-            Credential = "anything",
         });
 
         // The id is derived server-side, not taken from the request.
@@ -58,6 +57,41 @@ public class ComponentEnrollmentServiceTests
     }
 
     [Fact]
+    public void Enroll_also_issues_a_server_certificate_when_a_server_key_is_supplied()
+    {
+        var sut = CreateService(authorized: true);
+
+        var result = sut.Enroll(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = NewPublicKey(),
+            ServerPublicKey = NewPublicKey(),
+            ServerDnsNames = ["api.eryph.local"],
+        });
+
+        result.ServerCertificate.Should().NotBeEmpty("a server key was supplied");
+        result.ServerIssuingChain.Should().NotBeEmpty();
+        using var server = X509CertificateLoader.LoadCertificate(result.ServerCertificate);
+        server.MatchesHostname("api.eryph.local", false, false).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Enroll_omits_the_server_certificate_when_no_server_key_is_supplied()
+    {
+        var sut = CreateService(authorized: true);
+
+        var result = sut.Enroll(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        result.ServerCertificate.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Enroll_throws_when_the_policy_denies_the_request()
     {
         var sut = CreateService(authorized: false);
@@ -67,7 +101,6 @@ public class ComponentEnrollmentServiceTests
             ComponentType = ComponentType.Identity,
             Fqdn = "id.eryph.local",
             PublicKey = NewPublicKey(),
-            Credential = "wrong",
         });
 
         act.Should().Throw<ComponentEnrollmentException>();
@@ -83,28 +116,55 @@ public class ComponentEnrollmentServiceTests
             ComponentType = ComponentType.ComputeApi,
             Fqdn = "api.eryph.local",
             PublicKey = [1, 2, 3],
-            Credential = "anything",
         });
 
         act.Should().Throw<ComponentEnrollmentException>();
     }
 
-    [Theory]
-    [InlineData("s3cret", "s3cret", true)]
-    [InlineData("s3cret", "wrong", false)]
-    [InlineData("", "anything", false)]
-    public void SharedSecretEnrollmentPolicy_authorizes_only_on_a_matching_secret(
-        string configured, string provided, bool expected)
+    [Fact]
+    public void TokenEnrollmentPolicy_authorizes_a_valid_token_for_the_bound_type()
     {
-        var policy = new SharedSecretEnrollmentPolicy(
-            configured, NullLogger<SharedSecretEnrollmentPolicy>.Instance);
+        var policy = new TokenEnrollmentPolicy(
+            new StubTokenService(EnrollmentTokenValidationResult.Valid(ComponentType.VMHostAgent)),
+            NullLogger<TokenEnrollmentPolicy>.Instance);
 
-        policy.IsAuthorized(new ComponentEnrollmentRequest { Credential = provided })
-            .Should().Be(expected);
+        policy.IsAuthorized(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Token = "token",
+        }).Should().BeTrue();
+    }
+
+    [Fact]
+    public void TokenEnrollmentPolicy_denies_on_type_mismatch_or_invalid_token()
+    {
+        var typeMismatch = new TokenEnrollmentPolicy(
+            new StubTokenService(EnrollmentTokenValidationResult.Valid(ComponentType.Controller)),
+            NullLogger<TokenEnrollmentPolicy>.Instance);
+        typeMismatch.IsAuthorized(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Token = "token",
+        }).Should().BeFalse();
+
+        var invalid = new TokenEnrollmentPolicy(
+            new StubTokenService(EnrollmentTokenValidationResult.Invalid),
+            NullLogger<TokenEnrollmentPolicy>.Instance);
+        invalid.IsAuthorized(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Token = "token",
+        }).Should().BeFalse();
     }
 
     private sealed class StubPolicy(bool authorized) : IComponentEnrollmentPolicy
     {
         public bool IsAuthorized(ComponentEnrollmentRequest request) => authorized;
+    }
+
+    private sealed class StubTokenService(EnrollmentTokenValidationResult result) : IEnrollmentTokenService
+    {
+        public string Mint(ComponentType componentType, TimeSpan validFor) => "token";
+        public EnrollmentTokenValidationResult Redeem(string token) => result;
     }
 }

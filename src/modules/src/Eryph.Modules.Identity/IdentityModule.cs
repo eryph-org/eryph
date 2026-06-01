@@ -43,10 +43,6 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 {
     public override string Path => endpointResolver.GetEndpoint("identity").ToString();
 
-    // Operator-provisioned component enrollment secret (the default SharedSecretEnrollmentPolicy).
-    // Provisioned out-of-band by the deployment tooling; unset means enrollment is denied.
-    private const string ComponentEnrollmentSecretConfigKey = "identity:componentEnrollment:secret";
-
 #pragma warning disable S2325
     // ReSharper disable once UnusedMember.Global
     public void AddSimpleInjector(SimpleInjectorAddOptions options)
@@ -204,10 +200,11 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         // registered transient to match the (transient) cross-wired certificate services. Loggers
         // are built from the cross-wired ILoggerFactory.
         container.Register<IComponentCertificateAuthority, ComponentCertificateAuthority>();
+        container.Register<IEnrollmentTokenService, EnrollmentTokenService>();
         container.Register<IComponentEnrollmentPolicy>(() =>
-            new SharedSecretEnrollmentPolicy(
-                sp.GetRequiredService<IConfiguration>()[ComponentEnrollmentSecretConfigKey],
-                container.GetInstance<ILoggerFactory>().CreateLogger<SharedSecretEnrollmentPolicy>()));
+            new TokenEnrollmentPolicy(
+                container.GetInstance<IEnrollmentTokenService>(),
+                container.GetInstance<ILoggerFactory>().CreateLogger<TokenEnrollmentPolicy>()));
         container.Register<IComponentEnrollmentService>(() =>
             new ComponentEnrollmentService(
                 container.GetInstance<IComponentCertificateAuthority>(),

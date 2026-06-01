@@ -20,6 +20,10 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     private string ChainPath => Path.Combine(directory, "issuing-chain.pem");
     private string BundlePath => Path.Combine(directory, "ca-bundle.pem");
     private string PfxPath => Path.Combine(directory, "component.pfx");
+    private string ServerLeafPath => Path.Combine(directory, "server.crt");
+    private string ServerKeyPath => Path.Combine(directory, "server.key");
+    private string ServerChainPath => Path.Combine(directory, "server-chain.pem");
+    private string ServerPfxPath => Path.Combine(directory, "server.pfx");
 
     public bool HasValidCertificate() =>
         TryLoadLeaf(out var notAfter) && notAfter > DateTime.UtcNow;
@@ -27,14 +31,23 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     public bool HasCurrentCertificate() =>
         TryLoadLeaf(out var notAfter) && notAfter > DateTime.UtcNow + renewalLeadTime;
 
-    public void Save(byte[] pkcs8PrivateKey, ComponentEnrollmentResult result)
+    public void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey, ComponentEnrollmentResult result)
     {
         Directory.CreateDirectory(directory);
         File.WriteAllText(LeafPath, PemEncoding.WriteString("CERTIFICATE", result.Certificate));
-        File.WriteAllText(KeyPath, PemEncoding.WriteString("PRIVATE KEY", pkcs8PrivateKey));
+        File.WriteAllText(KeyPath, PemEncoding.WriteString("PRIVATE KEY", clientPkcs8PrivateKey));
         File.WriteAllText(ChainPath, ConcatPem(result.IssuingChain));
         File.WriteAllText(BundlePath, ConcatPem(result.CaTrustBundle));
-        WritePfx();
+        WritePfx(LeafPath, KeyPath, PfxPath);
+
+        // The server-TLS certificate (for the component's own endpoint) is optional.
+        if (result.ServerCertificate is { Length: > 0 })
+        {
+            File.WriteAllText(ServerLeafPath, PemEncoding.WriteString("CERTIFICATE", result.ServerCertificate));
+            File.WriteAllText(ServerKeyPath, PemEncoding.WriteString("PRIVATE KEY", serverPkcs8PrivateKey));
+            File.WriteAllText(ServerChainPath, ConcatPem(result.ServerIssuingChain));
+            WritePfx(ServerLeafPath, ServerKeyPath, ServerPfxPath);
+        }
     }
 
     /// <summary>
@@ -49,8 +62,21 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
             return null;
         if (!File.Exists(PfxPath))
-            WritePfx();
+            WritePfx(LeafPath, KeyPath, PfxPath);
         return PfxPath;
+    }
+
+    /// <summary>
+    /// The path to the component's server-TLS certificate as a PKCS#12 file (for its own HTTPS
+    /// listener), or null if no server certificate was enrolled.
+    /// </summary>
+    public string? GetServerCertificatePfxPath()
+    {
+        if (!File.Exists(ServerLeafPath) || !File.Exists(ServerKeyPath))
+            return null;
+        if (!File.Exists(ServerPfxPath))
+            WritePfx(ServerLeafPath, ServerKeyPath, ServerPfxPath);
+        return ServerPfxPath;
     }
 
     public X509Certificate2? LoadClientCertificate()
@@ -70,14 +96,14 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
             keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
     }
 
-    private void WritePfx()
+    private static void WritePfx(string leafPath, string keyPath, string pfxPath)
     {
-        using var fromPem = X509Certificate2.CreateFromPemFile(LeafPath, KeyPath);
+        using var fromPem = X509Certificate2.CreateFromPemFile(leafPath, keyPath);
         // Write to a temp file and move into place so a crash mid-write cannot leave a truncated PFX
-        // that would later be loaded as the client certificate.
-        var tempPath = PfxPath + ".tmp";
+        // that would later be loaded as a certificate.
+        var tempPath = pfxPath + ".tmp";
         File.WriteAllBytes(tempPath, fromPem.Export(X509ContentType.Pkcs12));
-        File.Move(tempPath, PfxPath, overwrite: true);
+        File.Move(tempPath, pfxPath, overwrite: true);
     }
 
     public X509Certificate2Collection LoadCaTrustBundle()

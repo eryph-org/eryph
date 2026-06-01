@@ -43,7 +43,8 @@ public class HttpEnrollmentTransportTests
             parsed.ComponentType.Should().Be(ComponentType.Controller);
             parsed.Fqdn.Should().Be("host.example");
             parsed.PublicKey.Should().Equal(1, 2, 3);
-            parsed.Credential.Should().Be("secret");
+            parsed.ServerPublicKey.Should().Equal(4, 5, 6);
+            parsed.Token.Should().Be("enroll-token");
 
             var result = new ComponentEnrollmentResult { ComponentId = componentId, Certificate = [9, 8, 7] };
             return new HttpResponseMessage(HttpStatusCode.OK)
@@ -63,12 +64,14 @@ public class HttpEnrollmentTransportTests
                 ComponentType = ComponentType.Controller,
                 Fqdn = "host.example",
                 PublicKey = [1, 2, 3],
-                Credential = "secret",
+                ServerPublicKey = [4, 5, 6],
+                Token = "enroll-token",
             },
             CancellationToken.None);
 
         // The wire format is the eryph contract: snake_case keys, enum as a string.
-        sentBody.Should().Contain("\"component_type\":\"Controller\"").And.Contain("\"public_key\":");
+        sentBody.Should().Contain("\"component_type\":\"Controller\"")
+            .And.Contain("\"public_key\":").And.Contain("\"server_public_key\":");
         result.ComponentId.Should().Be(componentId);
         result.Certificate.Should().Equal(9, 8, 7);
     }

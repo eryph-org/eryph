@@ -33,7 +33,7 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
         store.HasValidCertificate().Should().BeFalse("nothing is stored yet");
 
-        store.Save(key.ExportPkcs8PrivateKey(), result);
+        store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), result);
 
         store.HasValidCertificate().Should().BeTrue();
         store.HasCurrentCertificate().Should().BeTrue();
@@ -62,7 +62,7 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
         store.GetClientCertificatePfxPath().Should().BeNull("nothing is enrolled yet");
 
-        store.Save(key.ExportPkcs8PrivateKey(), result);
+        store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), result);
 
         var pfxPath = store.GetClientCertificatePfxPath();
         pfxPath.Should().NotBeNull();

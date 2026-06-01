@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -49,15 +50,44 @@ public sealed class ComponentEnrollmentService(
             .Select(certificate => certificate.Export(X509ContentType.Cert))
             .ToList();
 
+        // Also issue the component's server-TLS certificate when it supplied a server key, so it can
+        // serve its own endpoint over TLS chaining to the same root (see IssueServerCertificate).
+        byte[] serverCertificate = [];
+        IReadOnlyList<byte[]> serverChain = [];
+        if (request.ServerPublicKey is { Length: > 0 })
+        {
+            var dnsName = request.ServerDnsNames.FirstOrDefault() ?? request.Fqdn;
+            if (string.IsNullOrWhiteSpace(dnsName))
+                throw new ComponentEnrollmentException("A server certificate was requested without a DNS name.");
+
+            using var serverKey = RSA.Create();
+            try
+            {
+                serverKey.ImportSubjectPublicKeyInfo(request.ServerPublicKey, out _);
+            }
+            catch (CryptographicException ex)
+            {
+                throw new ComponentEnrollmentException("The enrollment request server public key is invalid.", ex);
+            }
+
+            var issuedServer = certificateAuthority.IssueServerCertificate(dnsName, serverKey);
+            serverCertificate = issuedServer.Leaf.Export(X509ContentType.Cert);
+            serverChain = issuedServer.IssuingChain
+                .Select(certificate => certificate.Export(X509ContentType.Cert))
+                .ToList();
+        }
+
         logger.LogInformation(
-            "Issued component certificate for {ComponentType} on {Fqdn} (component {ComponentId}).",
-            request.ComponentType, request.Fqdn, componentId);
+            "Issued component certificate(s) for {ComponentType} on {Fqdn} (component {ComponentId}; server cert: {HasServer}).",
+            request.ComponentType, request.Fqdn, componentId, serverCertificate.Length > 0);
 
         return new ComponentEnrollmentResult
         {
             ComponentId = componentId,
             Certificate = issued.Leaf.Export(X509ContentType.Cert),
             IssuingChain = issuingChain,
+            ServerCertificate = serverCertificate,
+            ServerIssuingChain = serverChain,
             CaTrustBundle = trustBundle,
         };
     }

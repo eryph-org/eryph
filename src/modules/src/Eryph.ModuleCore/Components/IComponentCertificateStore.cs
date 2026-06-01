@@ -22,8 +22,9 @@ public interface IComponentCertificateStore
     /// </summary>
     bool HasValidCertificate();
 
-    /// <summary>Persists the enrolled certificate, its PKCS#8 private key, chain and trust bundle.</summary>
-    void Save(byte[] pkcs8PrivateKey, ComponentEnrollmentResult result);
+    /// <summary>Persists the enrolled client + server certificates, their PKCS#8 private keys, chains
+    /// and the CA trust bundle. The server certificate is optional (it is written only when present).</summary>
+    void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey, ComponentEnrollmentResult result);
 
     /// <summary>
     /// The component's mTLS client certificate (leaf + private key), usable for TLS, or

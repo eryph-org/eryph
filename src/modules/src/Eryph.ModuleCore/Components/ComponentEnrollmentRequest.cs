@@ -1,12 +1,14 @@
+using System.Collections.Generic;
 using Eryph.Messages.Components;
 
 namespace Eryph.ModuleCore.Components;
 
 /// <summary>
-/// A component's request to enroll and obtain its mTLS client certificate. Sent over HTTPS to the
-/// identity service (off the bus — the bus is what the resulting certificate secures). The
-/// component generates its key pair locally; only the public key is sent, so the private key never
-/// leaves the component.
+/// A component's request to enroll and obtain its certificates. Sent over HTTPS to the identity
+/// service (off the bus — the bus is what the resulting certificates secure). The component
+/// generates its key pairs locally; only the public keys are sent, so the private keys never leave
+/// the component. Authorized by a one-time enrollment token (delivered out-of-band in the
+/// enrollment file, see <see cref="ComponentEnrollmentFile"/>).
 /// </summary>
 public sealed class ComponentEnrollmentRequest
 {
@@ -17,10 +19,17 @@ public sealed class ComponentEnrollmentRequest
     /// caller-supplied id.</summary>
     public string Fqdn { get; init; } = "";
 
-    /// <summary>The subject public key, DER-encoded as a SubjectPublicKeyInfo.</summary>
+    /// <summary>The client (mTLS) subject public key, DER-encoded as a SubjectPublicKeyInfo.</summary>
     public byte[] PublicKey { get; init; } = [];
 
-    /// <summary>An opaque enrollment credential validated by the (pluggable) enrollment policy —
-    /// e.g. an operator-provisioned shared secret for the in-repo default policy.</summary>
-    public string Credential { get; init; } = "";
+    /// <summary>The server-TLS subject public key, DER-encoded as a SubjectPublicKeyInfo. When set,
+    /// the identity service also issues a server certificate for the component's own TLS endpoint.</summary>
+    public byte[] ServerPublicKey { get; init; } = [];
+
+    /// <summary>The DNS name(s) the component serves on; become the server certificate's SAN.</summary>
+    public IReadOnlyList<string> ServerDnsNames { get; init; } = [];
+
+    /// <summary>The one-time enrollment token from the enrollment file, validated by the identity
+    /// service's enrollment policy.</summary>
+    public string Token { get; init; } = "";
 }

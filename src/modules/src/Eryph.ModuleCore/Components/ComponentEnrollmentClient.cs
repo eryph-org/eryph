@@ -41,17 +41,23 @@ public sealed class ComponentEnrollmentClient(
             attempt++;
             try
             {
-                using var key = RSA.Create(2048);
+                using var clientKey = RSA.Create(2048);
+                using var serverKey = RSA.Create(2048);
+                var serverDnsNames = options.ServerDnsNames.Count > 0
+                    ? options.ServerDnsNames
+                    : new[] { identity.MachineName };
                 var request = new ComponentEnrollmentRequest
                 {
                     ComponentType = identity.ComponentType,
                     Fqdn = identity.MachineName,
-                    PublicKey = key.ExportSubjectPublicKeyInfo(),
-                    Credential = options.EnrollmentSecret,
+                    PublicKey = clientKey.ExportSubjectPublicKeyInfo(),
+                    ServerPublicKey = serverKey.ExportSubjectPublicKeyInfo(),
+                    ServerDnsNames = serverDnsNames,
+                    Token = options.Token,
                 };
 
                 var result = await transport.EnrollAsync(request, cancellationToken);
-                store.Save(key.ExportPkcs8PrivateKey(), result);
+                store.Save(clientKey.ExportPkcs8PrivateKey(), serverKey.ExportPkcs8PrivateKey(), result);
 
                 logger.LogInformation(
                     "Component {ComponentType} enrolled on attempt {Attempt} (component {ComponentId}).",
