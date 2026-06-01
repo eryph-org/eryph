@@ -45,6 +45,39 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         renewalDue.HasCurrentCertificate().Should().BeFalse("the cert is inside the renewal window");
     }
 
+    [Fact]
+    public void GetClientCertificatePfxPath_is_null_before_enrollment_and_loadable_after()
+    {
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
+        var result = new ComponentEnrollmentResult
+        {
+            ComponentId = Guid.NewGuid(),
+            Certificate = cert.Export(X509ContentType.Cert),
+            IssuingChain = [],
+            CaTrustBundle = [cert.Export(X509ContentType.Cert)],
+        };
+
+        var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
+        store.GetClientCertificatePfxPath().Should().BeNull("nothing is enrolled yet");
+
+        store.Save(key.ExportPkcs8PrivateKey(), result);
+
+        var pfxPath = store.GetClientCertificatePfxPath();
+        pfxPath.Should().NotBeNull();
+        File.Exists(pfxPath).Should().BeTrue();
+        // The PFX loads and carries the private key (so the TLS stack can present it).
+        using var loaded = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(pfxPath!), password: null);
+        loaded.HasPrivateKey.Should().BeTrue();
+        loaded.Subject.Should().Contain("agent.eryph.local");
+
+        // Re-creates the PFX if it is removed.
+        File.Delete(pfxPath!);
+        store.GetClientCertificatePfxPath().Should().NotBeNull();
+        File.Exists(pfxPath).Should().BeTrue();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_dir))

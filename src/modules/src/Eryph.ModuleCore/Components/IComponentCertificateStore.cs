@@ -4,8 +4,9 @@ namespace Eryph.ModuleCore.Components;
 
 /// <summary>
 /// Persists and inspects the component's enrolled certificate material (leaf, private key, issuing
-/// chain and CA trust bundle). The bus mTLS transport reads from here; enrollment/renewal writes
-/// to it. Abstracted so the enrollment client is testable without touching the file system.
+/// chain and CA trust bundle). The bus mTLS transport reads the client certificate file via
+/// <see cref="GetClientCertificatePfxPath"/>; enrollment/renewal writes to it. Abstracted so the
+/// enrollment client is testable without touching the file system.
 /// </summary>
 public interface IComponentCertificateStore
 {
@@ -30,6 +31,13 @@ public interface IComponentCertificateStore
     /// certificate can present a full chain.
     /// </summary>
     X509Certificate2? LoadClientCertificate();
+
+    /// <summary>
+    /// Path to the client certificate as a PKCS#12 file (what the RabbitMQ transport hands to the
+    /// TLS stack — Rebus' SslSettings consumes a certificate file, not an in-memory certificate), or
+    /// <see langword="null"/> when not enrolled.
+    /// </summary>
+    string? GetClientCertificatePfxPath();
 
     /// <summary>The trusted CA roots (the bundle) used to validate the broker and peers.</summary>
     X509Certificate2Collection LoadCaTrustBundle();

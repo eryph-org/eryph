@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +16,22 @@ namespace Eryph.ModuleCore.Components;
 public sealed class HttpEnrollmentTransport(HttpClient httpClient, IEndpointResolver endpointResolver)
     : IEnrollmentTransport
 {
+    // Must match the identity API's JSON conventions (ApiProvider's AddEryphApiSettings): snake_case
+    // property names and enums as strings. Otherwise multi-word fields (component_type, public_key)
+    // do not bind on the server and the request is rejected.
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+
     public async Task<ComponentEnrollmentResult> EnrollAsync(
         ComponentEnrollmentRequest request,
         CancellationToken cancellationToken)
@@ -22,13 +39,13 @@ public sealed class HttpEnrollmentTransport(HttpClient httpClient, IEndpointReso
         var identity = endpointResolver.GetEndpoint("identity");
         var enrollUri = new Uri(new Uri(identity.GetLeftPart(UriPartial.Authority)), "/components/enroll");
 
-        var payload = JsonSerializer.Serialize(request);
+        var payload = JsonSerializer.Serialize(request, JsonOptions);
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
         using var response = await httpClient.PostAsync(enrollUri, content, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        return JsonSerializer.Deserialize<ComponentEnrollmentResult>(body)
+        return JsonSerializer.Deserialize<ComponentEnrollmentResult>(body, JsonOptions)
             ?? throw new InvalidOperationException("The enrollment response was empty.");
     }
 }

@@ -1,7 +1,7 @@
 using System;
-using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
+using System.Security.Authentication;
 using Dbosoft.Rebus.Configuration;
-using RabbitMQ.Client;
 using Rebus.Config;
 using Rebus.RabbitMq;
 using Rebus.Transport;
@@ -9,26 +9,34 @@ using Rebus.Transport;
 namespace Eryph.Rebus
 {
     /// <summary>
-    /// Configures the RabbitMQ transport. When a client certificate and CA trust bundle are
-    /// supplied (the split runtime with bus mTLS), the connection uses TLS, presents the
-    /// component's client certificate and validates the broker certificate against the bundle.
-    /// Without them it connects plaintext (e.g. the dev path).
+    /// Configures the RabbitMQ transport. When a client-certificate file is supplied (the split
+    /// runtime with bus mTLS), the connection uses TLS, presents the component's client certificate
+    /// and validates the broker certificate against the host's trust store. Without it the
+    /// connection is plaintext (e.g. the dev path).
     /// </summary>
+    /// <remarks>
+    /// Rebus.RabbitMq configures TLS per connection endpoint from <see cref="SslSettings"/>, which
+    /// only accepts a certificate <i>file</i> path and validates the server against the operating
+    /// system trust store (an in-memory certificate or a custom validation callback set on the
+    /// connection factory is not honoured — the connection is opened from per-endpoint SslOptions,
+    /// not the factory's). The deployment's root CA is therefore installed into the host trust store
+    /// by provisioning, and the client certificate is supplied as an (ACL-protected) PKCS#12 file.
+    /// </remarks>
     public class RabbitMqRebusTransportConfigurer : IRebusTransportConfigurer
     {
-        private readonly X509Certificate2 _clientCertificate;
-        private readonly X509Certificate2Collection _caTrustBundle;
+        private readonly string _clientCertificatePfxPath;
+        private readonly string _clientCertificatePassphrase;
 
         public RabbitMqRebusTransportConfigurer()
         {
         }
 
         public RabbitMqRebusTransportConfigurer(
-            X509Certificate2 clientCertificate,
-            X509Certificate2Collection caTrustBundle)
+            string clientCertificatePfxPath,
+            string clientCertificatePassphrase = "")
         {
-            _clientCertificate = clientCertificate;
-            _caTrustBundle = caTrustBundle;
+            _clientCertificatePfxPath = clientCertificatePfxPath;
+            _clientCertificatePassphrase = clientCertificatePassphrase ?? "";
         }
 
         public void ConfigureAsOneWayClient(StandardConfigurer<ITransport> configurer)
@@ -48,24 +56,25 @@ namespace Eryph.Rebus
 
         private void ApplyMutualTls(RabbitMqOptionsBuilder options)
         {
-            if (_clientCertificate is null)
+            if (string.IsNullOrEmpty(_clientCertificatePfxPath))
                 return;
 
-            options.CustomizeConnectionFactory(factory =>
-            {
-                var connectionFactory = (ConnectionFactory)factory;
-                connectionFactory.Ssl = new SslOption
-                {
-                    Enabled = true,
-                    ServerName = connectionFactory.HostName,
-                    Certs = [_clientCertificate],
-                    // Validate the broker against the distributed CA trust bundle rather than the
-                    // machine trust store (and still require a matching host name and serverAuth).
-                    CertificateValidationCallback = (_, certificate, chain, errors) =>
-                        TrustEvaluation.IsTrustedServerCertificate(certificate, chain, errors, _caTrustBundle),
-                };
-                return connectionFactory;
-            });
+            var connectionString = ConnectionString();
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException(
+                    "RABBITMQ_CONNECTIONSTRING must be set to configure bus mTLS.");
+
+            // ServerName must match the broker certificate; it is the host the client connects to.
+            var serverName = new Uri(connectionString).Host;
+            options.Ssl(new SslSettings(
+                enabled: true,
+                serverName: serverName,
+                certificatePath: _clientCertificatePfxPath,
+                certPassphrase: _clientCertificatePassphrase,
+                // Let the OS negotiate the protocol (TLS 1.2/1.3) and require a fully valid server
+                // chain — the deployment root CA is installed into the host trust store.
+                version: SslProtocols.None,
+                acceptablePolicyErrors: SslPolicyErrors.None));
         }
 
         private void WaitForConnection()

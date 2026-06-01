@@ -43,10 +43,12 @@ public static class ComponentEnrollment
             client.EnsureEnrolledAsync(cancellationToken).GetAwaiter().GetResult();
         }
 
-        var clientCertificate = store.LoadClientCertificate()
+        var clientCertificatePfxPath = store.GetClientCertificatePfxPath()
             ?? throw new InvalidOperationException("Enrollment did not produce a usable client certificate.");
 
-        return new RabbitMqRebusTransportConfigurer(clientCertificate, store.LoadCaTrustBundle());
+        // The deployment root CA must be installed into the host trust store (a provisioning step)
+        // so the broker's server certificate validates; the transport presents the client cert file.
+        return new RabbitMqRebusTransportConfigurer(clientCertificatePfxPath);
     }
 
     private static HttpClient CreateEnrollmentHttpClient(string trustAnchorBundlePath)

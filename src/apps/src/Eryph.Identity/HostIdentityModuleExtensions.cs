@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Rebus.Configuration;
@@ -10,6 +11,7 @@ using Eryph.Rebus;
 using Eryph.Security.Cryptography;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SimpleInjector;
 
 namespace Eryph.Identity
@@ -51,11 +53,16 @@ namespace Eryph.Identity
             {
                 var services = context.ModulesHostServices;
                 var configuration = services.GetRequiredService<IConfiguration>();
-                if (!bool.TryParse(configuration.GetSection("componentMtls")["enabled"], out var enabled) || !enabled)
+                var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Eryph.Identity.Transport");
+                var enabledRaw = configuration.GetSection("componentMtls")["enabled"];
+                if (!bool.TryParse(enabledRaw, out var enabled) || !enabled)
                 {
+                    logger.LogInformation("componentMtls disabled (enabled='{Raw}') — using plaintext bus transport.", enabledRaw);
                     container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
                     return;
                 }
+
+                logger.LogInformation("componentMtls enabled — self-issuing identity client certificate from the component CA.");
 
                 var certificateAuthority = new ComponentCertificateAuthority(
                     services.GetRequiredService<ICertificateStoreService>(),
@@ -67,15 +74,34 @@ namespace Eryph.Identity
 
                 using var key = services.GetRequiredService<ICertificateKeyService>().GenerateRsaKey(2048);
                 var issued = certificateAuthority.IssueComponentCertificate(componentId.ToString(), fqdn, key);
-                // The transport keeps this certificate for the life of the process; do not dispose it.
-                var clientCertificate = issued.Leaf.CopyWithPrivateKey(key);
 
-                var trustBundle = new X509Certificate2Collection();
-                foreach (var root in certificateAuthority.GetTrustedCaCertificates())
-                    trustBundle.Add(root);
+                // The transport consumes a certificate file (Rebus' SslSettings takes a path, not an
+                // in-memory certificate). Write the self-issued client certificate as a PKCS#12 file
+                // into the configured certificate directory. The deployment root CA is installed into
+                // the host trust store by provisioning so the broker's certificate validates.
+                // No SchannelCertificate.MakeUsable here: the key is consumed from the file by the TLS
+                // stack (which imports it itself), so the in-memory CopyWithPrivateKey being ephemeral
+                // is irrelevant — unlike the in-process server/listener paths.
+                using var bound = issued.Leaf.CopyWithPrivateKey(key);
+                var certificateDirectory = configuration.GetSection("componentMtls")["certificateDirectory"];
+                if (string.IsNullOrWhiteSpace(certificateDirectory))
+                {
+                    certificateDirectory = Path.Combine(Path.GetTempPath(), "eryph-identity-mtls");
+                    logger.LogWarning(
+                        "componentMtls:certificateDirectory is not configured; writing the identity client "
+                        + "certificate to '{Directory}'. Configure an ACL-restricted directory for production.",
+                        certificateDirectory);
+                }
+                Directory.CreateDirectory(certificateDirectory);
+                var pfxPath = Path.Combine(certificateDirectory, "identity.pfx");
+                File.WriteAllBytes(pfxPath, bound.Export(X509ContentType.Pkcs12));
+
+                logger.LogInformation(
+                    "Self-issued identity client certificate '{Thumbprint}' (component {ComponentId}) to '{PfxPath}'.",
+                    bound.Thumbprint, componentId, pfxPath);
 
                 container.RegisterInstance<IRebusTransportConfigurer>(
-                    new RabbitMqRebusTransportConfigurer(clientCertificate, trustBundle));
+                    new RabbitMqRebusTransportConfigurer(pfxPath));
             }
         }
     }

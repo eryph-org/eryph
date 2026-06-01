@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Asp.Versioning;
 using Eryph.ModuleCore.Components;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +27,10 @@ public class Enroll(IComponentEnrollmentService enrollmentService)
     // secret by default). Before it is exposed on a reachable interface, the host must apply rate
     // limiting to this route (ASP.NET Core rate limiter) to bound brute-force attempts against the
     // secret. The constant-time secret comparison alone does not limit attempt volume.
+    // The enrollment endpoint lives at the authority root and is not part of the versioned API, so
+    // it must be version-neutral — otherwise API versioning (which does not assume a default version)
+    // leaves the unversioned request unmatched and it falls through to the require-auth fallback.
+    [ApiVersionNeutral]
     [AllowAnonymous]
     [HttpPost("~/components/enroll")]
     [SwaggerOperation(

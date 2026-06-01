@@ -19,6 +19,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     private string KeyPath => Path.Combine(directory, "component.key");
     private string ChainPath => Path.Combine(directory, "issuing-chain.pem");
     private string BundlePath => Path.Combine(directory, "ca-bundle.pem");
+    private string PfxPath => Path.Combine(directory, "component.pfx");
 
     public bool HasValidCertificate() =>
         TryLoadLeaf(out var notAfter) && notAfter > DateTime.UtcNow;
@@ -33,6 +34,23 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         File.WriteAllText(KeyPath, PemEncoding.WriteString("PRIVATE KEY", pkcs8PrivateKey));
         File.WriteAllText(ChainPath, ConcatPem(result.IssuingChain));
         File.WriteAllText(BundlePath, ConcatPem(result.CaTrustBundle));
+        WritePfx();
+    }
+
+    /// <summary>
+    /// The path to the client certificate as a PKCS#12 file, which the RabbitMQ transport hands to
+    /// the TLS stack (Rebus' SslSettings consumes a certificate file, not an in-memory certificate).
+    /// Returns null if the component has not been enrolled; (re)creates the file from the stored PEM
+    /// if it is missing. The file is unprotected (no passphrase) and relies on the directory ACL,
+    /// exactly like the stored private key.
+    /// </summary>
+    public string? GetClientCertificatePfxPath()
+    {
+        if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
+            return null;
+        if (!File.Exists(PfxPath))
+            WritePfx();
+        return PfxPath;
     }
 
     public X509Certificate2? LoadClientCertificate()
@@ -41,13 +59,25 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
             return null;
 
         using var fromPem = X509Certificate2.CreateFromPemFile(LeafPath, KeyPath);
-        // Re-import via PKCS#12 so the private key is usable by the TLS stack (a certificate
-        // produced directly from PEM is not reliably usable for TLS handshakes on Windows).
-        // Ephemeral so no key is left behind in a machine store.
+        // Re-import via PKCS#12 so the private key is usable by the TLS stack: a certificate produced
+        // directly from PEM is not usable for TLS handshakes on Windows. DefaultKeySet (not
+        // EphemeralKeySet) is required — Schannel cannot use ephemeral keys and fails the handshake
+        // with "the platform does not support ephemeral keys". The key lives in the user key store
+        // for the lifetime of the returned certificate and is removed when it is disposed.
         return X509CertificateLoader.LoadPkcs12(
             fromPem.Export(X509ContentType.Pkcs12),
             password: null,
-            keyStorageFlags: X509KeyStorageFlags.EphemeralKeySet);
+            keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+    }
+
+    private void WritePfx()
+    {
+        using var fromPem = X509Certificate2.CreateFromPemFile(LeafPath, KeyPath);
+        // Write to a temp file and move into place so a crash mid-write cannot leave a truncated PFX
+        // that would later be loaded as the client certificate.
+        var tempPath = PfxPath + ".tmp";
+        File.WriteAllBytes(tempPath, fromPem.Export(X509ContentType.Pkcs12));
+        File.Move(tempPath, PfxPath, overwrite: true);
     }
 
     public X509Certificate2Collection LoadCaTrustBundle()

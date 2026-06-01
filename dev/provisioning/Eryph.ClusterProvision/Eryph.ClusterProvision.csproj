@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dev/operator provisioning harness for the split-runtime cluster. It is intentionally NOT part
+    of the product solution (eryph.sln): in a real deployment this work is done by out-of-repo
+    orchestration tooling. It exists here only to drive the IN-REPO component CA primitives
+    (ComponentCertificateAuthority / CaServerCertificateProvider) so a developer can stand up a
+    local mTLS cluster and so the provisioning steps are documented and reproducible.
+
+    It references only the CA implementation; it adds no product surface.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>eryph-cluster-provision</AssemblyName>
+    <RootNamespace>Eryph.ClusterProvision</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\modules\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\..\src\core\src\Eryph.Security.Cryptography\Eryph.Security.Cryptography.csproj" />
+    <ProjectReference Include="..\..\..\src\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -104,6 +104,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
             {
                 options.Authority = authority;
                 options.Audience = EryphConstants.Authorization.Audiences.IdentityApi;
+                // An HTTP authority (split-runtime dev, behind TLS termination) cannot serve HTTPS
+                // metadata; in production the authority is HTTPS and metadata stays HTTPS-only.
+                if (authority.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    options.RequireHttpsMetadata = false;
             });
 
 

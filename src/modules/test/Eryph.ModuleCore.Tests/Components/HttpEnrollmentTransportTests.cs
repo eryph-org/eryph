@@ -15,19 +15,41 @@ namespace Eryph.ModuleCore.Tests.Components;
 
 public class HttpEnrollmentTransportTests
 {
+    // Mirrors the identity API's AddEryphApiSettings (snake_case + enums as strings): the server
+    // deserializes the request and serializes the response with these conventions.
+    private static readonly JsonSerializerOptions ServerJsonOptions = CreateServerJsonOptions();
+
+    private static JsonSerializerOptions CreateServerJsonOptions()
+    {
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+        options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        return options;
+    }
+
     [Fact]
-    public async Task EnrollAsync_posts_to_the_authority_root_and_deserializes_the_result()
+    public async Task EnrollAsync_posts_the_authority_root_with_the_eryph_json_contract_and_deserializes_the_result()
     {
         var componentId = Guid.NewGuid();
+        string? sentBody = null;
         var handler = new StubHandler((request, _) =>
         {
             request.Method.Should().Be(HttpMethod.Post);
             request.RequestUri.Should().Be(new Uri("https://identity.eryph.local:8080/components/enroll"));
+            sentBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
 
-            var result = new ComponentEnrollmentResult { ComponentId = componentId, Certificate = [9] };
+            // The server (AddEryphApiSettings) parses the request with snake_case + string enums; the
+            // request must round-trip through those exact options or multi-word fields drop to null.
+            var parsed = JsonSerializer.Deserialize<ComponentEnrollmentRequest>(sentBody, ServerJsonOptions)!;
+            parsed.ComponentType.Should().Be(ComponentType.Controller);
+            parsed.Fqdn.Should().Be("host.example");
+            parsed.PublicKey.Should().Equal(1, 2, 3);
+            parsed.Credential.Should().Be("secret");
+
+            var result = new ComponentEnrollmentResult { ComponentId = componentId, Certificate = [9, 8, 7] };
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(JsonSerializer.Serialize(result), Encoding.UTF8, "application/json"),
+                Content = new StringContent(
+                    JsonSerializer.Serialize(result, ServerJsonOptions), Encoding.UTF8, "application/json"),
             };
         });
 
@@ -36,10 +58,19 @@ public class HttpEnrollmentTransportTests
             new EndpointResolver(new() { ["identity"] = "https://identity.eryph.local:8080/identity" }));
 
         var result = await transport.EnrollAsync(
-            new ComponentEnrollmentRequest { ComponentType = ComponentType.Identity, Fqdn = "x", PublicKey = [1] },
+            new ComponentEnrollmentRequest
+            {
+                ComponentType = ComponentType.Controller,
+                Fqdn = "host.example",
+                PublicKey = [1, 2, 3],
+                Credential = "secret",
+            },
             CancellationToken.None);
 
+        // The wire format is the eryph contract: snake_case keys, enum as a string.
+        sentBody.Should().Contain("\"component_type\":\"Controller\"").And.Contain("\"public_key\":");
         result.ComponentId.Should().Be(componentId);
+        result.Certificate.Should().Equal(9, 8, 7);
     }
 
     [Fact]

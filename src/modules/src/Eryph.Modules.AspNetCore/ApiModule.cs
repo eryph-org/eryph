@@ -66,7 +66,10 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
             {
                 options.Authority = authority.ToString();
                 options.Audience = AudienceName;
-                if (env.IsDevelopment())
+                // An http:// authority (split-runtime dev, or behind TLS termination) cannot serve
+                // HTTPS metadata; gate on the scheme (not the environment) so it is correct in any
+                // environment, and stays HTTPS-only when the authority is https. Mirrors IdentityModule.
+                if (authority.Scheme == Uri.UriSchemeHttp)
                     options.RequireHttpsMetadata = false;
             });
 

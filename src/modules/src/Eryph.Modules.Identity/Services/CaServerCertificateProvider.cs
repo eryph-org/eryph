@@ -22,10 +22,13 @@ public sealed class CaServerCertificateProvider(
         var issued = certificateAuthority.IssueServerCertificate(dnsName, key);
 
         // The server presents the leaf, so it needs the private key bound; the issuing chain is
-        // carried through unchanged for the listener to present alongside it.
+        // carried through unchanged for the listener to present alongside it. The key is re-imported
+        // so it is usable by Schannel — a CopyWithPrivateKey (ephemeral) key fails the TLS handshake
+        // on Windows (see SchannelCertificate.MakeUsable).
+        using var bound = issued.Leaf.CopyWithPrivateKey(key);
         return new IssuedCertificate
         {
-            Leaf = issued.Leaf.CopyWithPrivateKey(key),
+            Leaf = SchannelCertificate.MakeUsable(bound),
             IssuingChain = issued.IssuingChain,
         };
     }
