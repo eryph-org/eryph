@@ -57,7 +57,11 @@ namespace Eryph.Identity
             var expiresAt = DateTimeOffset.UtcNow.AddHours(options.TtlHours);
             var token = EnrollmentTokenCodec.Issue(ca, options.ComponentType, options.Fqdn, expiresAt);
 
-            var caCertificate = ca.GetTrustedCaCertificates().FirstOrDefault()
+            // Pin the same root that signs tokens (the first with a usable private key — see
+            // EnrollmentTokenCodec). Picking just the first trusted root could pin a public-only/older
+            // root during rollover, leaving the component unable to verify the token or the identity TLS.
+            var roots = ca.GetTrustedCaCertificates();
+            var caCertificate = roots.FirstOrDefault(c => c.HasPrivateKey) ?? roots.FirstOrDefault()
                 ?? throw new InvalidOperationException("The component CA is not available on this host.");
 
             var file = new ComponentEnrollmentFile

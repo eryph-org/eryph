@@ -7,10 +7,11 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.ModuleCore.Components;
 
 /// <summary>
-/// Runs component enrollment on startup and re-checks periodically to renew before expiry. The
-/// initial enrollment is retry-tolerant (see <see cref="ComponentEnrollmentClient"/>), so the
-/// component keeps trying if the identity service is not yet available. Registered by the
-/// split-runtime hosts that use bus mTLS; eryph-zero (in-memory bus) does not need it.
+/// Re-checks the component certificate periodically and renews it before expiry via the enrollment
+/// client. NOTE: this is the periodic-renewal path and is <b>not yet wired</b> — no host registers it.
+/// Today certificates are (re)issued at startup by <see cref="ComponentMtlsTransport"/> (enroll-if-stale);
+/// periodic renewal (and the bus reconnect it requires) is a planned milestone. When enabled, the
+/// split-runtime hosts that use bus mTLS will register it; eryph-zero (in-memory bus) does not need it.
 /// </summary>
 internal sealed class ComponentEnrollmentHostedService(
     ComponentEnrollmentClient client,

@@ -1,3 +1,4 @@
+#nullable enable
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -14,8 +15,8 @@ namespace Eryph.Rebus
         private const string ServerAuthOid = "1.3.6.1.5.5.7.3.1";
 
         public static bool IsTrustedServerCertificate(
-            X509Certificate certificate,
-            X509Chain presentedChain,
+            X509Certificate? certificate,
+            X509Chain? presentedChain,
             SslPolicyErrors errors,
             X509Certificate2Collection trustedRoots)
         {
