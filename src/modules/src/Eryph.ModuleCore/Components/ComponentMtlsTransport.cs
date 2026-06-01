@@ -57,19 +57,25 @@ public static class ComponentMtlsTransport
         File.WriteAllText(
             trustAnchorPath, PemEncoding.WriteString("CERTIFICATE", enrollment.IdentityCaCertificate));
 
-        // The enrollment token is bound to a specific host FQDN; the most likely deployment mistake is
-        // delivering a file to the wrong host, where the server would reject every attempt and the
-        // component would retry forever. Surface that early using the file's (informational) bound FQDN
-        // — the authoritative binding is still the signed token, checked server-side.
+        // The enrollment token is bound to a specific component type and host FQDN; the most likely
+        // deployment mistakes are delivering a file for the wrong component type or to the wrong host,
+        // where the server rejects every attempt and the component retries forever. Surface those early
+        // from the file's (informational) fields — the authoritative binding is the signed token,
+        // checked server-side.
+        var logger = loggerFactory.CreateLogger(typeof(ComponentMtlsTransport).FullName!);
+        if (enrollment.ComponentType != componentType)
+            logger.LogWarning(
+                "The enrollment file is for component type '{FileType}' but this component is '{ActualType}'. "
+                + "Enrollment will be rejected until the file for this component type is provided.",
+                enrollment.ComponentType, componentType);
+
         var identity = new ComponentIdentity(componentType, "");
         if (!string.IsNullOrWhiteSpace(enrollment.Fqdn)
             && !string.Equals(enrollment.Fqdn, identity.MachineName, StringComparison.OrdinalIgnoreCase))
-        {
-            loggerFactory.CreateLogger(typeof(ComponentMtlsTransport).FullName!).LogWarning(
+            logger.LogWarning(
                 "The enrollment file is bound to host '{FileFqdn}' but this machine reports '{LocalFqdn}'. "
                 + "Enrollment will be rejected until the file cut for this host is provided.",
                 enrollment.Fqdn, identity.MachineName);
-        }
 
         var endpointResolver = new EndpointResolver(new Dictionary<string, string>
         {

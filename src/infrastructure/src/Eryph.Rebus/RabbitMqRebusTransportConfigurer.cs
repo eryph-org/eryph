@@ -24,8 +24,10 @@ namespace Eryph.Rebus
     /// </remarks>
     public class RabbitMqRebusTransportConfigurer : IRebusTransportConfigurer
     {
-        private readonly string _clientCertificatePfxPath;
-        private readonly string _clientCertificatePassphrase;
+        // Default to empty (the "no client certificate / plaintext" sentinel) so the fields are always
+        // non-null regardless of which constructor is used.
+        private readonly string _clientCertificatePfxPath = "";
+        private readonly string _clientCertificatePassphrase = "";
 
         public RabbitMqRebusTransportConfigurer()
         {
