@@ -19,9 +19,12 @@ using Eryph.Security.Cryptography;
 namespace Eryph.Identity
 {
     /// <summary>
-    /// The operator command that produces a component enrollment file (run on the identity host,
-    /// elevated — it uses the component CA in the machine store). Usage:
-    /// <code>eryph-identity new-enrollment --type &lt;ComponentType&gt; [--endpoint &lt;url&gt;] [--out &lt;file&gt;] [--ttl-hours N]</code>
+    /// The operator command that produces a component enrollment file from the component CA on the
+    /// identity host. It uses the same PKI backend the daemon is configured with (see
+    /// <see cref="PkiOptions"/>): the Windows machine store (the default on Windows, which requires
+    /// elevation) or the file store (the default elsewhere, e.g. on Linux, governed by
+    /// <c>ERYPH_PKI_KEYSTORE</c>/<c>ERYPH_PKI_DIRECTORY</c>). Usage:
+    /// <code>eryph-identity new-enrollment --type &lt;ComponentType&gt; --fqdn &lt;host&gt; [--endpoint &lt;url&gt;] [--out &lt;file&gt;] [--ttl-hours N]</code>
     /// The resulting file bundles the identity CA certificate (trust anchor), the endpoint and a
     /// one-time token; deliver it out-of-band to the component, which imports it to enroll.
     /// </summary>

@@ -9,14 +9,14 @@ namespace Eryph.Identity
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
             // Operator command: produce a component enrollment file from the CA on this host, then
-            // exit (it does not start the identity host).
+            // exit (it does not start the identity host). Return the exit code instead of calling
+            // Environment.Exit, which would terminate the process immediately and bypass flush/dispose.
             if (args.Length > 0 && string.Equals(args[0], EnrollmentCommand.Verb, StringComparison.OrdinalIgnoreCase))
             {
-                Environment.Exit(await EnrollmentCommand.RunAsync(args));
-                return;
+                return await EnrollmentCommand.RunAsync(args);
             }
 
             // Logging uses the ASP.NET Core host defaults (UseAspNetCoreWithDefaults). Serilog is
@@ -33,6 +33,7 @@ namespace Eryph.Identity
                 .ConfigureIdentityComponent()
                 .UseAspNetCoreWithDefaults((module, webHostBuilder) => IdentityServerTls.Configure(webHostBuilder))
                 .RunModule<IdentityModule>();
+            return 0;
         }
     }
 }
