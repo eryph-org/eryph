@@ -27,6 +27,14 @@ public class IdentityDbContext: DbContext
             entity.Property(t => t.Jti).HasMaxLength(64);
         });
 
+        // OpenIddict indexes (ApplicationId, Status, Subject, Type) on both tokens and authorizations.
+        // On MariaDB/MySQL with utf8mb4 (4 bytes/char) the default Subject length (400) pushes the
+        // tokens index past the 3072-byte key limit. Subject holds a principal identifier, for which
+        // 256 is ample; capping it keeps the composite index within the limit. Harmless for the
+        // in-memory provider (eryph-zero, tests), which ignores column lengths.
+        modelBuilder.Entity<TokenEntity>().Property(t => t.Subject).HasMaxLength(256);
+        modelBuilder.Entity<AuthorizationEntity>().Property(a => a.Subject).HasMaxLength(256);
+
         base.OnModelCreating(modelBuilder);
     }
 }

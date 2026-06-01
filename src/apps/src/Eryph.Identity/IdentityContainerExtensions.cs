@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using Eryph.IdentityDb;
+using Eryph.IdentityDb.MySql;
 using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
-using Microsoft.EntityFrameworkCore.Storage;
 using SimpleInjector;
 
 namespace Eryph.Identity
@@ -27,9 +27,12 @@ namespace Eryph.Identity
             RegisterCertificateServices(container);
             container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
 
-            // Identity store stays in-memory for this milestone (mirrors eryph-zero).
-            container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
+            // The standalone identity host owns a durable MariaDB database — its own DB, separate from
+            // the controller/compute StateDb, because identity is its own authority. eryph-zero keeps
+            // the in-memory store. The connection string comes from ERYPH_IDENTITYDB_CONNECTIONSTRING;
+            // the schema is migrated in-process at startup by MigrateIdentityDbHandler.
+            container.RegisterInstance<IDbContextConfigurer<IdentityDbContext>>(
+                new MySqlIdentityDbContextConfigurer(GetIdentityDbConnectionString()));
 
             // The identity process owns its own endpoint; it is told its public address via
             // config so it can both host on it and (later) advertise it to the controller.
@@ -57,6 +60,17 @@ namespace Eryph.Identity
                 container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
             }
         }
+
+        /// <summary>
+        /// The MariaDB connection string for the identity database, supplied via the
+        /// <c>ERYPH_IDENTITYDB_CONNECTIONSTRING</c> environment variable. No credentialed default is
+        /// hardcoded — the operator owns this configuration.
+        /// </summary>
+        public static string GetIdentityDbConnectionString() =>
+            Environment.GetEnvironmentVariable("ERYPH_IDENTITYDB_CONNECTIONSTRING")
+            ?? throw new InvalidOperationException(
+                "The identity database connection string must be provided via the "
+                + "ERYPH_IDENTITYDB_CONNECTIONSTRING environment variable.");
 
         /// <summary>The identity component's own public URL (config/env, default for dev).</summary>
         public static string GetIdentityUrl()

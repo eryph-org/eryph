@@ -75,7 +75,9 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         services.AddDbContext<IdentityDbContext>(options =>
         {
             serviceProvider.GetRequiredService<IDbContextConfigurer<IdentityDbContext>>().Configure(options);
-            options.UseOpenIddict<ApplicationEntity, AuthorizationEntity, OpenIddictEntityFrameworkCoreScope, TokenEntity, string>();
+            // OpenIddict's tables are contributed through this options extension; the design-time
+            // migration factory applies the same call so generated migrations include them.
+            IdentityDbModel.ApplyOpenIddict(options);
         });
 
         var encryptionCertificate = signingCertManager.GetEncryptionCertificate();

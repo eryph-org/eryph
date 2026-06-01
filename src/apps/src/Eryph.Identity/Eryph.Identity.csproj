@@ -14,6 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
+    <ProjectReference Include="..\..\..\data\src\Eryph.IdentityDb.MySql\Eryph.IdentityDb.MySql.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
   </ItemGroup>
