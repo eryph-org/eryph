@@ -92,9 +92,10 @@ namespace Eryph.Identity
                         + "certificate to '{Directory}'. Configure an ACL-restricted directory for production.",
                         certificateDirectory);
                 }
-                Directory.CreateDirectory(certificateDirectory);
+                // The PKCS#12 holds the bus client private key — write it owner-only (0600 on Unix).
+                SecureFile.CreateOwnerOnlyDirectory(certificateDirectory);
                 var pfxPath = Path.Combine(certificateDirectory, "identity.pfx");
-                File.WriteAllBytes(pfxPath, bound.Export(X509ContentType.Pkcs12));
+                SecureFile.WriteOwnerOnly(pfxPath, bound.Export(X509ContentType.Pkcs12));
 
                 logger.LogInformation(
                     "Self-issued identity client certificate '{Thumbprint}' (component {ComponentId}) to '{PfxPath}'.",

@@ -4,6 +4,7 @@ using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Eryph.Identity
 {
@@ -27,9 +28,15 @@ namespace Eryph.Identity
                 var baseUrl = context.Configuration["ERYPH_IDENTITY_BASEURL"] ?? "https://localhost:8080/";
                 var dnsName = new Uri(baseUrl).Host;
 
-                var keyService = new WindowsCertificateKeyService();
+                // Resolve the platform key/cert backend from DI (same instances the module uses, so this
+                // self-issued cert chains to the same CA). Kestrel's ApplicationServices is the
+                // cross-wired provider that holds the registrations from IdentityContainerExtensions.
+                var services = options.ApplicationServices;
+                var keyService = services.GetRequiredService<ICertificateKeyService>();
                 var certificateAuthority = new ComponentCertificateAuthority(
-                    new WindowsCertificateStoreService(), new WindowsCertificateGenerator(), keyService);
+                    services.GetRequiredService<ICertificateStoreService>(),
+                    services.GetRequiredService<ICertificateGenerator>(),
+                    keyService);
                 var issued = new CaServerCertificateProvider(keyService, certificateAuthority)
                     .GetServerCertificate(dnsName);
 

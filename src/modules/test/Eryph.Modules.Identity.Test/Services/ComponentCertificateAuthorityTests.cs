@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -17,6 +18,43 @@ public class ComponentCertificateAuthorityTests
 
     private static ComponentCertificateAuthority CreateCa() =>
         new(new InMemoryCertificateStore(), new CertificateGenerator(), new InMemoryKeyService());
+
+    [Fact]
+    public void File_backed_ca_persists_keys_and_reloads_across_instances()
+    {
+        // The cross-platform (Linux default) backend: keys + certs live in a directory, not CNG/the
+        // Windows store. A fresh CA instance over the same directory must reuse the persisted root
+        // (with its private key), so it keeps one root and keeps issuing certs that chain to it.
+        var dir = Path.Combine(Path.GetTempPath(), "eryph-ca-file-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            ComponentCertificateAuthority NewCa() => new(
+                new FileCertificateStoreService(dir),
+                new CertificateGenerator(),
+                new FileCertificateKeyService(Path.Combine(dir, "keys")));
+
+            using var key1 = RSA.Create(2048);
+            var issued1 = NewCa().IssueComponentCertificate("id-1", "agent1.eryph.local", key1);
+
+            var reloaded = NewCa();
+            var roots = reloaded.GetTrustedCaCertificates();
+            roots.Should().ContainSingle("a fresh instance reuses the persisted root, not a new one");
+            roots[0].HasPrivateKey.Should().BeTrue("the root key persisted to disk and reloaded");
+
+            using var key2 = RSA.Create(2048);
+            var issued2 = reloaded.IssueComponentCertificate("id-2", "agent2.eryph.local", key2);
+            ChainsToTrustedRoot(issued2, reloaded).Should().BeTrue("issuance still chains to the persisted root");
+            // Same client intermediate across instances => its private key persisted and reloaded
+            // (a key that failed to reload would force the CA to regenerate a new intermediate).
+            issued2.IssuingChain[0].Thumbprint.Should().Be(issued1.IssuingChain[0].Thumbprint,
+                "the persisted client intermediate is reused, not regenerated");
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
 
     private static bool ChainsToTrustedRoot(IssuedCertificate issued, ComponentCertificateAuthority ca)
     {

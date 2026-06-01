@@ -48,10 +48,18 @@ namespace Eryph.Identity
                 return Task.FromResult(2);
             }
 
-            var ca = new ComponentCertificateAuthority(
-                new WindowsCertificateStoreService(),
-                new WindowsCertificateGenerator(),
-                new WindowsCertificateKeyService());
+            // Use the SAME backend the daemon is configured with, or the minted file would be signed by
+            // a different CA than the running identity host serves (e.g. ERYPH_PKI_KEYSTORE=file).
+            var (useFile, pkiDirectory) = PkiOptions.Resolve();
+            var ca = useFile
+                ? new ComponentCertificateAuthority(
+                    new FileCertificateStoreService(pkiDirectory),
+                    new CertificateGenerator(),
+                    new FileCertificateKeyService(PkiOptions.KeyDirectory(pkiDirectory)))
+                : new ComponentCertificateAuthority(
+                    new WindowsCertificateStoreService(),
+                    new WindowsCertificateGenerator(),
+                    new WindowsCertificateKeyService());
 
             var expiresAt = DateTimeOffset.UtcNow.AddHours(options.TtlHours);
             var token = EnrollmentTokenCodec.Issue(ca, options.ComponentType, options.Fqdn, expiresAt);
