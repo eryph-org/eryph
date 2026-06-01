@@ -63,9 +63,34 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), result);
         store.HasValidCertificate().Should().BeTrue();
 
-        // The key file is missing/corrupt (partial state): the leaf alone is not usable, so the store
-        // must report not-valid/not-current and let startup re-enroll rather than fail later.
+        // The key file is missing (partial state): the leaf alone is not usable, so the store must
+        // report not-valid/not-current and let startup re-enroll rather than fail later.
         File.Delete(Path.Combine(_dir, "component.key"));
+        store.HasValidCertificate().Should().BeFalse();
+        store.HasCurrentCertificate().Should().BeFalse();
+    }
+
+    [Fact]
+    public void Is_not_valid_when_the_private_key_is_corrupt()
+    {
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
+        var result = new ComponentEnrollmentResult
+        {
+            ComponentId = Guid.NewGuid(),
+            Certificate = cert.Export(X509ContentType.Cert),
+            IssuingChain = [],
+            CaTrustBundle = [cert.Export(X509ContentType.Cert)],
+        };
+
+        var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
+        store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), result);
+        store.HasValidCertificate().Should().BeTrue();
+
+        // A present-but-unparseable key must not count as usable — the leaf and key are loaded together,
+        // so a corrupt key fails the check and forces re-enrollment instead of a later PFX-build failure.
+        File.WriteAllText(Path.Combine(_dir, "component.key"), "-----BEGIN PRIVATE KEY-----\nnonsense\n-----END PRIVATE KEY-----");
         store.HasValidCertificate().Should().BeFalse();
         store.HasCurrentCertificate().Should().BeFalse();
     }

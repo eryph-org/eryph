@@ -151,19 +151,20 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     private bool TryLoadLeaf(out DateTime notAfterUtc)
     {
         notAfterUtc = default;
-        // "Valid/current" must mean "usable": require the private key alongside the leaf. Otherwise a
-        // missing/partial key would let HasValidCertificate skip re-enrollment, then fail later when
-        // GetClientCertificatePfxPath returns null or the TLS stack cannot find the key.
+        // "Valid/current" must mean "usable". Both files must exist, and loading the leaf together with
+        // its key must succeed — that rejects a corrupt or mismatched key (which would otherwise pass an
+        // existence check and then fail when the PFX is built), so re-enrollment is triggered instead of
+        // skipping it and failing later when the certificate/key is actually needed.
         if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
             return false;
 
         try
         {
-            using var leaf = X509Certificate2.CreateFromPem(File.ReadAllText(LeafPath));
+            using var leaf = X509Certificate2.CreateFromPemFile(LeafPath, KeyPath);
             notAfterUtc = leaf.NotAfter.ToUniversalTime();
             return true;
         }
-        catch (CryptographicException)
+        catch (Exception ex) when (ex is CryptographicException or ArgumentException)
         {
             return false;
         }
