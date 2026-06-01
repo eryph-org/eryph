@@ -108,32 +108,52 @@ public static class EnrollmentTokenCodec
     private static bool VerifiesAgainstAnyRoot(
         IComponentCertificateAuthority certificateAuthority, byte[] payload, byte[] signature)
     {
-        var any = false;
-        foreach (var certificate in certificateAuthority.GetTrustedCaCertificates())
+        // GetTrustedCaCertificates hands out fresh, caller-owned handles; dispose them all in the
+        // finally so neither the verify path nor the empty-store throw leaks a certificate handle.
+        var roots = certificateAuthority.GetTrustedCaCertificates();
+        try
         {
-            any = true;
-            // The certificate is owned by the CA; only the RSA key handle is disposed here.
-            using var key = certificate.GetRSAPublicKey();
-            if (key is not null && key.VerifyData(payload, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
-                return true;
+            if (roots.Count == 0)
+                throw new InvalidOperationException(
+                    "No component CA root certificate is available to verify enrollment tokens.");
+            foreach (var certificate in roots)
+            {
+                using var key = certificate.GetRSAPublicKey();
+                if (key is not null
+                    && key.VerifyData(payload, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+                    return true;
+            }
+            return false;
         }
-
-        if (!any)
-            throw new InvalidOperationException(
-                "No component CA root certificate is available to verify enrollment tokens.");
-        return false;
+        finally
+        {
+            foreach (var certificate in roots)
+                certificate.Dispose();
+        }
     }
 
     private static RSA GetSigningKey(IComponentCertificateAuthority certificateAuthority)
     {
-        foreach (var certificate in certificateAuthority.GetTrustedCaCertificates())
+        // The certificates are caller-owned; dispose them all once the signing key has been taken. The
+        // RSA returned by GetRSAPrivateKey owns its own key handle and stays usable after the
+        // certificate it came from is disposed, so the caller's 'using' disposes only the key.
+        var roots = certificateAuthority.GetTrustedCaCertificates();
+        try
         {
-            var key = certificate.GetRSAPrivateKey();
-            if (key is not null)
-                return key;
+            foreach (var certificate in roots)
+            {
+                var key = certificate.GetRSAPrivateKey();
+                if (key is not null)
+                    return key;
+            }
+            throw new InvalidOperationException(
+                "No component CA root certificate with a usable private key is available to sign enrollment tokens.");
         }
-        throw new InvalidOperationException(
-            "No component CA root certificate with a usable private key is available to sign enrollment tokens.");
+        finally
+        {
+            foreach (var certificate in roots)
+                certificate.Dispose();
+        }
     }
 
     private sealed class TokenPayload

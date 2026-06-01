@@ -26,6 +26,9 @@ public sealed class CaServerCertificateProvider(
         // so it is usable by Schannel — a CopyWithPrivateKey (ephemeral) key fails the TLS handshake
         // on Windows (see SchannelCertificate.MakeUsable).
         using var bound = issued.Leaf.CopyWithPrivateKey(key);
+        // The original public leaf was only needed to bind the key into 'bound'; dispose its handle now.
+        // Do not dispose 'issued' itself — its issuing chain is returned and presented by the listener.
+        issued.Leaf.Dispose();
         return new IssuedCertificate
         {
             Leaf = SchannelCertificate.MakeUsable(bound),

@@ -64,18 +64,29 @@ namespace Eryph.Identity
             // EnrollmentTokenCodec). Picking just the first trusted root could pin a public-only/older
             // root during rollover, leaving the component unable to verify the token or the identity TLS.
             var roots = ca.GetTrustedCaCertificates();
-            var caCertificate = roots.FirstOrDefault(c => c.HasPrivateKey) ?? roots.FirstOrDefault()
-                ?? throw new InvalidOperationException("The component CA is not available on this host.");
-
-            var file = new ComponentEnrollmentFile
+            ComponentEnrollmentFile file;
+            try
             {
-                ComponentType = options.ComponentType,
-                Fqdn = options.Fqdn,
-                IdentityEndpoint = options.Endpoint,
-                IdentityCaCertificate = caCertificate.Export(X509ContentType.Cert),
-                Token = token,
-                ExpiresAt = expiresAt,
-            };
+                var caCertificate = roots.FirstOrDefault(c => c.HasPrivateKey) ?? roots.FirstOrDefault()
+                    ?? throw new InvalidOperationException("The component CA is not available on this host.");
+
+                file = new ComponentEnrollmentFile
+                {
+                    ComponentType = options.ComponentType,
+                    Fqdn = options.Fqdn,
+                    IdentityEndpoint = options.Endpoint,
+                    IdentityCaCertificate = caCertificate.Export(X509ContentType.Cert),
+                    Token = token,
+                    ExpiresAt = expiresAt,
+                };
+            }
+            finally
+            {
+                // The caller owns the certificates GetTrustedCaCertificates returns; the file holds only
+                // the exported DER, so release their native handles before the command exits.
+                foreach (var root in roots)
+                    root.Dispose();
+            }
 
             var json = new JsonSerializerOptions
             {
