@@ -43,9 +43,10 @@ public class EnrollEndpointTests
         public StubEnrollmentService(ComponentEnrollmentResult result) => _result = result;
         public StubEnrollmentService(bool rejected) => _rejected = rejected;
 
-        public ComponentEnrollmentResult Enroll(ComponentEnrollmentRequest request) =>
+        public Task<ComponentEnrollmentResult> EnrollAsync(
+            ComponentEnrollmentRequest request, CancellationToken cancellationToken = default) =>
             _rejected || _result is null
                 ? throw new ComponentEnrollmentException("not authorized")
-                : _result;
+                : Task.FromResult(_result);
     }
 }

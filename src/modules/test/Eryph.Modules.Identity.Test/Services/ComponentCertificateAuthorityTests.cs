@@ -71,12 +71,35 @@ public class ComponentCertificateAuthorityTests
         var sut = CreateCa();
         using var key = RSA.Create(2048);
 
-        var issued = sut.IssueServerCertificate("identity.eryph.local", key);
+        var issued = sut.IssueServerCertificate(["identity.eryph.local"], key);
 
         ChainsToTrustedRoot(issued, sut).Should().BeTrue();
         EnhancedKeyUsages(issued.Leaf).Should().Contain(ServerAuthOid);
         issued.Leaf.Extensions.Single(e => e.Oid?.Value == "2.5.29.17").Format(false)
             .Should().Contain("identity.eryph.local");
+    }
+
+    [Fact]
+    public void IssueServerCertificate_covers_every_requested_dns_name()
+    {
+        var sut = CreateCa();
+        using var key = RSA.Create(2048);
+
+        var issued = sut.IssueServerCertificate(["api.eryph.local", "api", "compute.eryph.local"], key);
+
+        var san = issued.Leaf.Extensions.Single(e => e.Oid?.Value == "2.5.29.17").Format(false);
+        san.Should().Contain("api.eryph.local").And.Contain("api").And.Contain("compute.eryph.local");
+    }
+
+    [Fact]
+    public void IssueServerCertificate_rejects_an_empty_name_list()
+    {
+        var sut = CreateCa();
+        using var key = RSA.Create(2048);
+
+        var act = () => sut.IssueServerCertificate([], key);
+
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -87,7 +110,7 @@ public class ComponentCertificateAuthorityTests
         using var serverKey = RSA.Create(2048);
 
         var client = sut.IssueComponentCertificate("id", "agent.eryph.local", clientKey);
-        var server = sut.IssueServerCertificate("api.eryph.local", serverKey);
+        var server = sut.IssueServerCertificate(["api.eryph.local"], serverKey);
 
         client.IssuingChain[0].Thumbprint.Should().NotBe(server.IssuingChain[0].Thumbprint);
     }

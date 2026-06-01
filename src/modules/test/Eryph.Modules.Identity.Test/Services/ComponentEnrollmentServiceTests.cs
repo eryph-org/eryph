@@ -2,11 +2,17 @@
 using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
+using Eryph.IdentityDb;
+using Eryph.IdentityDb.Entities;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -27,11 +33,11 @@ public class ComponentEnrollmentServiceTests
     }
 
     [Fact]
-    public void Enroll_issues_certificate_chaining_to_the_ca_with_a_server_derived_id()
+    public async Task Enroll_issues_certificate_chaining_to_the_ca_with_a_server_derived_id()
     {
         var sut = CreateService(authorized: true);
 
-        var result = sut.Enroll(new ComponentEnrollmentRequest
+        var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
             ComponentType = ComponentType.VMHostAgent,
             Fqdn = "agent1.eryph.local",
@@ -57,11 +63,11 @@ public class ComponentEnrollmentServiceTests
     }
 
     [Fact]
-    public void Enroll_also_issues_a_server_certificate_when_a_server_key_is_supplied()
+    public async Task Enroll_also_issues_a_server_certificate_when_a_server_key_is_supplied()
     {
         var sut = CreateService(authorized: true);
 
-        var result = sut.Enroll(new ComponentEnrollmentRequest
+        var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
             ComponentType = ComponentType.ComputeApi,
             Fqdn = "api.eryph.local",
@@ -77,11 +83,48 @@ public class ComponentEnrollmentServiceTests
     }
 
     [Fact]
-    public void Enroll_omits_the_server_certificate_when_no_server_key_is_supplied()
+    public async Task Enroll_covers_every_requested_server_name_in_the_certificate()
     {
         var sut = CreateService(authorized: true);
 
-        var result = sut.Enroll(new ComponentEnrollmentRequest
+        var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = NewPublicKey(),
+            ServerPublicKey = NewPublicKey(),
+            ServerDnsNames = ["api.eryph.local", "compute.eryph.local"],
+        });
+
+        using var server = X509CertificateLoader.LoadCertificate(result.ServerCertificate);
+        server.MatchesHostname("api.eryph.local", false, false).Should().BeTrue();
+        server.MatchesHostname("compute.eryph.local", false, false)
+            .Should().BeTrue("every requested name must be covered, not just the first");
+    }
+
+    [Fact]
+    public async Task Enroll_rejects_when_any_requested_server_name_is_invalid()
+    {
+        var sut = CreateService(authorized: true);
+
+        var act = () => sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = NewPublicKey(),
+            ServerPublicKey = NewPublicKey(),
+            ServerDnsNames = ["api.eryph.local", "*.eryph.local"],
+        });
+
+        await act.Should().ThrowAsync<ComponentEnrollmentException>("a wildcard name must be rejected");
+    }
+
+    [Fact]
+    public async Task Enroll_omits_the_server_certificate_when_no_server_key_is_supplied()
+    {
+        var sut = CreateService(authorized: true);
+
+        var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
             ComponentType = ComponentType.VMHostAgent,
             Fqdn = "agent1.eryph.local",
@@ -92,79 +135,153 @@ public class ComponentEnrollmentServiceTests
     }
 
     [Fact]
-    public void Enroll_throws_when_the_policy_denies_the_request()
+    public async Task Enroll_throws_when_the_policy_denies_the_request()
     {
         var sut = CreateService(authorized: false);
 
-        var act = () => sut.Enroll(new ComponentEnrollmentRequest
+        var act = () => sut.EnrollAsync(new ComponentEnrollmentRequest
         {
             ComponentType = ComponentType.Identity,
             Fqdn = "id.eryph.local",
             PublicKey = NewPublicKey(),
         });
 
-        act.Should().Throw<ComponentEnrollmentException>();
+        await act.Should().ThrowAsync<ComponentEnrollmentException>();
     }
 
     [Fact]
-    public void Enroll_throws_on_an_invalid_public_key()
+    public async Task Enroll_throws_on_an_invalid_public_key()
     {
         var sut = CreateService(authorized: true);
 
-        var act = () => sut.Enroll(new ComponentEnrollmentRequest
+        var act = () => sut.EnrollAsync(new ComponentEnrollmentRequest
         {
             ComponentType = ComponentType.ComputeApi,
             Fqdn = "api.eryph.local",
             PublicKey = [1, 2, 3],
         });
 
-        act.Should().Throw<ComponentEnrollmentException>();
+        await act.Should().ThrowAsync<ComponentEnrollmentException>();
     }
 
     [Fact]
-    public void TokenEnrollmentPolicy_authorizes_a_valid_token_for_the_bound_type()
+    public async Task TokenEnrollmentPolicy_authorizes_when_the_redeemer_accepts_the_token()
     {
         var policy = new TokenEnrollmentPolicy(
-            new StubTokenService(EnrollmentTokenValidationResult.Valid(ComponentType.VMHostAgent)),
+            new StubTokenRedeemer(EnrollmentTokenValidationResult.Valid(ComponentType.VMHostAgent)),
             NullLogger<TokenEnrollmentPolicy>.Instance);
 
-        policy.IsAuthorized(new ComponentEnrollmentRequest
+        (await policy.IsAuthorizedAsync(new ComponentEnrollmentRequest
         {
             ComponentType = ComponentType.VMHostAgent,
             Token = "token",
-        }).Should().BeTrue();
+        })).Should().BeTrue();
     }
 
     [Fact]
-    public void TokenEnrollmentPolicy_denies_on_type_mismatch_or_invalid_token()
+    public async Task TokenEnrollmentPolicy_denies_when_the_redeemer_rejects_the_token()
     {
-        var typeMismatch = new TokenEnrollmentPolicy(
-            new StubTokenService(EnrollmentTokenValidationResult.Valid(ComponentType.Controller)),
+        // The redeemer enforces signature/expiry/type/one-time and returns Invalid; the policy denies.
+        var policy = new TokenEnrollmentPolicy(
+            new StubTokenRedeemer(EnrollmentTokenValidationResult.Invalid),
             NullLogger<TokenEnrollmentPolicy>.Instance);
-        typeMismatch.IsAuthorized(new ComponentEnrollmentRequest
-        {
-            ComponentType = ComponentType.VMHostAgent,
-            Token = "token",
-        }).Should().BeFalse();
 
-        var invalid = new TokenEnrollmentPolicy(
-            new StubTokenService(EnrollmentTokenValidationResult.Invalid),
-            NullLogger<TokenEnrollmentPolicy>.Instance);
-        invalid.IsAuthorized(new ComponentEnrollmentRequest
+        (await policy.IsAuthorizedAsync(new ComponentEnrollmentRequest
         {
             ComponentType = ComponentType.VMHostAgent,
             Token = "token",
-        }).Should().BeFalse();
+        })).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TokenEnrollmentPolicy_denies_when_no_token_is_presented()
+    {
+        var policy = new TokenEnrollmentPolicy(
+            new StubTokenRedeemer(EnrollmentTokenValidationResult.Valid(ComponentType.VMHostAgent)),
+            NullLogger<TokenEnrollmentPolicy>.Instance);
+
+        (await policy.IsAuthorizedAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Token = "",
+        })).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Enroll_does_not_consume_the_token_on_a_recoverable_client_error()
+    {
+        // Real CA + policy + redeemer over a shared in-memory IdentityDb, so the redeemed-token state
+        // is shared across requests exactly as it would be against a real database.
+        var ca = CreateCa();
+        var root = new InMemoryDatabaseRoot();
+        var dbName = "enroll-" + Guid.NewGuid().ToString("N");
+
+        ComponentEnrollmentService NewService()
+        {
+            var context = new IdentityDbContext(
+                new DbContextOptionsBuilder<IdentityDbContext>().UseInMemoryDatabase(dbName, root).Options);
+            var policy = new TokenEnrollmentPolicy(
+                new EnrollmentTokenRedeemer(ca, new IdentityDbRepository<RedeemedEnrollmentToken>(context)),
+                NullLogger<TokenEnrollmentPolicy>.Instance);
+            return new ComponentEnrollmentService(ca, policy, NullLogger<ComponentEnrollmentService>.Instance);
+        }
+
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, DateTimeOffset.UtcNow.AddMinutes(5));
+
+        // A valid token with garbage client-key bytes is rejected WITHOUT burning the token...
+        var badKey = () => NewService().EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = [1, 2, 3],
+            Token = token,
+        });
+        await badKey.Should().ThrowAsync<ComponentEnrollmentException>();
+
+        // ...and so is a valid token with an invalid requested server name.
+        var badServerName = () => NewService().EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = NewPublicKey(),
+            ServerPublicKey = NewPublicKey(),
+            ServerDnsNames = ["*.eryph.local"],
+            Token = token,
+        });
+        await badServerName.Should().ThrowAsync<ComponentEnrollmentException>();
+
+        // ...so the corrected retry still succeeds: the one-time token survived the recoverable errors.
+        var result = await NewService().EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = NewPublicKey(),
+            Token = token,
+        });
+        result.ComponentId.Should().Be(
+            ComponentIdentity.DeriveComponentId(ComponentType.ComputeApi, "api.eryph.local"));
+
+        // The token is now spent; a further attempt is rejected.
+        var replay = () => NewService().EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = NewPublicKey(),
+            Token = token,
+        });
+        await replay.Should().ThrowAsync<ComponentEnrollmentException>();
     }
 
     private sealed class StubPolicy(bool authorized) : IComponentEnrollmentPolicy
     {
-        public bool IsAuthorized(ComponentEnrollmentRequest request) => authorized;
+        public Task<bool> IsAuthorizedAsync(ComponentEnrollmentRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(authorized);
     }
 
-    private sealed class StubTokenService(EnrollmentTokenValidationResult result) : IEnrollmentTokenService
+    private sealed class StubTokenRedeemer(EnrollmentTokenValidationResult result) : IEnrollmentTokenRedeemer
     {
-        public string Mint(ComponentType componentType, TimeSpan validFor) => "token";
-        public EnrollmentTokenValidationResult Redeem(string token) => result;
+        public Task<EnrollmentTokenValidationResult> RedeemAsync(
+            string token, ComponentType expectedComponentType, CancellationToken cancellationToken = default) =>
+            Task.FromResult(result);
     }
 }

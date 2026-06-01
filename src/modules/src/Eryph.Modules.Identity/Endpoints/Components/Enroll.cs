@@ -40,23 +40,23 @@ public class Enroll(IComponentEnrollmentService enrollmentService)
         Tags = ["Components"])]
     [SwaggerResponse(Status200OK, "Success", typeof(ComponentEnrollmentResult), ["application/json"])]
     [SwaggerResponse(Status401Unauthorized, "The enrollment request was not authorized")]
-    public override Task<ActionResult<ComponentEnrollmentResult>> HandleAsync(
+    public override async Task<ActionResult<ComponentEnrollmentResult>> HandleAsync(
         [FromBody] ComponentEnrollmentRequest request,
         CancellationToken cancellationToken = default)
     {
         if (request is null)
-            return Task.FromResult<ActionResult<ComponentEnrollmentResult>>(BadRequest());
+            return BadRequest();
 
         try
         {
-            var result = enrollmentService.Enroll(request);
-            return Task.FromResult<ActionResult<ComponentEnrollmentResult>>(Ok(result));
+            var result = await enrollmentService.EnrollAsync(request, cancellationToken);
+            return Ok(result);
         }
         catch (ComponentEnrollmentException)
         {
             // Respond uniformly so the endpoint does not reveal whether the credential, the
             // identity claim, or the public key was the problem.
-            return Task.FromResult<ActionResult<ComponentEnrollmentResult>>(Unauthorized());
+            return Unauthorized();
         }
     }
 }

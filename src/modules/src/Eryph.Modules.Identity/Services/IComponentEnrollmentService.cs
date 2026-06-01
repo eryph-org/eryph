@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Eryph.ModuleCore.Components;
 
 namespace Eryph.Modules.Identity.Services;
@@ -13,5 +15,6 @@ public interface IComponentEnrollmentService
     /// Issues a certificate for the request after policy authorization. Throws
     /// <see cref="ComponentEnrollmentException"/> when the request is unauthorized or invalid.
     /// </summary>
-    ComponentEnrollmentResult Enroll(ComponentEnrollmentRequest request);
+    Task<ComponentEnrollmentResult> EnrollAsync(
+        ComponentEnrollmentRequest request, CancellationToken cancellationToken = default);
 }

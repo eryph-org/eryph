@@ -195,18 +195,18 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 
         // Component PKI + enrollment. The CA issues component mTLS and server-TLS certificates from
         // a single root; the enrollment service issues to authorized requests. The policy is the
-        // swappable seam (default = operator-provisioned shared secret read from configuration; if
-        // unset, enrollment is denied). These are stateless over the certificate store, so they are
-        // registered transient to match the (transient) cross-wired certificate services. Loggers
-        // are built from the cross-wired ILoggerFactory.
+        // swappable seam (default = operator-minted one-time enrollment token; if no/invalid token is
+        // presented, enrollment is denied). The CA is stateless over the certificate store, so it is
+        // registered transient to match the (transient) cross-wired certificate services. Loggers are
+        // built from the cross-wired ILoggerFactory.
         container.Register<IComponentCertificateAuthority, ComponentCertificateAuthority>();
-        // The redeemed-token set is the state that enforces one-time use, so it MUST be a singleton
-        // (the token service stays transient to match the transient cross-wired certificate services).
-        container.RegisterSingleton<IRedeemedTokenStore, RedeemedTokenStore>();
-        container.Register<IEnrollmentTokenService, EnrollmentTokenService>();
+        // The redeemer is NOT stateless — it records redeemed token ids through the IdentityDb
+        // repository (scoped). It is transient so each resolution (within the enrollment request scope,
+        // via the policy/service factories below) gets a fresh scoped repository, never a captured one.
+        container.Register<IEnrollmentTokenRedeemer, EnrollmentTokenRedeemer>();
         container.Register<IComponentEnrollmentPolicy>(() =>
             new TokenEnrollmentPolicy(
-                container.GetInstance<IEnrollmentTokenService>(),
+                container.GetInstance<IEnrollmentTokenRedeemer>(),
                 container.GetInstance<ILoggerFactory>().CreateLogger<TokenEnrollmentPolicy>()));
         container.Register<IComponentEnrollmentService>(() =>
             new ComponentEnrollmentService(

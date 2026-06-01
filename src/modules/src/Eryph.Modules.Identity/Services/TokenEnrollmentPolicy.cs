@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Eryph.ModuleCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -5,7 +7,7 @@ namespace Eryph.Modules.Identity.Services;
 
 /// <summary>
 /// Default enrollment policy: authorizes a request that presents a valid one-time enrollment token
-/// (see <see cref="IEnrollmentTokenService"/>) whose bound component type matches the request.
+/// (see <see cref="IEnrollmentTokenRedeemer"/>) whose bound component type matches the request.
 /// Redeeming the token marks it used, so it cannot enroll a second component. If no/invalid token is
 /// presented the request is denied — enrollment must be deliberately authorized by an operator-minted
 /// token.
@@ -17,11 +19,12 @@ namespace Eryph.Modules.Identity.Services;
 /// (attestation, cloud instance identity, …).
 /// </remarks>
 public sealed class TokenEnrollmentPolicy(
-    IEnrollmentTokenService tokenService,
+    IEnrollmentTokenRedeemer tokenRedeemer,
     ILogger<TokenEnrollmentPolicy> logger)
     : IComponentEnrollmentPolicy
 {
-    public bool IsAuthorized(ComponentEnrollmentRequest request)
+    public async Task<bool> IsAuthorizedAsync(
+        ComponentEnrollmentRequest request, CancellationToken cancellationToken = default)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.Token))
         {
@@ -29,18 +32,13 @@ public sealed class TokenEnrollmentPolicy(
             return false;
         }
 
-        var result = tokenService.Redeem(request.Token);
+        // The redeemer consumes the token only if it is valid AND bound to the requested type, so a
+        // wrong-type request cannot burn a still-valid token. The reason is not surfaced to the caller.
+        var result = await tokenRedeemer.RedeemAsync(request.Token, request.ComponentType, cancellationToken);
         if (!result.IsValid)
         {
-            logger.LogWarning("Rejecting component enrollment: the enrollment token is invalid, expired or already used.");
-            return false;
-        }
-
-        if (result.ComponentType != request.ComponentType)
-        {
             logger.LogWarning(
-                "Rejecting component enrollment: token is bound to {TokenType} but the request is for {RequestType}.",
-                result.ComponentType, request.ComponentType);
+                "Rejecting component enrollment: the enrollment token is invalid, expired, already used or not bound to the requested type.");
             return false;
         }
 

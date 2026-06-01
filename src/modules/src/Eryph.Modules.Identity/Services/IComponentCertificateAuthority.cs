@@ -32,12 +32,13 @@ public interface IComponentCertificateAuthority
         int validDays = 90);
 
     /// <summary>
-    /// Issues a server-TLS certificate (serverAuth) for the given DNS name, signed by the server
-    /// intermediate. Returns the leaf plus the intermediate(s) to present. Used by the internal
-    /// (default) server-TLS path; external/third-party server certificates bypass this.
+    /// Issues a server-TLS certificate (serverAuth) covering the given DNS name(s), signed by the
+    /// server intermediate. The first name is the subject CN; every name is added as a SAN. Returns
+    /// the leaf plus the intermediate(s) to present. Used by the internal (default) server-TLS path;
+    /// external/third-party server certificates bypass this.
     /// </summary>
     IssuedCertificate IssueServerCertificate(
-        string dnsName,
+        IReadOnlyList<string> dnsNames,
         RSA subjectPublicKey,
         int validDays = 90);
 }

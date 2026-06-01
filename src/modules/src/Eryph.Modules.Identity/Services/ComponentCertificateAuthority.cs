@@ -65,20 +65,21 @@ public class ComponentCertificateAuthority(
     }
 
     public IssuedCertificate IssueServerCertificate(
-        string dnsName, RSA subjectPublicKey, int validDays = 90)
+        IReadOnlyList<string> dnsNames, RSA subjectPublicKey, int validDays = 90)
     {
-        if (string.IsNullOrWhiteSpace(dnsName))
-            throw new ArgumentException("The server DNS name must be provided.", nameof(dnsName));
+        if (dnsNames is null || dnsNames.Count == 0 || dnsNames.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("At least one non-empty server DNS name must be provided.", nameof(dnsNames));
 
         var subject = new X500DistinguishedNameBuilder();
         subject.AddOrganizationName("eryph");
         subject.AddOrganizationalUnitName("server");
-        subject.AddCommonName(dnsName);
+        subject.AddCommonName(dnsNames[0]);
 
         var san = new SubjectAlternativeNameBuilder();
-        san.AddDnsName(dnsName);
+        foreach (var dnsName in dnsNames)
+            san.AddDnsName(dnsName);
 
-        return Issue(ServerCa, subject.Build(), $"eryph server {dnsName}", subjectPublicKey, ServerAuthOid, san, validDays);
+        return Issue(ServerCa, subject.Build(), $"eryph server {dnsNames[0]}", subjectPublicKey, ServerAuthOid, san, validDays);
     }
 
     private IssuedCertificate Issue(

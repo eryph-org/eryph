@@ -4,6 +4,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Eryph.ModuleCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +18,8 @@ public sealed class ComponentEnrollmentService(
     ILogger<ComponentEnrollmentService> logger)
     : IComponentEnrollmentService
 {
-    public ComponentEnrollmentResult Enroll(ComponentEnrollmentRequest request)
+    public async Task<ComponentEnrollmentResult> EnrollAsync(
+        ComponentEnrollmentRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.Fqdn))
@@ -26,14 +29,9 @@ public sealed class ComponentEnrollmentService(
         if (request.PublicKey is null || request.PublicKey.Length == 0)
             throw new ComponentEnrollmentException("The enrollment request must include the component public key.");
 
-        if (!policy.IsAuthorized(request))
-            throw new ComponentEnrollmentException("The component enrollment request was not authorized.");
-
-        // The component id is derived server-side from the (authorized) type + FQDN, never taken
-        // from the request, so an enrolling component cannot be issued a certificate for a
-        // different identity than the one it authenticated as.
-        var componentId = ComponentIdentity.DeriveComponentId(request.ComponentType, request.Fqdn);
-
+        // Validate and import everything the request carries BEFORE authorizing, because authorizing
+        // redeems the one-time token. A recoverable client error (malformed key bytes, an invalid
+        // server DNS name) must not consume a token that is still valid for a corrected retry.
         using var subjectKey = RSA.Create();
         try
         {
@@ -44,6 +42,40 @@ public sealed class ComponentEnrollmentService(
             throw new ComponentEnrollmentException("The enrollment request public key is invalid.", ex);
         }
 
+        // Cover every requested server name (default to the FQDN) — none is silently dropped, and
+        // each must be a valid DNS name or the whole request is rejected.
+        using RSA? serverKey = request.ServerPublicKey is { Length: > 0 } ? RSA.Create() : null;
+        IReadOnlyList<string>? serverDnsNames = null;
+        if (serverKey is not null)
+        {
+            var dnsNames = request.ServerDnsNames is { Count: > 0 }
+                ? request.ServerDnsNames.ToList()
+                : [request.Fqdn];
+            if (dnsNames.Any(string.IsNullOrWhiteSpace))
+                throw new ComponentEnrollmentException("A server certificate was requested with an empty DNS name.");
+            if (!dnsNames.All(IsValidDnsName))
+                throw new ComponentEnrollmentException(
+                    "A requested server DNS name is not a valid DNS name (wildcards and malformed names are rejected).");
+            try
+            {
+                serverKey.ImportSubjectPublicKeyInfo(request.ServerPublicKey!, out _);
+            }
+            catch (CryptographicException ex)
+            {
+                throw new ComponentEnrollmentException("The enrollment request server public key is invalid.", ex);
+            }
+            serverDnsNames = dnsNames;
+        }
+
+        // Authorize last: redeeming the one-time token is the final gate before issuance.
+        if (!await policy.IsAuthorizedAsync(request, cancellationToken))
+            throw new ComponentEnrollmentException("The component enrollment request was not authorized.");
+
+        // The component id is derived server-side from the (authorized) type + FQDN, never taken
+        // from the request, so an enrolling component cannot be issued a certificate for a
+        // different identity than the one it authenticated as.
+        var componentId = ComponentIdentity.DeriveComponentId(request.ComponentType, request.Fqdn);
+
         var issued = certificateAuthority.IssueComponentCertificate(
             componentId.ToString(), request.Fqdn, subjectKey);
         var issuingChain = issued.IssuingChain
@@ -53,30 +85,13 @@ public sealed class ComponentEnrollmentService(
             .Select(certificate => certificate.Export(X509ContentType.Cert))
             .ToList();
 
-        // Also issue the component's server-TLS certificate when it supplied a server key, so it can
-        // serve its own endpoint over TLS chaining to the same root (see IssueServerCertificate).
+        // Issue the component's server-TLS certificate when it supplied a server key, so it can serve
+        // its own endpoint over TLS chaining to the same root (see IssueServerCertificate).
         byte[] serverCertificate = [];
         IReadOnlyList<byte[]> serverChain = [];
-        if (request.ServerPublicKey is { Length: > 0 })
+        if (serverDnsNames is not null)
         {
-            var dnsName = request.ServerDnsNames.FirstOrDefault() ?? request.Fqdn;
-            if (string.IsNullOrWhiteSpace(dnsName))
-                throw new ComponentEnrollmentException("A server certificate was requested without a DNS name.");
-            if (!IsValidDnsName(dnsName))
-                throw new ComponentEnrollmentException(
-                    "The requested server DNS name is not a valid DNS name (wildcards and malformed names are rejected).");
-
-            using var serverKey = RSA.Create();
-            try
-            {
-                serverKey.ImportSubjectPublicKeyInfo(request.ServerPublicKey, out _);
-            }
-            catch (CryptographicException ex)
-            {
-                throw new ComponentEnrollmentException("The enrollment request server public key is invalid.", ex);
-            }
-
-            var issuedServer = certificateAuthority.IssueServerCertificate(dnsName, serverKey);
+            var issuedServer = certificateAuthority.IssueServerCertificate(serverDnsNames, serverKey!);
             serverCertificate = issuedServer.Leaf.Export(X509ContentType.Cert);
             serverChain = issuedServer.IssuingChain
                 .Select(certificate => certificate.Export(X509ContentType.Cert))
