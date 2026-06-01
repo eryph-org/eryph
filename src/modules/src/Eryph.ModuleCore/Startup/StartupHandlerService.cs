@@ -22,6 +22,11 @@ internal class StartupHandlerService<THandler>(Container container) : IHostedSer
         var logger = scope.GetInstance<ILogger<StartupHandlerService<THandler>>>();
         logger.LogDebug("Executing startup handler {Handler}...", typeof(THandler).Name);
         var handler = ActivatorUtilities.CreateInstance<THandler>(container);
+        // Cancel on startup abort too, not only on shutdown: while StartAsync runs, a cancelled startup
+        // token should stop the handler as well. (After StartAsync returns, shutdown is signalled via
+        // StopAsync; background work keeps observing _stopping.Token.)
+        using var registration = cancellationToken.Register(
+            static state => ((CancellationTokenSource)state!).Cancel(), _stopping);
         await handler.ExecuteAsync(_stopping.Token);
         logger.LogDebug("Startup handler {Handler} executed.", typeof(THandler).Name);
     }
