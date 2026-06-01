@@ -6,6 +6,7 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
@@ -30,14 +31,6 @@ namespace Eryph.Identity
 
         public static Task<int> RunAsync(string[] args)
         {
-            // The command uses the component CA in the Windows machine store and locks the output
-            // file with a Windows ACL, so it is Windows-only. Fail clearly rather than midway.
-            if (!OperatingSystem.IsWindows())
-            {
-                Console.Error.WriteLine("eryph-identity new-enrollment is only supported on Windows.");
-                return Task.FromResult(2);
-            }
-
             var options = ParseArgs(args);
             if (options is null)
             {
@@ -83,7 +76,13 @@ namespace Eryph.Identity
                 WriteIndented = true,
             };
             json.Converters.Add(new JsonStringEnumConverter());
-            WriteRestricted(options.OutPath, JsonSerializer.Serialize(file, json));
+            // The file holds a live one-time token until redeemed — write it owner-only on either OS:
+            // a restrictive Windows ACL, or 0600 on Unix.
+            var contents = JsonSerializer.Serialize(file, json);
+            if (OperatingSystem.IsWindows())
+                WriteRestricted(options.OutPath, contents);
+            else
+                SecureFile.WriteOwnerOnly(options.OutPath, Encoding.UTF8.GetBytes(contents));
 
             Console.WriteLine(
                 $"Wrote enrollment file for {options.ComponentType} on host '{options.Fqdn}' to '{options.OutPath}' (token valid until {file.ExpiresAt:u}).");
