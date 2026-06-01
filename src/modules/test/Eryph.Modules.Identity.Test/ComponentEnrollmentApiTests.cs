@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Linq;
 using System.Security.Cryptography;
 using Eryph.Messages.Components;
 using Eryph.Modules.AspNetCore;
@@ -75,6 +76,46 @@ public class ComponentEnrollmentApiTests
 
         validation.IsFail.Should().BeTrue();
         validation.ToModelStateDictionary().Keys.Should().Contain("$.server_dns_names[0]");
+    }
+
+    [Fact]
+    public void Validate_rejects_a_null_server_dns_name_without_throwing()
+    {
+        // A JSON body of {"server_dns_names":[null]} deserializes to a null entry; validation must
+        // report it as a 400 issue, never throw (which would surface as a 500 on the anonymous endpoint).
+        var request = Valid();
+        request.ServerPublicKey = NewPublicKey();
+        request.ServerDnsNames = [null!];
+
+        var validation = ComponentEnrollmentValidations.Validate(request);
+
+        validation.IsFail.Should().BeTrue();
+        validation.ToModelStateDictionary().Keys.Should().Contain("$.server_dns_names[0]");
+    }
+
+    [Fact]
+    public void Validate_rejects_too_many_server_dns_names()
+    {
+        var request = Valid();
+        request.ServerPublicKey = NewPublicKey();
+        request.ServerDnsNames = Enumerable.Range(0, 100).Select(i => $"name{i}.eryph.local").ToList();
+
+        var validation = ComponentEnrollmentValidations.Validate(request);
+
+        validation.IsFail.Should().BeTrue();
+        validation.ToModelStateDictionary().Keys.Should().Contain("$.server_dns_names");
+    }
+
+    [Fact]
+    public void Validate_rejects_an_undefined_component_type()
+    {
+        var request = Valid();
+        request.ComponentType = (ComponentType)999;
+
+        var validation = ComponentEnrollmentValidations.Validate(request);
+
+        validation.IsFail.Should().BeTrue();
+        validation.ToModelStateDictionary().Keys.Should().Contain("$.component_type");
     }
 
     [Fact]

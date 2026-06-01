@@ -73,6 +73,36 @@ public class ComponentCertificateAuthorityTests
             .Single().EnhancedKeyUsages.Cast<Oid>().Select(o => o.Value!).ToArray();
 
     [Fact]
+    public void Regenerating_the_root_reissues_intermediates_so_new_leaves_chain_to_the_recovered_root()
+    {
+        var store = new InMemoryCertificateStore();
+        var sut = new ComponentCertificateAuthority(store, new CertificateGenerator(), new InMemoryKeyService());
+
+        using var key1 = RSA.Create(2048);
+        var issued1 = sut.IssueComponentCertificate("id-1", "agent1.eryph.local", key1);
+        ChainsToTrustedRoot(issued1, sut).Should().BeTrue();
+
+        // Simulate loss of the root certificate (corrupted/removed): the CA must regenerate it. The old
+        // client intermediate is still in the store and chains to the now-gone root.
+        var rootSubject = new X500DistinguishedNameBuilder();
+        rootSubject.AddOrganizationName("eryph");
+        rootSubject.AddOrganizationalUnitName("component-ca");
+        rootSubject.AddCommonName("eryph-component-root-ca");
+        store.RemoveFromMyStore(rootSubject.Build());
+
+        using var key2 = RSA.Create(2048);
+        var issued2 = sut.IssueComponentCertificate("id-2", "agent2.eryph.local", key2);
+
+        // The new leaf must chain to the regenerated (now only-trusted) root — i.e. the orphaned
+        // intermediate was re-issued from the new root, not reused. Without that, the chain would build
+        // to the removed root and fail validation against GetTrustedCaCertificates.
+        ChainsToTrustedRoot(issued2, sut).Should().BeTrue(
+            "after a root regeneration the intermediate is re-issued so leaves chain to the new root");
+        issued2.IssuingChain[0].Thumbprint.Should().NotBe(issued1.IssuingChain[0].Thumbprint,
+            "the orphaned intermediate must be replaced, not reused");
+    }
+
+    [Fact]
     public void GetTrustedCaCertificates_returns_a_root_ca()
     {
         var bundle = CreateCa().GetTrustedCaCertificates();

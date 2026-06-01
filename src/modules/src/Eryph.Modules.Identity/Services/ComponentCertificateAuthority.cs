@@ -140,6 +140,12 @@ public class ComponentCertificateAuthority(
             return signingRoot;
 
         RemoveTier(Root);
+        // The intermediates were signed by the old root's key and would no longer chain to the new root
+        // (nor to the now-only-trusted new root returned by GetTrustedCaCertificates). Remove them so the
+        // next GetIntermediate re-issues them from the new root; otherwise leaves issued after a root
+        // regeneration would fail chain validation against the recovered trust anchor.
+        RemoveTier(ClientCa);
+        RemoveTier(ServerCa);
         using var key = certificateKeyService.GeneratePersistedRsaKey(Root.KeyName, 4096);
         var root = certificateGenerator.GenerateCaCertificate(
             Root.SubjectName, Root.FriendlyName, key, RootValidDays, []);
@@ -149,6 +155,12 @@ public class ComponentCertificateAuthority(
 
     private X509Certificate2 GetIntermediate(CaTier tier)
     {
+        // Ensure the root first: if it had to be regenerated it also removed the now-orphaned
+        // intermediates (signed by the old root), so the lookup below correctly finds none and re-issues
+        // this intermediate from the new root. Reusing an existing intermediate without this check could
+        // return one chaining to a root that is no longer trusted. The handle is disposed at method end.
+        using var root = EnsureRoot();
+
         var candidates = storeService.GetFromMyStore(tier.SubjectName);
         var existing = candidates
             .Where(c => IsValidCa(c) && c.HasPrivateKey)
@@ -162,9 +174,8 @@ public class ComponentCertificateAuthority(
 
         RemoveTier(tier);
 
-        // Dispose the root and the keyless issued intermediate after use — they hold native handles we
-        // do not return (intermediateWithKey is the one handed back and persisted).
-        using var root = EnsureRoot();
+        // The keyless issued intermediate holds a native handle we do not return (intermediateWithKey is
+        // the one handed back and persisted), so dispose it after binding the key.
         using var key = certificateKeyService.GeneratePersistedRsaKey(tier.KeyName, 4096);
         using var intermediate = certificateGenerator.IssueIntermediateCaCertificate(
             tier.SubjectName, tier.FriendlyName, key, root, IntermediateValidDays, []);

@@ -71,17 +71,21 @@ internal sealed class InMemoryKeyService : ICertificateKeyService
             existing.Dispose();
         var key = RSA.Create(keyLength);
         _keys[keyName] = key;
-        return key;
+        // Return an independent copy, like the real FileCertificateKeyService (which persists the key and
+        // hands back a fresh RSA the caller owns and disposes); disposing it must not dispose the store's
+        // retained instance, or a later GetPersistedRsaKey would touch a disposed key.
+        return Clone(key);
     }
 
-    public RSA? GetPersistedRsaKey(string keyName)
+    // Return a fresh instance, like the real FileCertificateKeyService (which reloads the key from disk
+    // each call): a caller that disposes the returned key must not destroy the store's copy.
+    public RSA? GetPersistedRsaKey(string keyName) =>
+        _keys.TryGetValue(keyName, out var stored) ? Clone(stored) : null;
+
+    private static RSA Clone(RSA key)
     {
-        if (!_keys.TryGetValue(keyName, out var stored))
-            return null;
-        // Return a fresh instance, like the real FileCertificateKeyService (which reloads the key from
-        // disk each call): a caller that disposes the returned key must not destroy the store's copy.
         var copy = RSA.Create();
-        copy.ImportRSAPrivateKey(stored.ExportRSAPrivateKey(), out _);
+        copy.ImportRSAPrivateKey(key.ExportRSAPrivateKey(), out _);
         return copy;
     }
 
