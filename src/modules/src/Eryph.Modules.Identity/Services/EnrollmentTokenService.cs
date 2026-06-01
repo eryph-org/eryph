@@ -1,7 +1,5 @@
 using System;
 using System.Buffers.Text;
-using System.Collections.Concurrent;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -14,19 +12,20 @@ namespace Eryph.Modules.Identity.Services;
 /// <summary>
 /// Default <see cref="IEnrollmentTokenService"/>: a token is a payload (<c>jti</c>, bound component
 /// type, expiry) signed by the component CA's root key and verified with the root certificate, so it
-/// is self-validating — no token secret is stored. One-time use is enforced by recording redeemed
-/// <c>jti</c>s; combined with a short lifetime this bounds replay.
+/// is self-validating — no token secret is stored. One-time use is enforced via the singleton
+/// <see cref="IRedeemedTokenStore"/>; combined with a short lifetime this bounds replay.
 /// </summary>
 /// <remarks>
-/// The redeemed-id set is in-memory: an identity restart within a token's (short) lifetime would
-/// allow that token to be redeemed again. Persisting redeemed ids across restarts is a follow-up;
-/// the short token lifetime is the interim mitigation.
+/// NOTE: the token is signed with the CA <i>root</i> key (the same key that signs the intermediates).
+/// This is accepted because the signed payload is entirely server-generated here (Mint is not an
+/// oracle for caller-supplied bytes), so it is not a cross-protocol signing oracle. A dedicated
+/// enrollment-signing key would be cleaner and is a possible follow-up.
 /// </remarks>
-public sealed class EnrollmentTokenService(IComponentCertificateAuthority certificateAuthority)
+public sealed class EnrollmentTokenService(
+    IComponentCertificateAuthority certificateAuthority,
+    IRedeemedTokenStore redeemedTokens)
     : IEnrollmentTokenService
 {
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _redeemed = new();
-
     public string Mint(ComponentType componentType, TimeSpan validFor)
     {
         var payload = new TokenPayload
@@ -37,7 +36,10 @@ public sealed class EnrollmentTokenService(IComponentCertificateAuthority certif
         };
 
         var payloadSegment = Base64Url.EncodeToString(JsonSerializer.SerializeToUtf8Bytes(payload));
-        using var key = GetRootCertificate().GetRSAPrivateKey()
+        // The certificate is owned by the CA/store (GetTrustedCaCertificates does not transfer
+        // ownership), so it is not disposed here; the RSA key handle we obtain from it is.
+        var cert = GetRootCertificate();
+        using var key = cert.GetRSAPrivateKey()
             ?? throw new InvalidOperationException("The component CA root key is not available for signing.");
         var signature = key.SignData(
             Encoding.ASCII.GetBytes(payloadSegment), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
@@ -57,7 +59,8 @@ public sealed class EnrollmentTokenService(IComponentCertificateAuthority certif
         TokenPayload? payload;
         try
         {
-            using var key = GetRootCertificate().GetRSAPublicKey()
+            var cert = GetRootCertificate();
+            using var key = cert.GetRSAPublicKey()
                 ?? throw new InvalidOperationException("The component CA root certificate is not available.");
             var signatureValid = key.VerifyData(
                 Encoding.ASCII.GetBytes(parts[0]),
@@ -81,24 +84,18 @@ public sealed class EnrollmentTokenService(IComponentCertificateAuthority certif
         if (expiry <= DateTimeOffset.UtcNow)
             return EnrollmentTokenValidationResult.Invalid;
 
-        // Atomically claim the token id; a second redemption fails.
-        if (!_redeemed.TryAdd(payload.Jti, expiry))
-            return EnrollmentTokenValidationResult.Invalid;
-
-        PruneExpired();
-        return EnrollmentTokenValidationResult.Valid(payload.Type);
+        // Claim the token id exactly once (the store is a singleton — see IRedeemedTokenStore).
+        return redeemedTokens.TryRedeem(payload.Jti, expiry)
+            ? EnrollmentTokenValidationResult.Valid(payload.Type)
+            : EnrollmentTokenValidationResult.Invalid;
     }
 
-    private System.Security.Cryptography.X509Certificates.X509Certificate2 GetRootCertificate() =>
-        certificateAuthority.GetTrustedCaCertificates().FirstOrDefault()
-        ?? throw new InvalidOperationException(
-            "No component CA root certificate is available to sign/verify enrollment tokens.");
-
-    private void PruneExpired()
+    private X509Certificate2 GetRootCertificate()
     {
-        var now = DateTimeOffset.UtcNow;
-        foreach (var entry in _redeemed.Where(e => e.Value <= now).ToList())
-            _redeemed.TryRemove(entry.Key, out _);
+        foreach (var certificate in certificateAuthority.GetTrustedCaCertificates())
+            return certificate;
+        throw new InvalidOperationException(
+            "No component CA root certificate is available to sign/verify enrollment tokens.");
     }
 
     private sealed class TokenPayload

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 
 namespace Eryph.ApiEndpoint
 {
@@ -16,20 +17,26 @@ namespace Eryph.ApiEndpoint
     {
         public static void Configure(IWebHostBuilder webHostBuilder)
         {
-            if (!bool.TryParse(Environment.GetEnvironmentVariable("componentMtls__enabled"), out var enabled) || !enabled)
-                return;
-
-            var certificateDirectory = Environment.GetEnvironmentVariable("componentMtls__certificateDirectory");
-            if (string.IsNullOrWhiteSpace(certificateDirectory))
-                return;
-
-            // The Kestrel options callback runs at server start, after the enrollment host filter has
-            // produced the certificate files.
-            webHostBuilder.ConfigureKestrel(options =>
+            // The Kestrel options callback runs at server start (after the enrollment host filter has
+            // produced the certificate files) and gives access to IConfiguration.
+            webHostBuilder.ConfigureKestrel((context, options) =>
             {
+                var mtls = context.Configuration.GetSection("componentMtls");
+                if (!bool.TryParse(mtls["enabled"], out var enabled) || !enabled)
+                    return;
+
+                var certificateDirectory = mtls["certificateDirectory"];
+                if (string.IsNullOrWhiteSpace(certificateDirectory))
+                    throw new InvalidOperationException(
+                        "componentMtls is enabled but componentMtls:certificateDirectory is not set.");
+
                 var pfxPath = Path.Combine(certificateDirectory, "server.pfx");
                 if (!File.Exists(pfxPath))
-                    return;
+                    // Fail closed: mTLS was requested but the enrolled server certificate is absent —
+                    // do not silently fall back to unauthenticated HTTP.
+                    throw new InvalidOperationException(
+                        $"componentMtls is enabled but the enrolled server certificate '{pfxPath}' is missing; "
+                        + "refusing to start without TLS.");
 
                 var leaf = X509CertificateLoader.LoadPkcs12(
                     File.ReadAllBytes(pfxPath), password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);

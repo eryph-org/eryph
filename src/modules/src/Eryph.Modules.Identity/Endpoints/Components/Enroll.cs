@@ -23,10 +23,10 @@ public class Enroll(IComponentEnrollmentService enrollmentService)
         .WithRequest<ComponentEnrollmentRequest>
         .WithActionResult<ComponentEnrollmentResult>
 {
-    // SECURITY: this anonymous endpoint authenticates only via the enrollment policy (a shared
-    // secret by default). Before it is exposed on a reachable interface, the host must apply rate
-    // limiting to this route (ASP.NET Core rate limiter) to bound brute-force attempts against the
-    // secret. The constant-time secret comparison alone does not limit attempt volume.
+    // SECURITY: this anonymous endpoint authenticates only via the enrollment policy (a one-time
+    // token by default). Before it is exposed on a reachable interface, the host should apply rate
+    // limiting to this route (ASP.NET Core rate limiter) to bound enumeration attempts (e.g. a holder
+    // of a stolen token probing component types/FQDNs before it is consumed) and log flooding.
     // The enrollment endpoint lives at the authority root and is not part of the versioned API, so
     // it must be version-neutral — otherwise API versioning (which does not assume a default version)
     // leaves the unversioned request unmatched and it falls through to the require-auth fallback.

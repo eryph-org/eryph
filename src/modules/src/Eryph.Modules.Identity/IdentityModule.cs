@@ -200,6 +200,9 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         // registered transient to match the (transient) cross-wired certificate services. Loggers
         // are built from the cross-wired ILoggerFactory.
         container.Register<IComponentCertificateAuthority, ComponentCertificateAuthority>();
+        // The redeemed-token set is the state that enforces one-time use, so it MUST be a singleton
+        // (the token service stays transient to match the transient cross-wired certificate services).
+        container.RegisterSingleton<IRedeemedTokenStore, RedeemedTokenStore>();
         container.Register<IEnrollmentTokenService, EnrollmentTokenService>();
         container.Register<IComponentEnrollmentPolicy>(() =>
             new TokenEnrollmentPolicy(

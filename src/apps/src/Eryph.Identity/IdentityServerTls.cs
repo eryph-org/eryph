@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 
 namespace Eryph.Identity
 {
@@ -17,30 +18,33 @@ namespace Eryph.Identity
     {
         public static void Configure(IWebHostBuilder webHostBuilder)
         {
-            if (!bool.TryParse(Environment.GetEnvironmentVariable("componentMtls__enabled"), out var enabled) || !enabled)
-                return;
+            webHostBuilder.ConfigureKestrel((context, options) =>
+            {
+                var mtls = context.Configuration.GetSection("componentMtls");
+                if (!bool.TryParse(mtls["enabled"], out var enabled) || !enabled)
+                    return;
 
-            var baseUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_BASEURL") ?? "https://localhost:8080/";
-            var dnsName = new Uri(baseUrl).Host;
+                var baseUrl = context.Configuration["ERYPH_IDENTITY_BASEURL"] ?? "https://localhost:8080/";
+                var dnsName = new Uri(baseUrl).Host;
 
-            var keyService = new WindowsCertificateKeyService();
-            var certificateAuthority = new ComponentCertificateAuthority(
-                new WindowsCertificateStoreService(), new WindowsCertificateGenerator(), keyService);
-            var issued = new CaServerCertificateProvider(keyService, certificateAuthority)
-                .GetServerCertificate(dnsName);
+                var keyService = new WindowsCertificateKeyService();
+                var certificateAuthority = new ComponentCertificateAuthority(
+                    new WindowsCertificateStoreService(), new WindowsCertificateGenerator(), keyService);
+                var issued = new CaServerCertificateProvider(keyService, certificateAuthority)
+                    .GetServerCertificate(dnsName);
 
-            // Present leaf + the server intermediate: components pin only the root, so the chain must
-            // be sent for them to build leaf -> server-intermediate -> root.
-            var chain = new X509Certificate2Collection();
-            foreach (var certificate in issued.IssuingChain)
-                chain.Add(certificate);
+                // Present leaf + the server intermediate: components pin only the root, so the chain
+                // must be sent for them to build leaf -> server-intermediate -> root.
+                var chain = new X509Certificate2Collection();
+                foreach (var certificate in issued.IssuingChain)
+                    chain.Add(certificate);
 
-            webHostBuilder.ConfigureKestrel(options =>
                 options.ConfigureHttpsDefaults(https =>
                 {
                     https.ServerCertificate = issued.Leaf;
                     https.ServerCertificateChain = chain;
-                }));
+                });
+            });
         }
     }
 }

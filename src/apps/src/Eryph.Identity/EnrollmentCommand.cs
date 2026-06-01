@@ -30,7 +30,8 @@ namespace Eryph.Identity
             if (options is null)
             {
                 Console.Error.WriteLine(
-                    "usage: eryph-identity new-enrollment --type <ComponentType> [--endpoint <url>] [--out <file>] [--ttl-hours N]");
+                    "usage: eryph-identity new-enrollment --type <ComponentType> --endpoint <url> [--out <file>] [--ttl-hours N]"
+                    + "\n  (--endpoint may be omitted if ERYPH_IDENTITY_URL is set)");
                 return Task.FromResult(2);
             }
 
@@ -38,7 +39,8 @@ namespace Eryph.Identity
                 new WindowsCertificateStoreService(),
                 new WindowsCertificateGenerator(),
                 new WindowsCertificateKeyService());
-            var tokenService = new EnrollmentTokenService(ca);
+            // Minting does not touch the redeemed-token set, so a throwaway store is fine here.
+            var tokenService = new EnrollmentTokenService(ca, new RedeemedTokenStore());
 
             var ttl = TimeSpan.FromHours(options.TtlHours);
             var token = tokenService.Mint(options.ComponentType, ttl);
@@ -83,9 +85,12 @@ namespace Eryph.Identity
                 || !Enum.TryParse<ComponentType>(typeText, ignoreCase: true, out var componentType))
                 return null;
 
+            // Require an explicit endpoint: the file is delivered to a remote component, so a silent
+            // localhost default would embed the wrong address.
             var endpoint = map.GetValueOrDefault("endpoint")
-                ?? Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL")
-                ?? "https://localhost:8080/";
+                ?? Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL");
+            if (string.IsNullOrWhiteSpace(endpoint))
+                return null;
             var outPath = map.GetValueOrDefault("out") ?? $"{componentType}-enrollment.json";
             var ttlHours = map.TryGetValue("ttl-hours", out var ttlText) && int.TryParse(ttlText, out var t) ? t : 1;
 

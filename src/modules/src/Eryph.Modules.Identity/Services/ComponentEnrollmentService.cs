@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using Eryph.ModuleCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,8 @@ public sealed class ComponentEnrollmentService(
         ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.Fqdn))
             throw new ComponentEnrollmentException("The enrollment request must include the component FQDN.");
+        if (!IsValidDnsName(request.Fqdn))
+            throw new ComponentEnrollmentException("The component FQDN is not a valid DNS name.");
         if (request.PublicKey is null || request.PublicKey.Length == 0)
             throw new ComponentEnrollmentException("The enrollment request must include the component public key.");
 
@@ -59,6 +62,9 @@ public sealed class ComponentEnrollmentService(
             var dnsName = request.ServerDnsNames.FirstOrDefault() ?? request.Fqdn;
             if (string.IsNullOrWhiteSpace(dnsName))
                 throw new ComponentEnrollmentException("A server certificate was requested without a DNS name.");
+            if (!IsValidDnsName(dnsName))
+                throw new ComponentEnrollmentException(
+                    "The requested server DNS name is not a valid DNS name (wildcards and malformed names are rejected).");
 
             using var serverKey = RSA.Create();
             try
@@ -91,4 +97,15 @@ public sealed class ComponentEnrollmentService(
             CaTrustBundle = trustBundle,
         };
     }
+
+    // A certificate is issued for a caller-supplied name (the token binds the component type, not the
+    // name), so the name must be a syntactically valid DNS name: labels of letters/digits/hyphens
+    // (no leading/trailing hyphen), dot-separated, total <= 253. This rejects wildcards, whitespace,
+    // and otherwise malformed SAN entries.
+    private static bool IsValidDnsName(string name) =>
+        name.Length <= 253
+        && Regex.IsMatch(
+            name,
+            @"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$",
+            RegexOptions.CultureInvariant);
 }
