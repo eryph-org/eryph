@@ -56,8 +56,14 @@ public sealed class EnrollmentTokenRedeemer(
         }
         catch (DbUpdateException)
         {
-            // A concurrent redemption claimed the same jti first.
-            return EnrollmentTokenValidationResult.Invalid;
+            // The insert may have failed because a concurrent redemption claimed the same jti first, or
+            // for an unrelated reason (connectivity, schema). Distinguish them by reading the database
+            // (AnyAsync issues an EXISTS query, ignoring our failed Added entity in the change tracker):
+            // if the row is now present it was a concurrent redemption and the token is spent; otherwise
+            // rethrow so a real database failure surfaces as an operational error, not a false "invalid".
+            if (await redeemedTokens.AnyAsync(new EnrollmentTokenSpecs.ByJti(content.Jti), cancellationToken))
+                return EnrollmentTokenValidationResult.Invalid;
+            throw;
         }
 
         return EnrollmentTokenValidationResult.Valid(content.ComponentType);

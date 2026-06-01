@@ -26,12 +26,13 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
             .Select(Clone).ToList();
 
     private static X509Certificate2 Clone(X509Certificate2 certificate) =>
-        // Load the round-tripped key as exportable so the clone can itself be cloned again (the store
-        // clones on both add and read); the default key set is non-exportable and a second export throws.
+        // Keep the key in-memory (EphemeralKeySet) so this "in-memory" store never persists keys to the
+        // Windows user key store, and Exportable so the clone can itself be cloned again (the store clones
+        // on both add and read; a non-exportable key would make a second export throw).
         X509CertificateLoader.LoadPkcs12(
             certificate.Export(X509ContentType.Pkcs12),
             password: null,
-            keyStorageFlags: X509KeyStorageFlags.Exportable);
+            keyStorageFlags: X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable);
 
     public void RemoveFromMyStore(X500DistinguishedName subjectName) =>
         _certificates.RemoveAll(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData));
