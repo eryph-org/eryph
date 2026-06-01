@@ -17,7 +17,7 @@ namespace Eryph.ApiEndpoint
 
             await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
-                .UseAspNetCoreWithDefaults((module, webHostBuilder) => { })
+                .UseAspNetCoreWithDefaults((module, webHostBuilder) => ComponentServerTls.Configure(webHostBuilder))
                 .AddComputeApiModule()
                 .RunConsoleAsync();
         }
