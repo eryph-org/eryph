@@ -25,6 +25,12 @@ public static class ComponentEnrollmentValidations
 
         if (string.IsNullOrWhiteSpace(request.Token))
             issues.Add(new ValidationIssue("$.token", "The enrollment token is required."));
+        else if (request.Token.Length > EnrollmentTokenCodec.MaxTokenLength)
+            // Bound the token at the (anonymous) request layer with the same cap the codec enforces, so
+            // an oversized body is rejected with a 400 before it is split/Base64-decoded downstream.
+            issues.Add(new ValidationIssue(
+                "$.token",
+                $"The enrollment token must not exceed {EnrollmentTokenCodec.MaxTokenLength} characters."));
 
         if (string.IsNullOrWhiteSpace(request.Fqdn))
             issues.Add(new ValidationIssue("$.fqdn", "The component FQDN is required."));
@@ -57,8 +63,15 @@ public static class ComponentEnrollmentValidations
             : Validation<ValidationIssue, EnrollComponentRequest>.Fail(issues.ToSeq());
     }
 
+    // A SubjectPublicKeyInfo for RSA-4096 is ~550 bytes (~740 base64 chars); 4 KB is far above any key
+    // we issue against yet bounds the decode/import work an anonymous caller can force with oversized input.
+    private const int MaxPublicKeyBase64Length = 4 * 1024;
+
     private static bool IsValidPublicKey(string base64)
     {
+        // Reject oversized input before allocating/decoding it (FromBase64String + ImportSubjectPublicKeyInfo).
+        if (base64.Length > MaxPublicKeyBase64Length)
+            return false;
         try
         {
             var bytes = Convert.FromBase64String(base64);

@@ -30,8 +30,9 @@ public static class EnrollmentTokenCodec
 {
     // Upper bound on an accepted token (in chars). A real token is a small JSON payload plus one
     // RSA-2048 signature, both Base64Url-encoded — a few hundred chars. 8 KB is far above any valid
-    // token yet caps the work an anonymous caller can force before the signature check.
-    private const int MaxTokenLength = 8 * 1024;
+    // token yet caps the work an anonymous caller can force before the signature check. Public so the
+    // request-validation layer can reject oversized tokens with a 400 using the same bound.
+    public const int MaxTokenLength = 8 * 1024;
 
     public static string Issue(
         IComponentCertificateAuthority certificateAuthority,
