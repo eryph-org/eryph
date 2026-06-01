@@ -33,7 +33,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
 
     public void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey, ComponentEnrollmentResult result)
     {
-        EnsureOwnerOnlyDirectory();
+        SecureDirectory.EnsureOwnerOnly(directory);
         File.WriteAllText(LeafPath, PemEncoding.WriteString("CERTIFICATE", result.Certificate));
         File.WriteAllText(KeyPath, PemEncoding.WriteString("PRIVATE KEY", clientPkcs8PrivateKey));
         File.WriteAllText(ChainPath, ConcatPem(result.IssuingChain));
@@ -146,18 +146,6 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         {
             return false;
         }
-    }
-
-    // The directory holds private keys; create it owner-only on first creation (0700 on Unix) so the
-    // key files are not reachable by other users even if their own mode is permissive. An existing
-    // directory's permissions are left to the deployment tooling.
-    private void EnsureOwnerOnlyDirectory()
-    {
-        if (!OperatingSystem.IsWindows() && !Directory.Exists(directory))
-            Directory.CreateDirectory(
-                directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        else
-            Directory.CreateDirectory(directory);
     }
 
     private static string ConcatPem(System.Collections.Generic.IReadOnlyList<byte[]> certificates) =>

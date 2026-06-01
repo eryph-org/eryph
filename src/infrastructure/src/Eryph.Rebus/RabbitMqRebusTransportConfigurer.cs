@@ -51,21 +51,23 @@ namespace Eryph.Rebus
             ApplyMutualTls(configurer.UseRabbitMq(ConnectionString(), queueName));
         }
 
-        private static string ConnectionString() =>
-            Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING");
+        private static string ConnectionString()
+        {
+            var connectionString = Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException(
+                    "RABBITMQ_CONNECTIONSTRING must be set to connect to the message bus.");
+            return connectionString;
+        }
 
         private void ApplyMutualTls(RabbitMqOptionsBuilder options)
         {
             if (string.IsNullOrEmpty(_clientCertificatePfxPath))
                 return;
 
-            var connectionString = ConnectionString();
-            if (string.IsNullOrWhiteSpace(connectionString))
-                throw new InvalidOperationException(
-                    "RABBITMQ_CONNECTIONSTRING must be set to configure bus mTLS.");
-
             // ServerName must match the broker certificate; it is the host the client connects to.
-            var serverName = new Uri(connectionString).Host;
+            // ConnectionString() has already validated it is set.
+            var serverName = new Uri(ConnectionString()).Host;
             options.Ssl(new SslSettings(
                 enabled: true,
                 serverName: serverName,
