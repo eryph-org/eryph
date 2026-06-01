@@ -151,7 +151,10 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     private bool TryLoadLeaf(out DateTime notAfterUtc)
     {
         notAfterUtc = default;
-        if (!File.Exists(LeafPath))
+        // "Valid/current" must mean "usable": require the private key alongside the leaf. Otherwise a
+        // missing/partial key would let HasValidCertificate skip re-enrollment, then fail later when
+        // GetClientCertificatePfxPath returns null or the TLS stack cannot find the key.
+        if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
             return false;
 
         try
