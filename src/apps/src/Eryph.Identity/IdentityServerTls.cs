@@ -25,8 +25,16 @@ namespace Eryph.Identity
                 if (!bool.TryParse(mtls["enabled"], out var enabled) || !enabled)
                     return;
 
-                var baseUrl = context.Configuration["ERYPH_IDENTITY_BASEURL"] ?? "https://localhost:8080/";
-                var dnsName = new Uri(baseUrl).Host;
+                // Require an explicit base URL when mTLS is enabled: the host name is baked into the
+                // self-issued server certificate, so falling back to "localhost" would silently issue a
+                // certificate components can never validate against the address they connect to.
+                var baseUrl = context.Configuration["ERYPH_IDENTITY_BASEURL"];
+                if (string.IsNullOrWhiteSpace(baseUrl)
+                    || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+                    throw new InvalidOperationException(
+                        "componentMtls is enabled but ERYPH_IDENTITY_BASEURL is not set to an absolute URL; "
+                        + "it is required to issue the identity server certificate for the correct host name.");
+                var dnsName = baseUri.Host;
 
                 // Resolve the platform key/cert backend from DI (same instances the module uses, so this
                 // self-issued cert chains to the same CA). Kestrel's ApplicationServices is the

@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -106,12 +107,14 @@ public sealed class ComponentEnrollmentClient(
         }
     }
 
-    // A client-error (4xx) response means the request can never succeed as-is, so retrying is futile —
-    // except 408 (Request Timeout) and 429 (Too Many Requests), which are transient by definition. A
-    // connection failure surfaces as an HttpRequestException with no StatusCode and is treated as
-    // transient (the identity service may not be listening yet).
+    // An error that retrying can never fix, so blocking startup must not loop on it forever:
+    //  - a client-error (4xx) response, except 408/429 which are transient by definition; and
+    //  - a malformed/empty success body (JsonException), which is a server/version mismatch, not an outage.
+    // A connection failure surfaces as an HttpRequestException with no StatusCode and stays transient
+    // (the identity service may simply not be listening yet).
     private static bool IsNonTransient(Exception ex) =>
-        ex is HttpRequestException { StatusCode: { } status }
-        && (int)status is >= 400 and < 500
-        && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests);
+        ex is JsonException
+        || (ex is HttpRequestException { StatusCode: { } status }
+            && (int)status is >= 400 and < 500
+            && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests));
 }

@@ -32,6 +32,11 @@ public static class ComponentEnrollmentValidations
                 "$.token",
                 $"The enrollment token must not exceed {EnrollmentTokenCodec.MaxTokenLength} characters."));
 
+        // Reject an out-of-range component type up front. The authoritative type binding is the signed
+        // token, but an undefined enum value should never reach the issue path.
+        if (!Enum.IsDefined(request.ComponentType))
+            issues.Add(new ValidationIssue("$.component_type", "The component type is not a known value."));
+
         if (string.IsNullOrWhiteSpace(request.Fqdn))
             issues.Add(new ValidationIssue("$.fqdn", "The component FQDN is required."));
         else if (!ComponentEnrollmentService.IsValidDnsName(request.Fqdn))
@@ -50,12 +55,19 @@ public static class ComponentEnrollmentValidations
                     "$.server_public_key", "The server public key is not a valid base64-encoded SubjectPublicKeyInfo."));
 
             var names = request.ServerDnsNames ?? [];
-            for (var i = 0; i < names.Count; i++)
-            {
-                if (!ComponentEnrollmentService.IsValidDnsName(names[i]))
-                    issues.Add(new ValidationIssue(
-                        $"$.server_dns_names[{i}]", $"'{names[i]}' is not a valid DNS name."));
-            }
+            // Bound the count on this anonymous endpoint before validating/issuing each name — a real
+            // component lists a handful of SANs, so a large array is only an attempt to force work.
+            if (names.Count > MaxServerDnsNames)
+                issues.Add(new ValidationIssue(
+                    "$.server_dns_names",
+                    $"At most {MaxServerDnsNames} server DNS names may be requested."));
+            else
+                for (var i = 0; i < names.Count; i++)
+                {
+                    if (!ComponentEnrollmentService.IsValidDnsName(names[i]))
+                        issues.Add(new ValidationIssue(
+                            $"$.server_dns_names[{i}]", $"'{names[i]}' is not a valid DNS name."));
+                }
         }
 
         return issues.Count == 0
@@ -66,6 +78,10 @@ public static class ComponentEnrollmentValidations
     // A SubjectPublicKeyInfo for RSA-4096 is ~550 bytes (~740 base64 chars); 4 KB is far above any key
     // we issue against yet bounds the decode/import work an anonymous caller can force with oversized input.
     private const int MaxPublicKeyBase64Length = 4 * 1024;
+
+    // A component requests its own FQDN plus a small number of aliases; cap the list so an anonymous
+    // caller cannot force thousands of regex validations / SAN entries.
+    private const int MaxServerDnsNames = 16;
 
     private static bool IsValidPublicKey(string base64)
     {

@@ -103,7 +103,21 @@ public static class ComponentMtlsTransport
         // Same JSON conventions the identity command writes it with (snake_case + string enums).
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         options.Converters.Add(new JsonStringEnumConverter());
-        return JsonSerializer.Deserialize<ComponentEnrollmentFile>(File.ReadAllText(path), options)
+        var enrollment = JsonSerializer.Deserialize<ComponentEnrollmentFile>(File.ReadAllText(path), options)
             ?? throw new InvalidOperationException($"The enrollment file '{path}' is empty or invalid.");
+
+        // Validate the fields we depend on so a truncated/tampered file fails with an actionable message
+        // here rather than as a cryptic CryptographicException (empty PEM) or a TLS error far downstream.
+        if (enrollment.IdentityCaCertificate is not { Length: > 0 })
+            throw new InvalidOperationException(
+                $"The enrollment file '{path}' has no identity CA certificate.");
+        if (string.IsNullOrWhiteSpace(enrollment.IdentityEndpoint))
+            throw new InvalidOperationException(
+                $"The enrollment file '{path}' has no identity endpoint.");
+        if (string.IsNullOrWhiteSpace(enrollment.Token))
+            throw new InvalidOperationException(
+                $"The enrollment file '{path}' has no enrollment token.");
+
+        return enrollment;
     }
 }

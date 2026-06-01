@@ -73,8 +73,16 @@ internal sealed class InMemoryKeyService : ICertificateKeyService
         return key;
     }
 
-    public RSA? GetPersistedRsaKey(string keyName) =>
-        _keys.TryGetValue(keyName, out var key) ? key : null;
+    public RSA? GetPersistedRsaKey(string keyName)
+    {
+        if (!_keys.TryGetValue(keyName, out var stored))
+            return null;
+        // Return a fresh instance, like the real FileCertificateKeyService (which reloads the key from
+        // disk each call): a caller that disposes the returned key must not destroy the store's copy.
+        var copy = RSA.Create();
+        copy.ImportRSAPrivateKey(stored.ExportRSAPrivateKey(), out _);
+        return copy;
+    }
 
     public void DeletePersistedKey(string keyName)
     {
