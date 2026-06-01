@@ -76,6 +76,12 @@ namespace Eryph.Identity
                 WriteIndented = true,
             };
             json.Converters.Add(new JsonStringEnumConverter());
+            // Ensure the output directory exists (owner-only on Unix — it will hold a token file) so a
+            // missing --out directory fails clearly rather than throwing from the file write.
+            var outDirectory = Path.GetDirectoryName(Path.GetFullPath(options.OutPath));
+            if (!string.IsNullOrEmpty(outDirectory))
+                SecureFile.CreateOwnerOnlyDirectory(outDirectory);
+
             // The file holds a live one-time token until redeemed — write it owner-only on either OS:
             // a restrictive Windows ACL, or 0600 on Unix.
             var contents = JsonSerializer.Serialize(file, json);
