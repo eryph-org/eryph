@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -8,10 +9,12 @@ using System.Text;
 namespace Eryph.ModuleCore.Components;
 
 /// <summary>
-/// Stores the component's enrolled certificate material as PEM files in a directory: the leaf
-/// certificate, its PKCS#8 private key, the issuing chain and the CA trust bundle. The directory
-/// is expected to be ACL-restricted by the deployment tooling (it holds the private key); this
-/// type does not relax permissions.
+/// Stores the component's enrolled certificate material in a directory. The PKCS#12 (<c>component.pfx</c>,
+/// bundling leaf + private key + issuing chain) is the authoritative artifact — it is what the bus
+/// transport loads, it is written first and atomically, and the validity checks read it. The PEM files
+/// (leaf, key, chain, CA bundle) are secondary copies for tooling/inspection. The directory is expected
+/// to be ACL-restricted by the deployment tooling (it holds the private key); this type does not relax
+/// permissions, and writes key-bearing files owner-only.
 /// </summary>
 public sealed class FileComponentCertificateStore(string directory, TimeSpan renewalLeadTime)
     : IComponentCertificateStore
@@ -35,33 +38,43 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     public void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey, ComponentEnrollmentResult result)
     {
         SecureDirectory.EnsureOwnerOnly(directory);
-        File.WriteAllText(LeafPath, PemEncoding.WriteString("CERTIFICATE", result.Certificate));
+
+        // Write the PKCS#12 first and atomically, built straight from the in-memory result: it bundles
+        // leaf + key + chain and is the only artifact the bus transport loads, so once it lands the
+        // component is fully enrolled regardless of the PEM copies. This matters because the enrollment
+        // token is single-use — a partial save that left the component looking un-enrolled would force a
+        // retry with an already-consumed token and brick the component on the next start.
+        WritePfxFromResult(PfxPath, result.Certificate, clientPkcs8PrivateKey, result.IssuingChain);
+
+        // Secondary PEM copies (tooling/inspection, CA trust bundle), each written atomically.
+        WritePemOwnerOnly(LeafPath, PemEncoding.WriteString("CERTIFICATE", result.Certificate));
         WriteKeyOwnerOnly(KeyPath, clientPkcs8PrivateKey);
-        File.WriteAllText(ChainPath, ConcatPem(result.IssuingChain));
-        File.WriteAllText(BundlePath, ConcatPem(result.CaTrustBundle));
-        WritePfx(LeafPath, KeyPath, ChainPath, PfxPath);
+        WritePemOwnerOnly(ChainPath, ConcatPem(result.IssuingChain));
+        WritePemOwnerOnly(BundlePath, ConcatPem(result.CaTrustBundle));
 
         // The server-TLS certificate (for the component's own endpoint) is optional.
         if (result.ServerCertificate is { Length: > 0 })
         {
-            File.WriteAllText(ServerLeafPath, PemEncoding.WriteString("CERTIFICATE", result.ServerCertificate));
+            WritePfxFromResult(ServerPfxPath, result.ServerCertificate, serverPkcs8PrivateKey, result.ServerIssuingChain);
+            WritePemOwnerOnly(ServerLeafPath, PemEncoding.WriteString("CERTIFICATE", result.ServerCertificate));
             WriteKeyOwnerOnly(ServerKeyPath, serverPkcs8PrivateKey);
-            File.WriteAllText(ServerChainPath, ConcatPem(result.ServerIssuingChain));
-            WritePfx(ServerLeafPath, ServerKeyPath, ServerChainPath, ServerPfxPath);
+            WritePemOwnerOnly(ServerChainPath, ConcatPem(result.ServerIssuingChain));
         }
         else
         {
             // This enrollment carries no server certificate: remove any artifacts a previous one left
             // behind so the component never keeps serving TLS with a stale certificate the current
             // enrollment dropped — the persisted state must match the latest result.
-            DeleteIfExists(ServerLeafPath, ServerKeyPath, ServerChainPath, ServerPfxPath);
+            DeleteIfExists(ServerPfxPath, ServerLeafPath, ServerKeyPath, ServerChainPath);
         }
     }
 
-    // Write a PKCS#8 private key as PEM, owner-only (0600 on Unix) from creation.
+    // Write a PKCS#8 private key as PEM, owner-only (0600 on Unix) and atomically.
     private static void WriteKeyOwnerOnly(string path, byte[] pkcs8PrivateKey) =>
-        SecureFile.WriteOwnerOnly(
-            path, Encoding.ASCII.GetBytes(PemEncoding.WriteString("PRIVATE KEY", pkcs8PrivateKey)));
+        WritePemOwnerOnly(path, PemEncoding.WriteString("PRIVATE KEY", pkcs8PrivateKey));
+
+    private static void WritePemOwnerOnly(string path, string pem) =>
+        SecureFile.WriteOwnerOnly(path, Encoding.ASCII.GetBytes(pem));
 
     private static void DeleteIfExists(params string[] paths)
     {
@@ -71,56 +84,84 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     }
 
     /// <summary>
-    /// The path to the client certificate as a PKCS#12 file, which the RabbitMQ transport hands to
-    /// the TLS stack (Rebus' SslSettings consumes a certificate file, not an in-memory certificate).
-    /// Returns null if the component has not been enrolled; (re)creates the file from the stored PEM
-    /// if it is missing. The file is unprotected (no passphrase) and relies on the directory ACL,
-    /// exactly like the stored private key.
+    /// The path to the client certificate as a PKCS#12 file, which the RabbitMQ transport hands to the
+    /// TLS stack (Rebus' SslSettings consumes a certificate file, not an in-memory certificate). Returns
+    /// the stored PFX when present (the authoritative artifact); if only PEMs were provisioned out of
+    /// band, (re)builds the PFX from them. Returns null if the component has not been enrolled.
     /// </summary>
-    public string? GetClientCertificatePfxPath()
-    {
-        if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
-            return null;
-        if (!File.Exists(PfxPath))
-            WritePfx(LeafPath, KeyPath, ChainPath, PfxPath);
-        return PfxPath;
-    }
+    public string? GetClientCertificatePfxPath() =>
+        ResolvePfxPath(PfxPath, LeafPath, KeyPath, ChainPath);
 
     /// <summary>
     /// The path to the component's server-TLS certificate as a PKCS#12 file (for its own HTTPS
     /// listener), or null if no server certificate was enrolled.
     /// </summary>
-    public string? GetServerCertificatePfxPath()
+    public string? GetServerCertificatePfxPath() =>
+        ResolvePfxPath(ServerPfxPath, ServerLeafPath, ServerKeyPath, ServerChainPath);
+
+    private static string? ResolvePfxPath(string pfxPath, string leafPath, string keyPath, string chainPath)
     {
-        if (!File.Exists(ServerLeafPath) || !File.Exists(ServerKeyPath))
+        // The PFX is the source of truth (Save writes it first and atomically).
+        if (File.Exists(pfxPath))
+            return pfxPath;
+        // Out-of-band provisioning may have placed only PEMs; (re)build the PFX from them.
+        if (!File.Exists(leafPath) || !File.Exists(keyPath))
             return null;
-        if (!File.Exists(ServerPfxPath))
-            WritePfx(ServerLeafPath, ServerKeyPath, ServerChainPath, ServerPfxPath);
-        return ServerPfxPath;
+        WritePfxFromPem(leafPath, keyPath, chainPath, pfxPath);
+        return pfxPath;
     }
 
     public X509Certificate2? LoadClientCertificate()
     {
+        // Prefer the authoritative PFX; fall back to PEM leaf+key. DefaultKeySet (not EphemeralKeySet)
+        // is required — Schannel cannot use ephemeral keys and fails the handshake with "the platform
+        // does not support ephemeral keys". The key lives in the user key store for the lifetime of the
+        // returned certificate and is removed when it is disposed.
+        if (File.Exists(PfxPath))
+            return X509CertificateLoader.LoadPkcs12(
+                File.ReadAllBytes(PfxPath), password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+
         if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
             return null;
 
         using var fromPem = X509Certificate2.CreateFromPemFile(LeafPath, KeyPath);
-        // Re-import via PKCS#12 so the private key is usable by the TLS stack: a certificate produced
-        // directly from PEM is not usable for TLS handshakes on Windows. DefaultKeySet (not
-        // EphemeralKeySet) is required — Schannel cannot use ephemeral keys and fails the handshake
-        // with "the platform does not support ephemeral keys". The key lives in the user key store
-        // for the lifetime of the returned certificate and is removed when it is disposed.
         return X509CertificateLoader.LoadPkcs12(
             fromPem.Export(X509ContentType.Pkcs12),
             password: null,
             keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
     }
 
-    // Export a PKCS#12 containing the leaf (with its private key) AND the issuing chain, so the
-    // presenting party offers leaf + intermediate(s) and a peer that trusts only the root can build the
-    // chain without already holding the intermediates. Loading the file with LoadPkcs12 still returns
-    // the key-holding leaf (the chain certs carry no private key).
-    private static void WritePfx(string leafPath, string keyPath, string chainPath, string pfxPath)
+    // Build a PKCS#12 (leaf-with-key + issuing chain) directly from the in-memory enrollment result and
+    // write it atomically. Producing it without reading the (separately written) PEM files is what makes
+    // a crash between PEM writes safe: the complete PFX is already durable, so the component is not left
+    // looking un-enrolled (which would force a retry with the already-consumed one-time token).
+    private static void WritePfxFromResult(
+        string pfxPath, byte[] certificateDer, byte[] pkcs8PrivateKey, IReadOnlyList<byte[]> chainDer)
+    {
+        var collection = new X509Certificate2Collection();
+        try
+        {
+            using var key = RSA.Create();
+            key.ImportPkcs8PrivateKey(pkcs8PrivateKey, out _);
+            using var leafNoKey = X509CertificateLoader.LoadCertificate(certificateDer);
+            collection.Add(leafNoKey.CopyWithPrivateKey(key));
+            foreach (var der in chainDer)
+                collection.Add(X509CertificateLoader.LoadCertificate(der));
+
+            // SecureFile writes owner-only (0600 on Unix) and atomically (temp + rename), so a crash
+            // mid-write cannot leave a truncated/loose-perm PFX.
+            SecureFile.WriteOwnerOnly(pfxPath, collection.Export(X509ContentType.Pkcs12)!);
+        }
+        finally
+        {
+            foreach (var certificate in collection)
+                certificate.Dispose();
+        }
+    }
+
+    // Rebuild the PFX from the PEM leaf + key (+ chain). Only used for the out-of-band-PEM fallback in
+    // ResolvePfxPath; the enrollment path uses WritePfxFromResult.
+    private static void WritePfxFromPem(string leafPath, string keyPath, string chainPath, string pfxPath)
     {
         var collection = new X509Certificate2Collection();
         try
@@ -128,9 +169,6 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
             collection.Add(X509Certificate2.CreateFromPemFile(leafPath, keyPath));
             if (File.Exists(chainPath))
                 collection.ImportFromPemFile(chainPath);
-
-            // The PFX carries the private key — SecureFile writes it owner-only (0600 on Unix) and
-            // atomically (temp + rename), so a crash mid-write cannot leave a truncated/loose-perm PFX.
             SecureFile.WriteOwnerOnly(pfxPath, collection.Export(X509ContentType.Pkcs12)!);
         }
         finally
@@ -151,10 +189,30 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     private bool TryLoadLeaf(out DateTime notAfterUtc)
     {
         notAfterUtc = default;
-        // "Valid/current" must mean "usable". Both files must exist, and loading the leaf together with
-        // its key must succeed — that rejects a corrupt or mismatched key (which would otherwise pass an
-        // existence check and then fail when the PFX is built), so re-enrollment is triggered instead of
-        // skipping it and failing later when the certificate/key is actually needed.
+
+        // The PKCS#12 is the source of truth: Save writes it first and atomically, and it is the artifact
+        // the transport loads, so a complete, key-bearing PFX means "enrolled and usable" even if the
+        // secondary PEM copies are missing (e.g. a crash between writes left only the PFX).
+        if (File.Exists(PfxPath))
+        {
+            try
+            {
+                using var leaf = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(PfxPath), password: null);
+                if (leaf.HasPrivateKey)
+                {
+                    notAfterUtc = leaf.NotAfter.ToUniversalTime();
+                    return true;
+                }
+            }
+            catch (CryptographicException)
+            {
+                // Unreadable PFX — fall back to the PEM copy.
+            }
+        }
+
+        // Fall back to the PEM leaf + key. Loading them together also rejects a corrupt or mismatched key
+        // (which would otherwise pass an existence check and then fail when the PFX is built), so
+        // re-enrollment is triggered instead of failing later when the certificate/key is needed.
         if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
             return false;
 
@@ -170,7 +228,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         }
     }
 
-    private static string ConcatPem(System.Collections.Generic.IReadOnlyList<byte[]> certificates) =>
+    private static string ConcatPem(IReadOnlyList<byte[]> certificates) =>
         string.Join(
             Environment.NewLine,
             certificates.Select(der => PemEncoding.WriteString("CERTIFICATE", der)));

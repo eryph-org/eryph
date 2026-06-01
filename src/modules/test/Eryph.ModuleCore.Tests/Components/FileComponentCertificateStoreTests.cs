@@ -46,32 +46,51 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
     }
 
     [Fact]
-    public void Is_not_valid_when_the_private_key_is_missing()
+    public void Remains_usable_when_only_the_pfx_survives_a_partial_save()
     {
-        using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
-        var result = new ComponentEnrollmentResult
-        {
-            ComponentId = Guid.NewGuid(),
-            Certificate = cert.Export(X509ContentType.Cert),
-            IssuingChain = [],
-            CaTrustBundle = [cert.Export(X509ContentType.Cert)],
-        };
+        var store = SaveSelfSigned();
 
-        var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
-        store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), result);
+        // Simulate a crash that wrote the (authoritative) PFX but not the secondary PEM copies. Because
+        // the enrollment token is single-use, the component must still consider itself enrolled — re-
+        // enrolling with the already-consumed token would brick it.
+        File.Delete(Path.Combine(_dir, "component.crt"));
+        File.Delete(Path.Combine(_dir, "component.key"));
+        File.Delete(Path.Combine(_dir, "issuing-chain.pem"));
+        File.Delete(Path.Combine(_dir, "ca-bundle.pem"));
+
+        store.HasValidCertificate().Should().BeTrue("the PFX alone is a complete, usable certificate");
+        store.HasCurrentCertificate().Should().BeTrue();
+        store.GetClientCertificatePfxPath().Should().Be(Path.Combine(_dir, "component.pfx"));
+    }
+
+    [Fact]
+    public void Is_not_valid_when_neither_the_pfx_nor_the_pem_key_is_present()
+    {
+        var store = SaveSelfSigned();
         store.HasValidCertificate().Should().BeTrue();
 
-        // The key file is missing (partial state): the leaf alone is not usable, so the store must
-        // report not-valid/not-current and let startup re-enroll rather than fail later.
+        // Neither source of a usable certificate remains: re-enrollment must be triggered.
+        File.Delete(Path.Combine(_dir, "component.pfx"));
         File.Delete(Path.Combine(_dir, "component.key"));
         store.HasValidCertificate().Should().BeFalse();
         store.HasCurrentCertificate().Should().BeFalse();
     }
 
     [Fact]
-    public void Is_not_valid_when_the_private_key_is_corrupt()
+    public void Is_not_valid_when_falling_back_to_a_corrupt_pem_key()
+    {
+        var store = SaveSelfSigned();
+        store.HasValidCertificate().Should().BeTrue();
+
+        // Drop the PFX so the PEM fallback is exercised, then corrupt the key: loading leaf+key together
+        // fails, so the store reports not-usable and forces re-enrollment instead of a later build failure.
+        File.Delete(Path.Combine(_dir, "component.pfx"));
+        File.WriteAllText(Path.Combine(_dir, "component.key"), "-----BEGIN PRIVATE KEY-----\nnonsense\n-----END PRIVATE KEY-----");
+        store.HasValidCertificate().Should().BeFalse();
+        store.HasCurrentCertificate().Should().BeFalse();
+    }
+
+    private FileComponentCertificateStore SaveSelfSigned()
     {
         using var key = RSA.Create(2048);
         var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
@@ -86,13 +105,7 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
 
         var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
         store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), result);
-        store.HasValidCertificate().Should().BeTrue();
-
-        // A present-but-unparseable key must not count as usable — the leaf and key are loaded together,
-        // so a corrupt key fails the check and forces re-enrollment instead of a later PFX-build failure.
-        File.WriteAllText(Path.Combine(_dir, "component.key"), "-----BEGIN PRIVATE KEY-----\nnonsense\n-----END PRIVATE KEY-----");
-        store.HasValidCertificate().Should().BeFalse();
-        store.HasCurrentCertificate().Should().BeFalse();
+        return store;
     }
 
     [Fact]
