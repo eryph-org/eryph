@@ -23,6 +23,15 @@ public sealed class ComponentEnrollmentFile
     /// <summary>The component type this enrollment is bound to (the token authorizes only this type).</summary>
     public ComponentType ComponentType { get; init; }
 
+    /// <summary>
+    /// The host FQDN this enrollment is bound to. The token authorizes enrollment of
+    /// <see cref="ComponentType"/> only for the component whose self-reported FQDN matches this value,
+    /// so an enrollment file produces a certificate for exactly one host identity. Informational here
+    /// (the binding is enforced from the signed token); surfaced so automated rollout can see which
+    /// host a file is for.
+    /// </summary>
+    public string Fqdn { get; init; } = "";
+
     /// <summary>The identity service base URL the component enrolls against (HTTPS).</summary>
     public string IdentityEndpoint { get; init; } = "";
 

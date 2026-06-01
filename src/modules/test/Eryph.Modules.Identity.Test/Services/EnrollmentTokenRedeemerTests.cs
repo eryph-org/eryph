@@ -16,6 +16,8 @@ namespace Eryph.Modules.Identity.Test.Services;
 
 public class EnrollmentTokenRedeemerTests
 {
+    private const string Host = "agent1.eryph.local";
+
     private static ComponentCertificateAuthority CreateCa() =>
         new(new InMemoryCertificateStore(), new CertificateGenerator(), new InMemoryKeyService());
 
@@ -38,12 +40,23 @@ public class EnrollmentTokenRedeemerTests
     {
         var ca = CreateCa();
         var store = new Store();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
 
-        var result = await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller);
+        var result = await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host);
 
         result.IsValid.Should().BeTrue();
         result.ComponentType.Should().Be(ComponentType.Controller);
+    }
+
+    [Fact]
+    public async Task RedeemAsync_matches_the_bound_host_case_insensitively()
+    {
+        var ca = CreateCa();
+        var store = new Store();
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
+
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, "Agent1.ERYPH.local"))
+            .IsValid.Should().BeTrue("DNS names are case-insensitive");
     }
 
     [Fact]
@@ -51,11 +64,11 @@ public class EnrollmentTokenRedeemerTests
     {
         var ca = CreateCa();
         var store = new Store();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, Host, DateTimeOffset.UtcNow.AddMinutes(5));
 
         // Two separate contexts over the shared store model two requests.
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi)).IsValid.Should().BeTrue();
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi)).IsValid
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi, Host)).IsValid.Should().BeTrue();
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi, Host)).IsValid
             .Should().BeFalse("a one-time token cannot be redeemed twice");
     }
 
@@ -64,25 +77,27 @@ public class EnrollmentTokenRedeemerTests
     {
         var ca = CreateCa();
         var store = new Store();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, DateTimeOffset.UtcNow.AddSeconds(-5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddSeconds(-5));
 
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller)).IsValid.Should().BeFalse();
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid.Should().BeFalse();
     }
 
     [Fact]
-    public async Task RedeemAsync_does_not_consume_the_token_on_type_mismatch()
+    public async Task RedeemAsync_does_not_consume_the_token_on_type_or_host_mismatch()
     {
         var ca = CreateCa();
         var store = new Store();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
 
-        // A request for the wrong type is rejected WITHOUT burning the one-time token...
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi)).IsValid
-            .Should().BeFalse("the token is bound to Controller, not ComputeApi");
-
-        // ...so the legitimate component can still redeem it.
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller)).IsValid
-            .Should().BeTrue("a wrong-type attempt must not consume the token");
+        // Wrong type is rejected without burning the token...
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi, Host)).IsValid
+            .Should().BeFalse("the token is bound to Controller");
+        // ...wrong host likewise...
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, "other.eryph.local")).IsValid
+            .Should().BeFalse("the token is bound to a different host");
+        // ...so the intended host can still redeem it.
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid
+            .Should().BeTrue("a wrong-type/wrong-host attempt must not consume the token");
     }
 
     [Fact]
@@ -90,14 +105,14 @@ public class EnrollmentTokenRedeemerTests
     {
         var ca = CreateCa();
         var store = new Store();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
         var parts = token.Split('.');
 
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(parts[0] + "." + Flip(parts[1]), ComponentType.Controller))
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(parts[0] + "." + Flip(parts[1]), ComponentType.Controller, Host))
             .IsValid.Should().BeFalse();
-        var foreign = EnrollmentTokenCodec.Issue(CreateCa(), ComponentType.Controller, DateTimeOffset.UtcNow.AddMinutes(5));
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(foreign, ComponentType.Controller)).IsValid.Should().BeFalse();
-        (await Redeemer(ca, store.NewContext()).RedeemAsync("a.b.c", ComponentType.Controller)).IsValid.Should().BeFalse();
+        var foreign = EnrollmentTokenCodec.Issue(CreateCa(), ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(foreign, ComponentType.Controller, Host)).IsValid.Should().BeFalse();
+        (await Redeemer(ca, store.NewContext()).RedeemAsync("a.b.c", ComponentType.Controller, Host)).IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -117,8 +132,8 @@ public class EnrollmentTokenRedeemerTests
             await seed.SaveChangesAsync();
         }
 
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, DateTimeOffset.UtcNow.AddMinutes(5));
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller)).IsValid.Should().BeTrue();
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid.Should().BeTrue();
 
         await using var check = store.NewContext();
         check.RedeemedEnrollmentTokens.Any(t => t.Jti == "stale").Should().BeFalse("expired rows are pruned");

@@ -226,7 +226,7 @@ public class ComponentEnrollmentServiceTests
             return new ComponentEnrollmentService(ca, policy, NullLogger<ComponentEnrollmentService>.Instance);
         }
 
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, "api.eryph.local", DateTimeOffset.UtcNow.AddMinutes(5));
 
         // A valid token with garbage client-key bytes is rejected WITHOUT burning the token...
         var badKey = () => NewService().EnrollAsync(new ComponentEnrollmentRequest
@@ -272,6 +272,48 @@ public class ComponentEnrollmentServiceTests
         await replay.Should().ThrowAsync<ComponentEnrollmentException>();
     }
 
+    [Fact]
+    public async Task Enroll_rejects_a_token_bound_to_a_different_host_without_consuming_it()
+    {
+        var ca = CreateCa();
+        var root = new InMemoryDatabaseRoot();
+        var dbName = "enroll-fqdn-" + Guid.NewGuid().ToString("N");
+
+        ComponentEnrollmentService NewService()
+        {
+            var context = new IdentityDbContext(
+                new DbContextOptionsBuilder<IdentityDbContext>().UseInMemoryDatabase(dbName, root).Options);
+            var policy = new TokenEnrollmentPolicy(
+                new EnrollmentTokenRedeemer(ca, new IdentityDbRepository<RedeemedEnrollmentToken>(context)),
+                NullLogger<TokenEnrollmentPolicy>.Instance);
+            return new ComponentEnrollmentService(ca, policy, NullLogger<ComponentEnrollmentService>.Instance);
+        }
+
+        // Token is bound to api.eryph.local.
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, "api.eryph.local", DateTimeOffset.UtcNow.AddMinutes(5));
+
+        // A host presenting a different FQDN is rejected and does NOT consume the token...
+        var wrongHost = () => NewService().EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "other.eryph.local",
+            PublicKey = NewPublicKey(),
+            Token = token,
+        });
+        await wrongHost.Should().ThrowAsync<ComponentEnrollmentException>();
+
+        // ...so the bound host can still enroll with it.
+        var result = await NewService().EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "api.eryph.local",
+            PublicKey = NewPublicKey(),
+            Token = token,
+        });
+        result.ComponentId.Should().Be(
+            ComponentIdentity.DeriveComponentId(ComponentType.ComputeApi, "api.eryph.local"));
+    }
+
     private sealed class StubPolicy(bool authorized) : IComponentEnrollmentPolicy
     {
         public Task<bool> IsAuthorizedAsync(ComponentEnrollmentRequest request, CancellationToken cancellationToken = default) =>
@@ -281,7 +323,7 @@ public class ComponentEnrollmentServiceTests
     private sealed class StubTokenRedeemer(EnrollmentTokenValidationResult result) : IEnrollmentTokenRedeemer
     {
         public Task<EnrollmentTokenValidationResult> RedeemAsync(
-            string token, ComponentType expectedComponentType, CancellationToken cancellationToken = default) =>
+            string token, ComponentType expectedComponentType, string expectedFqdn, CancellationToken cancellationToken = default) =>
             Task.FromResult(result);
     }
 }

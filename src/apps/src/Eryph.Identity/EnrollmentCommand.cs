@@ -7,6 +7,7 @@ using System.Security.AccessControl;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
@@ -41,8 +42,9 @@ namespace Eryph.Identity
             if (options is null)
             {
                 Console.Error.WriteLine(
-                    "usage: eryph-identity new-enrollment --type <ComponentType> --endpoint <url> [--out <file>] [--ttl-hours N]"
-                    + "\n  (--endpoint may be omitted if ERYPH_IDENTITY_URL is set)");
+                    "usage: eryph-identity new-enrollment --type <ComponentType> --fqdn <host> --endpoint <url> [--out <file>] [--ttl-hours N]"
+                    + "\n  (--endpoint may be omitted if ERYPH_IDENTITY_URL is set)"
+                    + "\n  --fqdn binds the token to one host: only the component whose FQDN matches may enroll with it.");
                 return Task.FromResult(2);
             }
 
@@ -52,7 +54,7 @@ namespace Eryph.Identity
                 new WindowsCertificateKeyService());
 
             var expiresAt = DateTimeOffset.UtcNow.AddHours(options.TtlHours);
-            var token = EnrollmentTokenCodec.Issue(ca, options.ComponentType, expiresAt);
+            var token = EnrollmentTokenCodec.Issue(ca, options.ComponentType, options.Fqdn, expiresAt);
 
             var caCertificate = ca.GetTrustedCaCertificates().FirstOrDefault()
                 ?? throw new InvalidOperationException("The component CA is not available on this host.");
@@ -60,6 +62,7 @@ namespace Eryph.Identity
             var file = new ComponentEnrollmentFile
             {
                 ComponentType = options.ComponentType,
+                Fqdn = options.Fqdn,
                 IdentityEndpoint = options.Endpoint,
                 IdentityCaCertificate = caCertificate.Export(X509ContentType.Cert),
                 Token = token,
@@ -75,7 +78,7 @@ namespace Eryph.Identity
             WriteRestricted(options.OutPath, JsonSerializer.Serialize(file, json));
 
             Console.WriteLine(
-                $"Wrote enrollment file for {options.ComponentType} to '{options.OutPath}' (token valid until {file.ExpiresAt:u}).");
+                $"Wrote enrollment file for {options.ComponentType} on host '{options.Fqdn}' to '{options.OutPath}' (token valid until {file.ExpiresAt:u}).");
             return Task.FromResult(0);
         }
 
@@ -138,6 +141,15 @@ namespace Eryph.Identity
                 || !Enum.IsDefined(componentType))
                 return null;
 
+            // Require the bound host FQDN: the token authorizes enrollment of this type only for the
+            // host that reports this FQDN, so an automated rollout cuts one file per host. Validate it
+            // as a DNS name here so a typo cannot mint a token that no host could ever redeem; store it
+            // lower-cased to match how it is bound and compared at redeem time.
+            var fqdn = map.GetValueOrDefault("fqdn");
+            if (string.IsNullOrWhiteSpace(fqdn) || !IsValidDnsName(fqdn))
+                return null;
+            fqdn = fqdn.ToLowerInvariant();
+
             // Require an explicit endpoint: the file is delivered to a remote component, so a silent
             // localhost default would embed the wrong address.
             var endpoint = map.GetValueOrDefault("endpoint")
@@ -150,9 +162,20 @@ namespace Eryph.Identity
             if (ttlHours <= 0)
                 return null;
 
-            return new Options(componentType, endpoint, outPath, ttlHours);
+            return new Options(componentType, fqdn, endpoint, outPath, ttlHours);
         }
 
-        private sealed record Options(ComponentType ComponentType, string Endpoint, string OutPath, int TtlHours);
+        // Mirror the server-side DNS-name check (ComponentEnrollmentService.IsValidDnsName) so the
+        // bound FQDN is a syntactically valid hostname: labels of letters/digits/hyphens (no
+        // leading/trailing hyphen), dot-separated, total <= 253. Rejects wildcards and whitespace.
+        private static bool IsValidDnsName(string name) =>
+            name.Length <= 253
+            && Regex.IsMatch(
+                name,
+                @"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$",
+                RegexOptions.CultureInvariant);
+
+        private sealed record Options(
+            ComponentType ComponentType, string Fqdn, string Endpoint, string OutPath, int TtlHours);
     }
 }

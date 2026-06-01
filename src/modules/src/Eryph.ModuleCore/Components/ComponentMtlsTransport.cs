@@ -51,6 +51,20 @@ public static class ComponentMtlsTransport
         File.WriteAllText(
             trustAnchorPath, PemEncoding.WriteString("CERTIFICATE", enrollment.IdentityCaCertificate));
 
+        // The enrollment token is bound to a specific host FQDN; the most likely deployment mistake is
+        // delivering a file to the wrong host, where the server would reject every attempt and the
+        // component would retry forever. Surface that early using the file's (informational) bound FQDN
+        // — the authoritative binding is still the signed token, checked server-side.
+        var identity = new ComponentIdentity(componentType, "");
+        if (!string.IsNullOrWhiteSpace(enrollment.Fqdn)
+            && !string.Equals(enrollment.Fqdn, identity.MachineName, StringComparison.OrdinalIgnoreCase))
+        {
+            loggerFactory.CreateLogger(typeof(ComponentMtlsTransport).FullName!).LogWarning(
+                "The enrollment file is bound to host '{FileFqdn}' but this machine reports '{LocalFqdn}'. "
+                + "Enrollment will be rejected until the file cut for this host is provided.",
+                enrollment.Fqdn, identity.MachineName);
+        }
+
         var endpointResolver = new EndpointResolver(new Dictionary<string, string>
         {
             ["identity"] = enrollment.IdentityEndpoint,
@@ -58,7 +72,7 @@ public static class ComponentMtlsTransport
         var options = new ComponentEnrollmentClientOptions { Token = enrollment.Token };
 
         var transport = ComponentEnrollment.EnsureEnrolledTransport(
-            new ComponentIdentity(componentType, ""),
+            identity,
             endpointResolver,
             options,
             certificateDirectory: certificateDirectory,

@@ -10,13 +10,15 @@ using Eryph.Messages.Components;
 namespace Eryph.Modules.Identity.Services;
 
 /// <summary>The verified contents of an enrollment token.</summary>
-public sealed record EnrollmentTokenContent(string Jti, ComponentType ComponentType, DateTimeOffset ExpiresAt);
+public sealed record EnrollmentTokenContent(
+    string Jti, ComponentType ComponentType, string Fqdn, DateTimeOffset ExpiresAt);
 
 /// <summary>
-/// The enrollment-token format: a payload (<c>jti</c>, bound component type, expiry) signed by the
-/// component CA's root key and verified with the root certificate, so the token is self-validating —
-/// nothing about it is secret. Issuing needs only the CA; reading verifies the signature and decodes
-/// the payload. The expiry and one-time decisions are the redeemer's, not the codec's.
+/// The enrollment-token format: a payload (<c>jti</c>, bound component type, bound host FQDN, expiry)
+/// signed by the component CA's root key and verified with the root certificate, so the token is
+/// self-validating — nothing about it is secret. Issuing needs only the CA; reading verifies the
+/// signature and decodes the payload. The expiry, host-binding and one-time decisions are the
+/// redeemer's, not the codec's.
 /// </summary>
 /// <remarks>
 /// The token is signed with the CA <i>root</i> key (the same key that signs the intermediates). This
@@ -29,12 +31,18 @@ public static class EnrollmentTokenCodec
     public static string Issue(
         IComponentCertificateAuthority certificateAuthority,
         ComponentType componentType,
+        string fqdn,
         DateTimeOffset expiresAt)
     {
+        if (string.IsNullOrWhiteSpace(fqdn))
+            throw new ArgumentException("The bound host FQDN must be provided.", nameof(fqdn));
+
         var payload = new TokenPayload
         {
             Jti = Guid.NewGuid().ToString("N"),
             Type = componentType,
+            // DNS is case-insensitive; normalise so the redeem-time comparison is stable.
+            Fqdn = fqdn.ToLowerInvariant(),
             Exp = expiresAt.ToUnixTimeSeconds(),
         };
 
@@ -69,13 +77,16 @@ public static class EnrollmentTokenCodec
                 return null;
 
             var payload = JsonSerializer.Deserialize<TokenPayload>(Base64Url.DecodeFromChars(parts[0]));
-            // Jti length matches the persisted column; type must be a defined enum member. (A token is
-            // CA-signed, so this only guards against a malformed token we ourselves could have minted.)
-            if (payload?.Jti is null || payload.Jti.Length is 0 or > 64 || !Enum.IsDefined(payload.Type))
+            // Jti length matches the persisted column; type must be a defined enum member; the bound
+            // host FQDN must be present. (A token is CA-signed, so this only guards against a malformed
+            // token we ourselves could have minted.)
+            if (payload?.Jti is null || payload.Jti.Length is 0 or > 64
+                || !Enum.IsDefined(payload.Type)
+                || string.IsNullOrWhiteSpace(payload.Fqdn))
                 return null;
 
             return new EnrollmentTokenContent(
-                payload.Jti, payload.Type, DateTimeOffset.FromUnixTimeSeconds(payload.Exp));
+                payload.Jti, payload.Type, payload.Fqdn, DateTimeOffset.FromUnixTimeSeconds(payload.Exp));
         }
         catch (Exception ex) when (ex is FormatException or CryptographicException or JsonException)
         {
@@ -114,6 +125,7 @@ public static class EnrollmentTokenCodec
     {
         [JsonPropertyName("jti")] public string? Jti { get; init; }
         [JsonPropertyName("type")] public ComponentType Type { get; init; }
+        [JsonPropertyName("fqdn")] public string? Fqdn { get; init; }
         [JsonPropertyName("exp")] public long Exp { get; init; }
     }
 }

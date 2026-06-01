@@ -12,13 +12,17 @@ namespace Eryph.Modules.Identity.Services;
 public interface IEnrollmentTokenRedeemer
 {
     /// <summary>
-    /// Validates a presented token (signature, expiry, bound to <paramref name="expectedComponentType"/>,
-    /// not-yet-redeemed) and, on success, records it redeemed so it cannot be reused. The token is
-    /// consumed only when it is actually valid for the request, so a wrong-type or otherwise-rejected
-    /// request does not burn the one-time token. Returns the bound component type when valid.
+    /// Validates a presented token (signature, expiry, bound to <paramref name="expectedComponentType"/>
+    /// and <paramref name="expectedFqdn"/>, not-yet-redeemed) and, on success, records it redeemed so it
+    /// cannot be reused. The token is consumed only when it is actually valid for the request, so a
+    /// wrong-type, wrong-host or otherwise-rejected request does not burn the one-time token. Returns the
+    /// bound component type when valid.
     /// </summary>
     Task<EnrollmentTokenValidationResult> RedeemAsync(
-        string token, ComponentType expectedComponentType, CancellationToken cancellationToken = default);
+        string token,
+        ComponentType expectedComponentType,
+        string expectedFqdn,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>The outcome of redeeming an enrollment token.</summary>

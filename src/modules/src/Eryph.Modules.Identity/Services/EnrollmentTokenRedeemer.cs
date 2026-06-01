@@ -20,7 +20,10 @@ public sealed class EnrollmentTokenRedeemer(
     : IEnrollmentTokenRedeemer
 {
     public async Task<EnrollmentTokenValidationResult> RedeemAsync(
-        string token, ComponentType expectedComponentType, CancellationToken cancellationToken = default)
+        string token,
+        ComponentType expectedComponentType,
+        string expectedFqdn,
+        CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
 
@@ -29,10 +32,13 @@ public sealed class EnrollmentTokenRedeemer(
         if (expired.Count > 0)
             await redeemedTokens.DeleteRangeAsync(expired, cancellationToken);
 
-        // Reject (without consuming the token) before claiming, so a wrong-type or otherwise-invalid
-        // request cannot burn a one-time token that is still valid for its intended component.
+        // Reject (without consuming the token) before claiming, so a wrong-type, wrong-host or
+        // otherwise-invalid request cannot burn a one-time token that is still valid for its intended
+        // component. The token is bound to a single component type AND host FQDN (DNS-insensitive).
         var content = EnrollmentTokenCodec.TryRead(certificateAuthority, token);
-        if (content is null || content.ExpiresAt <= now || content.ComponentType != expectedComponentType
+        if (content is null || content.ExpiresAt <= now
+            || content.ComponentType != expectedComponentType
+            || !string.Equals(content.Fqdn, expectedFqdn, StringComparison.OrdinalIgnoreCase)
             || await redeemedTokens.GetByIdAsync(content.Jti, cancellationToken) is not null)
         {
             // Commit the prune (only when there was something to prune) even though the token is rejected.
