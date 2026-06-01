@@ -69,7 +69,7 @@ void Init()
     using (var k = keyService.GenerateRsaKey(2048))
         _ = ca.IssueComponentCertificate("provision-warmup", "provision-warmup", k);
     using (var k = keyService.GenerateRsaKey(2048))
-        _ = ca.IssueServerCertificate("provision-warmup", k);
+        _ = ca.IssueServerCertificate(["provision-warmup"], k);
 
     Console.WriteLine($"CA initialised. Roots: {roots.Count}.");
     Status();
@@ -278,7 +278,7 @@ void EnrollTest(string identityUrl, string secret)
         ComponentType = Eryph.Messages.Components.ComponentType.Controller,
         Fqdn = "enroll-test.localhost",
         PublicKey = rsa.ExportSubjectPublicKeyInfo(),
-        Credential = secret,
+        Token = secret,
     };
     var jsonOpts = new System.Text.Json.JsonSerializerOptions
     {
@@ -286,7 +286,7 @@ void EnrollTest(string identityUrl, string secret)
     };
     jsonOpts.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     var json = System.Text.Json.JsonSerializer.Serialize(request, jsonOpts);
-    var enrollUri = new Uri(new Uri(new Uri(identityUrl).GetLeftPart(UriPartial.Authority)), "/components/enroll");
+    var enrollUri = new Uri(new Uri(new Uri(identityUrl).GetLeftPart(UriPartial.Authority)), "/v1/components/enroll");
     using var http = new System.Net.Http.HttpClient();
     using var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
     var resp = http.PostAsync(enrollUri, content).GetAwaiter().GetResult();

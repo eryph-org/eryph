@@ -98,9 +98,11 @@ public sealed class ComponentEnrollmentService(
                 .ToList();
         }
 
+        // Log only server-derived values (type, the derived component id) — the component id already
+        // encodes the FQDN, and logging the raw caller-supplied FQDN would be a log-injection vector.
         logger.LogInformation(
-            "Issued component certificate(s) for {ComponentType} on {Fqdn} (component {ComponentId}; server cert: {HasServer}).",
-            request.ComponentType, request.Fqdn, componentId, serverCertificate.Length > 0);
+            "Issued component certificate(s) for {ComponentType} (component {ComponentId}; server cert: {HasServer}).",
+            request.ComponentType, componentId, serverCertificate.Length > 0);
 
         return new ComponentEnrollmentResult
         {
@@ -113,12 +115,13 @@ public sealed class ComponentEnrollmentService(
         };
     }
 
-    // A certificate is issued for a caller-supplied name (the token binds the component type, not the
-    // name), so the name must be a syntactically valid DNS name: labels of letters/digits/hyphens
-    // (no leading/trailing hyphen), dot-separated, total <= 253. This rejects wildcards, whitespace,
-    // and otherwise malformed SAN entries.
-    private static bool IsValidDnsName(string name) =>
-        name.Length <= 253
+    // A certificate is issued for a caller-supplied name, so the name must be a syntactically valid
+    // DNS name: labels of letters/digits/hyphens (no leading/trailing hyphen), dot-separated, total
+    // <= 253. This rejects wildcards, whitespace, and otherwise malformed SAN entries. Shared with the
+    // endpoint's request validation so both apply the same rule.
+    internal static bool IsValidDnsName(string name) =>
+        !string.IsNullOrEmpty(name)
+        && name.Length <= 253
         && Regex.IsMatch(
             name,
             @"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$",

@@ -47,11 +47,10 @@ public static class EnrollmentTokenCodec
         };
 
         var payloadSegment = Base64Url.EncodeToString(JsonSerializer.SerializeToUtf8Bytes(payload));
-        // The certificate is owned by the CA (GetTrustedCaCertificates does not transfer ownership),
-        // so it is not disposed here; the RSA key handle obtained from it is.
-        var root = GetRootCertificate(certificateAuthority);
-        using var key = root.GetRSAPrivateKey()
-            ?? throw new InvalidOperationException("The component CA root key is not available for signing.");
+        // Sign with a trusted root that actually holds a usable private key — during a CA rollover the
+        // store can also contain public-only roots (older generations whose key was removed), and the
+        // first one is not necessarily signable. The RSA key handle is disposed; the cert is owned by the CA.
+        using var key = GetSigningKey(certificateAuthority);
         var signature = key.SignData(
             Encoding.ASCII.GetBytes(payloadSegment), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
@@ -113,12 +112,16 @@ public static class EnrollmentTokenCodec
         return false;
     }
 
-    private static X509Certificate2 GetRootCertificate(IComponentCertificateAuthority certificateAuthority)
+    private static RSA GetSigningKey(IComponentCertificateAuthority certificateAuthority)
     {
         foreach (var certificate in certificateAuthority.GetTrustedCaCertificates())
-            return certificate;
+        {
+            var key = certificate.GetRSAPrivateKey();
+            if (key is not null)
+                return key;
+        }
         throw new InvalidOperationException(
-            "No component CA root certificate is available to sign/verify enrollment tokens.");
+            "No component CA root certificate with a usable private key is available to sign enrollment tokens.");
     }
 
     private sealed class TokenPayload

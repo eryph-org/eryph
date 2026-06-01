@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Startup;
 using Eryph.Rebus;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 
@@ -26,6 +27,7 @@ internal sealed class ComponentRegistrationStartupHandler(
     IBus bus,
     ComponentIdentity identity,
     IComponentConfigState state,
+    IHostApplicationLifetime lifetime,
     ILogger<ComponentRegistrationStartupHandler> logger)
     : IStartupHandler
 {
@@ -35,8 +37,16 @@ internal sealed class ComponentRegistrationStartupHandler(
     public Task ExecuteAsync(CancellationToken cancellationToken)
     {
         // Do not block (or fail) host startup on the controller being reachable; register in the
-        // background and retry until it is.
-        _ = Task.Run(() => RegisterWithRetryAsync(cancellationToken), cancellationToken);
+        // background and retry until it is. The startup token only covers startup, so also stop the
+        // loop on application shutdown — otherwise it would keep retrying (and log) after the bus is
+        // disposed during host stop.
+        var linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, lifetime.ApplicationStopping);
+        _ = Task.Run(async () =>
+        {
+            using (linked)
+                await RegisterWithRetryAsync(linked.Token);
+        }, CancellationToken.None);
         return Task.CompletedTask;
     }
 

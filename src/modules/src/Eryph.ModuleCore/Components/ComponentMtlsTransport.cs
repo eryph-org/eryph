@@ -42,7 +42,12 @@ public static class ComponentMtlsTransport
                 "componentMtls:enrollmentFile must be set when componentMtls is enabled.");
         var enrollment = LoadEnrollmentFile(enrollmentFilePath);
 
-        var certificateDirectory = mtls["certificateDirectory"] ?? "";
+        // Private key material is written here and must land in a predictable, ACL-able location —
+        // never the current working directory. Require it explicitly when mTLS is enabled.
+        var certificateDirectory = mtls["certificateDirectory"];
+        if (string.IsNullOrWhiteSpace(certificateDirectory))
+            throw new InvalidOperationException(
+                "componentMtls:certificateDirectory must be set when componentMtls is enabled.");
         Directory.CreateDirectory(certificateDirectory);
 
         // Materialise the trust anchor from the file so the enrollment HTTP client can pin it to

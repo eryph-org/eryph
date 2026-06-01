@@ -34,7 +34,7 @@ public class HttpEnrollmentTransportTests
         var handler = new StubHandler((request, _) =>
         {
             request.Method.Should().Be(HttpMethod.Post);
-            request.RequestUri.Should().Be(new Uri("https://identity.eryph.local:8080/components/enroll"));
+            request.RequestUri.Should().Be(new Uri("https://identity.eryph.local:8080/v1/components/enroll"));
             sentBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
 
             // The server (AddEryphApiSettings) parses the request with snake_case + string enums; the
@@ -46,11 +46,21 @@ public class HttpEnrollmentTransportTests
             parsed.ServerPublicKey.Should().Equal(4, 5, 6);
             parsed.Token.Should().Be("enroll-token");
 
-            var result = new ComponentEnrollmentResult { ComponentId = componentId, Certificate = [9, 8, 7] };
+            // Mirror the server's EnrolledComponent wire shape exactly (component_id + certificate as
+            // strings); the client must deserialize that back into its byte[]/Guid-typed result.
+            var response = new
+            {
+                ComponentId = componentId.ToString(),
+                Certificate = Convert.ToBase64String(new byte[] { 9, 8, 7 }),
+                IssuingChain = Array.Empty<string>(),
+                ServerCertificate = "",
+                ServerIssuingChain = Array.Empty<string>(),
+                CaTrustBundle = Array.Empty<string>(),
+            };
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    JsonSerializer.Serialize(result, ServerJsonOptions), Encoding.UTF8, "application/json"),
+                    JsonSerializer.Serialize(response, ServerJsonOptions), Encoding.UTF8, "application/json"),
             };
         });
 
