@@ -115,6 +115,39 @@ public class ComponentCertificateAuthorityTests
     }
 
     [Fact]
+    public void GetTrustedCaCertificates_excludes_a_not_yet_valid_root()
+    {
+        var store = new InMemoryCertificateStore();
+        var sut = new ComponentCertificateAuthority(store, new CertificateGenerator(), new InMemoryKeyService());
+
+        foreach (var root in sut.GetTrustedCaCertificates()) // establish the valid root
+            root.Dispose();
+
+        // A root whose validity has not started yet (future NotBefore) must not be treated as a usable CA.
+        var subject = new X500DistinguishedNameBuilder();
+        subject.AddOrganizationName("eryph");
+        subject.AddOrganizationalUnitName("component-ca");
+        subject.AddCommonName("eryph-component-root-ca");
+        using var futureKey = RSA.Create(2048);
+        var request = new CertificateRequest(subject.Build(), futureKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
+        using var notYetValid = request.CreateSelfSigned(
+            DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(3650));
+        store.AddToMyStore(notYetValid);
+
+        var bundle = sut.GetTrustedCaCertificates();
+        try
+        {
+            bundle.Should().ContainSingle("the not-yet-valid root must be excluded from the trust bundle");
+        }
+        finally
+        {
+            foreach (var certificate in bundle)
+                certificate.Dispose();
+        }
+    }
+
+    [Fact]
     public void GetTrustedCaCertificates_returns_a_root_ca()
     {
         var bundle = CreateCa().GetTrustedCaCertificates();

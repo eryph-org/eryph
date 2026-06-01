@@ -210,13 +210,18 @@ public class ComponentCertificateAuthority(
                 certificate.Dispose();
     }
 
-    private static bool IsValidCa(X509Certificate2 certificate) =>
-        // NotAfter is DateTimeKind.Local and DateTime comparison ignores Kind, so compare in UTC — on a
-        // non-UTC host a raw NotAfter > UtcNow would treat the CA as valid past its true expiry (or expired
-        // early) by the host's offset. Matches CertificateGenerator and TryLoadLeaf.
-        certificate.NotAfter.ToUniversalTime() > DateTime.UtcNow
-        && certificate.Extensions.OfType<X509BasicConstraintsExtension>()
-            .Any(e => e.CertificateAuthority);
+    private static bool IsValidCa(X509Certificate2 certificate)
+    {
+        // Check both validity bounds in UTC. NotBefore/NotAfter are DateTimeKind.Local and DateTime
+        // comparison ignores Kind, so a raw comparison would be wrong by the host's UTC offset; and a
+        // not-yet-valid CA (future NotBefore) must not be selected for signing or put in the trust bundle,
+        // or issued leaves would fail chain validation until its validity begins.
+        var now = DateTime.UtcNow;
+        return certificate.NotBefore.ToUniversalTime() <= now
+            && certificate.NotAfter.ToUniversalTime() > now
+            && certificate.Extensions.OfType<X509BasicConstraintsExtension>()
+                .Any(e => e.CertificateAuthority);
+    }
 
     private sealed record CaTier(string CommonName, string KeyName, string FriendlyName)
     {
