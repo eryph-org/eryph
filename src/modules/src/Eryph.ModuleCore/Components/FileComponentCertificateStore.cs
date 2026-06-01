@@ -103,15 +103,15 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     private static void WritePfx(string leafPath, string keyPath, string chainPath, string pfxPath)
     {
         var collection = new X509Certificate2Collection();
+        // Unique temp name so concurrent (re)creations of the same PFX cannot clobber each other's
+        // temp file; written then moved into place so a crash mid-write cannot leave a truncated PFX.
+        var tempPath = pfxPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             collection.Add(X509Certificate2.CreateFromPemFile(leafPath, keyPath));
             if (File.Exists(chainPath))
                 collection.ImportFromPemFile(chainPath);
 
-            // Write to a temp file and move into place so a crash mid-write cannot leave a truncated
-            // PFX that would later be loaded as a certificate.
-            var tempPath = pfxPath + ".tmp";
             File.WriteAllBytes(tempPath, collection.Export(X509ContentType.Pkcs12)!);
             File.Move(tempPath, pfxPath, overwrite: true);
         }
@@ -119,6 +119,11 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         {
             foreach (var certificate in collection)
                 certificate.Dispose();
+            if (File.Exists(tempPath))
+            {
+                try { File.Delete(tempPath); }
+                catch { /* best effort — a successful Move already removed it */ }
+            }
         }
     }
 

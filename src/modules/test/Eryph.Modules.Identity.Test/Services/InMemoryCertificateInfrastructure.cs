@@ -21,8 +21,15 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
     public void RemoveFromMyStore(X500DistinguishedName subjectName) =>
         _certificates.RemoveAll(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData));
 
-    public void RemoveFromMyStore(PublicKey subjectKey) =>
-        _certificates.RemoveAll(c => c.GetPublicKey().SequenceEqual(subjectKey.EncodedKeyValue.RawData));
+    public void RemoveFromMyStore(PublicKey subjectKey)
+    {
+        // Match by Subject Key Identifier, exactly like the production FileCertificateStoreService —
+        // comparing raw key encodings is unreliable across cert/key round-trips.
+        var ski = new X509SubjectKeyIdentifierExtension(subjectKey, false).SubjectKeyIdentifier;
+        _certificates.RemoveAll(c =>
+            c.Extensions.OfType<X509SubjectKeyIdentifierExtension>().FirstOrDefault() is { } certSki
+            && string.Equals(certSki.SubjectKeyIdentifier, ski, StringComparison.OrdinalIgnoreCase));
+    }
 
     // The component CA only uses the "my" store; root-store operations are not exercised here.
     public void AddToRootStore(X509Certificate2 certificate) => throw new NotSupportedException();
