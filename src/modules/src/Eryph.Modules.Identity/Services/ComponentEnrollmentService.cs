@@ -76,14 +76,33 @@ public sealed class ComponentEnrollmentService(
         // different identity than the one it authenticated as.
         var componentId = ComponentIdentity.DeriveComponentId(request.ComponentType, request.Fqdn);
 
-        var issued = certificateAuthority.IssueComponentCertificate(
-            componentId.ToString(), request.Fqdn, subjectKey);
-        var issuingChain = issued.IssuingChain
-            .Select(certificate => certificate.Export(X509ContentType.Cert))
-            .ToList();
-        var trustBundle = certificateAuthority.GetTrustedCaCertificates()
-            .Select(certificate => certificate.Export(X509ContentType.Cert))
-            .ToList();
+        // The issued certificates and trust-bundle certificates are only needed to export their public
+        // wire bytes; dispose their native handles afterwards so a long-running identity service does
+        // not leak a handle per enrollment.
+        byte[] clientCertificate;
+        List<byte[]> issuingChain;
+        using (var issued = certificateAuthority.IssueComponentCertificate(
+                   componentId.ToString(), request.Fqdn, subjectKey))
+        {
+            clientCertificate = issued.Leaf.Export(X509ContentType.Cert);
+            issuingChain = issued.IssuingChain
+                .Select(certificate => certificate.Export(X509ContentType.Cert))
+                .ToList();
+        }
+
+        var trustCertificates = certificateAuthority.GetTrustedCaCertificates();
+        List<byte[]> trustBundle;
+        try
+        {
+            trustBundle = trustCertificates
+                .Select(certificate => certificate.Export(X509ContentType.Cert))
+                .ToList();
+        }
+        finally
+        {
+            foreach (var certificate in trustCertificates)
+                certificate.Dispose();
+        }
 
         // Issue the component's server-TLS certificate when it supplied a server key, so it can serve
         // its own endpoint over TLS chaining to the same root (see IssueServerCertificate).
@@ -91,7 +110,7 @@ public sealed class ComponentEnrollmentService(
         IReadOnlyList<byte[]> serverChain = [];
         if (serverDnsNames is not null)
         {
-            var issuedServer = certificateAuthority.IssueServerCertificate(serverDnsNames, serverKey!);
+            using var issuedServer = certificateAuthority.IssueServerCertificate(serverDnsNames, serverKey!);
             serverCertificate = issuedServer.Leaf.Export(X509ContentType.Cert);
             serverChain = issuedServer.IssuingChain
                 .Select(certificate => certificate.Export(X509ContentType.Cert))
@@ -107,7 +126,7 @@ public sealed class ComponentEnrollmentService(
         return new ComponentEnrollmentResult
         {
             ComponentId = componentId,
-            Certificate = issued.Leaf.Export(X509ContentType.Cert),
+            Certificate = clientCertificate,
             IssuingChain = issuingChain,
             ServerCertificate = serverCertificate,
             ServerIssuingChain = serverChain,

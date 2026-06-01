@@ -13,7 +13,10 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
 {
     private readonly List<X509Certificate2> _certificates = [];
 
-    public void AddToMyStore(X509Certificate2 certificate) => _certificates.Add(certificate);
+    // Store an independent clone, like the real File/Windows stores (which serialize the certificate to
+    // disk / the OS store on add): the caller keeps ownership of the instance it passed in and may
+    // dispose it without affecting what the store retains.
+    public void AddToMyStore(X509Certificate2 certificate) => _certificates.Add(Clone(certificate));
 
     // Return independent clones, exactly like the real File/Windows stores (which load fresh handles
     // from disk / the OS store on every call). The caller owns and may dispose the returned instances
@@ -23,7 +26,12 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
             .Select(Clone).ToList();
 
     private static X509Certificate2 Clone(X509Certificate2 certificate) =>
-        X509CertificateLoader.LoadPkcs12(certificate.Export(X509ContentType.Pkcs12), password: null);
+        // Load the round-tripped key as exportable so the clone can itself be cloned again (the store
+        // clones on both add and read); the default key set is non-exportable and a second export throws.
+        X509CertificateLoader.LoadPkcs12(
+            certificate.Export(X509ContentType.Pkcs12),
+            password: null,
+            keyStorageFlags: X509KeyStorageFlags.Exportable);
 
     public void RemoveFromMyStore(X500DistinguishedName subjectName) =>
         _certificates.RemoveAll(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData));

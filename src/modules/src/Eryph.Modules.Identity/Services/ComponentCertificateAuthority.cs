@@ -35,11 +35,20 @@ public class ComponentCertificateAuthority(
 
     public IReadOnlyList<X509Certificate2> GetTrustedCaCertificates()
     {
-        EnsureRoot();
-        return storeService.GetFromMyStore(Root.SubjectName)
+        // Ensure a signing root exists; the (key-bearing) instance it returns is not needed here, so
+        // dispose it rather than leak its handle.
+        EnsureRoot().Dispose();
+        var candidates = storeService.GetFromMyStore(Root.SubjectName);
+        var trusted = candidates
             .Where(IsValidCa)
             .OrderByDescending(c => c.NotBefore)
             .ToList();
+        // GetFromMyStore hands out fresh handles each call; dispose the ones we filter out (invalid or
+        // expired generations) — the caller owns and disposes the certificates we return.
+        foreach (var certificate in candidates)
+            if (!trusted.Any(t => ReferenceEquals(t, certificate)))
+                certificate.Dispose();
+        return trusted;
     }
 
     public IssuedCertificate IssueComponentCertificate(
@@ -91,7 +100,7 @@ public class ComponentCertificateAuthority(
         SubjectAlternativeNameBuilder san,
         int validDays)
     {
-        var intermediate = GetIntermediate(intermediateTier);
+        using var intermediate = GetIntermediate(intermediateTier);
         var leaf = certificateGenerator.IssueCertificate(
             subjectName,
             friendlyName,
@@ -105,8 +114,15 @@ public class ComponentCertificateAuthority(
                 san.Build(),
             ]);
 
-        // The component/endpoint must present leaf + intermediate; the root is the trusted anchor.
-        return new IssuedCertificate { Leaf = leaf, IssuingChain = [intermediate] };
+        // The component/endpoint must present leaf + intermediate; the root is the trusted anchor. The
+        // chain is only ever presented or exported as public certificates, so return a public-only copy
+        // of the intermediate — its private key is never handed out with the chain — and dispose the
+        // key-bearing instance here (the using) instead of leaking its handle to the caller.
+        return new IssuedCertificate
+        {
+            Leaf = leaf,
+            IssuingChain = [X509CertificateLoader.LoadCertificate(intermediate.RawData)],
+        };
     }
 
     private X509Certificate2 EnsureRoot()
@@ -146,9 +162,11 @@ public class ComponentCertificateAuthority(
 
         RemoveTier(tier);
 
-        var root = EnsureRoot();
+        // Dispose the root and the keyless issued intermediate after use — they hold native handles we
+        // do not return (intermediateWithKey is the one handed back and persisted).
+        using var root = EnsureRoot();
         using var key = certificateKeyService.GeneratePersistedRsaKey(tier.KeyName, 4096);
-        var intermediate = certificateGenerator.IssueIntermediateCaCertificate(
+        using var intermediate = certificateGenerator.IssueIntermediateCaCertificate(
             tier.SubjectName, tier.FriendlyName, key, root, IntermediateValidDays, []);
 
         // The issued intermediate carries no private key (it was signed by the root); bind the

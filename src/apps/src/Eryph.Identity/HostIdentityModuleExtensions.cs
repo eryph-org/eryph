@@ -73,7 +73,9 @@ namespace Eryph.Identity
                 var componentId = ComponentIdentity.DeriveComponentId(ComponentType.Identity, fqdn);
 
                 using var key = services.GetRequiredService<ICertificateKeyService>().GenerateRsaKey(2048);
-                var issued = certificateAuthority.IssueComponentCertificate(componentId.ToString(), fqdn, key);
+                // Dispose the issued leaf and chain (their native handles) once the PFX is written — they
+                // are only used here to build it; the key-bearing 'bound' copy is disposed separately.
+                using var issued = certificateAuthority.IssueComponentCertificate(componentId.ToString(), fqdn, key);
 
                 // The transport consumes a certificate file (Rebus' SslSettings takes a path, not an
                 // in-memory certificate). Write the self-issued client certificate as a PKCS#12 file
