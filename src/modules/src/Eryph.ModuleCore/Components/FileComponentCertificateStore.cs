@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace Eryph.ModuleCore.Components;
 
@@ -35,7 +36,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     {
         SecureDirectory.EnsureOwnerOnly(directory);
         File.WriteAllText(LeafPath, PemEncoding.WriteString("CERTIFICATE", result.Certificate));
-        File.WriteAllText(KeyPath, PemEncoding.WriteString("PRIVATE KEY", clientPkcs8PrivateKey));
+        WriteKeyOwnerOnly(KeyPath, clientPkcs8PrivateKey);
         File.WriteAllText(ChainPath, ConcatPem(result.IssuingChain));
         File.WriteAllText(BundlePath, ConcatPem(result.CaTrustBundle));
         WritePfx(LeafPath, KeyPath, ChainPath, PfxPath);
@@ -44,10 +45,29 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         if (result.ServerCertificate is { Length: > 0 })
         {
             File.WriteAllText(ServerLeafPath, PemEncoding.WriteString("CERTIFICATE", result.ServerCertificate));
-            File.WriteAllText(ServerKeyPath, PemEncoding.WriteString("PRIVATE KEY", serverPkcs8PrivateKey));
+            WriteKeyOwnerOnly(ServerKeyPath, serverPkcs8PrivateKey);
             File.WriteAllText(ServerChainPath, ConcatPem(result.ServerIssuingChain));
             WritePfx(ServerLeafPath, ServerKeyPath, ServerChainPath, ServerPfxPath);
         }
+        else
+        {
+            // This enrollment carries no server certificate: remove any artifacts a previous one left
+            // behind so the component never keeps serving TLS with a stale certificate the current
+            // enrollment dropped — the persisted state must match the latest result.
+            DeleteIfExists(ServerLeafPath, ServerKeyPath, ServerChainPath, ServerPfxPath);
+        }
+    }
+
+    // Write a PKCS#8 private key as PEM, owner-only (0600 on Unix) from creation.
+    private static void WriteKeyOwnerOnly(string path, byte[] pkcs8PrivateKey) =>
+        SecureFile.WriteOwnerOnly(
+            path, Encoding.ASCII.GetBytes(PemEncoding.WriteString("PRIVATE KEY", pkcs8PrivateKey)));
+
+    private static void DeleteIfExists(params string[] paths)
+    {
+        foreach (var path in paths)
+            if (File.Exists(path))
+                File.Delete(path);
     }
 
     /// <summary>
@@ -112,7 +132,10 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
             if (File.Exists(chainPath))
                 collection.ImportFromPemFile(chainPath);
 
-            File.WriteAllBytes(tempPath, collection.Export(X509ContentType.Pkcs12)!);
+            // The PFX carries the private key — create the temp file owner-only (0600 on Unix) so it is
+            // never momentarily world-readable under the umask. Move preserves the mode (rename keeps the
+            // inode on Unix; the owner-only directory ACL governs on Windows).
+            SecureFile.WriteOwnerOnly(tempPath, collection.Export(X509ContentType.Pkcs12)!);
             File.Move(tempPath, pfxPath, overwrite: true);
         }
         finally

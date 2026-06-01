@@ -59,6 +59,14 @@ public static class ComponentEnrollment
         if (File.Exists(trustAnchorBundlePath))
             trustAnchors.ImportFromPemFile(trustAnchorBundlePath);
 
+        // Without a trust anchor every TLS handshake to the identity service fails validation, and the
+        // enrollment loop would retry forever against an endpoint it can never trust. Fail fast with an
+        // actionable error so a missing/empty CA bundle is obvious instead of looking like an outage.
+        if (trustAnchors.Count == 0)
+            throw new InvalidOperationException(
+                $"No CA trust anchors were loaded from '{trustAnchorBundlePath}'. The enrollment file's "
+                + "CA certificate must be provisioned there before the component can enroll.");
+
         var handler = new HttpClientHandler
         {
             // Reuse the shared mTLS validation: rejects host-name mismatch, builds the chain through

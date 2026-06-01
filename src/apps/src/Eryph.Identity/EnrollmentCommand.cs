@@ -145,7 +145,10 @@ namespace Eryph.Identity
         private static Options? ParseArgs(string[] args)
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            // args[0] is the verb; parse the remaining --key value pairs.
+            // args[0] is the verb; the rest must be --key value pairs. Reject a dangling unpaired token
+            // (e.g. `--ttl-hours` with no value) instead of silently ignoring it and applying a default.
+            if ((args.Length - 1) % 2 != 0)
+                return null;
             for (var i = 1; i + 1 < args.Length; i += 2)
             {
                 if (!args[i].StartsWith("--", StringComparison.Ordinal))
