@@ -28,6 +28,11 @@ public sealed record EnrollmentTokenContent(
 /// </remarks>
 public static class EnrollmentTokenCodec
 {
+    // Upper bound on an accepted token (in chars). A real token is a small JSON payload plus one
+    // RSA-2048 signature, both Base64Url-encoded — a few hundred chars. 8 KB is far above any valid
+    // token yet caps the work an anonymous caller can force before the signature check.
+    private const int MaxTokenLength = 8 * 1024;
+
     public static string Issue(
         IComponentCertificateAuthority certificateAuthority,
         ComponentType componentType,
@@ -61,6 +66,13 @@ public static class EnrollmentTokenCodec
     public static EnrollmentTokenContent? TryRead(IComponentCertificateAuthority certificateAuthority, string token)
     {
         if (string.IsNullOrWhiteSpace(token))
+            return null;
+
+        // The enrollment endpoint is anonymous, so bound the accepted token size before any Split or
+        // Base64 decode allocates: a legitimate token is a small JSON payload plus one RSA signature
+        // (well under 1 KB), so this generous cap rejects only oversized input meant to amplify
+        // allocations.
+        if (token.Length > MaxTokenLength)
             return null;
 
         var parts = token.Split('.');

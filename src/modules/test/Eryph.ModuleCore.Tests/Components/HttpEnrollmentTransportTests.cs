@@ -27,14 +27,16 @@ public class HttpEnrollmentTransportTests
     }
 
     [Fact]
-    public async Task EnrollAsync_posts_the_authority_root_with_the_eryph_json_contract_and_deserializes_the_result()
+    public async Task EnrollAsync_posts_under_the_identity_path_base_with_the_eryph_json_contract_and_deserializes_the_result()
     {
         var componentId = Guid.NewGuid();
         string? sentBody = null;
         var handler = new StubHandler((request, _) =>
         {
             request.Method.Should().Be(HttpMethod.Post);
-            request.RequestUri.Should().Be(new Uri("https://identity.eryph.local:8080/v1/components/enroll"));
+            // The identity endpoint carries a path base ("/identity"); the enroll request must be sent
+            // under it, not at the authority root, or it 404s when identity is hosted under a path base.
+            request.RequestUri.Should().Be(new Uri("https://identity.eryph.local:8080/identity/v1/components/enroll"));
             sentBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
 
             // The server (AddEryphApiSettings) parses the request with snake_case + string enums; the

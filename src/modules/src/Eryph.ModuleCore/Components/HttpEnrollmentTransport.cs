@@ -38,7 +38,12 @@ public sealed class HttpEnrollmentTransport(HttpClient httpClient, IEndpointReso
         CancellationToken cancellationToken)
     {
         var identity = endpointResolver.GetEndpoint("identity");
-        var enrollUri = new Uri(new Uri(identity.GetLeftPart(UriPartial.Authority)), "/v1/components/enroll");
+        // Preserve the identity endpoint's path base (e.g. "/identity"): the whole identity API,
+        // including this versioned endpoint, is hosted under it. Appending to the authority alone would
+        // drop the base and 404. GetLeftPart(Path) strips any query/fragment; TrimEnd avoids a double
+        // slash so a base with or without a trailing slash both compose correctly.
+        var identityBase = identity.GetLeftPart(UriPartial.Path).TrimEnd('/');
+        var enrollUri = new Uri(identityBase + "/v1/components/enroll");
 
         var payload = JsonSerializer.Serialize(request, JsonOptions);
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
