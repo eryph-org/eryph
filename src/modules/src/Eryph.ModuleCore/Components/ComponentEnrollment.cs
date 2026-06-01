@@ -72,14 +72,32 @@ public static class ComponentEnrollment
                 $"No CA trust anchors were loaded from '{trustAnchorBundlePath}'. The enrollment file's "
                 + "CA certificate must be provisioned there before the component can enroll.");
 
-        var handler = new HttpClientHandler
-        {
-            // Reuse the shared mTLS validation: rejects host-name mismatch, builds the chain through
-            // the presented intermediates to the pre-provisioned root, and requires serverAuth.
-            ServerCertificateCustomValidationCallback = (_, certificate, chain, errors) =>
-                TrustEvaluation.IsTrustedServerCertificate(certificate, chain, errors, trustAnchors),
-        };
+        // The handler owns the loaded anchors and disposes them with itself; HttpClient disposes the
+        // handler (disposeHandler defaults to true), so disposing the HttpClient releases the anchor
+        // handles. Otherwise the imported certificates would leak on every enrollment/restart.
+        return new HttpClient(new EnrollmentHttpClientHandler(trustAnchors));
+    }
 
-        return new HttpClient(handler);
+    // Validates the identity server certificate against the pre-provisioned trust anchors (shared mTLS
+    // evaluation: rejects host-name mismatch, builds the chain through the presented intermediates to
+    // the root, requires serverAuth) and owns those anchors' native handles.
+    private sealed class EnrollmentHttpClientHandler : HttpClientHandler
+    {
+        private readonly X509Certificate2Collection _trustAnchors;
+
+        public EnrollmentHttpClientHandler(X509Certificate2Collection trustAnchors)
+        {
+            _trustAnchors = trustAnchors;
+            ServerCertificateCustomValidationCallback = (_, certificate, chain, errors) =>
+                TrustEvaluation.IsTrustedServerCertificate(certificate, chain, errors, _trustAnchors);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+                foreach (var anchor in _trustAnchors)
+                    anchor.Dispose();
+            base.Dispose(disposing);
+        }
     }
 }

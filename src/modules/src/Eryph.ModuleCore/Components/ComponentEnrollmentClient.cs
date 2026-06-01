@@ -1,4 +1,6 @@
 using System;
+using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -80,8 +82,18 @@ public sealed class ComponentEnrollmentClient(
                     return;
                 }
 
-                // No usable certificate: the identity service may still be starting or be briefly
-                // unavailable. Never fail the component on the first attempt — back off and keep trying.
+                if (IsNonTransient(ex))
+                {
+                    // A 4xx means the request itself is the problem (expired/used token, wrong host or
+                    // type, malformed request) — retrying can never succeed and would wedge startup
+                    // forever. Surface it so the operator gets an actionable failure instead of a hang.
+                    logger.LogError(
+                        ex, "Component enrollment failed with a non-retryable response; aborting enrollment.");
+                    throw;
+                }
+
+                // Transient (5xx, timeout/429, or a connection failure): the identity service may still
+                // be starting or be briefly unavailable. Never fail on this — back off and keep trying.
                 logger.LogWarning(
                     ex,
                     "Component enrollment attempt {Attempt} failed; retrying in {Delay}. "
@@ -93,4 +105,13 @@ public sealed class ComponentEnrollmentClient(
             }
         }
     }
+
+    // A client-error (4xx) response means the request can never succeed as-is, so retrying is futile —
+    // except 408 (Request Timeout) and 429 (Too Many Requests), which are transient by definition. A
+    // connection failure surfaces as an HttpRequestException with no StatusCode and is treated as
+    // transient (the identity service may not be listening yet).
+    private static bool IsNonTransient(Exception ex) =>
+        ex is HttpRequestException { StatusCode: { } status }
+        && (int)status is >= 400 and < 500
+        && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests);
 }
