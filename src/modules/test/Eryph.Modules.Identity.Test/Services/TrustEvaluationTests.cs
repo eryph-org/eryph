@@ -84,7 +84,9 @@ public class TrustEvaluationTests
         presented.ChainPolicy.CustomTrustStore.Add(root);
         presented.ChainPolicy.ExtraStore.Add(intermediate);
         presented.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        presented.Build(leaf);
+        // Assert the synthetic chain actually builds, so a generator/extension change surfaces here at
+        // the fixture rather than as a confusing failure in the test that consumes it.
+        presented.Build(leaf).Should().BeTrue("the test fixture's certificate chain must build");
 
         return new ChainFixture(root, intermediate, leaf, presented);
     }

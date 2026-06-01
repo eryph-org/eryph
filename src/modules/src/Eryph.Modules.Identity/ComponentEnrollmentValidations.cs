@@ -69,6 +69,14 @@ public static class ComponentEnrollmentValidations
                             $"$.server_dns_names[{i}]", $"'{names[i]}' is not a valid DNS name."));
                 }
         }
+        else if (request.ServerDnsNames is { Count: > 0 })
+        {
+            // Server DNS names only apply to a server certificate; reject them when no server public key
+            // was supplied rather than silently dropping them (and the certificate the caller expected).
+            issues.Add(new ValidationIssue(
+                "$.server_dns_names",
+                "Server DNS names require a server public key ($.server_public_key)."));
+        }
 
         return issues.Count == 0
             ? Validation<ValidationIssue, EnrollComponentRequest>.Success(request)

@@ -76,21 +76,34 @@ public sealed class ComponentEnrollmentClient(
             {
                 if (!blocking)
                 {
-                    // A still-valid certificate is already in place (this is a renewal). Do not loop
-                    // here — the hosted service retries on its next interval. Only the initial
-                    // enrollment (no usable certificate yet) blocks and retries until it succeeds.
-                    logger.LogWarning(
-                        ex, "Component certificate renewal attempt failed; will retry on the next check.");
+                    // A still-valid certificate is already in place (this is a renewal), so never throw —
+                    // that would crash a healthy component on a transient blip. But distinguish the cause:
+                    // a non-transient failure (used/expired enrollment token, TLS misconfiguration) cannot
+                    // succeed on the next check either, so surface it at Error with an actionable message
+                    // instead of a misleading "will retry"; the component keeps running on its current
+                    // certificate until it expires.
+                    if (IsNonTransient(ex))
+                        logger.LogError(
+                            ex,
+                            "Component certificate renewal cannot succeed (non-retryable error); the component "
+                            + "will keep running on its current certificate until it expires. A new enrollment "
+                            + "token/file is required to renew.");
+                    else
+                        logger.LogWarning(
+                            ex, "Component certificate renewal attempt failed; will retry on the next check.");
                     return;
                 }
 
                 if (IsNonTransient(ex))
                 {
-                    // A 4xx means the request itself is the problem (expired/used token, wrong host or
-                    // type, malformed request) — retrying can never succeed and would wedge startup
-                    // forever. Surface it so the operator gets an actionable failure instead of a hang.
+                    // A non-retryable failure (4xx such as an expired/used token or wrong host/type, a
+                    // malformed response, or a TLS trust failure): retrying can never succeed and would
+                    // wedge startup forever. Surface it so the operator gets an actionable failure. If the
+                    // token was already consumed server-side, a new enrollment file is required.
                     logger.LogError(
-                        ex, "Component enrollment failed with a non-retryable response; aborting enrollment.");
+                        ex,
+                        "Component enrollment failed with a non-retryable error; aborting. If the enrollment "
+                        + "token was already consumed, a new enrollment file must be issued.");
                     throw;
                 }
 

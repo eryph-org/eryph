@@ -211,7 +211,10 @@ public class ComponentCertificateAuthority(
     }
 
     private static bool IsValidCa(X509Certificate2 certificate) =>
-        certificate.NotAfter > DateTime.UtcNow
+        // NotAfter is DateTimeKind.Local and DateTime comparison ignores Kind, so compare in UTC — on a
+        // non-UTC host a raw NotAfter > UtcNow would treat the CA as valid past its true expiry (or expired
+        // early) by the host's offset. Matches CertificateGenerator and TryLoadLeaf.
+        certificate.NotAfter.ToUniversalTime() > DateTime.UtcNow
         && certificate.Extensions.OfType<X509BasicConstraintsExtension>()
             .Any(e => e.CertificateAuthority);
 

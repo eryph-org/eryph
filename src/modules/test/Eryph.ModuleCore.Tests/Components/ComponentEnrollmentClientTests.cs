@@ -94,6 +94,23 @@ public class ComponentEnrollmentClientTests
     }
 
     [Fact]
+    public async Task EnsureEnrolledAsync_does_not_throw_on_a_non_transient_renewal_failure()
+    {
+        // Renewal window (valid but not current): even a non-transient failure (e.g. the renewal token
+        // was already used) must NOT throw — the component keeps running on its current certificate. It
+        // is logged at Error, but a single non-blocking attempt is made and no retry loop runs.
+        var transport = new FakeTransport(
+            failuresBeforeSuccess: int.MaxValue,
+            failureFactory: () => new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized));
+        var store = new FakeStore { Valid = true, Current = false };
+
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
+
+        transport.Calls.Should().Be(1);
+        store.SaveCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task EnsureEnrolledAsync_fails_fast_on_a_tls_trust_failure_instead_of_retrying_forever()
     {
         // A wrong pinned CA / host-name mismatch surfaces as an HttpRequestException wrapping an

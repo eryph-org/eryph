@@ -107,6 +107,18 @@ public class ComponentEnrollmentApiTests
     }
 
     [Fact]
+    public void Validate_rejects_server_dns_names_without_a_server_public_key()
+    {
+        var request = Valid();
+        request.ServerDnsNames = ["api.eryph.local"]; // no ServerPublicKey
+
+        var validation = ComponentEnrollmentValidations.Validate(request);
+
+        validation.IsFail.Should().BeTrue();
+        validation.ToModelStateDictionary().Keys.Should().Contain("$.server_dns_names");
+    }
+
+    [Fact]
     public void Validate_rejects_an_undefined_component_type()
     {
         var request = Valid();

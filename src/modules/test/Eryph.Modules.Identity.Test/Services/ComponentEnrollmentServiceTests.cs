@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -53,13 +54,31 @@ public class ComponentEnrollmentServiceTests
         using var leaf = X509CertificateLoader.LoadCertificate(result.Certificate);
         using var chain = new X509Chain();
         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        foreach (var rootDer in result.CaTrustBundle)
-            chain.ChainPolicy.CustomTrustStore.Add(X509CertificateLoader.LoadCertificate(rootDer));
-        foreach (var intermediateDer in result.IssuingChain)
-            chain.ChainPolicy.ExtraStore.Add(X509CertificateLoader.LoadCertificate(intermediateDer));
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        chain.Build(leaf).Should().BeTrue(
-            "the issued leaf must chain through the intermediate to a root in the returned bundle");
+        // X509Chain does not own certificates added to its policy stores, so track and dispose them.
+        var loaded = new List<X509Certificate2>();
+        try
+        {
+            foreach (var rootDer in result.CaTrustBundle)
+            {
+                var root = X509CertificateLoader.LoadCertificate(rootDer);
+                loaded.Add(root);
+                chain.ChainPolicy.CustomTrustStore.Add(root);
+            }
+            foreach (var intermediateDer in result.IssuingChain)
+            {
+                var intermediate = X509CertificateLoader.LoadCertificate(intermediateDer);
+                loaded.Add(intermediate);
+                chain.ChainPolicy.ExtraStore.Add(intermediate);
+            }
+            chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+            chain.Build(leaf).Should().BeTrue(
+                "the issued leaf must chain through the intermediate to a root in the returned bundle");
+        }
+        finally
+        {
+            foreach (var certificate in loaded)
+                certificate.Dispose();
+        }
     }
 
     [Fact]

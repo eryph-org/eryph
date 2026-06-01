@@ -141,6 +141,82 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         File.Exists(pfxPath).Should().BeTrue();
     }
 
+    [Fact]
+    public void Server_certificate_is_persisted_and_cleaned_up_on_re_enrollment_without_one()
+    {
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
+        var der = cert.Export(X509ContentType.Cert);
+
+        var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
+        store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), new ComponentEnrollmentResult
+        {
+            ComponentId = Guid.NewGuid(),
+            Certificate = der,
+            IssuingChain = [],
+            CaTrustBundle = [der],
+            ServerCertificate = der,
+            ServerIssuingChain = [],
+        });
+
+        var serverPfx = store.GetServerCertificatePfxPath();
+        serverPfx.Should().Be(Path.Combine(_dir, "server.pfx"));
+        File.Exists(serverPfx).Should().BeTrue();
+        using (var loaded = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(serverPfx!), password: null))
+            loaded.HasPrivateKey.Should().BeTrue("the listener must present the server key");
+
+        // Re-enrolling without a server certificate removes the stale server artifacts.
+        store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), new ComponentEnrollmentResult
+        {
+            ComponentId = Guid.NewGuid(),
+            Certificate = der,
+            IssuingChain = [],
+            CaTrustBundle = [der],
+        });
+
+        store.GetServerCertificatePfxPath().Should().BeNull("the server certificate was dropped");
+        File.Exists(Path.Combine(_dir, "server.crt")).Should().BeFalse();
+        File.Exists(Path.Combine(_dir, "server.key")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Save_rejects_a_server_certificate_without_its_key()
+    {
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
+        var der = cert.Export(X509ContentType.Cert);
+
+        var store = new FileComponentCertificateStore(_dir, TimeSpan.FromDays(45));
+        var act = () => store.Save(key.ExportPkcs8PrivateKey(), [], new ComponentEnrollmentResult
+        {
+            ComponentId = Guid.NewGuid(),
+            Certificate = der,
+            IssuingChain = [],
+            CaTrustBundle = [der],
+            ServerCertificate = der,
+            ServerIssuingChain = [],
+        });
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void LoadClientCertificate_returns_a_key_bearing_certificate_from_the_pfx_and_the_pem_fallback()
+    {
+        var store = SaveSelfSigned();
+
+        using (var fromPfx = store.LoadClientCertificate())
+            fromPfx!.HasPrivateKey.Should().BeTrue("loaded from the authoritative PFX");
+
+        // Drop the PFX so the PEM fallback (CreateFromPemFile + PKCS#12 round-trip) is exercised.
+        File.Delete(Path.Combine(_dir, "component.pfx"));
+        using var fromPem = store.LoadClientCertificate();
+        fromPem!.HasPrivateKey.Should().BeTrue("rebuilt from the PEM leaf+key");
+        fromPem.Subject.Should().Contain("agent.eryph.local");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_dir))

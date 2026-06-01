@@ -195,9 +195,12 @@ namespace Eryph.Identity
                 || endpointUri.Scheme != Uri.UriSchemeHttps)
                 return null;
             var outPath = map.GetValueOrDefault("out") ?? $"{componentType}-enrollment.json";
-            var ttlHours = map.TryGetValue("ttl-hours", out var ttlText) && int.TryParse(ttlText, out var t) ? t : 1;
-            // A non-positive TTL would mint an already-expired, unredeemable token; reject it loudly.
-            if (ttlHours <= 0)
+            // Default to 1 hour when omitted. When supplied, it must parse to a positive integer —
+            // silently falling back to the default on "--ttl-hours 24h" would mint a token that expires
+            // far sooner than the operator intended. A non-positive TTL would be already-expired.
+            var ttlHours = 1;
+            if (map.TryGetValue("ttl-hours", out var ttlText)
+                && (!int.TryParse(ttlText, out ttlHours) || ttlHours <= 0))
                 return null;
 
             return new Options(componentType, fqdn, endpoint, outPath, ttlHours);

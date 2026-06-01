@@ -55,6 +55,9 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         // The server-TLS certificate (for the component's own endpoint) is optional.
         if (result.ServerCertificate is { Length: > 0 })
         {
+            if (serverPkcs8PrivateKey is not { Length: > 0 })
+                throw new ArgumentException(
+                    "A server certificate was provided without its private key.", nameof(serverPkcs8PrivateKey));
             WritePfxFromResult(ServerPfxPath, result.ServerCertificate, serverPkcs8PrivateKey, result.ServerIssuingChain);
             WritePemOwnerOnly(ServerLeafPath, PemEncoding.WriteString("CERTIFICATE", result.ServerCertificate));
             WriteKeyOwnerOnly(ServerKeyPath, serverPkcs8PrivateKey);
@@ -197,7 +200,10 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         {
             try
             {
-                using var leaf = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(PfxPath), password: null);
+                // EphemeralKeySet: this is only a validity check (NotAfter + HasPrivateKey), so keep the key
+                // in memory rather than importing it into the user key store on every poll/startup check.
+                using var leaf = X509CertificateLoader.LoadPkcs12(
+                    File.ReadAllBytes(PfxPath), password: null, keyStorageFlags: X509KeyStorageFlags.EphemeralKeySet);
                 if (leaf.HasPrivateKey)
                 {
                     notAfterUtc = leaf.NotAfter.ToUniversalTime();
@@ -229,7 +235,9 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     }
 
     private static string ConcatPem(IReadOnlyList<byte[]> certificates) =>
+        // Join with "\n" (not Environment.NewLine): PEM is conventionally LF-terminated, and these files
+        // are meant to be readable by external tooling (openssl, etc.) across platforms.
         string.Join(
-            Environment.NewLine,
+            "\n",
             certificates.Select(der => PemEncoding.WriteString("CERTIFICATE", der)));
 }

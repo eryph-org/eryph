@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -38,13 +39,20 @@ namespace Eryph.ApiEndpoint
                         $"componentMtls is enabled but the enrolled server certificate '{pfxPath}' is missing; "
                         + "refusing to start without TLS.");
 
-                var leaf = X509CertificateLoader.LoadPkcs12(
+                // Load the whole PKCS#12: it bundles the leaf (with key) AND the issuing chain, so the
+                // chain travels with the leaf in one atomic file. Reading the chain from a separate PEM
+                // would let a crash between the two writes leave the leaf without its chain, and clients
+                // pinning only the root could not validate the handshake.
+                var bundle = X509CertificateLoader.LoadPkcs12Collection(
                     File.ReadAllBytes(pfxPath), password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+                var leaf = bundle.OfType<X509Certificate2>().FirstOrDefault(c => c.HasPrivateKey)
+                    ?? throw new InvalidOperationException(
+                        $"The enrolled server certificate '{pfxPath}' does not contain a private key.");
 
                 var chain = new X509Certificate2Collection();
-                var chainPath = Path.Combine(certificateDirectory, "server-chain.pem");
-                if (File.Exists(chainPath))
-                    chain.ImportFromPemFile(chainPath);
+                foreach (var certificate in bundle)
+                    if (!ReferenceEquals(certificate, leaf))
+                        chain.Add(certificate);
 
                 options.ConfigureHttpsDefaults(https =>
                 {

@@ -1,7 +1,10 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Ardalis.Specification;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.Messages.Components;
@@ -10,6 +13,7 @@ using Eryph.Security.Cryptography;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Moq;
 using Xunit;
 
 namespace Eryph.Modules.Identity.Test.Services;
@@ -138,6 +142,68 @@ public class EnrollmentTokenRedeemerTests
         await using var check = store.NewContext();
         check.RedeemedEnrollmentTokens.Any(t => t.Jti == "stale").Should().BeFalse("expired rows are pruned");
         check.RedeemedEnrollmentTokens.Any(t => t.Jti != "stale").Should().BeTrue("the fresh token was recorded");
+    }
+
+    // The EF in-memory provider never enforces the primary-key constraint, so the save-failure branch is
+    // exercised with a mock repository whose insert throws DbUpdateException.
+    private static Mock<IIdentityDbRepository<RedeemedEnrollmentToken>> RepoThatFailsToSaveTheClaim()
+    {
+        var repo = new Mock<IIdentityDbRepository<RedeemedEnrollmentToken>>();
+        repo.Setup(r => r.ListAsync(It.IsAny<ISpecification<RedeemedEnrollmentToken>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<RedeemedEnrollmentToken>());
+        repo.Setup(r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RedeemedEnrollmentToken?)null);
+        repo.Setup(r => r.AddAsync(It.IsAny<RedeemedEnrollmentToken>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RedeemedEnrollmentToken entity, CancellationToken _) => entity);
+        repo.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("insert failed"));
+        return repo;
+    }
+
+    [Fact]
+    public async Task RedeemAsync_returns_invalid_when_a_concurrent_redemption_committed_the_token()
+    {
+        var ca = CreateCa();
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
+        var repo = RepoThatFailsToSaveTheClaim();
+        // The jti row IS present in the database now: a concurrent request claimed it first.
+        repo.Setup(r => r.AnyAsync(It.IsAny<ISpecification<RedeemedEnrollmentToken>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        (await new EnrollmentTokenRedeemer(ca, repo.Object).RedeemAsync(token, ComponentType.Controller, Host))
+            .IsValid.Should().BeFalse("the token was already redeemed by a concurrent request");
+    }
+
+    [Fact]
+    public async Task RedeemAsync_rethrows_a_real_database_failure_instead_of_reporting_invalid()
+    {
+        var ca = CreateCa();
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
+        var repo = RepoThatFailsToSaveTheClaim();
+        // The jti row is NOT present: the save failed for an unrelated reason (connectivity/schema).
+        repo.Setup(r => r.AnyAsync(It.IsAny<ISpecification<RedeemedEnrollmentToken>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var act = () => new EnrollmentTokenRedeemer(ca, repo.Object).RedeemAsync(token, ComponentType.Controller, Host);
+
+        await act.Should().ThrowAsync<DbUpdateException>("a real DB failure must surface, not become a false invalid");
+    }
+
+    [Fact]
+    public async Task RedeemAsync_keeps_the_original_update_error_when_the_recheck_also_fails()
+    {
+        var ca = CreateCa();
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
+        var repo = RepoThatFailsToSaveTheClaim();
+        repo.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("original insert failure"));
+        repo.Setup(r => r.AnyAsync(It.IsAny<ISpecification<RedeemedEnrollmentToken>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("database unreachable"));
+
+        var act = () => new EnrollmentTokenRedeemer(ca, repo.Object).RedeemAsync(token, ComponentType.Controller, Host);
+
+        (await act.Should().ThrowAsync<DbUpdateException>("the original update error must not be masked by the recheck failure"))
+            .WithMessage("original insert failure");
     }
 
     private static string Flip(string segment) =>
