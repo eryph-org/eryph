@@ -35,17 +35,28 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
             keyStorageFlags: X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable);
 
     public void RemoveFromMyStore(X500DistinguishedName subjectName) =>
-        _certificates.RemoveAll(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData));
+        RemoveAndDispose(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData));
 
     public void RemoveFromMyStore(PublicKey subjectKey)
     {
         // Match by Subject Key Identifier, exactly like the production FileCertificateStoreService —
         // comparing raw key encodings is unreliable across cert/key round-trips.
         var ski = new X509SubjectKeyIdentifierExtension(subjectKey, false).SubjectKeyIdentifier;
-        _certificates.RemoveAll(c =>
+        RemoveAndDispose(c =>
             c.Extensions.OfType<X509SubjectKeyIdentifierExtension>().FirstOrDefault() is { } certSki
             && string.Equals(certSki.SubjectKeyIdentifier, ski, StringComparison.OrdinalIgnoreCase));
     }
+
+    // Dispose the certificates as they are removed so the in-memory store does not leak native handles
+    // across the test run (it retains its own clones; removed ones are no longer referenced).
+    private void RemoveAndDispose(Predicate<X509Certificate2> match) =>
+        _certificates.RemoveAll(c =>
+        {
+            if (!match(c))
+                return false;
+            c.Dispose();
+            return true;
+        });
 
     // The component CA only uses the "my" store; root-store operations are not exercised here.
     public void AddToRootStore(X509Certificate2 certificate) => throw new NotSupportedException();
