@@ -38,7 +38,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         File.WriteAllText(KeyPath, PemEncoding.WriteString("PRIVATE KEY", clientPkcs8PrivateKey));
         File.WriteAllText(ChainPath, ConcatPem(result.IssuingChain));
         File.WriteAllText(BundlePath, ConcatPem(result.CaTrustBundle));
-        WritePfx(LeafPath, KeyPath, PfxPath);
+        WritePfx(LeafPath, KeyPath, ChainPath, PfxPath);
 
         // The server-TLS certificate (for the component's own endpoint) is optional.
         if (result.ServerCertificate is { Length: > 0 })
@@ -46,7 +46,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
             File.WriteAllText(ServerLeafPath, PemEncoding.WriteString("CERTIFICATE", result.ServerCertificate));
             File.WriteAllText(ServerKeyPath, PemEncoding.WriteString("PRIVATE KEY", serverPkcs8PrivateKey));
             File.WriteAllText(ServerChainPath, ConcatPem(result.ServerIssuingChain));
-            WritePfx(ServerLeafPath, ServerKeyPath, ServerPfxPath);
+            WritePfx(ServerLeafPath, ServerKeyPath, ServerChainPath, ServerPfxPath);
         }
     }
 
@@ -62,7 +62,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         if (!File.Exists(LeafPath) || !File.Exists(KeyPath))
             return null;
         if (!File.Exists(PfxPath))
-            WritePfx(LeafPath, KeyPath, PfxPath);
+            WritePfx(LeafPath, KeyPath, ChainPath, PfxPath);
         return PfxPath;
     }
 
@@ -75,7 +75,7 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         if (!File.Exists(ServerLeafPath) || !File.Exists(ServerKeyPath))
             return null;
         if (!File.Exists(ServerPfxPath))
-            WritePfx(ServerLeafPath, ServerKeyPath, ServerPfxPath);
+            WritePfx(ServerLeafPath, ServerKeyPath, ServerChainPath, ServerPfxPath);
         return ServerPfxPath;
     }
 
@@ -96,14 +96,30 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
             keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
     }
 
-    private static void WritePfx(string leafPath, string keyPath, string pfxPath)
+    // Export a PKCS#12 containing the leaf (with its private key) AND the issuing chain, so the
+    // presenting party offers leaf + intermediate(s) and a peer that trusts only the root can build the
+    // chain without already holding the intermediates. Loading the file with LoadPkcs12 still returns
+    // the key-holding leaf (the chain certs carry no private key).
+    private static void WritePfx(string leafPath, string keyPath, string chainPath, string pfxPath)
     {
-        using var fromPem = X509Certificate2.CreateFromPemFile(leafPath, keyPath);
-        // Write to a temp file and move into place so a crash mid-write cannot leave a truncated PFX
-        // that would later be loaded as a certificate.
-        var tempPath = pfxPath + ".tmp";
-        File.WriteAllBytes(tempPath, fromPem.Export(X509ContentType.Pkcs12));
-        File.Move(tempPath, pfxPath, overwrite: true);
+        var collection = new X509Certificate2Collection();
+        try
+        {
+            collection.Add(X509Certificate2.CreateFromPemFile(leafPath, keyPath));
+            if (File.Exists(chainPath))
+                collection.ImportFromPemFile(chainPath);
+
+            // Write to a temp file and move into place so a crash mid-write cannot leave a truncated
+            // PFX that would later be loaded as a certificate.
+            var tempPath = pfxPath + ".tmp";
+            File.WriteAllBytes(tempPath, collection.Export(X509ContentType.Pkcs12)!);
+            File.Move(tempPath, pfxPath, overwrite: true);
+        }
+        finally
+        {
+            foreach (var certificate in collection)
+                certificate.Dispose();
+        }
     }
 
     public X509Certificate2Collection LoadCaTrustBundle()
