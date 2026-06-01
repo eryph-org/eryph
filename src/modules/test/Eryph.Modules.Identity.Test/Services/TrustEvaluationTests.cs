@@ -18,33 +18,33 @@ public class TrustEvaluationTests
     [Fact]
     public void Accepts_a_server_cert_chaining_through_the_presented_intermediate_to_a_trusted_root()
     {
-        var (root, leaf, presented) = BuildChain(ServerAuthOid);
+        using var chain = BuildChain(ServerAuthOid);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            leaf, presented, SslPolicyErrors.RemoteCertificateChainErrors, [root])
+            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [chain.Root])
             .Should().BeTrue();
     }
 
     [Fact]
     public void Rejects_a_host_name_mismatch_even_when_the_chain_is_valid()
     {
-        var (root, leaf, presented) = BuildChain(ServerAuthOid);
+        using var chain = BuildChain(ServerAuthOid);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            leaf, presented, SslPolicyErrors.RemoteCertificateNameMismatch, [root])
+            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateNameMismatch, [chain.Root])
             .Should().BeFalse();
     }
 
     [Fact]
     public void Rejects_a_cert_that_does_not_chain_to_a_trusted_root()
     {
-        var (_, leaf, presented) = BuildChain(ServerAuthOid);
+        using var chain = BuildChain(ServerAuthOid);
         using var otherKey = RSA.Create(2048);
-        var otherRoot = Generator.GenerateCaCertificate(
+        using var otherRoot = Generator.GenerateCaCertificate(
             new X500DistinguishedName("CN=other-root"), "other", otherKey, 3650, []);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            leaf, presented, SslPolicyErrors.RemoteCertificateChainErrors, [otherRoot])
+            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [otherRoot])
             .Should().BeFalse();
     }
 
@@ -52,14 +52,14 @@ public class TrustEvaluationTests
     public void Rejects_a_cert_without_the_serverAuth_eku()
     {
         // A client-auth leaf from the same hierarchy must not be accepted as a server certificate.
-        var (root, leaf, presented) = BuildChain(ClientAuthOid);
+        using var chain = BuildChain(ClientAuthOid);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            leaf, presented, SslPolicyErrors.RemoteCertificateChainErrors, [root])
+            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [chain.Root])
             .Should().BeFalse();
     }
 
-    private static (X509Certificate2 Root, X509Certificate2 Leaf, X509Chain Presented) BuildChain(string ekuOid)
+    private static ChainFixture BuildChain(string ekuOid)
     {
         using var rootKey = RSA.Create(2048);
         var root = Generator.GenerateCaCertificate(
@@ -86,6 +86,25 @@ public class TrustEvaluationTests
         presented.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
         presented.Build(leaf);
 
-        return (root, leaf, presented);
+        return new ChainFixture(root, intermediate, leaf, presented);
+    }
+
+    // Owns the native handles produced for one test (root + intermediate + leaf + the presented chain)
+    // so they are disposed deterministically instead of leaking across the run.
+    private sealed class ChainFixture(
+        X509Certificate2 root, X509Certificate2 intermediate, X509Certificate2 leaf, X509Chain presented)
+        : System.IDisposable
+    {
+        public X509Certificate2 Root => root;
+        public X509Certificate2 Leaf => leaf;
+        public X509Chain Presented => presented;
+
+        public void Dispose()
+        {
+            presented.Dispose();
+            leaf.Dispose();
+            intermediate.Dispose();
+            root.Dispose();
+        }
     }
 }

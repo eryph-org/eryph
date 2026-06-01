@@ -34,15 +34,17 @@ public class ComponentCertificateAuthorityTests
                 new FileCertificateKeyService(Path.Combine(dir, "keys")));
 
             using var key1 = RSA.Create(2048);
-            var issued1 = NewCa().IssueComponentCertificate("id-1", "agent1.eryph.local", key1);
+            using var issued1 = NewCa().IssueComponentCertificate("id-1", "agent1.eryph.local", key1);
 
             var reloaded = NewCa();
             var roots = reloaded.GetTrustedCaCertificates();
             roots.Should().ContainSingle("a fresh instance reuses the persisted root, not a new one");
             roots[0].HasPrivateKey.Should().BeTrue("the root key persisted to disk and reloaded");
+            foreach (var root in roots)
+                root.Dispose();
 
             using var key2 = RSA.Create(2048);
-            var issued2 = reloaded.IssueComponentCertificate("id-2", "agent2.eryph.local", key2);
+            using var issued2 = reloaded.IssueComponentCertificate("id-2", "agent2.eryph.local", key2);
             ChainsToTrustedRoot(issued2, reloaded).Should().BeTrue("issuance still chains to the persisted root");
             // Same client intermediate across instances => its private key persisted and reloaded
             // (a key that failed to reload would force the CA to regenerate a new intermediate).
@@ -60,12 +62,22 @@ public class ComponentCertificateAuthorityTests
     {
         using var chain = new X509Chain();
         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        foreach (var root in ca.GetTrustedCaCertificates())
-            chain.ChainPolicy.CustomTrustStore.Add(root);
-        foreach (var intermediate in issued.IssuingChain)
-            chain.ChainPolicy.ExtraStore.Add(intermediate);
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        return chain.Build(issued.Leaf);
+        // GetTrustedCaCertificates returns caller-owned handles; dispose them once the chain is built.
+        var roots = ca.GetTrustedCaCertificates();
+        try
+        {
+            foreach (var root in roots)
+                chain.ChainPolicy.CustomTrustStore.Add(root);
+            foreach (var intermediate in issued.IssuingChain)
+                chain.ChainPolicy.ExtraStore.Add(intermediate);
+            chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+            return chain.Build(issued.Leaf);
+        }
+        finally
+        {
+            foreach (var root in roots)
+                root.Dispose();
+        }
     }
 
     private static string[] EnhancedKeyUsages(X509Certificate2 certificate) =>
@@ -79,7 +91,7 @@ public class ComponentCertificateAuthorityTests
         var sut = new ComponentCertificateAuthority(store, new CertificateGenerator(), new InMemoryKeyService());
 
         using var key1 = RSA.Create(2048);
-        var issued1 = sut.IssueComponentCertificate("id-1", "agent1.eryph.local", key1);
+        using var issued1 = sut.IssueComponentCertificate("id-1", "agent1.eryph.local", key1);
         ChainsToTrustedRoot(issued1, sut).Should().BeTrue();
 
         // Simulate loss of the root certificate (corrupted/removed): the CA must regenerate it. The old
@@ -91,7 +103,7 @@ public class ComponentCertificateAuthorityTests
         store.RemoveFromMyStore(rootSubject.Build());
 
         using var key2 = RSA.Create(2048);
-        var issued2 = sut.IssueComponentCertificate("id-2", "agent2.eryph.local", key2);
+        using var issued2 = sut.IssueComponentCertificate("id-2", "agent2.eryph.local", key2);
 
         // The new leaf must chain to the regenerated (now only-trusted) root — i.e. the orphaned
         // intermediate was re-issued from the new root, not reused. Without that, the chain would build
@@ -106,10 +118,17 @@ public class ComponentCertificateAuthorityTests
     public void GetTrustedCaCertificates_returns_a_root_ca()
     {
         var bundle = CreateCa().GetTrustedCaCertificates();
-
-        bundle.Should().ContainSingle().Which.Extensions
-            .OfType<X509BasicConstraintsExtension>().Should()
-            .ContainSingle().Which.CertificateAuthority.Should().BeTrue();
+        try
+        {
+            bundle.Should().ContainSingle().Which.Extensions
+                .OfType<X509BasicConstraintsExtension>().Should()
+                .ContainSingle().Which.CertificateAuthority.Should().BeTrue();
+        }
+        finally
+        {
+            foreach (var certificate in bundle)
+                certificate.Dispose();
+        }
     }
 
     [Fact]
@@ -120,7 +139,7 @@ public class ComponentCertificateAuthorityTests
         const string componentId = "11111111-2222-3333-4444-555555555555";
         const string fqdn = "agent1.eryph.local";
 
-        var issued = sut.IssueComponentCertificate(componentId, fqdn, key);
+        using var issued = sut.IssueComponentCertificate(componentId, fqdn, key);
 
         issued.IssuingChain.Should().NotBeEmpty("the leaf must be presentable with its intermediate");
         ChainsToTrustedRoot(issued, sut).Should().BeTrue();
@@ -139,7 +158,7 @@ public class ComponentCertificateAuthorityTests
         var sut = CreateCa();
         using var key = RSA.Create(2048);
 
-        var issued = sut.IssueServerCertificate(["identity.eryph.local"], key);
+        using var issued = sut.IssueServerCertificate(["identity.eryph.local"], key);
 
         ChainsToTrustedRoot(issued, sut).Should().BeTrue();
         EnhancedKeyUsages(issued.Leaf).Should().Contain(ServerAuthOid);
@@ -153,7 +172,7 @@ public class ComponentCertificateAuthorityTests
         var sut = CreateCa();
         using var key = RSA.Create(2048);
 
-        var issued = sut.IssueServerCertificate(["api.eryph.local", "api", "compute.eryph.local"], key);
+        using var issued = sut.IssueServerCertificate(["api.eryph.local", "api", "compute.eryph.local"], key);
 
         var san = issued.Leaf.Extensions.Single(e => e.Oid?.Value == "2.5.29.17").Format(false);
         san.Should().Contain("api.eryph.local").And.Contain("api").And.Contain("compute.eryph.local");
@@ -177,8 +196,8 @@ public class ComponentCertificateAuthorityTests
         using var clientKey = RSA.Create(2048);
         using var serverKey = RSA.Create(2048);
 
-        var client = sut.IssueComponentCertificate("id", "agent.eryph.local", clientKey);
-        var server = sut.IssueServerCertificate(["api.eryph.local"], serverKey);
+        using var client = sut.IssueComponentCertificate("id", "agent.eryph.local", clientKey);
+        using var server = sut.IssueServerCertificate(["api.eryph.local"], serverKey);
 
         client.IssuingChain[0].Thumbprint.Should().NotBe(server.IssuingChain[0].Thumbprint);
     }
@@ -189,7 +208,8 @@ public class ComponentCertificateAuthorityTests
         var store = new InMemoryCertificateStore();
         var sut = new ComponentCertificateAuthority(store, new CertificateGenerator(), new InMemoryKeyService());
 
-        sut.GetTrustedCaCertificates(); // establishes the first root
+        foreach (var root in sut.GetTrustedCaCertificates()) // establishes the first root
+            root.Dispose();
 
         // A second, still-valid root generation under the same subject (as a future rollover adds).
         var subject = new X500DistinguishedNameBuilder();
@@ -197,9 +217,19 @@ public class ComponentCertificateAuthorityTests
         subject.AddOrganizationalUnitName("component-ca");
         subject.AddCommonName("eryph-component-root-ca");
         using var secondKey = RSA.Create(2048);
-        store.AddToMyStore(new CertificateGenerator().GenerateCaCertificate(
-            subject.Build(), "eryph component root CA", secondKey, 3650, []));
+        using var secondRoot = new CertificateGenerator().GenerateCaCertificate(
+            subject.Build(), "eryph component root CA", secondKey, 3650, []);
+        store.AddToMyStore(secondRoot);
 
-        sut.GetTrustedCaCertificates().Should().HaveCount(2);
+        var bundle = sut.GetTrustedCaCertificates();
+        try
+        {
+            bundle.Should().HaveCount(2);
+        }
+        finally
+        {
+            foreach (var certificate in bundle)
+                certificate.Dispose();
+        }
     }
 }
