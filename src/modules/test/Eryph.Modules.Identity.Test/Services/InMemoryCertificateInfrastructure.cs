@@ -15,8 +15,15 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
 
     public void AddToMyStore(X509Certificate2 certificate) => _certificates.Add(certificate);
 
+    // Return independent clones, exactly like the real File/Windows stores (which load fresh handles
+    // from disk / the OS store on every call). The caller owns and may dispose the returned instances
+    // without affecting the certificates the store retains — the contract the production code relies on.
     public IReadOnlyList<X509Certificate2> GetFromMyStore(X500DistinguishedName subjectName) =>
-        _certificates.Where(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData)).ToList();
+        _certificates.Where(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData))
+            .Select(Clone).ToList();
+
+    private static X509Certificate2 Clone(X509Certificate2 certificate) =>
+        X509CertificateLoader.LoadPkcs12(certificate.Export(X509ContentType.Pkcs12), password: null);
 
     public void RemoveFromMyStore(X500DistinguishedName subjectName) =>
         _certificates.RemoveAll(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData));

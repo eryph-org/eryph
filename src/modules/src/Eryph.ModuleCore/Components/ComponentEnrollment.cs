@@ -29,7 +29,15 @@ public static class ComponentEnrollment
     {
         var store = new FileComponentCertificateStore(certificateDirectory, renewalLeadTime);
 
-        if (!store.HasValidCertificate())
+        // Enroll when the stored certificate is missing, expired, or already inside its renewal window
+        // (all three are "not current"). EnsureEnrolledAsync decides how hard to try: with no valid
+        // certificate it blocks and retries until the identity service answers (the bus cannot connect
+        // without one, and components may start before identity does — the token aborts a stuck startup);
+        // for a still-valid but renewal-due certificate it makes a single non-blocking attempt and
+        // returns, so a restart renews the certificate without ever blocking a component that can already
+        // run. Guarding on HasCurrentCertificate (not HasValidCertificate) is what lets startup renew a
+        // renewal-due certificate — periodic renewal is a separate milestone that is not yet wired.
+        if (!store.HasCurrentCertificate())
         {
             using var httpClient = CreateEnrollmentHttpClient(trustAnchorBundlePath);
             var transport = new HttpEnrollmentTransport(httpClient, endpointResolver);
@@ -37,9 +45,6 @@ public static class ComponentEnrollment
                 transport, store, identity, options,
                 loggerFactory.CreateLogger<ComponentEnrollmentClient>());
 
-            // Block here until enrolled: the bus cannot connect without the certificate, and the
-            // client retries through the identity service still starting. The token lets the host
-            // abort a stuck startup cleanly.
             client.EnsureEnrolledAsync(cancellationToken).GetAwaiter().GetResult();
         }
 

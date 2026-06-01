@@ -111,10 +111,15 @@ public class ComponentCertificateAuthority(
 
     private X509Certificate2 EnsureRoot()
     {
-        var signingRoot = storeService.GetFromMyStore(Root.SubjectName)
+        var candidates = storeService.GetFromMyStore(Root.SubjectName);
+        var signingRoot = candidates
             .Where(c => IsValidCa(c) && c.HasPrivateKey)
             .OrderByDescending(c => c.NotBefore)
             .FirstOrDefault();
+        // Dispose every certificate we are not returning — filtered-out/older generations (a rollover
+        // can leave several in the store) each hold an unmanaged key handle that would otherwise leak on
+        // this long-running process. When none is selected, this disposes them all.
+        DisposeExcept(candidates, signingRoot);
         if (signingRoot is not null)
             return signingRoot;
 
@@ -128,10 +133,14 @@ public class ComponentCertificateAuthority(
 
     private X509Certificate2 GetIntermediate(CaTier tier)
     {
-        var existing = storeService.GetFromMyStore(tier.SubjectName)
+        var candidates = storeService.GetFromMyStore(tier.SubjectName);
+        var existing = candidates
             .Where(c => IsValidCa(c) && c.HasPrivateKey)
             .OrderByDescending(c => c.NotBefore)
             .FirstOrDefault();
+        // Dispose the certificates we are not returning (see EnsureRoot) so intermediate rollovers do
+        // not accumulate native handles.
+        DisposeExcept(candidates, existing);
         if (existing is not null)
             return existing;
 
@@ -160,6 +169,16 @@ public class ComponentCertificateAuthority(
         }
 
         certificateKeyService.DeletePersistedKey(tier.KeyName);
+    }
+
+    // Dispose every certificate in the set except the one we keep, releasing the unmanaged key handles
+    // of the candidates we did not select (passing null for kept disposes them all).
+    private static void DisposeExcept(
+        System.Collections.Generic.IReadOnlyList<X509Certificate2> certificates, X509Certificate2? kept)
+    {
+        foreach (var certificate in certificates)
+            if (!ReferenceEquals(certificate, kept))
+                certificate.Dispose();
     }
 
     private static bool IsValidCa(X509Certificate2 certificate) =>
