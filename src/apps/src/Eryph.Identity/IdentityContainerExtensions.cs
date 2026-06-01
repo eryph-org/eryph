@@ -19,12 +19,12 @@ namespace Eryph.Identity
         /// </summary>
         public static void Bootstrap(this Container container)
         {
-            // Token signing/encryption certificate stack. The key persistence and certificate
-            // store are Windows-specific today (CNG machine key + LocalMachine store), exactly
-            // as eryph-zero uses them; a cross-platform key store is future work.
-            container.RegisterSingleton<ICertificateKeyService, WindowsCertificateKeyService>();
-            container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
-            container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
+            // Token signing/encryption + component-CA certificate stack. Register the platform key/cert
+            // backend: CNG machine keys + machine store on Windows; a file-based store under an
+            // operator-secured directory otherwise (Linux is the default enterprise control node).
+            // Selected by ERYPH_PKI_KEYSTORE = auto (default) | windows | file; directory from
+            // ERYPH_PKI_DIRECTORY. Consumers resolve these through DI.
+            RegisterCertificateServices(container);
             container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
 
             // Identity store stays in-memory for this milestone (mirrors eryph-zero).
@@ -34,6 +34,28 @@ namespace Eryph.Identity
             // The identity process owns its own endpoint; it is told its public address via
             // config so it can both host on it and (later) advertise it to the controller.
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(GetOwnEndpoints()));
+        }
+
+        // Registers the platform certificate/key backend. Selection is the DI registration's job;
+        // every consumer (TokenCertificateManager, ComponentCertificateAuthority, the TLS listeners)
+        // resolves ICertificateKeyService/ICertificateStoreService/ICertificateGenerator through DI.
+        private static void RegisterCertificateServices(Container container)
+        {
+            var (useFile, directory) = PkiOptions.Resolve();
+            if (useFile)
+            {
+                container.RegisterSingleton<ICertificateKeyService>(
+                    () => new FileCertificateKeyService(PkiOptions.KeyDirectory(directory)));
+                container.RegisterSingleton<ICertificateStoreService>(
+                    () => new FileCertificateStoreService(directory));
+                container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
+            }
+            else
+            {
+                container.RegisterSingleton<ICertificateKeyService, WindowsCertificateKeyService>();
+                container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
+                container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
+            }
         }
 
         /// <summary>The identity component's own public URL (config/env, default for dev).</summary>

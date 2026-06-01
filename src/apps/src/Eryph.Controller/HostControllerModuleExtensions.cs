@@ -3,13 +3,17 @@ using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Rebus.Configuration;
 using Eryph.AppCore;
+using Eryph.Messages.Components;
+using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
 using Eryph.Rebus;
 using Eryph.StateDb.MySql;
 using Medallion.Threading;
 using Medallion.Threading.FileSystem;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rebus.Sagas;
 using Rebus.Timeouts;
 using SimpleInjector;
@@ -68,7 +72,11 @@ namespace Eryph.Controller
                     // timeout configurers during configuration. Register the host-provided bus
                     // primitives, the distributed lock provider and the OVN environment BEFORE
                     // next() so they are available when the module builds the bus.
-                    container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
+                    ComponentMtlsTransport.Register(
+                        container,
+                        context.ModulesHostServices.GetRequiredService<IConfiguration>(),
+                        context.ModulesHostServices.GetRequiredService<ILoggerFactory>(),
+                        ComponentType.Controller);
                     container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
                     container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
 

@@ -46,6 +46,8 @@ public static class IdentityModuleFactoryExtensions
 
             container.RegisterSingleton<ICertificateKeyService, TestCertificateKeyService>();
             container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
+            // The component CA (resolved by the enrollment endpoint) needs a certificate store.
+            container.RegisterSingleton<ICertificateStoreService, Services.InMemoryCertificateStore>();
             container.RegisterInstance<ITokenCertificateManager>(
                 new TestTokenCertificateManager(tokenCertificates));
 

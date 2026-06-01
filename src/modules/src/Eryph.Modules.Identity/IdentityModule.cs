@@ -99,6 +99,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
             {
                 options.Authority = authority;
                 options.Audience = EryphConstants.Authorization.Audiences.IdentityApi;
+                // An HTTP authority (split-runtime dev, behind TLS termination) cannot serve HTTPS
+                // metadata; in production the authority is HTTPS and metadata stays HTTPS-only.
+                if (authority.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    options.RequireHttpsMetadata = false;
             });
 
 
@@ -181,11 +185,33 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
     {
         container.Register(sp.GetRequiredService<ICertificateKeyService>);
         container.Register(sp.GetRequiredService<ICertificateGenerator>);
+        container.Register(sp.GetRequiredService<ICertificateStoreService>);
         container.Register(sp.GetRequiredService<IEndpointResolver>);
         container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
+
+        // Component PKI + enrollment. The CA issues component mTLS and server-TLS certificates from
+        // a single root; the enrollment service issues to authorized requests. The policy is the
+        // swappable seam (default = operator-minted one-time enrollment token; if no/invalid token is
+        // presented, enrollment is denied). The CA is stateless over the certificate store, so it is
+        // registered transient to match the (transient) cross-wired certificate services. Loggers are
+        // built from the cross-wired ILoggerFactory.
+        container.Register<IComponentCertificateAuthority, ComponentCertificateAuthority>();
+        // The redeemer is NOT stateless — it records redeemed token ids through the IdentityDb
+        // repository (scoped). It is transient so each resolution (within the enrollment request scope,
+        // via the policy/service factories below) gets a fresh scoped repository, never a captured one.
+        container.Register<IEnrollmentTokenRedeemer, EnrollmentTokenRedeemer>();
+        container.Register<IComponentEnrollmentPolicy>(() =>
+            new TokenEnrollmentPolicy(
+                container.GetInstance<IEnrollmentTokenRedeemer>(),
+                container.GetInstance<ILoggerFactory>().CreateLogger<TokenEnrollmentPolicy>()));
+        container.Register<IComponentEnrollmentService>(() =>
+            new ComponentEnrollmentService(
+                container.GetInstance<IComponentCertificateAuthority>(),
+                container.GetInstance<IComponentEnrollmentPolicy>(),
+                container.GetInstance<ILoggerFactory>().CreateLogger<ComponentEnrollmentService>()));
 
         // The identity component runs a bidirectional bus endpoint on its own inbound queue
         // (from the registered ComponentIdentity) so it can register/heartbeat and receive

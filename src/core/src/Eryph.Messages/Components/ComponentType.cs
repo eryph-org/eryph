@@ -15,4 +15,10 @@ public enum ComponentType
     Network,
     ComputeApi,
     Identity,
+
+    /// <summary>
+    /// The controller itself. It does not register in the component catalog (it is the authority),
+    /// but it has a component identity so it can authenticate on the bus via mTLS.
+    /// </summary>
+    Controller,
 }
