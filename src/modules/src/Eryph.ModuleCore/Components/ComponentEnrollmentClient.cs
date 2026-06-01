@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
@@ -108,13 +109,22 @@ public sealed class ComponentEnrollmentClient(
     }
 
     // An error that retrying can never fix, so blocking startup must not loop on it forever:
+    //  - a malformed/empty success body (JsonException): a server/version mismatch, not an outage;
     //  - a client-error (4xx) response, except 408/429 which are transient by definition; and
-    //  - a malformed/empty success body (JsonException), which is a server/version mismatch, not an outage.
-    // A connection failure surfaces as an HttpRequestException with no StatusCode and stays transient
-    // (the identity service may simply not be listening yet).
-    private static bool IsNonTransient(Exception ex) =>
-        ex is JsonException
-        || (ex is HttpRequestException { StatusCode: { } status }
-            && (int)status is >= 400 and < 500
-            && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests));
+    //  - a TLS trust failure (wrong pinned CA, host-name mismatch): it surfaces as an HttpRequestException
+    //    with no StatusCode wrapping an AuthenticationException, and is a misconfiguration retrying cannot
+    //    fix. A plain connection failure has no such inner exception and stays transient (the identity
+    //    service may simply not be listening yet).
+    private static bool IsNonTransient(Exception ex)
+    {
+        if (ex is JsonException)
+            return true;
+        if (ex is HttpRequestException { StatusCode: { } status })
+            return (int)status is >= 400 and < 500
+                && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests);
+        for (var inner = ex; inner is not null; inner = inner.InnerException)
+            if (inner is AuthenticationException)
+                return true;
+        return false;
+    }
 }

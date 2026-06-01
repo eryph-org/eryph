@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
@@ -83,6 +84,25 @@ public class ComponentEnrollmentClientTests
         var transport = new FakeTransport(
             failuresBeforeSuccess: int.MaxValue,
             failureFactory: () => new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized));
+        var store = new FakeStore();
+
+        var act = () => Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+        transport.Calls.Should().Be(1);
+        store.SaveCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task EnsureEnrolledAsync_fails_fast_on_a_tls_trust_failure_instead_of_retrying_forever()
+    {
+        // A wrong pinned CA / host-name mismatch surfaces as an HttpRequestException wrapping an
+        // AuthenticationException. It is a misconfiguration retrying cannot fix, so blocking startup must
+        // abort rather than loop forever.
+        var transport = new FakeTransport(
+            failuresBeforeSuccess: int.MaxValue,
+            failureFactory: () => new HttpRequestException(
+                "TLS failure", new AuthenticationException("the remote certificate is invalid")));
         var store = new FakeStore();
 
         var act = () => Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
