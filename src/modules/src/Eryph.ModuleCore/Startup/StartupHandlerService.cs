@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
@@ -22,7 +21,10 @@ internal class StartupHandlerService<THandler>(Container container) : IHostedSer
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var logger = scope.GetInstance<ILogger<StartupHandlerService<THandler>>>();
         logger.LogDebug("Executing startup handler {Handler}...", typeof(THandler).Name);
-        var handler = ActivatorUtilities.CreateInstance<THandler>(container);
+        // Resolve the handler from the active SimpleInjector scope (it is registered via
+        // AddStartupHandler). ActivatorUtilities.CreateInstance would bypass the container's scope,
+        // so scoped dependencies could be resolved from the wrong scope and never disposed.
+        var handler = scope.GetInstance<THandler>();
         // Cancel on startup abort too, not only on shutdown: while StartAsync runs, a cancelled startup
         // token should stop the handler as well. (After StartAsync returns, shutdown is signalled via
         // StopAsync; background work keeps observing _stopping.Token.)

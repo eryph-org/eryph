@@ -123,30 +123,20 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     private static void WritePfx(string leafPath, string keyPath, string chainPath, string pfxPath)
     {
         var collection = new X509Certificate2Collection();
-        // Unique temp name so concurrent (re)creations of the same PFX cannot clobber each other's
-        // temp file; written then moved into place so a crash mid-write cannot leave a truncated PFX.
-        var tempPath = pfxPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             collection.Add(X509Certificate2.CreateFromPemFile(leafPath, keyPath));
             if (File.Exists(chainPath))
                 collection.ImportFromPemFile(chainPath);
 
-            // The PFX carries the private key — create the temp file owner-only (0600 on Unix) so it is
-            // never momentarily world-readable under the umask. Move preserves the mode (rename keeps the
-            // inode on Unix; the owner-only directory ACL governs on Windows).
-            SecureFile.WriteOwnerOnly(tempPath, collection.Export(X509ContentType.Pkcs12)!);
-            File.Move(tempPath, pfxPath, overwrite: true);
+            // The PFX carries the private key — SecureFile writes it owner-only (0600 on Unix) and
+            // atomically (temp + rename), so a crash mid-write cannot leave a truncated/loose-perm PFX.
+            SecureFile.WriteOwnerOnly(pfxPath, collection.Export(X509ContentType.Pkcs12)!);
         }
         finally
         {
             foreach (var certificate in collection)
                 certificate.Dispose();
-            if (File.Exists(tempPath))
-            {
-                try { File.Delete(tempPath); }
-                catch { /* best effort — a successful Move already removed it */ }
-            }
         }
     }
 

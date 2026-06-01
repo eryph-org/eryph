@@ -84,14 +84,13 @@ namespace Eryph.Identity
                 // is irrelevant — unlike the in-process server/listener paths.
                 using var bound = issued.Leaf.CopyWithPrivateKey(key);
                 var certificateDirectory = configuration.GetSection("componentMtls")["certificateDirectory"];
+                // Require an explicit directory, exactly like the other components (ComponentMtlsTransport):
+                // it holds the client private key, so falling back to a world-writable temp path with
+                // unpredictable ACLs would be insecure. Fail fast so the operator configures a protected one.
                 if (string.IsNullOrWhiteSpace(certificateDirectory))
-                {
-                    certificateDirectory = Path.Combine(Path.GetTempPath(), "eryph-identity-mtls");
-                    logger.LogWarning(
-                        "componentMtls:certificateDirectory is not configured; writing the identity client "
-                        + "certificate to '{Directory}'. Configure an ACL-restricted directory for production.",
-                        certificateDirectory);
-                }
+                    throw new InvalidOperationException(
+                        "componentMtls is enabled but componentMtls:certificateDirectory is not configured. "
+                        + "Set it to an ACL-restricted directory for the identity client certificate.");
                 // Export leaf + issuing chain so the component presents the full chain (a broker that
                 // trusts only the root can then build it). The PKCS#12 holds the private key — write it
                 // owner-only (0600 on Unix).

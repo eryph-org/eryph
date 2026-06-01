@@ -50,6 +50,9 @@ internal sealed class InMemoryKeyService : ICertificateKeyService
 
     public RSA GeneratePersistedRsaKey(string keyName, int keyLength)
     {
+        // Dispose any key being replaced so repeated generations under one name don't leak handles.
+        if (_keys.TryGetValue(keyName, out var existing))
+            existing.Dispose();
         var key = RSA.Create(keyLength);
         _keys[keyName] = key;
         return key;
@@ -58,5 +61,9 @@ internal sealed class InMemoryKeyService : ICertificateKeyService
     public RSA? GetPersistedRsaKey(string keyName) =>
         _keys.TryGetValue(keyName, out var key) ? key : null;
 
-    public void DeletePersistedKey(string keyName) => _keys.Remove(keyName);
+    public void DeletePersistedKey(string keyName)
+    {
+        if (_keys.Remove(keyName, out var key))
+            key.Dispose();
+    }
 }
