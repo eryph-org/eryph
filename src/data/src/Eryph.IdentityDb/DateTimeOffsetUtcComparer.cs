@@ -8,5 +8,5 @@ namespace Eryph.IdentityDb;
 /// <see cref="DateTimeOffsetToDateTimeConverter"/> so the lossy SQLite storage still compares correctly.
 /// </summary>
 internal class DateTimeOffsetUtcComparer() : ValueComparer<DateTimeOffset>(
-    (a, b) => a.Ticks == b.Ticks,
-    a => a.Ticks.GetHashCode());
+    (a, b) => a.UtcTicks == b.UtcTicks,
+    a => a.UtcTicks.GetHashCode());
