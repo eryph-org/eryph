@@ -17,8 +17,10 @@ using Microsoft.Extensions.Logging;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Subscriptions;
+using System.IO.Abstractions;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.Identity.ChangeTracking;
 using Eryph.Modules.Identity.Events;
 using Eryph.Modules.Identity.Events.Validations;
 using Eryph.Modules.Identity.Services;
@@ -28,6 +30,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenIddict.EntityFrameworkCore.Models;
@@ -38,8 +41,17 @@ using static OpenIddict.Server.OpenIddictServerHandlers.Exchange;
 namespace Eryph.Modules.Identity;
 
 [ApiVersion("1.0")]
-public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
+public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration configuration) : WebModule
 {
+    private readonly IdentityChangeTrackingConfig _changeTrackingConfig = BindChangeTracking(configuration);
+
+    private static IdentityChangeTrackingConfig BindChangeTracking(IConfiguration configuration)
+    {
+        var config = new IdentityChangeTrackingConfig();
+        configuration.GetSection("IdentityChangeTracking").Bind(config);
+        return config;
+    }
+
     public override string Path => endpointResolver.GetEndpoint("identity").ToString();
 
 #pragma warning disable S2325
@@ -59,6 +71,15 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
             {
                 ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),
             });
+
+        // Mirror the state store's change-tracking/export pipeline for the identity database. Register
+        // change tracking BEFORE seeding so the export queues are enabled before the seeders save (and
+        // re-export) the rebuilt rows. Off by default in server mode; on for eryph-zero and for taking a
+        // backup / live DB migration.
+        if (_changeTrackingConfig.TrackChanges)
+            options.AddIdentityChangeTracking();
+
+        options.AddIdentitySeeding(_changeTrackingConfig);
 
         options.AddLogging();
     }
@@ -191,6 +212,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register(sp.GetRequiredService<IEndpointResolver>);
         container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
+
+        // Change-tracking/export config + file system, used by the export handlers and the seeders.
+        container.RegisterInstance(_changeTrackingConfig);
+        container.RegisterSingleton<IFileSystem, FileSystem>();
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
 

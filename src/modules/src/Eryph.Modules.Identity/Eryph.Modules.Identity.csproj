@@ -11,9 +11,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="OpenIddict.AspNetCore" Version="7.5.0" />
+    <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.2.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\data\src\Eryph.IdentityDb\Eryph.IdentityDb.csproj" />
+    <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\Eryph.Modules.AspNetCore\Eryph.Modules.AspNetCore.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Security.Cryptography\Eryph.Security.Cryptography.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
