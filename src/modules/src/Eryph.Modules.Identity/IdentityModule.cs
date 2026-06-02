@@ -82,7 +82,15 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
         // re-export) the rebuilt rows. Off by default in server mode; on for eryph-zero and for taking a
         // backup / live DB migration.
         if (_changeTrackingConfig.TrackChanges)
+        {
+            if (string.IsNullOrWhiteSpace(_changeTrackingConfig.ClientsConfigPath)
+                || string.IsNullOrWhiteSpace(_changeTrackingConfig.RedeemedTokensConfigPath))
+                throw new InvalidOperationException(
+                    "IdentityChangeTracking:TrackChanges is enabled but the export paths are not "
+                    + "configured. Set IdentityChangeTracking:ClientsConfigPath and :RedeemedTokensConfigPath.");
+
             options.AddIdentityChangeTracking();
+        }
 
         options.AddIdentitySeeding();
 
@@ -98,6 +106,10 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
         var authority = endpointResolver.GetEndpoint("identity").ToString();
         var signingCertManager = serviceProvider.GetRequiredService<ITokenCertificateManager>();
 
+        // The configurer is registered in the app/root container and resolved here via cross-wiring.
+        // When change tracking is enabled it is decorated as scoped (depending on scoped interceptors);
+        // SimpleInjector resolves that against the ambient async scope active when EF creates the context
+        // (inside operation scopes and the scoped startup handlers), so this captured provider is correct.
         services.AddDbContext<IdentityDbContext>(options =>
         {
             serviceProvider.GetRequiredService<IDbContextConfigurer<IdentityDbContext>>().Configure(options);
