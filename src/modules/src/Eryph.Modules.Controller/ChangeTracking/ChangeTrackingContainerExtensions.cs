@@ -26,9 +26,14 @@ public static class ChangeTrackingContainerExtensions
 
     private static void RegisterChangeTracking(this Container container)
     {
+        // The generic change-tracking core now lives in Eryph.ModuleCore; the concrete handlers and
+        // interceptors live in this (Controller) assembly, so scan it explicitly rather than the
+        // assembly of the now-shared base types.
+        var controllerAssembly = typeof(ChangeTrackingContainerExtensions).Assembly;
+
         container.Register(typeof(IChangeTrackingQueue<>), typeof(ChangeTrackingQueue<>), Lifestyle.Singleton);
         container.Register(typeof(IChangeHandler<>),
-            typeof(IChangeHandler<>).Assembly,
+            controllerAssembly,
             Lifestyle.Scoped);
 
         container.RegisterDecorator(
@@ -38,7 +43,7 @@ public static class ChangeTrackingContainerExtensions
 
         container.Collection.Register(
             typeof(IDbTransactionInterceptor),
-            new []{ typeof(ChangeInterceptorBase<>).Assembly },
+            new []{ controllerAssembly },
             Lifestyle.Scoped);
     }
 }

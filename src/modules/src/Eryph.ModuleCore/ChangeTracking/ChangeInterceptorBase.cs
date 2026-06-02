@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,10 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Modules.Controller.ChangeTracking;
+namespace Eryph.ModuleCore.ChangeTracking;
 
 /// <summary>
-/// Base class for change interceptors that detect changes in the database.
+/// Base class for change interceptors that detect changes in the database and enqueue them for export
+/// to the on-disk config mirror.
 /// </summary>
 /// <remarks>
 /// We use both <see cref="CreatedSavepointAsync(DbTransaction, TransactionEventData, CancellationToken)"/>
@@ -20,7 +21,7 @@ namespace Eryph.Modules.Controller.ChangeTracking;
 /// is created. Otherwise, we would miss deleted entities as EF Core seems
 /// to remove them from the change tracker after the <c>SaveChangesAsync()</c>.
 /// </remarks>
-internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
+public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
 {
     private readonly IChangeTrackingQueue<TChange> _queue;
     private readonly ILogger _logger;
