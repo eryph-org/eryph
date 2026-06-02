@@ -337,6 +337,25 @@ internal static class Program
                                 options.AddStartupHandler<EnsureConfigurationStartupHandler>();
                                 options.AddStartupHandler<DatabaseResetHandler>();
 
+                                // Migrate the identity database (SQLite) during warmup alongside the
+                                // state store. It is disposable and rebuilt from the config mirror by the
+                                // identity module's seeders in the main host, so reset-on-pending-migration
+                                // (IdentityDatabaseResetHandler) is the right behavior, mirroring the state store.
+                                var identityDbConnectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+                                {
+                                    DataSource = System.IO.Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
+                                }.ToString();
+                                container.RegisterInstance<Eryph.IdentityDb.IDbContextConfigurer<Eryph.IdentityDb.IdentityDbContext>>(
+                                    new Eryph.IdentityDb.Sqlite.SqliteIdentityDbContextConfigurer(identityDbConnectionString));
+                                options.Services.AddDbContext<Eryph.IdentityDb.IdentityDbContext>((sp, dbOptions) =>
+                                {
+                                    sp.GetRequiredService<Container>()
+                                        .GetInstance<Eryph.IdentityDb.IDbContextConfigurer<Eryph.IdentityDb.IdentityDbContext>>()
+                                        .Configure(dbOptions);
+                                    Eryph.IdentityDb.IdentityDbModel.ApplyOpenIddict(dbOptions);
+                                });
+                                options.AddStartupHandler<IdentityDatabaseResetHandler>();
+
                                 container.RegisterInstance(changeTrackingConfig);
                                 // Change tracking must be registered before seeding so its
                                 // hosted services enable their queues in StartAsync before
