@@ -24,6 +24,9 @@ internal class RedeemedTokenSeeder(
 {
     public async Task Execute(CancellationToken stoppingToken)
     {
+        if (!config.SeedDatabase)
+            return;
+
         if (!fileSystem.Directory.Exists(config.RedeemedTokensConfigPath))
             return;
 

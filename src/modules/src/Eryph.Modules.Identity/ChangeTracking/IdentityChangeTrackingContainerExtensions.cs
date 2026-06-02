@@ -41,12 +41,14 @@ public static class IdentityChangeTrackingContainerExtensions
         options.AddHostedService<ChangeTrackingBackgroundService<RedeemedTokenChange>>();
     }
 
-    public static void AddIdentitySeeding(this SimpleInjectorAddOptions options, IdentityChangeTrackingConfig config)
+    public static void AddIdentitySeeding(this SimpleInjectorAddOptions options)
     {
-        if (config.SeedDatabase)
-        {
-            options.Container.Collection.Append<IConfigSeeder<IdentityModule>, RedeemedTokenSeeder>(Lifestyle.Scoped);
-        }
+        // Always append (so the IConfigSeeder<IdentityModule> collection is registered even when no
+        // other seeders are — SimpleInjector requires the collection to exist for SeedFromConfigHandler
+        // to resolve it). The seeder itself honours IdentityChangeTrackingConfig.SeedDatabase, so it is a
+        // no-op when seeding is disabled. eryph-zero appends its own client/scope seeders too; the appends
+        // compose into one collection that the single handler runs.
+        options.Container.Collection.Append<IConfigSeeder<IdentityModule>, RedeemedTokenSeeder>(Lifestyle.Scoped);
 
         options.AddHostedService<SeedFromConfigHandler<IdentityModule>>();
     }

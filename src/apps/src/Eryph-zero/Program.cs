@@ -519,6 +519,14 @@ internal static class Program
                 ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
                 ["changeTracking:catletSpecificationsConfigPath"] = ZeroConfig.GetCatletSpecificationsConfigPath(),
                 ["changeTracking:catletSpecificationVersionsConfigPath"] = ZeroConfig.GetCatletSpecificationVersionsConfigPath(),
+
+                // Identity store change tracking: the SQLite identity DB is disposable and rebuilt from
+                // these files (same model as the state store).
+                ["identityChangeTracking:trackChanges"] = bool.TrueString,
+                ["identityChangeTracking:seedDatabase"] = bool.TrueString,
+                ["identityChangeTracking:redeemedTokensConfigPath"] = ZeroConfig.GetIdentityRedeemedTokensConfigPath(),
+                ["identityChangeTracking:tokensConfigPath"] = ZeroConfig.GetIdentityTokensConfigPath(),
+                ["identityChangeTracking:authorizationsConfigPath"] = ZeroConfig.GetIdentityAuthorizationsConfigPath(),
             });
         });
 

@@ -30,28 +30,9 @@ namespace Eryph.Identity
             builder.ConfigureFrameworkServices((_, services) =>
             {
                 services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityTransportFilter>();
-                services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityDbMigrationFilter>();
             });
 
             return builder;
-        }
-
-        /// <summary>
-        /// Migrates the identity database before the module's own startup handlers (the system client
-        /// and component CA seeders) run, so they operate against an up-to-date schema. Registered only
-        /// for the standalone host; eryph-zero keeps the in-memory store and never migrates.
-        /// </summary>
-        private sealed class IdentityDbMigrationFilter : IAddSimpleInjectorFilter<IdentityModule>
-        {
-            public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
-                Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
-            {
-                return (context, options) =>
-                {
-                    options.AddStartupHandler<MigrateIdentityDbHandler>();
-                    next(context, options);
-                };
-            }
         }
 
         private sealed class IdentityTransportFilter : IConfigureContainerFilter<IdentityModule>

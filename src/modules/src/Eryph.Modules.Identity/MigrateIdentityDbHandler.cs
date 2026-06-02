@@ -5,12 +5,12 @@ using Eryph.ModuleCore.Startup;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Identity;
+namespace Eryph.Modules.Identity;
 
 /// <summary>
-/// Applies the identity-database migrations on startup. In eryph-zero the identity store is in-memory
-/// and never migrated; the standalone identity host owns its MariaDB database, so it migrates
-/// in-process before the system-client / component-CA seeders touch it.
+/// Applies the identity-database migrations on startup, before the seeders run. Relational only: on the
+/// in-memory provider (test wiring) there are no migrations, so it is a no-op. Both the standalone
+/// identity host (MariaDB) and eryph-zero (SQLite) own their database and migrate it in-process.
 /// </summary>
 internal sealed class MigrateIdentityDbHandler(
     IdentityDbContext context,
@@ -19,6 +19,9 @@ internal sealed class MigrateIdentityDbHandler(
 {
     public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        if (!context.Database.IsRelational())
+            return;
+
         logger.LogInformation("Applying identity database migrations...");
         await context.Database.MigrateAsync(cancellationToken);
         logger.LogInformation("Identity database is up to date.");

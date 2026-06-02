@@ -12,6 +12,7 @@ using Eryph.ModuleCore.Components;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Startup;
 using Eryph.Rebus;
 using Microsoft.Extensions.Logging;
 using Rebus.Config;
@@ -72,6 +73,10 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
                 ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),
             });
 
+        // Migrate the identity database before anything reads or seeds it (no-op on the in-memory
+        // provider used by tests).
+        options.AddStartupHandler<MigrateIdentityDbHandler>();
+
         // Mirror the state store's change-tracking/export pipeline for the identity database. Register
         // change tracking BEFORE seeding so the export queues are enabled before the seeders save (and
         // re-export) the rebuilt rows. Off by default in server mode; on for eryph-zero and for taking a
@@ -79,7 +84,7 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
         if (_changeTrackingConfig.TrackChanges)
             options.AddIdentityChangeTracking();
 
-        options.AddIdentitySeeding(_changeTrackingConfig);
+        options.AddIdentitySeeding();
 
         options.AddLogging();
     }

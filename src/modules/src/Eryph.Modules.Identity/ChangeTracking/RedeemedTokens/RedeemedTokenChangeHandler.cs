@@ -42,6 +42,7 @@ internal class RedeemedTokenChangeHandler(
             ExpiresAt = entity.ExpiresAt,
         };
 
+        fileSystem.Directory.CreateDirectory(config.RedeemedTokensConfigPath);
         var json = JsonSerializer.Serialize(model);
         await fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
     }

@@ -51,7 +51,9 @@ namespace Eryph.Runtime.Zero
                     container.RegisterDecorator(typeof(IClientService),
                         typeof(ClientServiceWithConfigServiceDecorator));
 
-                    container.RegisterSingleton<IFileSystem, FileSystem>();
+                    // IFileSystem and the SeedFromConfigHandler are now registered by the identity
+                    // module itself (shared across packagings). Here we only append the zero-specific
+                    // client + scope seeders; the module runs them alongside its own seeders.
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
                 };
@@ -60,11 +62,8 @@ namespace Eryph.Runtime.Zero
             public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
                 Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
             {
-                return (context, options) =>
-                {
-                    options.AddHostedService<SeedFromConfigHandler<IdentityModule>>();
-                    next(context, options);
-                };
+                // The identity module registers SeedFromConfigHandler<IdentityModule> itself now.
+                return next;
             }
         }
     }
