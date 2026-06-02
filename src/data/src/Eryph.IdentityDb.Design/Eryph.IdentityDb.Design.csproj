@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Eryph.IdentityDb.MySql\Eryph.IdentityDb.MySql.csproj" />
+    <ProjectReference Include="..\Eryph.IdentityDb.Sqlite\Eryph.IdentityDb.Sqlite.csproj" />
     <ProjectReference Include="..\Eryph.IdentityDb\Eryph.IdentityDb.csproj" />
   </ItemGroup>
 
