@@ -2,6 +2,7 @@ using Eryph.Configuration;
 using Eryph.IdentityDb;
 using Eryph.ModuleCore.ChangeTracking;
 using Eryph.ModuleCore.Configuration;
+using Eryph.Modules.Identity.ChangeTracking.Clients;
 using Eryph.Modules.Identity.ChangeTracking.RedeemedTokens;
 using Eryph.Modules.Identity.Seeding;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -38,6 +39,7 @@ public static class IdentityChangeTrackingContainerExtensions
             Lifestyle.Scoped);
 
         // One background exporter per change type.
+        options.AddHostedService<ChangeTrackingBackgroundService<ClientApplicationChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<RedeemedTokenChange>>();
     }
 
@@ -48,6 +50,7 @@ public static class IdentityChangeTrackingContainerExtensions
         // to resolve it). The seeder itself honours IdentityChangeTrackingConfig.SeedDatabase, so it is a
         // no-op when seeding is disabled. eryph-zero appends its own client/scope seeders too; the appends
         // compose into one collection that the single handler runs.
+        options.Container.Collection.Append<IConfigSeeder<IdentityModule>, ClientSeeder>(Lifestyle.Scoped);
         options.Container.Collection.Append<IConfigSeeder<IdentityModule>, RedeemedTokenSeeder>(Lifestyle.Scoped);
 
         options.AddHostedService<SeedFromConfigHandler<IdentityModule>>();

@@ -13,6 +13,9 @@ public class IdentityChangeTrackingConfig
 
     public bool SeedDatabase { get; set; }
 
+    /// <summary>Directory for client application records (one file per client id).</summary>
+    public string ClientsConfigPath { get; set; } = "";
+
     /// <summary>Directory for redeemed enrollment-token records (one file per <c>jti</c>).</summary>
     public string RedeemedTokensConfigPath { get; set; } = "";
 

@@ -524,6 +524,9 @@ internal static class Program
                 // these files (same model as the state store).
                 ["identityChangeTracking:trackChanges"] = bool.TrueString,
                 ["identityChangeTracking:seedDatabase"] = bool.TrueString,
+                // Reuse the existing clients directory so previously written client files (incl. the
+                // system client) load, and the change-tracking export replaces the old decorator.
+                ["identityChangeTracking:clientsConfigPath"] = ZeroConfig.GetClientConfigPath(),
                 ["identityChangeTracking:redeemedTokensConfigPath"] = ZeroConfig.GetIdentityRedeemedTokensConfigPath(),
                 ["identityChangeTracking:tokensConfigPath"] = ZeroConfig.GetIdentityTokensConfigPath(),
                 ["identityChangeTracking:authorizationsConfigPath"] = ZeroConfig.GetIdentityAuthorizationsConfigPath(),

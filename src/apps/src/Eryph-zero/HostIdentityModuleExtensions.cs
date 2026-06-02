@@ -47,14 +47,10 @@ namespace Eryph.Runtime.Zero
 
                     next(context, container);
 
-                    container.RegisterSingleton<IClientConfigService, ClientConfigService>();
-                    container.RegisterDecorator(typeof(IClientService),
-                        typeof(ClientServiceWithConfigServiceDecorator));
-
-                    // IFileSystem and the SeedFromConfigHandler are now registered by the identity
-                    // module itself (shared across packagings). Here we only append the zero-specific
-                    // client + scope seeders; the module runs them alongside its own seeders.
-                    container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
+                    // Client persistence is now handled by the identity module's change-tracking export
+                    // (replacing the old ClientServiceWithConfigServiceDecorator write-through) and its
+                    // ClientSeeder (replacing IdentityClientSeeder). IFileSystem + SeedFromConfigHandler
+                    // are registered by the module. Only the scope seeder remains zero-specific.
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
                 };
             }
