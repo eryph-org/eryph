@@ -19,9 +19,8 @@ public class IdentityChangeTrackingConfig
     /// <summary>Directory for redeemed enrollment-token records (one file per <c>jti</c>).</summary>
     public string RedeemedTokensConfigPath { get; set; } = "";
 
-    /// <summary>Directory for OpenIddict token records (one file per token id).</summary>
-    public string TokensConfigPath { get; set; } = "";
-
-    /// <summary>Directory for OpenIddict authorization records (one file per authorization id).</summary>
-    public string AuthorizationsConfigPath { get; set; } = "";
+    // Note: OpenIddict tokens and authorizations are deliberately NOT change-tracked to files. They are
+    // FK-bound runtime state (tokens/authorizations reference the application's regenerated primary key),
+    // so a per-file reseed cannot preserve referential integrity. They live in the durable store and are
+    // captured by a DB-level backup; on a full drop they are re-acquired by re-authentication.
 }

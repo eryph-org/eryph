@@ -37,12 +37,6 @@ namespace Eryph.Runtime.Zero.Configuration
         public static string GetIdentityRedeemedTokensConfigPath()
             => Path.Combine(GetIdentityConfigPath(), "redeemed-tokens");
 
-        public static string GetIdentityTokensConfigPath()
-            => Path.Combine(GetIdentityConfigPath(), "tokens");
-
-        public static string GetIdentityAuthorizationsConfigPath()
-            => Path.Combine(GetIdentityConfigPath(), "authorizations");
-
         public static string GetVMConfigPath()
         {
             var privateConfigPath = Path.Combine(GetConfigPath(), "private");

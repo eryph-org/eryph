@@ -528,6 +528,8 @@ internal static class Program
                 // system client) load, and the change-tracking export replaces the old decorator.
                 ["identityChangeTracking:clientsConfigPath"] = ZeroConfig.GetClientConfigPath(),
                 ["identityChangeTracking:redeemedTokensConfigPath"] = ZeroConfig.GetIdentityRedeemedTokensConfigPath(),
+                // OpenIddict tokens/authorizations are not file-exported (FK-bound runtime state); they
+                // live in the SQLite store and are re-acquired on a full drop.
                 ["identityChangeTracking:tokensConfigPath"] = ZeroConfig.GetIdentityTokensConfigPath(),
                 ["identityChangeTracking:authorizationsConfigPath"] = ZeroConfig.GetIdentityAuthorizationsConfigPath(),
             });
