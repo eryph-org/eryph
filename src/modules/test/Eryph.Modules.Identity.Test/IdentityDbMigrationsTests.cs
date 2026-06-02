@@ -1,5 +1,6 @@
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.MySql;
+using Eryph.IdentityDb.Sqlite;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -28,5 +29,21 @@ public class IdentityDbMigrationsTests
         context.Database.GetMigrations().Should().Contain(
             m => m.EndsWith("InitialCreate"),
             "the MariaDB migrations assembly must be discoverable from the runtime context");
+    }
+
+    [Fact]
+    public void Sqlite_configured_context_discovers_the_initial_migration()
+    {
+        // Same guard for the eryph-zero SQLite store: a typo in MigrationsAssembly("Eryph.IdentityDb.Sqlite")
+        // would make MigrateIdentityDbHandler a silent no-op and leave eryph-zero with an empty identity DB.
+        var options = new DbContextOptionsBuilder<IdentityDbContext>();
+        new SqliteIdentityDbContextConfigurer("Data Source=:memory:").Configure(options);
+        IdentityDbModel.ApplyOpenIddict(options);
+
+        using var context = new IdentityDbContext(options.Options);
+
+        context.Database.GetMigrations().Should().Contain(
+            m => m.EndsWith("InitialCreate"),
+            "the SQLite migrations assembly must be discoverable from the runtime context");
     }
 }

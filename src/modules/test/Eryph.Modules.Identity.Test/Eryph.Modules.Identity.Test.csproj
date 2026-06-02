@@ -24,6 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\data\src\Eryph.IdentityDb.MySql\Eryph.IdentityDb.MySql.csproj" />
+    <ProjectReference Include="..\..\..\data\src\Eryph.IdentityDb.Sqlite\Eryph.IdentityDb.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
     <ProjectReference Include="..\Eryph.Modules.AspNetCore.TestBase\Eryph.Modules.AspNetCore.TestBase.csproj" />
   </ItemGroup>

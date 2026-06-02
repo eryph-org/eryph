@@ -28,8 +28,8 @@ namespace Eryph.Identity
             container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
 
             // The standalone identity host owns a durable MariaDB database — its own DB, separate from
-            // the controller/compute StateDb, because identity is its own authority. eryph-zero keeps
-            // the in-memory store. The connection string comes from ERYPH_IDENTITYDB_CONNECTIONSTRING;
+            // the controller/compute StateDb, because identity is its own authority. eryph-zero uses a
+            // disposable SQLite store instead. The connection string comes from ERYPH_IDENTITYDB_CONNECTIONSTRING;
             // the schema is migrated in-process at startup by MigrateIdentityDbHandler.
             container.RegisterInstance<IDbContextConfigurer<IdentityDbContext>>(
                 new MySqlIdentityDbContextConfigurer(GetIdentityDbConnectionString()));

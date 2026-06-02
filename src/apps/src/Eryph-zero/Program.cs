@@ -530,8 +530,6 @@ internal static class Program
                 ["identityChangeTracking:redeemedTokensConfigPath"] = ZeroConfig.GetIdentityRedeemedTokensConfigPath(),
                 // OpenIddict tokens/authorizations are not file-exported (FK-bound runtime state); they
                 // live in the SQLite store and are re-acquired on a full drop.
-                ["identityChangeTracking:tokensConfigPath"] = ZeroConfig.GetIdentityTokensConfigPath(),
-                ["identityChangeTracking:authorizationsConfigPath"] = ZeroConfig.GetIdentityAuthorizationsConfigPath(),
             });
         });
 
