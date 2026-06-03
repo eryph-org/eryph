@@ -54,7 +54,7 @@ public class SetGuestServicesDataVMCommandHandlerTests
         {
             CatletId = Guid.NewGuid(),
             VmId = VmId,
-            Values = null,
+            // Values defaults to an empty collection; this is the remove-keys-only path.
             RemoveKeys = new List<string> { "eryph:guest-services:shell", "eryph:guest-services:shell-args" },
         }));
 

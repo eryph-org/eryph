@@ -29,12 +29,10 @@ internal class SetGuestServicesDataVMCommandHandler(
         TryAsync(async () =>
             {
                 var values = new Dictionary<string, string?>(StringComparer.Ordinal);
-                if (command.Values is not null)
-                    foreach (var (key, value) in command.Values)
-                        values[key] = value;
-                if (command.RemoveKeys is not null)
-                    foreach (var key in command.RemoveKeys)
-                        values[key] = null;
+                foreach (var (key, value) in command.Values)
+                    values[key] = value;
+                foreach (var key in command.RemoveKeys)
+                    values[key] = null;
 
                 await writer.SetExternalAsync(command.VmId, values);
                 return unit;

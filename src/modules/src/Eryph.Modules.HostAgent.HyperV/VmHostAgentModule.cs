@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Abstractions;
 using System.Net.WebSockets;
 using System.Threading;
@@ -127,8 +128,21 @@ namespace Eryph.Modules.HostAgent
             // Validate + consume the one-time token and open the guest hvsocket BEFORE upgrading. A null
             // stream means an unknown/expired/used token → 404 without an upgrade, not leaking whether the
             // token ever existed.
-            var guestStream = await channelService.OpenChannelAsync(token, context.RequestAborted)
-                .ConfigureAwait(false);
+            Stream guestStream;
+            try
+            {
+                guestStream = await channelService.OpenChannelAsync(token, context.RequestAborted)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // The token was accepted but dialing the guest hvsocket failed (catlet stopped, vsock not
+                // ready). Fail with a controlled status instead of letting it bubble out of the pipeline.
+                logger.LogWarning(ex, "Failed to open the EGS guest channel.");
+                context.Response.StatusCode = StatusCodes.Status502BadGateway;
+                return;
+            }
+
             if (guestStream is null)
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
