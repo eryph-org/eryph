@@ -158,6 +158,7 @@ namespace Eryph.Modules.HostAgent
             }
             finally
             {
+                webSocket.Dispose();
                 await guestStream.DisposeAsync().ConfigureAwait(false);
             }
         }

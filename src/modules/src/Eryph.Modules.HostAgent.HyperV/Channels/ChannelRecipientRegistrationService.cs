@@ -23,7 +23,12 @@ public sealed class ChannelRecipientRegistrationService(
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _registration = registry.RegisterRecipient((IAgentChannelRecipient)channelService);
+        if (channelService is not IAgentChannelRecipient recipient)
+            throw new InvalidOperationException(
+                $"The registered {nameof(IChannelService)} ({channelService.GetType().Name}) must also "
+                + $"implement {nameof(IAgentChannelRecipient)} to be reached by the in-process forwarder.");
+
+        _registration = registry.RegisterRecipient(recipient);
         return Task.CompletedTask;
     }
 

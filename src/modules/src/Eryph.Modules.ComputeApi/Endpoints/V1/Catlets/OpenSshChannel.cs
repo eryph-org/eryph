@@ -61,7 +61,7 @@ public class OpenSshChannel(
         Description =
             "Starts an operation that prepares a one-time SSH channel to the catlet's guest services. "
             + "Track the returned operation; its result carries the channel token. Then connect the "
-            + "data-plane WebSocket at catlets/{id}/ssh-channel/connect with that token.",
+            + "data-plane WebSocket at catlets/{id}/guest-services/ssh-channel/connect with that token.",
         OperationId = "Catlets_OpenSshChannel",
         Tags = ["Catlets"])
     ]
