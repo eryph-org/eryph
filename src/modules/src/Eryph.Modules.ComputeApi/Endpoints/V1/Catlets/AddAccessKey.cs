@@ -74,7 +74,7 @@ public class AddAccessKey(
         if (publicKey.IndexOfAny(['\r', '\n', '"']) >= 0)
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                detail: "The public key must not contain control characters.");
+                detail: "The public key must not contain line breaks or quote characters.");
 
         if (request.Body.ExpiresAt is { } pastExpiry && pastExpiry <= DateTimeOffset.UtcNow)
             return Problem(

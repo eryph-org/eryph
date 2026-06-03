@@ -69,20 +69,25 @@ public class OpenSshChannel(
         [FromRoute] OpenSshChannelRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.PublicKey is { Length: > SshChannelLimits.MaxPublicKeyLength })
-            return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The public key must not exceed {SshChannelLimits.MaxPublicKeyLength} characters.");
+        // The ttl only applies to an injected key; without a key there is nothing to write, so the key
+        // and its ttl are validated together and otherwise ignored.
+        if (request.PublicKey is { } publicKey)
+        {
+            if (publicKey.Length > SshChannelLimits.MaxPublicKeyLength)
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: $"The public key must not exceed {SshChannelLimits.MaxPublicKeyLength} characters.");
 
-        if (request.PublicKey is { } publicKey && publicKey.IndexOfAny(['\r', '\n', '"']) >= 0)
-            return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: "The public key must not contain control characters.");
+            if (publicKey.IndexOfAny(['\r', '\n', '"']) >= 0)
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: "The public key must not contain line breaks or quote characters.");
 
-        if (request.Ttl is { } ttl && (ttl <= 0 || ttl > SshChannelLimits.MaxTtlSeconds))
-            return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The ttl must be between 1 and {SshChannelLimits.MaxTtlSeconds} seconds.");
+            if (request.Ttl is { } ttl && (ttl <= 0 || ttl > SshChannelLimits.MaxTtlSeconds))
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: $"The ttl must be between 1 and {SshChannelLimits.MaxTtlSeconds} seconds.");
+        }
 
         return await base.HandleAsync(request, cancellationToken);
     }
