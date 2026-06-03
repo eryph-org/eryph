@@ -11,14 +11,13 @@ using Rebus.Sagas;
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
-internal class AddSshKeySaga(IWorkflow workflow,
+internal class SetGuestServicesDataSaga(IWorkflow workflow,
     ICatletDataService vmDataService) :
-    OperationTaskWorkflowSaga<AddSshKeyCommand, EryphSagaData<AddSshKeySagaData>>(workflow),
-    IHandleMessages<OperationTaskStatusEvent<AddSshKeyVMCommand>>
+    OperationTaskWorkflowSaga<SetGuestServicesDataCommand, EryphSagaData<SetGuestServicesDataSagaData>>(workflow),
+    IHandleMessages<OperationTaskStatusEvent<SetGuestServicesDataVMCommand>>
 {
-    protected override async Task Initiated(AddSshKeyCommand message)
+    protected override async Task Initiated(SetGuestServicesDataCommand message)
     {
-        Data.Data.SubjectId = message.SubjectId;
         var catlet = await vmDataService.Get(message.CatletId);
         if (catlet is null)
         {
@@ -28,23 +27,22 @@ internal class AddSshKeySaga(IWorkflow workflow,
 
         Data.Data.VmId = catlet.VmId;
 
-        await StartNewTask(new AddSshKeyVMCommand
+        await StartNewTask(new SetGuestServicesDataVMCommand
         {
             CatletId = message.CatletId,
             VmId = Data.Data.VmId,
-            SubjectId = message.SubjectId,
-            PublicKey = message.PublicKey,
-            KeyExpiry = message.KeyExpiry,
+            Values = message.Values,
+            RemoveKeys = message.RemoveKeys,
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<AddSshKeyVMCommand> message) =>
+    public Task Handle(OperationTaskStatusEvent<SetGuestServicesDataVMCommand> message) =>
         FailOrRun(message, () => Complete());
 
-    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<AddSshKeySagaData>> config)
+    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<SetGuestServicesDataSagaData>> config)
     {
         base.CorrelateMessages(config);
-        config.Correlate<OperationTaskStatusEvent<AddSshKeyVMCommand>>(
+        config.Correlate<OperationTaskStatusEvent<SetGuestServicesDataVMCommand>>(
             m => m.InitiatingTaskId, m => m.SagaTaskId);
     }
 }

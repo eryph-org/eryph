@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
-public class AddSshKeyRequest : SingleEntityRequest
+public class AddAccessKeyRequest : SingleEntityRequest
 {
     [FromBody]
-    public required AddSshKeyRequestBody Body { get; set; }
+    public required AddAccessKeyRequestBody Body { get; set; }
 }
 
-public class AddSshKeyRequestBody
+public class AddAccessKeyRequestBody
 {
     /// <summary>The operator's SSH public key in OpenSSH authorized_keys form.</summary>
     public required string PublicKey { get; set; }

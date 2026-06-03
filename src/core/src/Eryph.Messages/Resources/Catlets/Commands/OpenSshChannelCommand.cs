@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Catlets.Commands
@@ -7,9 +8,10 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     public class OpenSshChannelCommand : IHasResource, ICommandWithName
     {
         public Guid CatletId { get; set; }
-        public string SubjectId { get; set; }
-        public string? PublicKey { get; set; }
-        public DateTimeOffset? KeyExpiry { get; set; }
+
+        // External-pool KVP values authorizing the operator's key, built by the
+        // endpoint. Empty for the pre-injected-key flow (no write).
+        public Dictionary<string, string> AccessKeyValues { get; set; }
         public Resource Resource => new(ResourceType.Catlet, CatletId);
         public string GetCommandName()
         {

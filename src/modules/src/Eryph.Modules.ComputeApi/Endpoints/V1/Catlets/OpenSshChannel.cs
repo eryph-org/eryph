@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -36,21 +37,25 @@ public class OpenSshChannel(
     protected override object CreateOperationMessage(Catlet model, OpenSshChannelRequest request)
     {
         var publicKey = string.IsNullOrWhiteSpace(request.PublicKey) ? null : request.PublicKey.Trim();
-        DateTimeOffset? keyExpiry = publicKey is not null && request.Ttl is { } ttl
-            ? DateTimeOffset.UtcNow.AddSeconds(ttl)
-            : null;
+        var accessKeyValues = new Dictionary<string, string>();
+        if (publicKey is not null)
+        {
+            DateTimeOffset? keyExpiry = request.Ttl is { } ttl
+                ? DateTimeOffset.UtcNow.AddSeconds(ttl)
+                : null;
+            accessKeyValues[GuestServicesKvp.AccessKeySlot(userRightsProvider.GetUserId())] =
+                GuestServicesKvp.BuildAuthorizedKeyLine(publicKey, keyExpiry);
+        }
 
         return new OpenSshChannelCommand
         {
             CatletId = model.Id,
-            SubjectId = userRightsProvider.GetUserId(),
-            PublicKey = publicKey,
-            KeyExpiry = keyExpiry,
+            AccessKeyValues = accessKeyValues,
         };
     }
 
     [Authorize(Policy = "compute:catlets:remote-access")]
-    [HttpPut("catlets/{id}/ssh-channel")]
+    [HttpPut("catlets/{id}/guest-services/ssh-channel")]
     [SwaggerOperation(
         Summary = "Open an SSH channel to a catlet",
         Description =

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -17,42 +18,46 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 /// <summary>
-/// BYOK key-install for the EGS remote channel: authorizes the caller's SSH public key in the catlet's
-/// guest (the agent writes it to the subject-keyed KVP slot, optionally with an expiry). An ordinary
-/// operation endpoint — the key is live once the operation completes; then connect the channel.
+/// Authorizes the caller's SSH public key for guest-services access (the agent writes it to the
+/// caller's subject-keyed KVP slot, optionally with an expiry). An ordinary operation endpoint; the
+/// key is live once the operation completes.
 /// </summary>
-public class AddSshKey(
+public class AddAccessKey(
     IEntityOperationRequestHandler<Catlet> operationHandler,
     ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder,
     IUserRightsProvider userRightsProvider)
-    : ResourceOperationEndpoint<AddSshKeyRequest, Catlet>(operationHandler, specBuilder)
+    : ResourceOperationEndpoint<AddAccessKeyRequest, Catlet>(operationHandler, specBuilder)
 {
     // Authorized by the compute:catlets:remote-access scope; requires read (not write) project access.
     protected override AccessRight RequiredAccessRight => AccessRight.Read;
 
-    protected override object CreateOperationMessage(Catlet model, AddSshKeyRequest request)
+    protected override object CreateOperationMessage(Catlet model, AddAccessKeyRequest request)
     {
-        return new AddSshKeyCommand
+        var subjectId = userRightsProvider.GetUserId();
+        var authorizedKey = GuestServicesKvp.BuildAuthorizedKeyLine(request.Body.PublicKey, request.Body.ExpiresAt);
+        return new SetGuestServicesDataCommand
         {
             CatletId = model.Id,
-            SubjectId = userRightsProvider.GetUserId(),
-            PublicKey = request.Body.PublicKey,
-            KeyExpiry = request.Body.ExpiresAt,
+            OperationName = "Authorizing access key",
+            Values = new Dictionary<string, string>
+            {
+                [GuestServicesKvp.AccessKeySlot(subjectId)] = authorizedKey,
+            },
         };
     }
 
     [Authorize(Policy = "compute:catlets:remote-access")]
-    [HttpPost("catlets/{id}/ssh-keys")]
+    [HttpPost("catlets/{id}/guest-services/access-keys")]
     [SwaggerOperation(
-        Summary = "Authorize an SSH key on a catlet",
+        Summary = "Authorize a guest-services access key on a catlet",
         Description =
             "Starts an operation that authorizes the caller's SSH public key in the catlet's guest "
             + "services so it can be used to connect the SSH channel.",
-        OperationId = "Catlets_AddSshKey",
+        OperationId = "Catlets_AddAccessKey",
         Tags = ["Catlets"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
-        [FromRoute] AddSshKeyRequest request,
+        [FromRoute] AddAccessKeyRequest request,
         CancellationToken cancellationToken = default)
     {
         var publicKey = request.Body.PublicKey;

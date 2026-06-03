@@ -31,7 +31,7 @@ public class OpenSshChannelConnect(
         .WithActionResult
 {
     [Authorize(Policy = "compute:catlets:remote-access")]
-    [HttpGet("catlets/{id}/ssh-channel/connect")]
+    [HttpGet("catlets/{id}/guest-services/ssh-channel/connect")]
     [SwaggerOperation(
         Summary = "Connect the SSH channel data plane",
         Description =

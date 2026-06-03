@@ -233,6 +233,10 @@ namespace Eryph.Modules.HostAgent
             container.RegisterSingleton<IHostDataExchange, HostDataExchange>();
             container.RegisterSingleton<IChannelEndpointProvider, ChannelEndpointProvider>();
             container.RegisterSingleton<IChannelService, ChannelService>();
+            // Reads guest services + provisioning status from the guest KVP pool.
+            container.RegisterSingleton<IGuestStatusReader, GuestStatusReader>();
+            // Single write path for guest-services settings (shell, authorized keys, ...).
+            container.RegisterSingleton<IGuestDataWriter, GuestDataWriter>();
 
             container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();

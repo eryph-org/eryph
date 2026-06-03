@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Linq;
 using System.IO;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -10,19 +10,18 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 using Eryph.GuestServices.Core;
-using Eryph.GuestServices.HvDataExchange.Host;
 using Eryph.GuestServices.Sockets;
 using Eryph.Modules.AspNetCore.Channels;
 
 namespace Eryph.Modules.HostAgent.Channels;
 
 /// <summary>
-/// Default <see cref="IChannelService"/>: holds pending one-time channels keyed by token, writes/clears
-/// the guest authorized-key KVP slot via <see cref="HostDataExchange"/>, and on open dials the guest
+/// Default <see cref="IChannelService"/>: holds pending one-time channels keyed by token, writes the
+/// operator's authorized-key KVP values via <see cref="IGuestDataWriter"/>, and on open dials the guest
 /// hvsocket with <see cref="SocketFactory.CreateClientSocket"/> and returns it as a stream.
 /// </summary>
 public class ChannelService(
-    IHostDataExchange hostDataExchange,
+    IGuestDataWriter guestDataWriter,
     IChannelEndpointProvider endpointProvider,
     ILogger<ChannelService> logger)
     : IChannelService, IAgentChannelRecipient
@@ -38,18 +37,15 @@ public class ChannelService(
 
     public async Task<ChannelRegistration> RegisterChannel(
         Guid vmId,
-        string subjectId,
-        string? publicKey,
-        DateTimeOffset? keyExpiry,
+        IReadOnlyDictionary<string, string> accessKeyValues,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(subjectId))
-            throw new ArgumentException("The subject id must be provided.", nameof(subjectId));
-
-        // Added-key flow: publish the operator's key to the guest's authorized set. Pre-injected flow
-        // (publicKey == null) skips the write.
-        if (!string.IsNullOrWhiteSpace(publicKey))
-            await AddKey(vmId, subjectId, publicKey, keyExpiry, cancellationToken).ConfigureAwait(false);
+        // Added-key flow: publish the operator's authorized key to the guest. Pre-injected flow
+        // (empty map) skips the write.
+        if (accessKeyValues is { Count: > 0 })
+            await guestDataWriter.SetExternalAsync(
+                vmId,
+                accessKeyValues.ToDictionary(kvp => kvp.Key, kvp => (string?)kvp.Value)).ConfigureAwait(false);
 
         var token = MintToken();
         var expiresAt = DateTimeOffset.UtcNow + TokenLifetime;
@@ -70,29 +66,6 @@ public class ChannelService(
         };
     }
 
-    public async Task AddKey(
-        Guid vmId,
-        string subjectId,
-        string publicKey,
-        DateTimeOffset? keyExpiry,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(subjectId))
-            throw new ArgumentException("The subject id must be provided.", nameof(subjectId));
-        if (string.IsNullOrWhiteSpace(publicKey))
-            throw new ArgumentException("The public key must be provided.", nameof(publicKey));
-
-        // The guest's ClientKeyProvider reads exactly this slot family (Constants.ClientAuthKeyPrefix + id)
-        // and honours the expiry-time option.
-        var slotKey = Constants.ClientAuthKeyPrefix + subjectId;
-        await hostDataExchange.SetExternalValuesAsync(
-            vmId,
-            new Dictionary<string, string?>
-            {
-                [slotKey] = BuildAuthorizedKeyLine(publicKey, keyExpiry),
-            }).ConfigureAwait(false);
-    }
-
     public async Task<Stream?> OpenChannelAsync(string token, CancellationToken cancellationToken = default)
     {
         if (!TryConsumeToken(token, out var vmId))
@@ -111,35 +84,6 @@ public class ChannelService(
     {
         var socket = await SocketFactory.CreateClientSocket(vmId, Constants.ServiceId).ConfigureAwait(false);
         return new NetworkStream(socket, ownsSocket: true);
-    }
-
-    public async Task RemoveKey(Guid vmId, string subjectId, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(subjectId))
-            throw new ArgumentException("The subject id must be provided.", nameof(subjectId));
-
-        // SetExternalValuesAsync removes a key when its value is null (HostDataExchange maps null to
-        // a RemoveKvpItems call). The slot key must match exactly what RegisterChannel wrote.
-        var slotKey = Constants.ClientAuthKeyPrefix + subjectId;
-        await hostDataExchange.SetExternalValuesAsync(
-            vmId,
-            new Dictionary<string, string?>
-            {
-                [slotKey] = null,
-            }).ConfigureAwait(false);
-    }
-
-    // OpenSSH authorized_keys line: an optional leading `expiry-time="..."` option then the key body.
-    // The timestamp must be the OpenSSH compact UTC form "yyyyMMddHHmmssZ" (no 'T' separator) — the
-    // guest's ClientKeyProvider rejects other forms and treats an unparseable expiry as expired.
-    private static string BuildAuthorizedKeyLine(string publicKey, DateTimeOffset? keyExpiry)
-    {
-        var key = publicKey.Trim();
-        if (keyExpiry is not { } expiry)
-            return key;
-
-        var expiryText = expiry.ToUniversalTime().ToString("yyyyMMddHHmmss'Z'", CultureInfo.InvariantCulture);
-        return $"expiry-time=\"{expiryText}\" {key}";
     }
 
     private bool TryConsumeToken(string token, out Guid vmId)

@@ -11,14 +11,13 @@ using Rebus.Sagas;
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
-internal class RemoveSshKeySaga(IWorkflow workflow,
+internal class GetGuestServicesStatusSaga(IWorkflow workflow,
     ICatletDataService vmDataService) :
-    OperationTaskWorkflowSaga<RemoveSshKeyCommand, EryphSagaData<RemoveSshKeySagaData>>(workflow),
-    IHandleMessages<OperationTaskStatusEvent<RemoveSshKeyVMCommand>>
+    OperationTaskWorkflowSaga<GetGuestServicesStatusCommand, EryphSagaData<GetGuestServicesStatusSagaData>>(workflow),
+    IHandleMessages<OperationTaskStatusEvent<GetGuestServicesStatusVMCommand>>
 {
-    protected override async Task Initiated(RemoveSshKeyCommand message)
+    protected override async Task Initiated(GetGuestServicesStatusCommand message)
     {
-        Data.Data.SubjectId = message.SubjectId;
         var catlet = await vmDataService.Get(message.CatletId);
         if (catlet is null)
         {
@@ -28,21 +27,20 @@ internal class RemoveSshKeySaga(IWorkflow workflow,
 
         Data.Data.VmId = catlet.VmId;
 
-        await StartNewTask(new RemoveSshKeyVMCommand
+        await StartNewTask(new GetGuestServicesStatusVMCommand
         {
             CatletId = message.CatletId,
             VmId = Data.Data.VmId,
-            SubjectId = message.SubjectId,
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<RemoveSshKeyVMCommand> message) =>
-        FailOrRun(message, () => Complete());
+    public Task Handle(OperationTaskStatusEvent<GetGuestServicesStatusVMCommand> message) =>
+        FailOrRun(message, (GetGuestServicesStatusVMCommandResponse response) => Complete(response));
 
-    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<RemoveSshKeySagaData>> config)
+    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<GetGuestServicesStatusSagaData>> config)
     {
         base.CorrelateMessages(config);
-        config.Correlate<OperationTaskStatusEvent<RemoveSshKeyVMCommand>>(
+        config.Correlate<OperationTaskStatusEvent<GetGuestServicesStatusVMCommand>>(
             m => m.InitiatingTaskId, m => m.SagaTaskId);
     }
 }

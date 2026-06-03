@@ -16,15 +16,16 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
     private const string RemoteAccessScope = "compute:catlets:remote-access";
     private const string PublicKey = "ssh-ed25519 AAAAExampleOperatorKey operator@host";
 
+    private static string AccessKeySlot =>
+        "eryph:guest-services:client-public-key:" + EryphConstants.SystemClientId;
+
     [Fact]
     public async Task OpenSshChannel_WithKeyAndTtl_DispatchesCommandWithExpiry()
     {
-        var before = DateTimeOffset.UtcNow;
-
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true)
             .PutAsync(
-                $"v1/catlets/{CatletId}/ssh-channel?publicKey={Uri.EscapeDataString(PublicKey)}&ttl=600",
+                $"v1/catlets/{CatletId}/guest-services/ssh-channel?publicKey={Uri.EscapeDataString(PublicKey)}&ttl=600",
                 null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
@@ -33,10 +34,8 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
         messages.Should().SatisfyRespectively(m =>
         {
             m.CatletId.Should().Be(CatletId);
-            m.SubjectId.Should().Be(EryphConstants.SystemClientId.ToString());
-            m.PublicKey.Should().Be(PublicKey);
-            m.KeyExpiry.Should().NotBeNull();
-            m.KeyExpiry!.Value.Should().BeCloseTo(before.AddSeconds(600), TimeSpan.FromMinutes(1));
+            m.AccessKeyValues.Should().ContainKey(AccessKeySlot);
+            m.AccessKeyValues[AccessKeySlot].Should().StartWith("expiry-time=").And.EndWith(PublicKey);
         });
     }
 
@@ -45,16 +44,12 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
     {
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true)
-            .PutAsync($"v1/catlets/{CatletId}/ssh-channel", null);
+            .PutAsync($"v1/catlets/{CatletId}/guest-services/ssh-channel", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = Factory.GetPendingRebusMessages<OpenSshChannelCommand>();
-        messages.Should().SatisfyRespectively(m =>
-        {
-            m.PublicKey.Should().BeNull();
-            m.KeyExpiry.Should().BeNull();
-        });
+        messages.Should().SatisfyRespectively(m => m.AccessKeyValues.Should().BeEmpty());
     }
 
     [Fact]
@@ -62,17 +57,13 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
     {
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true)
-            .PutAsync($"v1/catlets/{CatletId}/ssh-channel?ttl=600", null);
+            .PutAsync($"v1/catlets/{CatletId}/guest-services/ssh-channel?ttl=600", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = Factory.GetPendingRebusMessages<OpenSshChannelCommand>();
-        messages.Should().SatisfyRespectively(m =>
-        {
-            m.PublicKey.Should().BeNull();
-            // The TTL only applies to an injected key; without a key there is no expiry to set.
-            m.KeyExpiry.Should().BeNull();
-        });
+        // The TTL only applies to an injected key; without a key there is nothing to write.
+        messages.Should().SatisfyRespectively(m => m.AccessKeyValues.Should().BeEmpty());
     }
 
     [Fact]
@@ -80,7 +71,7 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
     {
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", true)
-            .PutAsync($"v1/catlets/{CatletId}/ssh-channel", null);
+            .PutAsync($"v1/catlets/{CatletId}/guest-services/ssh-channel", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
@@ -95,7 +86,7 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
 
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, RemoteAccessScope, false)
-            .PutAsync($"v1/catlets/{CatletId}/ssh-channel", null);
+            .PutAsync($"v1/catlets/{CatletId}/guest-services/ssh-channel", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
         Factory.GetPendingRebusMessages<OpenSshChannelCommand>().Should().ContainSingle();
@@ -109,7 +100,7 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
 
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, RemoteAccessScope, false)
-            .PutAsync($"v1/catlets/{CatletId}/ssh-channel", null);
+            .PutAsync($"v1/catlets/{CatletId}/guest-services/ssh-channel", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         Factory.GetPendingRebusMessages<OpenSshChannelCommand>().Should().BeEmpty();
@@ -121,7 +112,7 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true)
             .PutAsync(
-                $"v1/catlets/{CatletId}/ssh-channel?publicKey={Uri.EscapeDataString(PublicKey)}&ttl=2592001",
+                $"v1/catlets/{CatletId}/guest-services/ssh-channel?publicKey={Uri.EscapeDataString(PublicKey)}&ttl=2592001",
                 null);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -136,7 +127,7 @@ public class OpenSshChannelTests(ITestOutputHelper outputHelper)
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true)
             .PutAsync(
-                $"v1/catlets/{CatletId}/ssh-channel?publicKey={Uri.EscapeDataString(longKey)}",
+                $"v1/catlets/{CatletId}/guest-services/ssh-channel?publicKey={Uri.EscapeDataString(longKey)}",
                 null);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

@@ -29,9 +29,7 @@ internal class OpenSshChannelVMCommandHandler(
         OpenSshChannelVMCommand command) =>
         from registration in TryAsync(() => channelService.RegisterChannel(
                 command.VmId,
-                command.SubjectId,
-                command.PublicKey,
-                command.KeyExpiry))
+                command.AccessKeyValues))
             .ToEither(ex => Error.New("Failed to open the SSH channel.", Error.New(ex)))
         select new OpenSshChannelVMCommandResponse
         {

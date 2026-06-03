@@ -39,7 +39,7 @@ public class OpenSshChannelConnectTests : InMemoryStateDbTestBase
     {
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true)
-            .GetAsync($"v1/catlets/{CatletId}/ssh-channel/connect?token=the-token");
+            .GetAsync($"v1/catlets/{CatletId}/guest-services/ssh-channel/connect?token=the-token");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         _forwarder.CallCount.Should().Be(0);
@@ -50,7 +50,7 @@ public class OpenSshChannelConnectTests : InMemoryStateDbTestBase
     {
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", true)
-            .GetAsync($"v1/catlets/{CatletId}/ssh-channel/connect?token=the-token");
+            .GetAsync($"v1/catlets/{CatletId}/guest-services/ssh-channel/connect?token=the-token");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         _forwarder.CallCount.Should().Be(0);
@@ -66,7 +66,7 @@ public class OpenSshChannelConnectTests : InMemoryStateDbTestBase
         var wsClient = _factory.Server.CreateWebSocketClient();
         wsClient.ConfigureRequest = request => request.Headers["Authorization"] = authorization.ToString();
 
-        var uri = new Uri(_factory.Server.BaseAddress, $"v1/catlets/{CatletId}/ssh-channel/connect?token=the-token");
+        var uri = new Uri(_factory.Server.BaseAddress, $"v1/catlets/{CatletId}/guest-services/ssh-channel/connect?token=the-token");
         using var webSocket = await wsClient.ConnectAsync(uri, CancellationToken.None);
 
         // The forwarder closes the socket once it has been handed the connection; receiving that close

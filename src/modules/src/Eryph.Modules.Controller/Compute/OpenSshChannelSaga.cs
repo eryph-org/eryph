@@ -18,7 +18,6 @@ internal class OpenSshChannelSaga(IWorkflow workflow,
 {
     protected override async Task Initiated(OpenSshChannelCommand message)
     {
-        Data.Data.SubjectId = message.SubjectId;
         var catlet = await vmDataService.Get(message.CatletId);
         if (catlet is null)
         {
@@ -32,9 +31,7 @@ internal class OpenSshChannelSaga(IWorkflow workflow,
         {
             CatletId = message.CatletId,
             VmId = Data.Data.VmId,
-            SubjectId = message.SubjectId,
-            PublicKey = message.PublicKey,
-            KeyExpiry = message.KeyExpiry,
+            AccessKeyValues = message.AccessKeyValues,
         });
     }
 
