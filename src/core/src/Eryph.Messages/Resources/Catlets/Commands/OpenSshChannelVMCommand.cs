@@ -11,6 +11,6 @@ public class OpenSshChannelVMCommand : IVMCommand, IHasResource
     public Guid VmId { get; set; }
 
     // External-pool KVP values authorizing the operator's key (empty = none).
-    public Dictionary<string, string> AccessKeyValues { get; set; }
+    public Dictionary<string, string> AccessKeyValues { get; set; } = new();
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

@@ -97,7 +97,27 @@ public static class WebSocketBridge
                 }
 
                 if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    // Acknowledge the close back to the WebSocket peer so its close handshake completes
+                    // (RFC 6455); otherwise the closing side waits until the socket is disposed. The
+                    // stream side is torn down via the linked token in the finally.
+                    if (source.State == WebSocketState.CloseReceived)
+                    {
+                        try
+                        {
+                            await source.CloseOutputAsync(
+                                result.CloseStatus ?? WebSocketCloseStatus.NormalClosure,
+                                result.CloseStatusDescription,
+                                CancellationToken.None).ConfigureAwait(false);
+                        }
+                        catch (WebSocketException)
+                        {
+                            // Peer already gone; ignore.
+                        }
+                    }
+
                     break;
+                }
 
                 try
                 {
@@ -227,7 +247,24 @@ public static class WebSocketBridge
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    // Mirror the close back to the destination so the far side sees a clean shutdown.
+                    // Acknowledge the close to the peer that sent it so its close handshake completes
+                    // (RFC 6455); otherwise the closing side waits until the socket is disposed.
+                    if (source.State == WebSocketState.CloseReceived)
+                    {
+                        try
+                        {
+                            await source.CloseOutputAsync(
+                                result.CloseStatus ?? WebSocketCloseStatus.NormalClosure,
+                                result.CloseStatusDescription,
+                                CancellationToken.None).ConfigureAwait(false);
+                        }
+                        catch (WebSocketException)
+                        {
+                            // Source already gone; ignore.
+                        }
+                    }
+
+                    // Mirror the close to the destination so the far side sees a clean shutdown.
                     if (destination.State == WebSocketState.Open)
                     {
                         try
