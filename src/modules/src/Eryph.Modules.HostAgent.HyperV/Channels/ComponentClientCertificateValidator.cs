@@ -23,6 +23,7 @@ public static class ComponentClientCertificateValidator
 
     public static bool IsTrustedComponentClient(
         X509Certificate2? clientCertificate,
+        X509Chain? presentedChain,
         X509Certificate2Collection trustedRoots)
     {
         if (clientCertificate is null || trustedRoots is null || trustedRoots.Count == 0)
@@ -32,11 +33,16 @@ public static class ComponentClientCertificateValidator
         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
         chain.ChainPolicy.CustomTrustStore.AddRange(trustedRoots);
         chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+
         // The compute API presents leaf + client intermediate in the handshake; Kestrel surfaces only
-        // the leaf here, so the intermediate must be discoverable. The client intermediate is itself
-        // part of the deployment PKI under the trusted root; add the trusted set to the extra store so
-        // a leaf -> intermediate -> root chain can be built even when only the leaf is presented.
-        chain.ChainPolicy.ExtraStore.AddRange(trustedRoots);
+        // the leaf to this callback, so the intermediate must come from the presented chain. The trust
+        // bundle holds the root anchor only, so without the presented intermediates the fresh chain has
+        // no source to build leaf -> intermediate -> root.
+        if (presentedChain is not null)
+        {
+            foreach (var element in presentedChain.ChainElements)
+                chain.ChainPolicy.ExtraStore.Add(element.Certificate);
+        }
 
         return chain.Build(clientCertificate) && HasClientAuthEku(clientCertificate);
     }

@@ -54,9 +54,9 @@ namespace Eryph.Agent
                         // Require a client certificate; the per-request validation against the component
                         // CA happens below so we bind to the deployment PKI rather than the OS trust store.
                         https.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
-                        https.ClientCertificateValidation = (clientCertificate, _, _) =>
+                        https.ClientCertificateValidation = (clientCertificate, chain, _) =>
                             ComponentClientCertificateValidator.IsTrustedComponentClient(
-                                clientCertificate, trustedRoots);
+                                clientCertificate, chain, trustedRoots);
                     });
                 });
             });

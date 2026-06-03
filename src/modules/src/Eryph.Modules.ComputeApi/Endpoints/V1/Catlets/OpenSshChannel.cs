@@ -70,9 +70,11 @@ public class OpenSshChannel(
         CancellationToken cancellationToken = default)
     {
         // The ttl only applies to an injected key; without a key there is nothing to write, so the key
-        // and its ttl are validated together and otherwise ignored.
-        if (request.PublicKey is { } publicKey)
+        // and its ttl are validated together and otherwise ignored. Normalize the same way
+        // CreateOperationMessage does so a whitespace-only key is treated as "no key" here too.
+        if (!string.IsNullOrWhiteSpace(request.PublicKey))
         {
+            var publicKey = request.PublicKey.Trim();
             if (publicKey.Length > SshChannelLimits.MaxPublicKeyLength)
                 return Problem(
                     statusCode: StatusCodes.Status400BadRequest,
