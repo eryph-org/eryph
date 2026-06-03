@@ -43,7 +43,7 @@ namespace Eryph.Agent
 
                 var port = int.TryParse(channel["port"], out var configuredPort) ? configuredPort : 9700;
 
-                var serverCertificate = LoadServerCertificate(certificateDirectory);
+                var (serverCertificate, serverCertificateChain) = LoadServerCertificate(certificateDirectory);
                 var trustedRoots = LoadTrustedRoots(certificateDirectory);
 
                 options.Listen(ip, port, listenOptions =>
@@ -51,6 +51,10 @@ namespace Eryph.Agent
                     listenOptions.UseHttps(https =>
                     {
                         https.ServerCertificate = serverCertificate;
+                        // Present the issuing intermediate alongside the leaf so the compute API can build
+                        // leaf -> intermediate -> root against the root it pins (its validator chains via
+                        // the presented intermediates, exactly like the bus transport).
+                        https.ServerCertificateChain = serverCertificateChain;
                         // Require a client certificate; the per-request validation against the component
                         // CA happens below so we bind to the deployment PKI rather than the OS trust store.
                         https.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
@@ -62,10 +66,12 @@ namespace Eryph.Agent
             });
         }
 
-        private static X509Certificate2 LoadServerCertificate(string certificateDirectory)
+        private static (X509Certificate2 Leaf, X509Certificate2Collection Chain) LoadServerCertificate(
+            string certificateDirectory)
         {
             // Mirror ComponentServerTls (the compute API's loader): server.pfx bundles the leaf with its
-            // private key plus the issuing chain in one atomic file.
+            // private key plus the issuing chain in one atomic file. The leaf is presented together with
+            // its intermediate so the peer can build a chain to the root it pins.
             var pfxPath = Path.Combine(certificateDirectory, "server.pfx");
             if (!File.Exists(pfxPath))
                 throw new InvalidOperationException(
@@ -74,9 +80,16 @@ namespace Eryph.Agent
 
             var bundle = X509CertificateLoader.LoadPkcs12Collection(
                 File.ReadAllBytes(pfxPath), password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
-            return bundle.OfType<X509Certificate2>().FirstOrDefault(c => c.HasPrivateKey)
+            var leaf = bundle.OfType<X509Certificate2>().FirstOrDefault(c => c.HasPrivateKey)
                 ?? throw new InvalidOperationException(
                     $"The enrolled server certificate '{pfxPath}' does not contain a private key.");
+
+            var chain = new X509Certificate2Collection();
+            foreach (var certificate in bundle)
+                if (!ReferenceEquals(certificate, leaf))
+                    chain.Add(certificate);
+
+            return (leaf, chain);
         }
 
         private static X509Certificate2Collection LoadTrustedRoots(string certificateDirectory)
