@@ -33,5 +33,6 @@ internal class GetGuestServicesStatusVMCommandHandler(
             GuestServicesVersion = status.GuestServicesVersion,
             ProvisioningState = status.ProvisioningState,
             Shell = status.Shell,
+            ShellArgs = status.ShellArgs,
         };
 }

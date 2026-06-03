@@ -9,4 +9,6 @@ public class GuestServicesStatusOperationResult : OperationResult
     public string? ProvisioningState { get; set; }
 
     public string? Shell { get; set; }
+
+    public string? ShellArgs { get; set; }
 }

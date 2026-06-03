@@ -2,20 +2,16 @@ using System;
 using System.Collections.Generic;
 using Eryph.Resources;
 
-namespace Eryph.Messages.Resources.Catlets.Commands
-{
-    [SendMessageTo(MessageRecipient.Controllers)]
-    public class OpenSshChannelCommand : IHasResource, ICommandWithName
-    {
-        public Guid CatletId { get; set; }
+namespace Eryph.Messages.Resources.Catlets.Commands;
 
-        // External-pool KVP values authorizing the operator's key, built by the
-        // endpoint. Empty for the pre-injected-key flow (no write).
-        public Dictionary<string, string> AccessKeyValues { get; set; }
-        public Resource Resource => new(ResourceType.Catlet, CatletId);
-        public string GetCommandName()
-        {
-            return "Opening SSH channel";
-        }
-    }
+[SendMessageTo(MessageRecipient.Controllers)]
+public class OpenSshChannelCommand : IHasResource, ICommandWithName
+{
+    public Guid CatletId { get; set; }
+
+    // External-pool KVP values authorizing the operator's key, built by the
+    // endpoint. Empty for the pre-injected-key flow (no write).
+    public Dictionary<string, string> AccessKeyValues { get; set; }
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
+    public string GetCommandName() => "Opening SSH channel";
 }

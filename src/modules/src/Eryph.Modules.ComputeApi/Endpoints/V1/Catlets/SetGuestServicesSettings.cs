@@ -29,6 +29,9 @@ public class SetGuestServicesSettings(
     // Authorized by the compute:catlets:remote-access scope; requires read (not write) project access.
     protected override AccessRight RequiredAccessRight => AccessRight.Read;
 
+    // Each setting must fit the Hyper-V KVP value limit.
+    private const int MaxShellLength = 512;
+
     protected override object CreateOperationMessage(Catlet model, SetGuestServicesSettingsRequest request)
     {
         var values = new Dictionary<string, string>();
@@ -63,6 +66,12 @@ public class SetGuestServicesSettings(
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: "At least one setting must be provided.");
+
+        if (request.Body.Shell is { Length: > MaxShellLength }
+            || request.Body.ShellArgs is { Length: > MaxShellLength })
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"A setting must not exceed {MaxShellLength} characters.");
 
         return await base.HandleAsync(request, cancellationToken);
     }

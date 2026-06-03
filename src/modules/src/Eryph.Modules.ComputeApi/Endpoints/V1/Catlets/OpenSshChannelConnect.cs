@@ -41,7 +41,7 @@ public class OpenSshChannelConnect(
         Tags = ["Catlets"])
     ]
     public override async Task<ActionResult> HandleAsync(
-        SshChannelConnectRequest request,
+        [FromRoute] SshChannelConnectRequest request,
         CancellationToken cancellationToken = default)
     {
         var httpContext = HttpContext;

@@ -66,13 +66,18 @@ public class OpenSshChannel(
         Tags = ["Catlets"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
-        OpenSshChannelRequest request,
+        [FromRoute] OpenSshChannelRequest request,
         CancellationToken cancellationToken = default)
     {
         if (request.PublicKey is { Length: > SshChannelLimits.MaxPublicKeyLength })
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The public key must not exceed {SshChannelLimits.MaxPublicKeyLength} characters.");
+
+        if (request.PublicKey is { } publicKey && publicKey.IndexOfAny(['\r', '\n', '"']) >= 0)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The public key must not contain control characters.");
 
         if (request.Ttl is { } ttl && (ttl <= 0 || ttl > SshChannelLimits.MaxTtlSeconds))
             return Problem(

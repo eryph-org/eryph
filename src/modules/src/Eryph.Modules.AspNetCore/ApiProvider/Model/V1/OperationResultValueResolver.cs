@@ -70,6 +70,7 @@ public class OperationResultValueResolver(
                 GuestServicesVersion = statusResponse.GuestServicesVersion,
                 ProvisioningState = statusResponse.ProvisioningState,
                 Shell = statusResponse.Shell,
+                ShellArgs = statusResponse.ShellArgs,
             },
             ValidateCatletSpecificationCommandResponse validateSpecificationResponse => new CatletSpecificationOperationResult
             {

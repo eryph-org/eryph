@@ -69,6 +69,22 @@ public class GuestServicesSettingsTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task SetSettings_WhenCatletInOtherProject_ReturnsNotFound()
+    {
+        await ArrangeOtherUserAccess(BuiltinRole.Contributor, OtherProjectId);
+
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, RemoteAccessScope, false)
+            .PatchAsJsonAsync(
+                $"v1/catlets/{CatletId}/guest-services/settings",
+                new { shell = "/bin/bash" },
+                options: ApiJsonSerializerOptions.Options);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task SetSettings_WithoutRemoteAccessScope_IsForbidden()
     {
         var response = await Factory.CreateDefaultClient()

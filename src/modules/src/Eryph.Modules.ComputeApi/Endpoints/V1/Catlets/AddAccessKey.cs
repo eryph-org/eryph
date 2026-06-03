@@ -71,6 +71,16 @@ public class AddAccessKey(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The public key must not exceed {SshChannelLimits.MaxPublicKeyLength} characters.");
 
+        if (publicKey.IndexOfAny(['\r', '\n', '"']) >= 0)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The public key must not contain control characters.");
+
+        if (request.Body.ExpiresAt is { } pastExpiry && pastExpiry <= DateTimeOffset.UtcNow)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The expiry must be in the future.");
+
         if (request.Body.ExpiresAt is { } expiresAt
             && expiresAt > DateTimeOffset.UtcNow.AddSeconds(SshChannelLimits.MaxTtlSeconds))
             return Problem(

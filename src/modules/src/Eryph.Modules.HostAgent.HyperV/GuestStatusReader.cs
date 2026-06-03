@@ -10,7 +10,8 @@ public sealed record GuestStatus(
     string? GuestServicesStatus,
     string? GuestServicesVersion,
     string? ProvisioningState,
-    string? Shell);
+    string? Shell,
+    string? ShellArgs);
 
 public interface IGuestStatusReader
 {
@@ -38,6 +39,7 @@ public sealed class GuestStatusReader(IHostDataExchange hostDataExchange) : IGue
             guest.GetValueOrDefault(Constants.StatusKey),
             guest.GetValueOrDefault(Constants.VersionKey),
             guest.GetValueOrDefault(ProvisioningStateKey),
-            external.GetValueOrDefault(Constants.ShellKey));
+            external.GetValueOrDefault(Constants.ShellKey),
+            external.GetValueOrDefault(Constants.ShellArgsKey));
     }
 }

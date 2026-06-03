@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -26,6 +27,11 @@ internal class OpenSshChannelSaga(IWorkflow workflow,
         }
 
         Data.Data.VmId = catlet.VmId;
+        if (Data.Data.VmId == Guid.Empty)
+        {
+            await Fail("The catlet has not been provisioned yet.");
+            return;
+        }
 
         await StartNewTask(new OpenSshChannelVMCommand
         {

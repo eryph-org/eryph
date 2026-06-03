@@ -91,6 +91,22 @@ public class AccessKeyTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task AddAccessKey_WithPastExpiry_ReturnsBadRequest()
+    {
+        var expiresAt = DateTimeOffset.UtcNow.AddHours(-1);
+
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true)
+            .PostAsJsonAsync(
+                $"v1/catlets/{CatletId}/guest-services/access-keys",
+                new { publicKey = PublicKey, expiresAt },
+                options: ApiJsonSerializerOptions.Options);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task RemoveAccessKey_DispatchesRemoval()
     {
         var response = await Factory.CreateDefaultClient()
