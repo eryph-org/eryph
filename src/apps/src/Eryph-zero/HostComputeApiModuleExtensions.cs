@@ -49,6 +49,12 @@ public static class HostComputeApiModuleExtensions
                 next(context, container);
 
                 container.UseInMemoryBus(context.ModulesHostServices);
+
+                // The compute API consumes the channel rendezvous; the host owns the single in-process
+                // forwarder and the agent registers its recipient with that same instance.
+                container.RegisterInstance<Eryph.Modules.AspNetCore.Channels.IAgentChannelForwarder>(
+                    context.ModulesHostServices
+                        .GetRequiredService<Eryph.Modules.AspNetCore.Channels.InProcessAgentChannelForwarder>());
             };
         }
     }

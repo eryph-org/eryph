@@ -56,6 +56,12 @@ namespace Eryph.ApiEndpoint
                         context.ModulesHostServices.GetRequiredService<IConfiguration>(),
                         context.ModulesHostServices.GetRequiredService<ILoggerFactory>(),
                         ComponentType.ComputeApi);
+
+                    // Reach the agent's channel listener over the network with component mTLS.
+                    container.Register<
+                        Eryph.Modules.AspNetCore.Channels.IAgentChannelForwarder,
+                        Eryph.Modules.AspNetCore.Channels.MtlsAgentChannelForwarder>(Lifestyle.Scoped);
+
                     next(context, container);
                 };
             }

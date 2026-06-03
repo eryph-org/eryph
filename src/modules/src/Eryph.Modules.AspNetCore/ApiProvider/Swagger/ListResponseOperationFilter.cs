@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using JetBrains.Annotations;
@@ -15,12 +16,14 @@ public class ListResponseOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        var responseType = context.MethodInfo.GetCustomAttribute<SwaggerResponseAttribute>(true);
+        // An action may declare several [SwaggerResponse] attributes (e.g. 200/400/401), so enumerate
+        // them — GetCustomAttribute (singular) throws AmbiguousMatchException when more than one is
+        // present. We only care about the one carrying a paged ListResponse<> body.
+        var isPageable = context.MethodInfo
+            .GetCustomAttributes<SwaggerResponseAttribute>(true)
+            .Any(attr => attr.Type is not null && attr.Type.IsClosedTypeOf(typeof(ListResponse<>)));
 
-        if (responseType is null)
-            return;
-
-        if (!responseType.Type.IsClosedTypeOf(typeof(ListResponse<>)))
+        if (!isPageable)
             return;
 
         operation.Extensions.Add("x-ms-pageable", new OpenApiObject

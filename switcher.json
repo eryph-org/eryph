@@ -1,0 +1,34 @@
+{
+  "solution": "Eryph.sln",
+  "solutionFolder": null,
+  "mappings": {
+    "Eryph.GuestServices.Core": "../guest-services/src/Eryph.GuestServices.Core/Eryph.GuestServices.Core.csproj",
+    "Eryph.GuestServices.Sockets": "../guest-services/src/Eryph.GuestServices.Sockets/Eryph.GuestServices.Sockets.csproj",
+    "Eryph.GuestServices.HvDataExchange.Common": "../guest-services/src/Eryph.GuestServices.HvDataExchange.Common/Eryph.GuestServices.HvDataExchange.Common.csproj",
+    "Eryph.GuestServices.HvDataExchange.Host": "../guest-services/src/Eryph.GuestServices.HvDataExchange.Host/Eryph.GuestServices.HvDataExchange.Host.csproj"
+  },
+  "restore": [
+    {
+      "name": "Eryph.Modules.HostAgent.HyperV",
+      "packages": [
+        {
+          "packageName": "Eryph.GuestServices.Core",
+          "version": "0.4.0-preview.4"
+        },
+        {
+          "packageName": "Eryph.GuestServices.Sockets",
+          "version": "0.4.0-preview.4"
+        },
+        {
+          "packageName": "Eryph.GuestServices.HvDataExchange.Common",
+          "version": "0.4.0-preview.4"
+        },
+        {
+          "packageName": "Eryph.GuestServices.HvDataExchange.Host",
+          "version": "0.4.0-preview.4"
+        }
+      ]
+    }
+  ],
+  "removeProjects": true
+}

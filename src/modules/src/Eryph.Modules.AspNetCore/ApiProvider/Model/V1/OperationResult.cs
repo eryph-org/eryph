@@ -12,6 +12,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 [JsonDerivedType(typeof(CatletOperationResult), "Catlet")]
 [JsonDerivedType(typeof(CatletConfigOperationResult), "CatletConfig")]
 [JsonDerivedType(typeof(CatletSpecificationOperationResult), "CatletSpecification")]
+[JsonDerivedType(typeof(SshChannelOperationResult), "SshChannel")]
 public abstract class OperationResult
 {
 }

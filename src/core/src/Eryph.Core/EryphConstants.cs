@@ -111,6 +111,7 @@ namespace Eryph.Core
                 public static readonly string CatletsRead = "compute:catlets:read";
                 public static readonly string CatletsWrite = "compute:catlets:write";
                 public static readonly string CatletsControl = "compute:catlets:control";
+                public static readonly string CatletsRemoteAccess = "compute:catlets:remote-access";
                 public static readonly string GenesRead = "compute:genes:read";
                 public static readonly string GenesWrite = "compute:genes:write";
                 public static readonly string ProjectsRead = "compute:projects:read";
@@ -129,6 +130,7 @@ namespace Eryph.Core
                 new(Scopes.CatletsRead, [Audiences.ComputeApi], "Grants read access for catlets"),
                 new(Scopes.CatletsWrite, [Audiences.ComputeApi], "Grants write access for catlets"),
                 new(Scopes.CatletsControl, [Audiences.ComputeApi], "Grants control access (start, stop) for catlets"),
+                new(Scopes.CatletsRemoteAccess, [Audiences.ComputeApi], "Grants remote SSH channel access for catlets"),
                 new(Scopes.GenesRead, [Audiences.ComputeApi], "Grants read access for genes"),
                 new(Scopes.GenesWrite, [Audiences.ComputeApi], "Grants write access for genes"),
                 new(Scopes.ProjectsRead, [Audiences.ComputeApi], "Grants read access for projects"),

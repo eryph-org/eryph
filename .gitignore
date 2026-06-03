@@ -267,3 +267,4 @@ docs/internal/
 
 # Local standalone-run scratch dir (pids, generated settings, planning notes)
 .run/
+*.lscache
