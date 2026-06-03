@@ -20,11 +20,7 @@ namespace Eryph.Modules.HostAgent.Channels;
 /// operator's authorized-key KVP values via <see cref="IGuestDataWriter"/>, and on open dials the guest
 /// hvsocket with <see cref="SocketFactory.CreateClientSocket"/> and returns it as a stream.
 /// </summary>
-public class ChannelService(
-    IGuestDataWriter guestDataWriter,
-    IChannelEndpointProvider endpointProvider,
-    ILogger<ChannelService> logger)
-    : IChannelService, IAgentChannelRecipient
+public class ChannelService : IChannelService, IAgentChannelRecipient, IDisposable
 {
     // One-time tokens with a grace window. The token only buys the window between the control plane
     // returning it and the channel being opened; after a successful open it is consumed and removed,
@@ -33,7 +29,24 @@ public class ChannelService(
     // which on the split runtime crosses RabbitMQ, so it is generous rather than seconds-tight.
     private static readonly TimeSpan TokenLifetime = TimeSpan.FromSeconds(120);
 
+    private readonly IGuestDataWriter _guestDataWriter;
+    private readonly IChannelEndpointProvider _endpointProvider;
+    private readonly ILogger<ChannelService> _logger;
     private readonly ConcurrentDictionary<string, PendingChannel> _pending = new(StringComparer.Ordinal);
+    private readonly Timer _sweepTimer;
+
+    public ChannelService(
+        IGuestDataWriter guestDataWriter,
+        IChannelEndpointProvider endpointProvider,
+        ILogger<ChannelService> logger)
+    {
+        _guestDataWriter = guestDataWriter;
+        _endpointProvider = endpointProvider;
+        _logger = logger;
+        // Sweep expired pending tokens on a timer (not only when a new channel is registered) so a burst
+        // of never-opened tokens cannot accumulate in this long-lived process once registrations stop.
+        _sweepTimer = new Timer(_ => SweepExpired(), null, TokenLifetime, TokenLifetime);
+    }
 
     public async Task<ChannelRegistration> RegisterChannel(
         Guid vmId,
@@ -43,7 +56,7 @@ public class ChannelService(
         // Added-key flow: publish the operator's authorized key to the guest. Pre-injected flow
         // (empty map) skips the write.
         if (accessKeyValues is { Count: > 0 })
-            await guestDataWriter.SetExternalAsync(
+            await _guestDataWriter.SetExternalAsync(
                 vmId,
                 accessKeyValues.ToDictionary(kvp => kvp.Key, kvp => (string?)kvp.Value)).ConfigureAwait(false);
 
@@ -61,7 +74,7 @@ public class ChannelService(
         return new ChannelRegistration
         {
             Token = token,
-            AgentEndpoint = endpointProvider.BuildChannelUrl(token),
+            AgentEndpoint = _endpointProvider.BuildChannelUrl(token),
             ExpiresAt = expiresAt,
         };
     }
@@ -72,7 +85,7 @@ public class ChannelService(
             return null;
 
         var stream = await ConnectGuestAsync(vmId, cancellationToken).ConfigureAwait(false);
-        logger.LogDebug("Opened EGS channel to guest {VmId}.", vmId);
+        _logger.LogDebug("Opened EGS channel to guest {VmId}.", vmId);
         return stream;
     }
 
@@ -119,6 +132,8 @@ public class ChannelService(
                 _pending.TryRemove(token, out _);
         }
     }
+
+    public void Dispose() => _sweepTimer.Dispose();
 
     private sealed record PendingChannel(Guid VmId, DateTimeOffset ExpiresAt);
 }
