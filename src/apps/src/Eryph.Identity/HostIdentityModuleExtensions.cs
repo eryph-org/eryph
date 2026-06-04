@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Rebus.Configuration;
+using Eryph.IdentityDb.MySql;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Startup;
@@ -30,13 +31,30 @@ namespace Eryph.Identity
             builder.ConfigureFrameworkServices((_, services) =>
             {
                 services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityTransportFilter>();
+                services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityTransportFilter>();
             });
 
             return builder;
         }
 
-        private sealed class IdentityTransportFilter : IConfigureContainerFilter<IdentityModule>
+        private sealed class IdentityTransportFilter
+            : IConfigureContainerFilter<IdentityModule>,
+                IAddSimpleInjectorFilter<IdentityModule>
         {
+            public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
+                Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
+            {
+                return (context, options) =>
+                {
+                    // The standalone identity host's store is MariaDB. The host picks the provider; the
+                    // module stays provider-agnostic. The connection string comes from
+                    // ERYPH_IDENTITYDB_CONNECTIONSTRING (see IdentityContainerExtensions).
+                    options.RegisterMySqlIdentityStore(
+                        IdentityContainerExtensions.GetIdentityDbConnectionString());
+                    next(context, options);
+                };
+            }
+
             public Action<IModuleContext<IdentityModule>, Container> Invoke(
                 Action<IModuleContext<IdentityModule>, Container> next)
             {

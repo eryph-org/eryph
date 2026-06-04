@@ -22,6 +22,7 @@ using Eryph.App;
 using Eryph.Core;
 using Eryph.Core.Settings;
 using Eryph.Core.VmAgent;
+using Eryph.IdentityDb.Sqlite;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
@@ -345,15 +346,7 @@ internal static class Program
                                 {
                                     DataSource = System.IO.Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
                                 }.ToString();
-                                container.RegisterInstance<Eryph.IdentityDb.IDbContextConfigurer<Eryph.IdentityDb.IdentityDbContext>>(
-                                    new Eryph.IdentityDb.Sqlite.SqliteIdentityDbContextConfigurer(identityDbConnectionString));
-                                options.Services.AddDbContext<Eryph.IdentityDb.IdentityDbContext>((sp, dbOptions) =>
-                                {
-                                    sp.GetRequiredService<Container>()
-                                        .GetInstance<Eryph.IdentityDb.IDbContextConfigurer<Eryph.IdentityDb.IdentityDbContext>>()
-                                        .Configure(dbOptions);
-                                    Eryph.IdentityDb.IdentityDbModel.ApplyOpenIddict(dbOptions);
-                                });
+                                options.RegisterSqliteIdentityStore(identityDbConnectionString);
                                 options.AddStartupHandler<IdentityDatabaseResetHandler>();
 
                                 container.RegisterInstance(changeTrackingConfig);

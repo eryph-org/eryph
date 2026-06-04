@@ -1,7 +1,7 @@
 using System;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
-namespace Eryph.IdentityDb;
+namespace Eryph.IdentityDb.Sqlite;
 
 /// <summary>
 /// Compares <see cref="DateTimeOffset"/> values by their UTC ticks only, ignoring the offset. Paired with

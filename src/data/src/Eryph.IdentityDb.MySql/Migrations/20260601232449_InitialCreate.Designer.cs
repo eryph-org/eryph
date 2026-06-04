@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Eryph.IdentityDb.MySql.Migrations
 {
-    [DbContext(typeof(IdentityDbContext))]
+    [DbContext(typeof(MySqlIdentityDbContext))]
     [Migration("20260601232449_InitialCreate")]
     partial class InitialCreate
     {

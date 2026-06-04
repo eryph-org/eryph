@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Eryph.IdentityDb.Sqlite.Migrations
 {
-    [DbContext(typeof(IdentityDbContext))]
+    [DbContext(typeof(SqliteIdentityDbContext))]
     [Migration("20260602062332_InitialCreate")]
     partial class InitialCreate
     {

@@ -106,17 +106,10 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
         var authority = endpointResolver.GetEndpoint("identity").ToString();
         var signingCertManager = serviceProvider.GetRequiredService<ITokenCertificateManager>();
 
-        // The configurer is registered in the app/root container and resolved here via cross-wiring.
-        // When change tracking is enabled it is decorated as scoped (depending on scoped interceptors);
-        // SimpleInjector resolves that against the ambient async scope active when EF creates the context
-        // (inside operation scopes and the scoped startup handlers), so this captured provider is correct.
-        services.AddDbContext<IdentityDbContext>(options =>
-        {
-            serviceProvider.GetRequiredService<IDbContextConfigurer<IdentityDbContext>>().Configure(options);
-            // OpenIddict's tables are contributed through this options extension; the design-time
-            // migration factory applies the same call so generated migrations include them.
-            IdentityDbModel.ApplyOpenIddict(options);
-        });
+        // The DbContext itself is registered by the host via the provider-specific
+        // RegisterXxxIdentityStore() extension (mirroring how each host registers the state store), so the
+        // module stays provider-agnostic. OpenIddict's UseDbContext<IdentityDbContext>() below resolves
+        // whichever derived context that extension registered.
 
         var encryptionCertificate = signingCertManager.GetEncryptionCertificate();
         var signingCertificate = signingCertManager.GetSigningCertificate();

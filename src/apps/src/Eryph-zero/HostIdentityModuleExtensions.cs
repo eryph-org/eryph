@@ -1,9 +1,13 @@
 ﻿using System;
+using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
+using Eryph.IdentityDb.Sqlite;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Identity;
+using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Clients;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -52,8 +56,17 @@ namespace Eryph.Runtime.Zero
             public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
                 Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
             {
-                // The identity module registers SeedFromConfigHandler<IdentityModule> itself now.
-                return next;
+                return (context, options) =>
+                {
+                    // eryph-zero's identity store is the disposable on-disk SQLite database (mirrored to
+                    // config files). The host picks the provider; the module stays provider-agnostic.
+                    var connectionString = new SqliteConnectionStringBuilder
+                    {
+                        DataSource = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
+                    }.ToString();
+                    options.RegisterSqliteIdentityStore(connectionString);
+                    next(context, options);
+                };
             }
         }
     }

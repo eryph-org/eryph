@@ -1,7 +1,7 @@
 using System;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace Eryph.IdentityDb;
+namespace Eryph.IdentityDb.Sqlite;
 
 /// <summary>
 /// Converts <see cref="DateTimeOffset"/> to <see cref="DateTime"/> for SQLite, which has no native

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Eryph.IdentityDb.MySql.Migrations
 {
-    [DbContext(typeof(IdentityDbContext))]
+    [DbContext(typeof(MySqlIdentityDbContext))]
     partial class IdentityDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

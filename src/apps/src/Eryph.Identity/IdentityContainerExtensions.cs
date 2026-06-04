@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Eryph.IdentityDb;
-using Eryph.IdentityDb.MySql;
 using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
@@ -27,12 +25,12 @@ namespace Eryph.Identity
             RegisterCertificateServices(container);
             container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
 
-            // The standalone identity host owns a durable MariaDB database — its own DB, separate from
-            // the controller/compute StateDb, because identity is its own authority. eryph-zero uses a
-            // disposable SQLite store instead. The connection string comes from ERYPH_IDENTITYDB_CONNECTIONSTRING;
-            // the schema is migrated in-process at startup by MigrateIdentityDbHandler.
-            container.RegisterInstance<IDbContextConfigurer<IdentityDbContext>>(
-                new MySqlIdentityDbContextConfigurer(GetIdentityDbConnectionString()));
+            // The standalone identity host owns a durable MariaDB database — its own DB, separate from the
+            // controller/compute StateDb, because identity is its own authority. eryph-zero uses a disposable
+            // SQLite store instead. The store (configurer + DbContext) is registered by
+            // HostIdentityModuleExtensions via RegisterMySqlIdentityStore so the configurer lands on the
+            // module container alongside the change-tracking pipeline; the schema is migrated in-process at
+            // startup by MigrateIdentityDbHandler.
 
             // The identity process owns its own endpoint; it is told its public address via
             // config so it can both host on it and (later) advertise it to the controller.

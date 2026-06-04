@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Eryph.IdentityDb.Sqlite.Migrations
 {
-    [DbContext(typeof(IdentityDbContext))]
+    [DbContext(typeof(SqliteIdentityDbContext))]
     partial class IdentityDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

@@ -1,34 +1,17 @@
-﻿using System;
-using Eryph.IdentityDb.Entities;
+﻿using Eryph.IdentityDb.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.IdentityDb;
 
-public class IdentityDbContext: DbContext
+// Shared identity model. Each packaging derives a provider-specific context (Sqlite/MySql/InMemory)
+// and registers it via that provider's RegisterXxxIdentityStore extension — mirroring StateStoreContext.
+// The non-generic DbContextOptions constructor lets the derived contexts pass their own
+// DbContextOptions<TDerived> through to the base, so a single model serves every provider.
+public class IdentityDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<ApplicationEntity> Applications { get; set; }
 
     public DbSet<RedeemedEnrollmentToken> RedeemedEnrollmentTokens { get; set; }
-
-    public IdentityDbContext(DbContextOptions<IdentityDbContext> options)
-        : base(options)
-    {
-    }
-
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-    {
-        base.ConfigureConventions(configurationBuilder);
-
-        // SQLite (the eryph-zero identity store) has no native DateTimeOffset; convert all
-        // DateTimeOffset values to UTC DateTime (e.g. RedeemedEnrollmentToken.ExpiresAt) so they
-        // persist and compare correctly. Keyed on the provider name so the shared context needs no
-        // dependency on the SQLite provider package; MariaDB / in-memory keep native handling.
-        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
-        {
-            configurationBuilder.Properties<DateTimeOffset>()
-                .HaveConversion<DateTimeOffsetToDateTimeConverter, DateTimeOffsetUtcComparer>();
-        }
-    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
