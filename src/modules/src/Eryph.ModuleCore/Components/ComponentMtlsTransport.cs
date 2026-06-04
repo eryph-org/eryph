@@ -93,6 +93,13 @@ public static class ComponentMtlsTransport
             loggerFactory: loggerFactory);
 
         container.RegisterInstance<IRebusTransportConfigurer>(transport);
+
+        // The same enrolled certificate material is what dials other components over mTLS (e.g. the
+        // compute API's EGS remote-channel data plane dialing a host agent). Expose the store so those
+        // consumers can present the client certificate and validate peers against the enrolled CA — the
+        // single trust anchor, no divergent trust path.
+        container.RegisterInstance<IComponentCertificateStore>(
+            new FileComponentCertificateStore(certificateDirectory, TimeSpan.FromDays(45)));
     }
 
     private static ComponentEnrollmentFile LoadEnrollmentFile(string path)

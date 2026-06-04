@@ -59,6 +59,19 @@ public class OperationResultValueResolver(
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(populateResponse.Config),
             },
+            OpenSshChannelVMCommandResponse sshChannelResponse => new SshChannelOperationResult
+            {
+                Token = sshChannelResponse.Token,
+                ExpiresAt = sshChannelResponse.ExpiresAt,
+            },
+            GetGuestServicesStatusVMCommandResponse statusResponse => new GuestServicesStatusOperationResult
+            {
+                GuestServicesStatus = statusResponse.GuestServicesStatus,
+                GuestServicesVersion = statusResponse.GuestServicesVersion,
+                ProvisioningState = statusResponse.ProvisioningState,
+                Shell = statusResponse.Shell,
+                ShellArgs = statusResponse.ShellArgs,
+            },
             ValidateCatletSpecificationCommandResponse validateSpecificationResponse => new CatletSpecificationOperationResult
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(

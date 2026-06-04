@@ -46,7 +46,8 @@ public class ScopeHierarchyTests
         result.Should().BeEquivalentTo(
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsControl);
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess);
     }
 
     [Fact]
@@ -58,7 +59,8 @@ public class ScopeHierarchyTests
         // Assert
         result.Should().BeEquivalentTo(
             EryphConstants.Authorization.Scopes.CatletsControl,
-            EryphConstants.Authorization.Scopes.CatletsRead);
+            EryphConstants.Authorization.Scopes.CatletsRead,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess);
     }
 
     [Fact]
@@ -74,6 +76,7 @@ public class ScopeHierarchyTests
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
             EryphConstants.Authorization.Scopes.GenesWrite,
             EryphConstants.Authorization.Scopes.GenesRead,
             EryphConstants.Authorization.Scopes.ProjectsWrite,
@@ -127,6 +130,7 @@ public class ScopeHierarchyTests
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
             EryphConstants.Authorization.Scopes.GenesRead
         );
     }
@@ -188,5 +192,20 @@ public class ScopeHierarchyTests
             EryphConstants.Authorization.Scopes.IdentityClientsWrite,
             EryphConstants.Authorization.Scopes.IdentityRead,
             EryphConstants.Authorization.Scopes.IdentityWrite);
+    }
+
+    [Fact]
+    public void GetGrantingScopes_WithCatletsRemoteAccess_ReturnsAllGrantingScopes()
+    {
+        // Act
+        var result = ScopeHierarchy.GetGrantingScopes(
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess);
+
+        // Assert — every scope that implies remote-access also grants it.
+        result.Should().BeEquivalentTo(
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
+            EryphConstants.Authorization.Scopes.CatletsWrite,
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.ComputeWrite);
     }
 }

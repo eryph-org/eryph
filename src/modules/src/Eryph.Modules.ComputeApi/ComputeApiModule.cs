@@ -63,6 +63,9 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
 
     public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
     {
+        // IAgentChannelForwarder (the SSH channel data plane) is supplied by the host, like the bus
+        // transport and state store — see each host's HostComputeApiModuleExtensions.
+
         container.Register<IGetRequestHandler<StateDb.Model.Catlet, CatletConfiguration>,
             GetCatletConfigurationHandler>();
         container.Register<IGetRequestHandler<StateDb.Model.Catlet, Catlet>,

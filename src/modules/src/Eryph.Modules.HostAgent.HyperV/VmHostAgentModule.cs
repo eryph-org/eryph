@@ -1,5 +1,11 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.IO.Abstractions;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.Windows;
@@ -8,11 +14,14 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
+using Eryph.GuestServices.HvDataExchange.Host;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Networks;
 using Eryph.ModuleCore.Startup;
+using Eryph.Modules.AspNetCore.Channels;
+using Eryph.Modules.HostAgent.Channels;
 using Eryph.Modules.HostAgent.Inventory;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
@@ -22,6 +31,8 @@ using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,10 +49,12 @@ using IFileSystem = System.IO.Abstractions.IFileSystem;
 namespace Eryph.Modules.HostAgent
 {
     [UsedImplicitly]
-    public class VmHostAgentModule
+    public class VmHostAgentModule : WebModule
     {
         private readonly TracingConfig _tracingConfig = new();
         private readonly InventoryConfig _inventoryConfig = new();
+        private readonly ChannelListenerOptions _channelListenerOptions = new();
+        private Container? _container;
 
         public VmHostAgentModule(IConfiguration configuration)
         {
@@ -50,6 +63,14 @@ namespace Eryph.Modules.HostAgent
 
             configuration.GetSection("Inventory")
                 .Bind(_inventoryConfig);
+
+            configuration.GetSection(ChannelListenerOptions.SectionName)
+                .Bind(_channelListenerOptions);
+            // The channel listener loads its server certificate and CA trust bundle from the same
+            // component certificate directory the bus transport uses (componentMtls:certificateDirectory),
+            // so the listener and the bus stay on one source of truth.
+            _channelListenerOptions.CertificateDirectory =
+                configuration.GetSection("componentMtls")["certificateDirectory"];
         }
 
         public string Name => "Eryph.VmHostAgent";
@@ -73,6 +94,87 @@ namespace Eryph.Modules.HostAgent
                         .DisallowConcurrentExecution());
             });
             services.AddQuartzHostedService();
+        }
+
+        // Maps the network channel listener (GET /v1/channels/{token}). Enabled only where the agent is
+        // reached over the network (the split runtime, with mTLS configured by Eryph.Agent/AgentChannelTls);
+        // in eryph-zero the listener is off and the compute API reaches the channel service in-process.
+        [UsedImplicitly]
+        public void Configure(IApplicationBuilder app)
+        {
+            if (!_channelListenerOptions.Enabled)
+                return;
+
+            app.UseWebSockets();
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
+                endpoints.MapGet("/v1/channels/{token}", HandleChannelAsync));
+        }
+
+        // GET /v1/channels/{token}: upgrade to a WebSocket and bridge it to the guest hvsocket via
+        // IChannelService. The transport-level mTLS (host Kestrel) has already proven the caller is the
+        // compute API; the one-time token authorizes this specific channel.
+        private async Task HandleChannelAsync(HttpContext context, string token)
+        {
+            if (!context.WebSockets.IsWebSocketRequest)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            var channelService = _container!.GetInstance<IChannelService>();
+            var logger = _container.GetInstance<ILogger<VmHostAgentModule>>();
+
+            // Validate + consume the one-time token and open the guest hvsocket BEFORE upgrading. A null
+            // stream means an unknown/expired/used token → 404 without an upgrade, not leaking whether the
+            // token ever existed.
+            Stream guestStream;
+            try
+            {
+                guestStream = await channelService.OpenChannelAsync(token, context.RequestAborted)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // The token was accepted but dialing the guest hvsocket failed (catlet stopped, vsock not
+                // ready). Fail with a controlled status instead of letting it bubble out of the pipeline.
+                logger.LogWarning(ex, "Failed to open the EGS guest channel.");
+                context.Response.StatusCode = StatusCodes.Status502BadGateway;
+                return;
+            }
+
+            if (guestStream is null)
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            WebSocket webSocket;
+            try
+            {
+                webSocket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await guestStream.DisposeAsync().ConfigureAwait(false);
+                logger.LogDebug(ex, "Failed to accept the EGS channel WebSocket.");
+                return;
+            }
+
+            try
+            {
+                await WebSocketBridge.PumpAsync(webSocket, guestStream, context.RequestAborted)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "The EGS channel bridge failed.");
+            }
+            finally
+            {
+                webSocket.Dispose();
+                await guestStream.DisposeAsync().ConfigureAwait(false);
+            }
         }
 
         [UsedImplicitly]
@@ -101,8 +203,14 @@ namespace Eryph.Modules.HostAgent
                 // slice, where routing switches to the registered InboundQueue from the component
                 // catalog instead of a name constructed from the machine name.
                 $"{QueueNames.VMHostAgent}.{Environment.MachineName}",
-                // The host-agent hosts no service endpoints, so it advertises none.
-                advertisedEndpoints: null,
+                // EGS remote-channel listener (when enabled): advertise the agent's channel base URL
+                // under a per-host endpoint name so the compute API can resolve the listener for the
+                // specific host that runs a given catlet. The endpoints config domain is a flat
+                // name -> URL map across all components, so the name must be host-qualified (the
+                // short machine name matches the agent identity the controller routes operations to;
+                // see the inbound-queue comment above). Empty when the listener is disabled (eryph-zero
+                // and dev), so nothing is advertised then.
+                advertisedEndpoints: BuildAdvertisedEndpoints(),
                 typeof(PlacementConfigRealizer),
                 typeof(NetworkProvidersConfigRealizer),
                 typeof(EndpointsConfigRealizer));
@@ -110,10 +218,40 @@ namespace Eryph.Modules.HostAgent
             options.AddLogging();
         }
 
+        // Builds the EGS channel listener's advertised endpoints. Empty unless the listener is enabled
+        // (so non-mTLS dev and eryph-zero advertise nothing). The endpoint name is host-qualified on the
+        // agent's machine name — the same identity the controller routes VM operations to.
+        private Dictionary<string, string> BuildAdvertisedEndpoints()
+        {
+            if (!_channelListenerOptions.Enabled)
+                return new Dictionary<string, string>();
+
+            var provider = new ChannelEndpointProvider(_channelListenerOptions);
+            return new Dictionary<string, string>
+            {
+                [$"egs-channel:{Environment.MachineName}"] = provider.BaseUrl,
+            };
+        }
+
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            // Captured so the channel WebSocket endpoint (mapped in Configure, run by the ASP.NET
+            // pipeline) can resolve IChannelService from the module's SimpleInjector container at
+            // request time. By the first request ConfigureContainer has always run.
+            _container = container;
+
             container.RegisterInstance(_inventoryConfig);
+
+            // EGS remote-channel data plane.
+            container.RegisterInstance(_channelListenerOptions);
+            container.RegisterSingleton<IHostDataExchange, HostDataExchange>();
+            container.RegisterSingleton<IChannelEndpointProvider, ChannelEndpointProvider>();
+            container.RegisterSingleton<IChannelService, ChannelService>();
+            // Reads guest services + provisioning status from the guest KVP pool.
+            container.RegisterSingleton<IGuestStatusReader, GuestStatusReader>();
+            // Single write path for guest-services settings (shell, authorized keys, ...).
+            container.RegisterSingleton<IGuestDataWriter, GuestDataWriter>();
 
             container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();

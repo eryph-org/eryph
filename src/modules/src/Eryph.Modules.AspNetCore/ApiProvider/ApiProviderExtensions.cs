@@ -116,6 +116,11 @@ public static class ApiProviderExtensions
         app.UseExceptionHandler();
         app.UseStatusCodePages();
 
+        // Enables WebSocket upgrades for endpoints that proxy interactive streams (the EGS remote SSH
+        // channel reverse-proxies the operator WebSocket to the host agent). Must run before routing so
+        // the upgrade is available when the endpoint inspects HttpContext.WebSockets.
+        app.UseWebSockets();
+
         app.UseRouting();
 
         app.UseAuthentication();

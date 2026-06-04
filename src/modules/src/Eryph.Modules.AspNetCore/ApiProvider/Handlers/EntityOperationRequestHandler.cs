@@ -39,7 +39,8 @@ public class EntityOperationRequestHandler<TEntity>(
     public async Task<ActionResult<Operation>> HandleOperationRequest(
         Func<ISingleResultSpecification<TEntity>?> specificationFunc,
         Func<TEntity, object> createOperationFunc,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AccessRight accessRight = AccessRight.Write)
     {
         using var ta = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled);
         ta.EnlistRebus();
@@ -55,10 +56,10 @@ public class EntityOperationRequestHandler<TEntity>(
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
                     detail: "You do not have super admin access.");
-            case Resource resource when !(await _userRightsProvider.HasResourceAccess(resource.Id, AccessRight.Write)):
+            case Resource resource when !(await _userRightsProvider.HasResourceAccess(resource.Id, accessRight)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have write access to the project.");
+                    detail: $"You do not have {(accessRight == AccessRight.Read ? "read" : "write")} access to the project.");
             case Project project when !(await _userRightsProvider.HasProjectAccess(project.Id, AccessRight.Admin)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
