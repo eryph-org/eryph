@@ -1,3 +1,4 @@
+using System;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.MySql;
 using Eryph.IdentityDb.Sqlite;
@@ -27,7 +28,7 @@ public class IdentityDbMigrationsTests
         using var context = new MySqlIdentityDbContext(options.Options);
 
         context.Database.GetMigrations().Should().Contain(
-            m => m.EndsWith("InitialCreate"),
+            m => m.EndsWith("InitialCreate", StringComparison.Ordinal),
             "the MariaDB migrations must be discoverable from the derived context's assembly");
     }
 
@@ -44,7 +45,7 @@ public class IdentityDbMigrationsTests
         using var context = new SqliteIdentityDbContext(options.Options);
 
         context.Database.GetMigrations().Should().Contain(
-            m => m.EndsWith("InitialCreate"),
+            m => m.EndsWith("InitialCreate", StringComparison.Ordinal),
             "the SQLite migrations must be discoverable from the derived context's assembly");
     }
 }
