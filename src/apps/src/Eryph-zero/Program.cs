@@ -25,6 +25,7 @@ using Eryph.Core.VmAgent;
 using Eryph.IdentityDb.Sqlite;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Startup;
+using Eryph.Modules.AspNetCore.Channels;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Seeding;
@@ -419,7 +420,17 @@ internal static class Program
                     })
                     .UseAspNetCore((module, webHostBuilder) =>
                     {
-                        webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
+                        webHostBuilder.UseHttpSys(options =>
+                        {
+                            // Modules with their own endpoint (identity, compute) expose an absolute URL
+                            // as their path. The host agent is a WebModule whose channel listener is off
+                            // in-process, so it has no endpoint URL; give it a port-shared prefix so
+                            // http.sys accepts it (it maps nothing and 404s).
+                            var prefix = Uri.TryCreate(module.Path, UriKind.Absolute, out _)
+                                ? module.Path
+                                : $"{basePathUrl}{(string.IsNullOrWhiteSpace(module.Path) ? "hostagent" : module.Path.Trim('/'))}";
+                            options.UrlPrefixes.Add(prefix);
+                        });
                     })
                     .UseSimpleInjector(container)
                     .ConfigureEryphAppConfiguration(args)
@@ -452,6 +463,9 @@ internal static class Program
                     .AddIdentityModule()
                     .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                     .ConfigureServices(c => c.AddSingleton(_genepoolSettings))
+                    // Host-owned in-process channel rendezvous: the compute module consumes it as the
+                    // forwarder, the agent module registers its channel service as the recipient.
+                    .ConfigureServices(c => c.AddSingleton<InProcessAgentChannelForwarder>())
                     .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
                     // The logger must not be disposed here as it is injected into multiple modules.
                     // Serilog requires a single logger instance for synchronization.

@@ -9,6 +9,7 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Commands;
 using Eryph.ModuleCore;
+using Eryph.Modules.AspNetCore.Channels;
 using Eryph.Rebus;
 using Eryph.StateDb.Sqlite;
 using Microsoft.AspNetCore.Builder;
@@ -34,8 +35,15 @@ public static class ApiModuleFactoryExtensions
     public static WebModuleFactory<ComputeApiModule> WithApiHost(
         this WebModuleFactory<ComputeApiModule> factory,
         Action<Container> configureContainer,
-        Action<SimpleInjectorAddOptions> configureModuleContainer) =>
-        factory.WithModuleHostBuilder(hostBuilder =>
+        Action<SimpleInjectorAddOptions> configureModuleContainer,
+        IAgentChannelForwarder? channelForwarder = null)
+    {
+        // The compute API consumes IAgentChannelForwarder but does not register it — the host wires the
+        // implementation (network dial in the split runtime, in-process in eryph-zero). The test host
+        // does the same; a no-op forwarder is enough unless a test needs to observe the forward call.
+        var forwarder = channelForwarder ?? new NullAgentChannelForwarder();
+
+        return factory.WithModuleHostBuilder(hostBuilder =>
         {
             Container container = new();
 
@@ -78,9 +86,9 @@ public static class ApiModuleFactoryExtensions
             hostBuilder.ConfigureFrameworkServices((_, services) =>
             {
                 services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>>(
-                    _ => new ModuleFilters(configureModuleContainer));
+                    _ => new ModuleFilters(configureModuleContainer, forwarder));
                 services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>(
-                    _ => new ModuleFilters(configureModuleContainer));
+                    _ => new ModuleFilters(configureModuleContainer, forwarder));
             });
         }).WithWebHostBuilder(webBuilder =>
         {
@@ -92,6 +100,7 @@ public static class ApiModuleFactoryExtensions
                     services.AddAuthorization(opts => ComputeApiModule.ConfigureScopes(opts, "fake"));
                 });
         });
+    }
 
     public static List<T> GetPendingRebusMessages<T>(
         this WebModuleFactory<ComputeApiModule> factory)
@@ -121,7 +130,8 @@ public static class ApiModuleFactoryExtensions
         }
 
     private class ModuleFilters(
-        Action<SimpleInjectorAddOptions> configureModuleContainer)
+        Action<SimpleInjectorAddOptions> configureModuleContainer,
+        IAgentChannelForwarder channelForwarder)
         : IAddSimpleInjectorFilter<ComputeApiModule>,
             IConfigureContainerFilter<ComputeApiModule>
     {
@@ -143,6 +153,7 @@ public static class ApiModuleFactoryExtensions
                 next(context, container);
 
                 container.RegisterInstance(context.ModulesHostServices.GetRequiredService<InMemNetwork>());
+                container.RegisterInstance(channelForwarder);
                 container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
                 container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
                 container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();

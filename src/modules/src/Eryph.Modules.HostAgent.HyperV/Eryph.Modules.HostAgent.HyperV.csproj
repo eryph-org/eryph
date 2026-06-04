@@ -8,8 +8,16 @@
     <InternalsVisibleTo Include="$(AssemblyName).Test" />
   </ItemGroup>
   <ItemGroup>
+    <!-- WebModule: maps the remote-channel WebSocket endpoint, so it needs the ASP.NET Core framework. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\..\..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
+  <PropertyGroup>
+    <!-- Guest-services libraries (hvsocket + KVP). TODO: track the stable feed version on release. -->
+    <GuestServicesVersion>0.4.0-preview.4</GuestServicesVersion>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Hosting" Version="2.0.0" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.1-ci.3" />
@@ -26,9 +34,15 @@
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.2.1" />
+    <PackageReference Include="Eryph.GuestServices.Core" Version="$(GuestServicesVersion)" />
+    <PackageReference Include="Eryph.GuestServices.HvDataExchange.Common" Version="$(GuestServicesVersion)" />
+    <PackageReference Include="Eryph.GuestServices.HvDataExchange.Host" Version="$(GuestServicesVersion)" />
+    <PackageReference Include="Eryph.GuestServices.Sockets" Version="$(GuestServicesVersion)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
+    <!-- Provides the shared WebSocketBridge (WS <-> stream pump) used by the channel listener. -->
+    <ProjectReference Include="..\Eryph.Modules.AspNetCore\Eryph.Modules.AspNetCore.csproj" />
     <ProjectReference Include="..\Eryph.AnsiConsole\Eryph.AnsiConsole.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />

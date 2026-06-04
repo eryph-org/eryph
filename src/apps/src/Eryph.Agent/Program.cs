@@ -28,6 +28,11 @@ namespace Eryph.Agent
 
                 await ModulesHost.CreateDefaultBuilder(args)
                     .UseSimpleInjector(container)
+                    // The agent is a WebModule: host Kestrel so it can serve the EGS remote-channel
+                    // listener (/v1/channels/{token}). AgentChannelTls binds the mTLS endpoint (server
+                    // cert + required component client certificate); it is a no-op when the channel is
+                    // disabled.
+                    .UseAspNetCoreWithDefaults((_, webHostBuilder) => AgentChannelTls.Configure(webHostBuilder))
                     .AddVmHostAgentModule()
                     .UseSerilog()
                     .RunConsoleAsync().ConfigureAwait(false);

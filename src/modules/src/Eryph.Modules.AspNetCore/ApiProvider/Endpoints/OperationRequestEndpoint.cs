@@ -24,9 +24,16 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
 {
     protected abstract object CreateOperationMessage(TEntity model, TRequest request);
 
+    /// <summary>
+    /// The project access right the caller must hold on the entity. Defaults to
+    /// <see cref="AccessRight.Write"/>; endpoints whose operation is authorized by a narrower scope
+    /// (e.g. the remote-access channel endpoints) override this with a lesser right.
+    /// </summary>
+    protected virtual AccessRight RequiredAccessRight => AccessRight.Write;
+
     private ISingleResultSpecification<TEntity>? CreateSpecification(TRequest request)
     {
-        return specBuilder.GetSingleEntitySpec(request, AccessRight.Write);
+        return specBuilder.GetSingleEntitySpec(request, RequiredAccessRight);
     }
 
     [SwaggerResponse(
@@ -43,7 +50,8 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
         return operationHandler.HandleOperationRequest(
             () => CreateSpecification(request),
             m => CreateOperationMessage(m, request),
-            cancellationToken);
+            cancellationToken,
+            RequiredAccessRight);
     }
 }
 

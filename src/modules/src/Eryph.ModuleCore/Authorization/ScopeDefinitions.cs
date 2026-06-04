@@ -18,6 +18,7 @@ public static class ScopeDefinitions
         EryphConstants.Authorization.Scopes.CatletsRead,
         EryphConstants.Authorization.Scopes.CatletsWrite,
         EryphConstants.Authorization.Scopes.CatletsControl,
+        EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
         EryphConstants.Authorization.Scopes.GenesRead,
         EryphConstants.Authorization.Scopes.GenesWrite,
         EryphConstants.Authorization.Scopes.ProjectsRead,

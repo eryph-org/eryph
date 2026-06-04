@@ -27,6 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The swagger filter tests touch ASP.NET MVC ApiExplorer types (ApiDescription). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Eryph.Modules.AspNetCore\Eryph.Modules.AspNetCore.csproj" />
   </ItemGroup>
 

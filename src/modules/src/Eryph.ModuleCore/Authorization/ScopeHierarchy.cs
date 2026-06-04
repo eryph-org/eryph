@@ -25,6 +25,7 @@ public static class ScopeHierarchy
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
             EryphConstants.Authorization.Scopes.GenesWrite,
             EryphConstants.Authorization.Scopes.GenesRead,
             EryphConstants.Authorization.Scopes.ProjectsWrite,
@@ -39,11 +40,13 @@ public static class ScopeHierarchy
         [EryphConstants.Authorization.Scopes.CatletsWrite] =
         [
             EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsControl
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess
         ],
         [EryphConstants.Authorization.Scopes.CatletsControl] =
         [
-            EryphConstants.Authorization.Scopes.CatletsRead
+            EryphConstants.Authorization.Scopes.CatletsRead,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess
         ],
         [EryphConstants.Authorization.Scopes.GenesWrite] =
         [
