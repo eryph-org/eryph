@@ -26,8 +26,7 @@ internal class ClientApplicationChangeHandler(
         ClientApplicationChange change,
         CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(
-            config.ClientsConfigPath, $"{IdentityConfigFileName.Coerce(change.ClientId)}.json");
+        var path = Path.Combine(config.ClientsConfigPath, $"{change.ClientId}.json");
 
         var descriptor = await clientService.Get(change.ClientId, change.TenantId, cancellationToken);
         if (descriptor is null)
