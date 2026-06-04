@@ -13,6 +13,8 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <!-- The agent is a WebModule host (Kestrel) for the EGS remote-channel listener. -->
     <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.2.0" />
+    <!-- Run as a Windows service on each Hyper-V host (like eryph-zero); no-op when run interactively. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
