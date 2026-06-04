@@ -19,7 +19,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
-    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.GenepoolModule\Eryph.Modules.GenePoolModule.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.GenePoolModule\Eryph.Modules.GenePoolModule.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj" />
   </ItemGroup>
 </Project>
