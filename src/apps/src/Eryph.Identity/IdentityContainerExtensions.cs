@@ -64,11 +64,16 @@ namespace Eryph.Identity
         /// <c>ERYPH_IDENTITYDB_CONNECTIONSTRING</c> environment variable. No credentialed default is
         /// hardcoded — the operator owns this configuration.
         /// </summary>
-        public static string GetIdentityDbConnectionString() =>
-            Environment.GetEnvironmentVariable("ERYPH_IDENTITYDB_CONNECTIONSTRING")
-            ?? throw new InvalidOperationException(
-                "The identity database connection string must be provided via the "
-                + "ERYPH_IDENTITYDB_CONNECTIONSTRING environment variable.");
+        public static string GetIdentityDbConnectionString()
+        {
+            var connectionString = Environment.GetEnvironmentVariable("ERYPH_IDENTITYDB_CONNECTIONSTRING");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException(
+                    "The identity database connection string must be provided via the "
+                    + "ERYPH_IDENTITYDB_CONNECTIONSTRING environment variable.");
+
+            return connectionString;
+        }
 
         /// <summary>The identity component's own public URL (config/env, default for dev).</summary>
         public static string GetIdentityUrl()

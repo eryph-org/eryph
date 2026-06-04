@@ -65,7 +65,7 @@ public class RedeemedTokenChangeTrackingTests : IDisposable
             await handler.HandleChangeAsync(new RedeemedTokenChange("jti-1"));
         }
 
-        File.Exists(path).Should().BeTrue("the redeemed token must be mirrored to the config file");
+        _fileSystem.File.Exists(path).Should().BeTrue("the redeemed token must be mirrored to the config file");
 
         // Fresh, empty database (a dropped + recreated store) — then seed from the file mirror.
         var freshRoot = new InMemoryDatabaseRoot();
@@ -91,7 +91,7 @@ public class RedeemedTokenChangeTrackingTests : IDisposable
     {
         var path = Path.Combine(_config.RedeemedTokensConfigPath, "jti-2.json");
         _fileSystem.Directory.CreateDirectory(_config.RedeemedTokensConfigPath);
-        await File.WriteAllTextAsync(path, "{\"Jti\":\"jti-2\"}");
+        await _fileSystem.File.WriteAllTextAsync(path, "{\"Jti\":\"jti-2\"}");
 
         var root = new InMemoryDatabaseRoot();
         await using var context = NewContext(root);
@@ -101,12 +101,12 @@ public class RedeemedTokenChangeTrackingTests : IDisposable
         // No such token in the database -> the export must delete the stale mirror file.
         await handler.HandleChangeAsync(new RedeemedTokenChange("jti-2"));
 
-        File.Exists(path).Should().BeFalse("a removed token must remove its mirror file");
+        _fileSystem.File.Exists(path).Should().BeFalse("a removed token must remove its mirror file");
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_dir))
-            Directory.Delete(_dir, recursive: true);
+        if (_fileSystem.Directory.Exists(_dir))
+            _fileSystem.Directory.Delete(_dir, recursive: true);
     }
 }

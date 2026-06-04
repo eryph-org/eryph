@@ -61,8 +61,8 @@ public class ClientApplicationChangeTrackingTests : IDisposable
         await handler.HandleChangeAsync(new ClientApplicationChange("client-1", TenantId));
 
         var path = Path.Combine(_config.ClientsConfigPath, "client-1.json");
-        File.Exists(path).Should().BeTrue("the client must be mirrored to a config file");
-        var model = JsonSerializer.Deserialize<ClientConfigModel>(await File.ReadAllTextAsync(path));
+        _fileSystem.File.Exists(path).Should().BeTrue("the client must be mirrored to a config file");
+        var model = JsonSerializer.Deserialize<ClientConfigModel>(await _fileSystem.File.ReadAllTextAsync(path));
         model!.ClientId.Should().Be("client-1");
         model.X509CertificateBase64.Should().Be("cert-base64");
         model.SharedSecret.Should().Be("hashed-secret");
@@ -94,7 +94,7 @@ public class ClientApplicationChangeTrackingTests : IDisposable
     {
         var path = Path.Combine(_config.ClientsConfigPath, "client-2.json");
         _fileSystem.Directory.CreateDirectory(_config.ClientsConfigPath);
-        await File.WriteAllTextAsync(path, "{\"ClientId\":\"client-2\"}");
+        await _fileSystem.File.WriteAllTextAsync(path, "{\"ClientId\":\"client-2\"}");
 
         var service = new Mock<IClientService>();
         service
@@ -104,12 +104,12 @@ public class ClientApplicationChangeTrackingTests : IDisposable
         var handler = new ClientApplicationChangeHandler(_config, _fileSystem, service.Object);
         await handler.HandleChangeAsync(new ClientApplicationChange("client-2", TenantId));
 
-        File.Exists(path).Should().BeFalse("a removed client must remove its mirror file");
+        _fileSystem.File.Exists(path).Should().BeFalse("a removed client must remove its mirror file");
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_dir))
-            Directory.Delete(_dir, recursive: true);
+        if (_fileSystem.Directory.Exists(_dir))
+            _fileSystem.Directory.Delete(_dir, recursive: true);
     }
 }
