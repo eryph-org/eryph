@@ -22,6 +22,7 @@ using Eryph.App;
 using Eryph.Core;
 using Eryph.Core.Settings;
 using Eryph.Core.VmAgent;
+using Eryph.IdentityDb.Sqlite;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.AspNetCore.Channels;
@@ -338,6 +339,17 @@ internal static class Program
                                 options.AddStartupHandler<EnsureConfigurationStartupHandler>();
                                 options.AddStartupHandler<DatabaseResetHandler>();
 
+                                // Migrate the identity database (SQLite) during warmup alongside the
+                                // state store. It is disposable and rebuilt from the config mirror by the
+                                // identity module's seeders in the main host, so reset-on-pending-migration
+                                // (IdentityDatabaseResetHandler) is the right behavior, mirroring the state store.
+                                var identityDbConnectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+                                {
+                                    DataSource = System.IO.Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
+                                }.ToString();
+                                options.RegisterSqliteIdentityStore(identityDbConnectionString);
+                                options.AddStartupHandler<IdentityDatabaseResetHandler>();
+
                                 container.RegisterInstance(changeTrackingConfig);
                                 // Change tracking must be registered before seeding so its
                                 // hosted services enable their queues in StartAsync before
@@ -533,6 +545,17 @@ internal static class Program
                 ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
                 ["changeTracking:catletSpecificationsConfigPath"] = ZeroConfig.GetCatletSpecificationsConfigPath(),
                 ["changeTracking:catletSpecificationVersionsConfigPath"] = ZeroConfig.GetCatletSpecificationVersionsConfigPath(),
+
+                // Identity store change tracking: the SQLite identity DB is disposable and rebuilt from
+                // these files (same model as the state store).
+                ["identityChangeTracking:trackChanges"] = bool.TrueString,
+                ["identityChangeTracking:seedDatabase"] = bool.TrueString,
+                // Reuse the existing clients directory so previously written client files (incl. the
+                // system client) load, and the change-tracking export replaces the old decorator.
+                ["identityChangeTracking:clientsConfigPath"] = ZeroConfig.GetClientConfigPath(),
+                ["identityChangeTracking:redeemedTokensConfigPath"] = ZeroConfig.GetIdentityRedeemedTokensConfigPath(),
+                // OpenIddict tokens/authorizations are not file-exported (FK-bound runtime state); they
+                // live in the SQLite store and are re-acquired on a full drop.
             });
         });
 

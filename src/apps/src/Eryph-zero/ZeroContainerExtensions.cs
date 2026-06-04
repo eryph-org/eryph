@@ -5,7 +5,6 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
-using Eryph.IdentityDb;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.Identity.Services;
 using Eryph.Modules.GenePool.Genetics;
@@ -47,11 +46,11 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
             container.RegisterInstance<IEryphOvnPathProvider>(new EryphOvnPathProvider());
 
-            // Identity token-signing certificate manager + in-memory identity store. Owned by
-            // the root bootstrap (like the standalone IdentityContainerExtensions), so the identity
-            // host filter only wires the module, not these services.
+            // Identity token-signing certificate manager. The identity store (a disposable on-disk SQLite
+            // database mirrored to config files) is registered by HostIdentityModuleExtensions via
+            // RegisterSqliteIdentityStore, so the configurer lands on the module container alongside the
+            // change-tracking pipeline that decorates it.
             container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
-            container.Register<Eryph.IdentityDb.IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
 
             container.Register<INetworkProviderManager, NetworkProviderManager>();
             container.Register<IControllerSettingsManager, ControllerSettingsManager>();

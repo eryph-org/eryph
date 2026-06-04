@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
-namespace Eryph.Modules.Controller.ChangeTracking;
+namespace Eryph.ModuleCore.ChangeTracking;
 
-internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
+public class ChangeTrackingBackgroundService<TChange> : BackgroundService
 {
     private readonly Container _container;
     private readonly ILogger<ChangeTrackingBackgroundService<TChange>> _logger;

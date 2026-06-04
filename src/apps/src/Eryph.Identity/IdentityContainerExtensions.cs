@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Eryph.IdentityDb;
 using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
-using Microsoft.EntityFrameworkCore.Storage;
 using SimpleInjector;
 
 namespace Eryph.Identity
@@ -27,9 +25,12 @@ namespace Eryph.Identity
             RegisterCertificateServices(container);
             container.RegisterSingleton<ITokenCertificateManager, TokenCertificateManager>();
 
-            // Identity store stays in-memory for this milestone (mirrors eryph-zero).
-            container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
+            // The standalone identity host owns a durable MariaDB database — its own DB, separate from the
+            // controller/compute StateDb, because identity is its own authority. eryph-zero uses a disposable
+            // SQLite store instead. The store (configurer + DbContext) is registered by
+            // HostIdentityModuleExtensions via RegisterMySqlIdentityStore so the configurer lands on the
+            // module container alongside the change-tracking pipeline; the schema is migrated in-process at
+            // startup by MigrateIdentityDbHandler.
 
             // The identity process owns its own endpoint; it is told its public address via
             // config so it can both host on it and (later) advertise it to the controller.
@@ -56,6 +57,22 @@ namespace Eryph.Identity
                 container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
                 container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
             }
+        }
+
+        /// <summary>
+        /// The MariaDB connection string for the identity database, supplied via the
+        /// <c>ERYPH_IDENTITYDB_CONNECTIONSTRING</c> environment variable. No credentialed default is
+        /// hardcoded — the operator owns this configuration.
+        /// </summary>
+        public static string GetIdentityDbConnectionString()
+        {
+            var connectionString = Environment.GetEnvironmentVariable("ERYPH_IDENTITYDB_CONNECTIONSTRING");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException(
+                    "The identity database connection string must be provided via the "
+                    + "ERYPH_IDENTITYDB_CONNECTIONSTRING environment variable.");
+
+            return connectionString;
         }
 
         /// <summary>The identity component's own public URL (config/env, default for dev).</summary>

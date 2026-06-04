@@ -51,9 +51,6 @@ public static class IdentityModuleFactoryExtensions
             container.RegisterInstance<ITokenCertificateManager>(
                 new TestTokenCertificateManager(tokenCertificates));
 
-            container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
-
             // The identity module now runs a bus + registers as a component, so the test host
             // must supply an in-memory transport the module's ConfigureRebus can resolve
             // (mirrors the compute-API test harness).
@@ -66,7 +63,10 @@ public static class IdentityModuleFactoryExtensions
                 }));
             container.RegisterInstance(new InMemNetwork());
             hostBuilder.ConfigureFrameworkServices((_, services) =>
-                services.AddTransient<IConfigureContainerFilter<IdentityModule>, InMemoryBusFilter>());
+            {
+                services.AddTransient<IConfigureContainerFilter<IdentityModule>, InMemoryBusFilter>();
+                services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, InMemoryBusFilter>();
+            });
         }).WithWebHostBuilder(webBuilder =>
         {
             webBuilder.ConfigureTestServices(services =>
@@ -101,8 +101,23 @@ public static class IdentityModuleFactoryExtensions
     /// Registers the in-memory bus transport on the identity module container so the module's
     /// own ConfigureRebus (added when registration moved into the module) can start.
     /// </summary>
-    private sealed class InMemoryBusFilter : IConfigureContainerFilter<IdentityModule>
+    private sealed class InMemoryBusFilter
+        : IConfigureContainerFilter<IdentityModule>,
+            IAddSimpleInjectorFilter<IdentityModule>
     {
+        public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
+            Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
+        {
+            return (context, options) =>
+            {
+                // Tests run on the in-memory identity store. The host picks the provider; the module stays
+                // provider-agnostic. Registering here (on the module's options.Container) co-locates the
+                // configurer with the DbContext and the change-tracking decorator, exactly like the real hosts.
+                options.RegisterInMemoryIdentityStore(new InMemoryDatabaseRoot());
+                next(context, options);
+            };
+        }
+
         public Action<IModuleContext<IdentityModule>, Container> Invoke(
             Action<IModuleContext<IdentityModule>, Container> next)
         {

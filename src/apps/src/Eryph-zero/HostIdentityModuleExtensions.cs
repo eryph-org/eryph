@@ -1,15 +1,13 @@
 ﻿using System;
-using System.IO.Abstractions;
-using Dbosoft.Hosuto.HostedServices;
+using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
-using Eryph.Configuration.Model;
-using Eryph.IdentityDb;
-using Eryph.ModuleCore.Configuration;
+using Eryph.IdentityDb.Sqlite;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Identity;
-using Eryph.Modules.Identity.Services;
+using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Clients;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -47,12 +45,10 @@ namespace Eryph.Runtime.Zero
 
                     next(context, container);
 
-                    container.RegisterSingleton<IClientConfigService, ClientConfigService>();
-                    container.RegisterDecorator(typeof(IClientService),
-                        typeof(ClientServiceWithConfigServiceDecorator));
-
-                    container.RegisterSingleton<IFileSystem, FileSystem>();
-                    container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
+                    // Client persistence is now handled by the identity module's change-tracking export
+                    // (replacing the old ClientServiceWithConfigServiceDecorator write-through) and its
+                    // ClientSeeder (replacing IdentityClientSeeder). IFileSystem + SeedFromConfigHandler
+                    // are registered by the module. Only the scope seeder remains zero-specific.
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
                 };
             }
@@ -62,7 +58,13 @@ namespace Eryph.Runtime.Zero
             {
                 return (context, options) =>
                 {
-                    options.AddHostedService<SeedFromConfigHandler<IdentityModule>>();
+                    // eryph-zero's identity store is the disposable on-disk SQLite database (mirrored to
+                    // config files). The host picks the provider; the module stays provider-agnostic.
+                    var connectionString = new SqliteConnectionStringBuilder
+                    {
+                        DataSource = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
+                    }.ToString();
+                    options.RegisterSqliteIdentityStore(connectionString);
                     next(context, options);
                 };
             }

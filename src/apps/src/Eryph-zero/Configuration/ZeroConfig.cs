@@ -28,6 +28,15 @@ namespace Eryph.Runtime.Zero.Configuration
             return clientsConfigPath;
         }
 
+        private static string GetIdentityConfigPath()
+        {
+            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+            return Path.Combine(privateConfigPath, "identity");
+        }
+
+        public static string GetIdentityRedeemedTokensConfigPath()
+            => Path.Combine(GetIdentityConfigPath(), "redeemed-tokens");
+
         public static string GetVMConfigPath()
         {
             var privateConfigPath = Path.Combine(GetConfigPath(), "private");

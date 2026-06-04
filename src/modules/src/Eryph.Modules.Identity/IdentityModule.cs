@@ -12,13 +12,16 @@ using Eryph.ModuleCore.Components;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Startup;
 using Eryph.Rebus;
 using Microsoft.Extensions.Logging;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Subscriptions;
+using System.IO.Abstractions;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.Identity.ChangeTracking;
 using Eryph.Modules.Identity.Events;
 using Eryph.Modules.Identity.Events.Validations;
 using Eryph.Modules.Identity.Services;
@@ -28,6 +31,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenIddict.EntityFrameworkCore.Models;
@@ -38,8 +42,17 @@ using static OpenIddict.Server.OpenIddictServerHandlers.Exchange;
 namespace Eryph.Modules.Identity;
 
 [ApiVersion("1.0")]
-public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
+public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration configuration) : WebModule
 {
+    private readonly IdentityChangeTrackingConfig _changeTrackingConfig = BindChangeTracking(configuration);
+
+    private static IdentityChangeTrackingConfig BindChangeTracking(IConfiguration configuration)
+    {
+        var config = new IdentityChangeTrackingConfig();
+        configuration.GetSection("IdentityChangeTracking").Bind(config);
+        return config;
+    }
+
     public override string Path => endpointResolver.GetEndpoint("identity").ToString();
 
 #pragma warning disable S2325
@@ -60,6 +73,27 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                 ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),
             });
 
+        // Migrate the identity database before anything reads or seeds it (no-op on the in-memory
+        // provider used by tests).
+        options.AddStartupHandler<MigrateIdentityDbHandler>();
+
+        // Mirror the state store's change-tracking/export pipeline for the identity database. Register
+        // change tracking BEFORE seeding so the export queues are enabled before the seeders save (and
+        // re-export) the rebuilt rows. Off by default in server mode; on for eryph-zero and for taking a
+        // backup / live DB migration.
+        if (_changeTrackingConfig.TrackChanges)
+        {
+            if (string.IsNullOrWhiteSpace(_changeTrackingConfig.ClientsConfigPath)
+                || string.IsNullOrWhiteSpace(_changeTrackingConfig.RedeemedTokensConfigPath))
+                throw new InvalidOperationException(
+                    "IdentityChangeTracking:TrackChanges is enabled but the export paths are not "
+                    + "configured. Set IdentityChangeTracking:ClientsConfigPath and :RedeemedTokensConfigPath.");
+
+            options.AddIdentityChangeTracking();
+        }
+
+        options.AddIdentitySeeding();
+
         options.AddLogging();
     }
 
@@ -72,11 +106,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         var authority = endpointResolver.GetEndpoint("identity").ToString();
         var signingCertManager = serviceProvider.GetRequiredService<ITokenCertificateManager>();
 
-        services.AddDbContext<IdentityDbContext>(options =>
-        {
-            serviceProvider.GetRequiredService<IDbContextConfigurer<IdentityDbContext>>().Configure(options);
-            options.UseOpenIddict<ApplicationEntity, AuthorizationEntity, OpenIddictEntityFrameworkCoreScope, TokenEntity, string>();
-        });
+        // The DbContext itself is registered by the host via the provider-specific
+        // RegisterXxxIdentityStore() extension (mirroring how each host registers the state store), so the
+        // module stays provider-agnostic. OpenIddict's UseDbContext<IdentityDbContext>() below resolves
+        // whichever derived context that extension registered.
 
         var encryptionCertificate = signingCertManager.GetEncryptionCertificate();
         var signingCertificate = signingCertManager.GetSigningCertificate();
@@ -189,6 +222,10 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register(sp.GetRequiredService<IEndpointResolver>);
         container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
+
+        // Change-tracking/export config + file system, used by the export handlers and the seeders.
+        container.RegisterInstance(_changeTrackingConfig);
+        container.RegisterSingleton<IFileSystem, FileSystem>();
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
 

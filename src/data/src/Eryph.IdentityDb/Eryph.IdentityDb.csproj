@@ -10,6 +10,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.8" />
     <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.8" />
+    <!-- Provides SimpleInjectorAddOptions for the RegisterXxxIdentityStore extensions (and is inherited
+         transitively by the provider projects), exactly as Eryph.StateDb does for the state store. -->
+    <PackageReference Include="SimpleInjector.Integration.ServiceCollection" Version="5.5.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.Data\Eryph.Data.csproj" />

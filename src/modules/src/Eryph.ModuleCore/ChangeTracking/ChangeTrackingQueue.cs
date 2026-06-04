@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Eryph.Modules.Controller.ChangeTracking;
+namespace Eryph.ModuleCore.ChangeTracking;
 
-internal interface IChangeTrackingQueue<TChange>
+public interface IChangeTrackingQueue<TChange>
 {
     void Enable();
 
@@ -19,7 +19,7 @@ internal interface IChangeTrackingQueue<TChange>
         CancellationToken cancellationToken = default);
 }
 
-internal class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
+public class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
 {
     private bool _enabled;
 
@@ -51,4 +51,4 @@ internal class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
     }
 }
 
-internal record ChangeTrackingQueueItem<TChange>(Guid TransactionId, TChange Changes);
+public record ChangeTrackingQueueItem<TChange>(Guid TransactionId, TChange Changes);
