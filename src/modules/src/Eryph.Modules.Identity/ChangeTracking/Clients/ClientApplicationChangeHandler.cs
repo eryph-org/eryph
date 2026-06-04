@@ -40,6 +40,11 @@ internal class ClientApplicationChangeHandler(
         var model = descriptor.FromDescriptor();
         fileSystem.Directory.CreateDirectory(config.ClientsConfigPath);
         var json = JsonSerializer.Serialize(model);
-        await fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
+        // Write atomically: a crash mid-write must not leave a truncated mirror file that would fail the
+        // seeder on the next start. Write to a temp file (the seeder only reads "*.json", so it ignores
+        // "*.json.tmp"), then atomically replace the target.
+        var tempPath = path + ".tmp";
+        await fileSystem.File.WriteAllTextAsync(tempPath, json, Encoding.UTF8, cancellationToken);
+        fileSystem.File.Move(tempPath, path, overwrite: true);
     }
 }
