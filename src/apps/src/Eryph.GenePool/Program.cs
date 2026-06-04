@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Microsoft.Extensions.Hosting;
@@ -27,11 +28,25 @@ namespace Eryph.GenePool
                 container.Options.EnableAutoVerification = false;
                 container.Bootstrap();
 
-                await ModulesHost.CreateDefaultBuilder(args)
+                var builder = ModulesHost.CreateDefaultBuilder(args);
+                // Windows services start with the system32 directory as their working directory;
+                // pin the content root to the app base directory so config/assets resolve (mirrors
+                // eryph-zero). Hosuto otherwise defaults to Environment.CurrentDirectory.
+                builder.UseContentRoot(AppContext.BaseDirectory);
+
+                var host = builder
+                    // Run as a Windows service on each Hyper-V host. UseWindowsService installs the
+                    // service lifetime only when actually started as a service; interactively it is a
+                    // no-op and the default console lifetime applies. (RunConsoleAsync would force the
+                    // console lifetime and break service mode, so build + RunAsync like eryph-zero.)
+                    .ConfigureInternalHost(hb =>
+                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-genepool"))
                     .UseSimpleInjector(container)
                     .AddGenePoolModule()
                     .UseSerilog()
-                    .RunConsoleAsync().ConfigureAwait(false);
+                    .Build();
+
+                await host.RunAsync().ConfigureAwait(false);
             }
             finally
             {
