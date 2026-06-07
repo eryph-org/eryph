@@ -130,6 +130,10 @@ namespace Eryph.Modules.Controller
             container.RegisterSingleton<IClusterTopologyProvider, ComponentRegistryClusterTopologyProvider>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
+            // Chooses the OVN northbound connection: the local pipe when the network process is
+            // co-located (in-process or same host), or its advertised SSL endpoint when remote.
+            container.Register<IOvnNorthboundConnectionProvider, OvnNorthboundConnectionProvider>(Lifestyle.Scoped);
+
             container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
             container.RegisterSingleton<IStorageIdentifierGenerator, StorageIdentifierGenerator>();
 

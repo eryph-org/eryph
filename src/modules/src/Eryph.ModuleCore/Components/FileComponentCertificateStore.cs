@@ -189,6 +189,31 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         return bundle;
     }
 
+    /// <summary>
+    /// Reads the enrolled client PEM material (private key, leaf-with-issuing-chain certificate and CA
+    /// trust bundle) as strings, or <see langword="null"/> when the component is not yet enrolled. Used
+    /// to configure OVN SSL, which takes PEM-encoded strings. The certificate is the leaf followed by the
+    /// issuing chain so a peer can build the path to the CA when the component CA is an intermediate.
+    /// </summary>
+    public ComponentCertificatePem? ReadClientCertificatePem()
+    {
+        if (!File.Exists(KeyPath) || !File.Exists(LeafPath) || !File.Exists(BundlePath))
+            return null;
+
+        var certificate = File.ReadAllText(LeafPath);
+        if (File.Exists(ChainPath))
+        {
+            var chain = File.ReadAllText(ChainPath);
+            if (!string.IsNullOrWhiteSpace(chain))
+                certificate = certificate.TrimEnd() + "\n" + chain.TrimStart();
+        }
+
+        return new ComponentCertificatePem(
+            File.ReadAllText(KeyPath),
+            certificate,
+            File.ReadAllText(BundlePath));
+    }
+
     private bool TryLoadLeaf(out DateTime notAfterUtc)
     {
         notAfterUtc = default;

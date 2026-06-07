@@ -32,9 +32,14 @@ public static class HostNetworkModuleExtensions
         {
             return (context, container) =>
             {
-                next(context, container);
-
+                // The network module now configures and starts its bus inside ConfigureContainer (run
+                // by next), so the (in-memory) transport and the OVN environment must be registered
+                // first. In-process, the controller reaches the OVN databases over the local pipe; the
+                // bus registration just makes the network component discoverable like every other module.
+                container.UseInMemoryBus(context.ModulesHostServices);
                 container.UseOvn(context.ModulesHostServices);
+
+                next(context, container);
             };
         }
     }

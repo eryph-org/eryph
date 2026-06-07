@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- Cross-platform by design: the net10.0 build is the Linux artifact (cross-platform
-         OVN system environment). The net10.0-windows build runs on a Windows dev/host box
-         using the Windows OVN environment, exactly like eryph-zero. -->
+    <!-- Cross-platform by design (like Eryph.Controller): the net10.0 build is the Linux
+         artifact (cross-platform OVN system environment); the net10.0-windows build runs on
+         a Windows dev/host box using the Windows OVN environment, exactly like eryph-zero. -->
     <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
@@ -16,16 +16,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Rebus.MySql" Version="4.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" />
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageReference Include="DistributedLock.FileSystem" Version="1.0.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
-    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />
-    <ProjectReference Include="..\..\..\data\src\Eryph.StateDb.MySql\Eryph.StateDb.MySql.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj" />
   </ItemGroup>
 </Project>

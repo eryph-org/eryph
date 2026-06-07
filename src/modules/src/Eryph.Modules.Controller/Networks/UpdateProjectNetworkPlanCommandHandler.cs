@@ -18,9 +18,9 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.Controller.Networks;
 
 [UsedImplicitly]
-public class UpdateProjectNetworkPlanCommandHandler(
+internal class UpdateProjectNetworkPlanCommandHandler(
     ISystemEnvironment systemEnvironment,
-    IOVNSettings ovnSettings,
+    IOvnNorthboundConnectionProvider connectionProvider,
     ILogger logger,
     INetworkProviderManager networkProviderManager,
     IProjectNetworkPlanBuilder planBuilder,
@@ -43,9 +43,10 @@ public class UpdateProjectNetworkPlanCommandHandler(
             Eff(() => new CancellationTokenSource(TimeSpan.FromMinutes(5))),
             cancelSource =>
                 from _ in SuccessAff(unit)
+                from connection in connectionProvider.GetNorthboundConnection()
                 let networkPlanRealizer = new NetworkPlanRealizer(
                     systemEnvironment,
-                    new OVNControlTool(systemEnvironment, ovnSettings.NorthDBConnection),
+                    new OVNControlTool(systemEnvironment, connection),
                     logger)
                 from appliedPlan in networkPlanRealizer.ApplyNetworkPlan(networkPlan, cancelSource.Token).ToAff(e => e)
                 select appliedPlan)

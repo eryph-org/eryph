@@ -1,9 +1,25 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
+using Dbosoft.Rebus;
+using Dbosoft.Rebus.Configuration;
+using Dbosoft.Rebus.Operations;
+using Eryph.Core;
+using Eryph.Messages.Components;
+using Eryph.ModuleCore;
+using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Networks;
+using Eryph.ModuleCore.Startup;
+using Eryph.Rebus;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Rebus.Config;
+using Rebus.Handlers;
+using Rebus.Retry.Simple;
+using Rebus.Subscriptions;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -12,6 +28,55 @@ namespace Eryph.Modules.Network;
 [UsedImplicitly]
 public class NetworkModule
 {
+    private readonly bool _remoteEnabled;
+    private readonly string _advertisedHost;
+
+    public NetworkModule(IConfiguration configuration)
+    {
+        // The OVN databases are exposed remotely over SSL only when the process is enrolled for mTLS
+        // (the standalone network host). Co-located (eryph-zero, or a controller on the same host) the
+        // controller reaches them over the local pipe, so nothing is advertised.
+        _remoteEnabled = bool.TryParse(configuration.GetSection("componentMtls")["enabled"], out var enabled)
+                         && enabled;
+        // The address remote clients dial. Defaults to the machine name; an operator behind NAT/DNS can
+        // override it. Only used when the databases are exposed remotely.
+        _advertisedHost = configuration["ovn:advertisedHost"] is { Length: > 0 } host
+            ? host
+            : Environment.MachineName;
+    }
+
+    [UsedImplicitly]
+    public void AddSimpleInjector(SimpleInjectorAddOptions options)
+    {
+        options.AddHostedService<OwnThreadOVSNodeHostedService<SyncedOVNDatabaseNode>>();
+        options.AddHostedService<OwnThreadOVSNodeHostedService<NetworkControllerNode>>();
+        options.AddStartupHandler<StartBusModuleHandler>();
+
+        // Opt in to controller-driven component registration so the controller can track the network
+        // process's liveness, route to its inbound queue, and resolve its OVN endpoints. The network
+        // process consumes no distributed config domains, so it registers no realizers.
+        options.AddComponentRegistration(
+            ComponentType.Network,
+            $"{QueueNames.Network}.{Environment.MachineName}",
+            BuildAdvertisedEndpoints());
+
+        options.AddLogging();
+    }
+
+    // The OVN northbound/southbound SSL endpoints the controller and agents dial. Empty when the
+    // databases are not exposed remotely (co-located/in-process), so nothing is advertised then.
+    private Dictionary<string, string> BuildAdvertisedEndpoints()
+    {
+        if (!_remoteEnabled)
+            return new Dictionary<string, string>();
+
+        return new Dictionary<string, string>
+        {
+            [OvnRemoteEndpoints.NorthboundName] = $"ssl:{_advertisedHost}:{OvnRemoteEndpoints.NorthboundPort}",
+            [OvnRemoteEndpoints.SouthboundName] = $"ssl:{_advertisedHost}:{OvnRemoteEndpoints.SouthboundPort}",
+        };
+    }
+
     [UsedImplicitly]
     public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
     {
@@ -20,14 +85,29 @@ public class NetworkModule
         container.RegisterSingleton<NetworkControllerNode>();
         container.RegisterSingleton<IOVSService<SyncedOVNDatabaseNode>, OVSNodeService<SyncedOVNDatabaseNode>>();
         container.RegisterSingleton<IOVSService<NetworkControllerNode>, OVSNodeService<NetworkControllerNode>>();
-    }
 
-    [UsedImplicitly]
-    public void AddSimpleInjector(SimpleInjectorAddOptions options)
-    {
-        options.AddHostedService<OwnThreadOVSNodeHostedService<SyncedOVNDatabaseNode>>();
-        options.AddHostedService<OwnThreadOVSNodeHostedService<NetworkControllerNode>>();
+        container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
+        container.Collection.Register(typeof(IHandleMessages<>), typeof(NetworkModule).Assembly);
+        container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationTaskHandler<>), Lifestyle.Scoped);
+        container.AddRebusOperationsHandlers();
 
-        options.AddLogging();
+        container.ConfigureRebus(configurer => configurer
+            .Serialization(s => s.UseEryphSettings())
+            // Use the registered component inbound queue as the single source of truth for the bus
+            // endpoint name (it must match what AddComponentRegistration announced). Resolved inside
+            // the transport lambda (bus start) so it does not trigger premature container verification
+            // during ConfigureContainer.
+            .Transport(t =>
+                container.GetService<IRebusTransportConfigurer>()
+                    .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
+            .Options(x =>
+            {
+                x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
+                x.SetNumberOfWorkers(5);
+                x.EnableSynchronousRequestReply();
+            })
+            .Subscriptions(s => container.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
+            .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
+            .Start());
     }
 }
