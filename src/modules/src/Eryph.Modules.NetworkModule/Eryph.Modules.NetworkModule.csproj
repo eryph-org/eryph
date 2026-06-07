@@ -9,7 +9,7 @@
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.OVN.Hosting" Version="2.0.0" />
+    <PackageReference Include="Dbosoft.OVN.Hosting" Version="2.1.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

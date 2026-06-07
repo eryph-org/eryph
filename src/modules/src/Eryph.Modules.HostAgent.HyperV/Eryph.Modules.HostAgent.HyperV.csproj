@@ -19,7 +19,7 @@
     <GuestServicesVersion>0.4.0-preview.4</GuestServicesVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.OVN.Hosting" Version="2.0.0" />
+    <PackageReference Include="Dbosoft.OVN.Hosting" Version="2.1.0" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.1-ci.3" />
     <PackageReference Include="Eryph.GenePool.Client" Version="0.5.1-ci.5" />
     <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.5.1-ci.5" />
