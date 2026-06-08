@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Microsoft.Extensions.Hosting;
@@ -26,11 +27,30 @@ namespace Eryph.Network
                 container.Options.EnableAutoVerification = false;
                 container.Bootstrap();
 
-                await ModulesHost.CreateDefaultBuilder(args)
+                var builder = ModulesHost.CreateDefaultBuilder(args);
+                // Windows services start with system32 as the working directory; pin the content root
+                // so module/config resolution works the same as interactive runs.
+                builder.UseContentRoot(AppContext.BaseDirectory);
+
+                var host = builder
+                    .ConfigureInternalHost(hb =>
+                    {
+#if WINDOWS
+                        // No-op when not started as a Windows service (interactive/dev).
+                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-network");
+#else
+                        // The OVN network control plane is native on Linux (the cross-platform OVN system
+                        // environment uses the OS-provided OVN under /usr). No-op when not run under
+                        // systemd (interactive/dev).
+                        hb.UseSystemd();
+#endif
+                    })
                     .UseSimpleInjector(container)
                     .AddNetworkModule()
                     .UseSerilog()
-                    .RunConsoleAsync().ConfigureAwait(false);
+                    .Build();
+
+                await host.RunAsync().ConfigureAwait(false);
             }
             finally
             {
