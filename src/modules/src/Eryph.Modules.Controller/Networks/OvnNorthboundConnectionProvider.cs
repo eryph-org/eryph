@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,18 +59,31 @@ internal class OvnNorthboundConnectionProvider(
             return await BuildSslConnection(endpoint);
         });
 
-    // The advertised endpoint has the form "ssl:<host>:<port>".
-    private async Task<OvsDbConnection> BuildSslConnection(string endpoint)
+    // The advertised endpoint has the form "ssl:<host>:<port>". The host may itself contain ':'
+    // (an IPv6 literal), so the port is taken from the last ':' rather than splitting on every ':'.
+    internal static (string Host, int Port) ParseSslEndpoint(string endpoint)
     {
-        var parts = endpoint.Split(':');
-        if (parts.Length != 3
-            || !string.Equals(parts[0], "ssl", StringComparison.OrdinalIgnoreCase)
-            || !int.TryParse(parts[2], out var port))
+        const string prefix = "ssl:";
+        var hostPort = endpoint.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? endpoint[prefix.Length..]
+            : throw new InvalidOperationException(
+                $"The advertised northbound endpoint '{endpoint}' must be of the form 'ssl:host:port'.");
+        var lastColon = hostPort.LastIndexOf(':');
+        if (lastColon <= 0 || !int.TryParse(hostPort[(lastColon + 1)..], out var port))
             throw new InvalidOperationException(
                 $"The advertised northbound endpoint '{endpoint}' is not of the form 'ssl:host:port'.");
-        var host = parts[1];
+        return (hostPort[..lastColon], port);
+    }
 
-        var pem = container.GetInstance<IComponentCertificateStore>().ReadClientCertificatePem()
+    private async Task<OvsDbConnection> BuildSslConnection(string endpoint)
+    {
+        var (host, port) = ParseSslEndpoint(endpoint);
+
+        // Resolve the store safely so an un-enrolled controller gets the actionable message below rather
+        // than a raw container ActivationException.
+        var store = container.GetRegistration(typeof(IComponentCertificateStore))?.GetInstance()
+            as IComponentCertificateStore;
+        var pem = store?.ReadClientCertificatePem()
             ?? throw new InvalidOperationException(
                 "The controller is not enrolled, so it cannot present a client certificate to the remote "
                 + "OVN northbound database. Enable componentMtls on the controller.");
@@ -81,6 +95,11 @@ internal class OvnNorthboundConnectionProvider(
         var certFile = new OvsFile("eryph-ovn-client", "nb-client.crt");
         var caFile = new OvsFile("eryph-ovn-client", "nb-ca.pem");
         var fileSystem = systemEnvironment.FileSystem;
+        // The materialised private key must not be readable by other local users. Create the directory
+        // owner-restricted up front (the Dbosoft.OVN adminOnly flag is honoured from 2.1.1; this keeps
+        // the key protected on 2.1.0 too).
+        var clientCertDirectory = Path.GetDirectoryName(fileSystem.ResolveOvsFilePath(keyFile, false))!;
+        SecureDirectory.EnsureOwnerOnly(clientCertDirectory);
         fileSystem.EnsurePathForFileExists(keyFile, adminOnly: true);
         await fileSystem.WriteFileAsync(keyFile, pem.PrivateKeyPem);
         await fileSystem.WriteFileAsync(certFile, pem.CertificatePem);

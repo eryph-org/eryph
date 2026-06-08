@@ -195,6 +195,12 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     /// to configure OVN SSL, which takes PEM-encoded strings. The certificate is the leaf followed by the
     /// issuing chain so a peer can build the path to the CA when the component CA is an intermediate.
     /// </summary>
+    /// <remarks>
+    /// Returns <see langword="null"/> if the PEM copies are incomplete — notably the rare case where a
+    /// crash between <see cref="Save"/>'s PKCS#12 write and its PEM writes left only the PFX. The CA trust
+    /// bundle is not carried by the PFX, so it cannot be reconstructed from it; recovery is a re-enrollment
+    /// (which rewrites the full PEM set). Callers must treat null as "not currently usable for SSL".
+    /// </remarks>
     public ComponentCertificatePem? ReadClientCertificatePem()
     {
         if (!File.Exists(KeyPath) || !File.Exists(LeafPath) || !File.Exists(BundlePath))
