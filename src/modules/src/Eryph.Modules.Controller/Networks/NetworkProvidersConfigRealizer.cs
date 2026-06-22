@@ -33,10 +33,15 @@ public class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
         var foundSubnets = new List<ProviderSubnet>();
         var foundIpPools = new List<IpPool>();
 
+        // Flat providers are included so that static IP support for flat networks works.
+        // Their subnets are optional: a flat provider without subnets relies on an external
+        // DHCP server, a flat provider with subnets has eryph assign static IPs from the pool.
         foreach (var networkProvider in config.NetworkProviders
-                     .Where(x => x.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay))
+                     .Where(x => x.Type is NetworkProviderType.NatOverlay
+                         or NetworkProviderType.Overlay
+                         or NetworkProviderType.Flat))
         {
-            foreach (var subnet in networkProvider.Subnets)
+            foreach (var subnet in networkProvider.Subnets ?? Array.Empty<NetworkProviderSubnet>())
             {
                 var subnetEntity = existingSubnets.FirstOrDefault(e =>
                     e.ProviderName == networkProvider.Name && e.Name == subnet.Name);
@@ -59,6 +64,15 @@ public class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
 
                     await _stateStore.For<ProviderSubnet>().AddAsync(subnetEntity, cancellationToken);
                 }
+
+                // Gateway/DNS/MTU are only consumed for flat providers (pushed into the guest
+                // config), but persisting them unconditionally keeps the mapping simple.
+                subnetEntity.Gateway = subnet.Gateway;
+                subnetEntity.DnsServersV4 = subnet.DnsServers is { Length: > 0 }
+                    ? string.Join(',', subnet.DnsServers)
+                    : null;
+                subnetEntity.DnsDomain = subnet.DnsDomain;
+                subnetEntity.MTU = subnet.Mtu.GetValueOrDefault();
 
                 foreach (var ipPool in subnet.IpPools)
                 {

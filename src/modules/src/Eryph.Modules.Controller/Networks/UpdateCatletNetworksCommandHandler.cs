@@ -139,13 +139,27 @@ public class UpdateCatletNetworksCommandHandler(
             validNetwork, command.CatletId, catletMetadataId,
             networkConfig.AdapterName, hostname.IfNoneUnsafe((string?)null), fixedMacAddress)
         
+        // For flat networks, look up the (optional) default provider subnet. When the flat
+        // provider has a subnet configured, eryph assigns a static IP from its pool and
+        // pushes the network configuration into the guest. Otherwise the catlet relies on
+        // an external DHCP server on the flat network (no eryph-managed IP).
+        from flatSubnet in isFlatNetwork
+            ? stateStore.For<ProviderSubnet>().IO.GetBySpecAsync(
+                new ProviderSubnetSpecs.GetByName(networkProvider.Name, EryphConstants.DefaultSubnetName))
+            : RightAsync<Error, Option<ProviderSubnet>>(None)
+
         from ips in isFlatNetwork
-            ? from existingAssignments in stateStore.For<IpAssignment>().IO.ListAsync(
-                  new IPAssignmentSpecs.GetByPort(networkPort.Id))
-              from _ in existingAssignments
-                  .Map(a => stateStore.For<IpAssignment>().IO.DeleteAsync(a))
-                  .SequenceSerial()
-              select Seq<IPAddress>()
+            ? flatSubnet.Match(
+                Some: _ => providerIpManager.ConfigureProviderPortIps(
+                    networkProvider.Name, EryphConstants.DefaultSubnetName,
+                    EryphConstants.DefaultIpPoolName, networkPort),
+                None: () =>
+                    from existingAssignments in stateStore.For<IpAssignment>().IO.ListAsync(
+                        new IPAssignmentSpecs.GetByPort(networkPort.Id))
+                    from _ in existingAssignments
+                        .Map(a => stateStore.For<IpAssignment>().IO.DeleteAsync(a))
+                        .SequenceSerial()
+                    select Seq<IPAddress>())
             : ipManager.ConfigurePortIps(validNetwork, networkPort, networkConfig)
 
         from floatingIps in isFlatNetwork
@@ -187,6 +201,26 @@ public class UpdateCatletNetworksCommandHandler(
             MacAddressSpoofing = enableMacAddressSpoofing,
             DhcpGuard = enableDhcpGuard,
             RouterGuard = enableRouterGuard,
+            // Static network settings, only populated for flat networks with a provider subnet.
+            PrefixLengthV4 = flatSubnet
+                .Bind(s => Optional(s.IpNetwork))
+                .Map(n => (int?)IPNetwork2.Parse(n).Cidr)
+                .IfNoneUnsafe((int?)null),
+            GatewayV4 = flatSubnet
+                .Bind(s => Optional(s.Gateway))
+                .IfNoneUnsafe((string?)null),
+            DnsServersV4 = flatSubnet
+                .Bind(s => Optional(s.DnsServersV4))
+                .Map(d => (IReadOnlyList<string>)d.Split(
+                    ',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .IfNoneUnsafe((IReadOnlyList<string>?)null),
+            DnsDomain = flatSubnet
+                .Bind(s => Optional(s.DnsDomain))
+                .IfNoneUnsafe((string?)null),
+            Mtu = flatSubnet
+                .Filter(s => s.MTU > 0)
+                .Map(s => (int?)s.MTU)
+                .IfNoneUnsafe((int?)null),
         };
 
     private EitherAsync<Error, CatletNetworkPort> AddOrUpdateAdapterPort(

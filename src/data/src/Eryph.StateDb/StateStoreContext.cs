@@ -224,6 +224,17 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasForeignKey(x => x.SubnetId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // ProviderSubnet and VirtualNetworkSubnet share the TPH 'Subnet' table and both
+        // declare MTU/DnsServersV4. Map the ProviderSubnet columns explicitly so they do
+        // not take over the existing VirtualNetworkSubnet columns (EF's default conflict
+        // resolution would otherwise reassign them, orphaning existing data).
+        modelBuilder.Entity<ProviderSubnet>()
+            .Property(x => x.MTU)
+            .HasColumnName("ProviderSubnet_MTU");
+        modelBuilder.Entity<ProviderSubnet>()
+            .Property(x => x.DnsServersV4)
+            .HasColumnName("ProviderSubnet_DnsServersV4");
+
         modelBuilder.Entity<IpPool>()
             .HasKey(x => x.Id);
         modelBuilder.Entity<IpPool>()

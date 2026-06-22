@@ -47,6 +47,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
     private const string SecondProjectSubnetId = "0c721846-5e2e-40a9-83d2-f1b75206ef84";
 
     private const string FlatNetworkId = "98ff838a-a2c3-464d-8884-f348888ed804";
+    private const string FlatStaticNetworkId = "6cf3f1c3-58a2-4f1a-9d1f-2a2d9b5e1c77";
 
     private const string CatletMetadataId = "15e2b061-c625-4469-9fe7-7c455058fcc0";
     private const string CatletId = "de8c6710-172a-44be-bbed-27ba9905ed8f";
@@ -194,6 +195,131 @@ public class UpdateCatletNetworksCommandHandlerTests(
         });
 
         await ShouldBeFlatNetworkInDatabase();
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_CatletIsAddedToFlatNetworkWithSubnet_AssignsStaticIp()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-static-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("flat-static-provider");
+                    settings.NetworkName.Should().Be("flat-static-network");
+                    settings.AddressesV4.Should().Equal("192.168.5.12");
+                    settings.FloatingAddressV4.Should().BeNull();
+                    settings.PrefixLengthV4.Should().Be(24);
+                    settings.GatewayV4.Should().Be("192.168.5.1");
+                    settings.DnsServersV4.Should().Equal("9.9.9.9", "8.8.8.8");
+                    settings.DnsDomain.Should().Be("example.com");
+                    settings.Mtu.Should().Be(1400);
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            // The static IP is bound to the catlet port (not a floating port) and is drawn
+            // from the flat provider's subnet pool.
+            var floatingPorts = await stateStore.For<FloatingNetworkPort>().ListAsync();
+            floatingPorts.Should().BeEmpty();
+
+            var assignment = (await stateStore.For<IpAssignment>().ListAsync())
+                .Should().ContainSingle().Subject;
+            assignment.Should().BeOfType<IpPoolAssignment>();
+            assignment.IpAddress.Should().Be("192.168.5.12");
+        });
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_MoveCatletFromOverlayNetworkToFlatNetworkWithSubnet_AssignsStaticIp()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                Networks =
+                [
+                    new CatletNetworkConfig { AdapterName = "eth0", Name = "default" }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            await handler.UpdateNetworks(command);
+            await stateStore.SaveChangesAsync();
+        });
+
+        var updatedConfigCommand = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                Networks =
+                [
+                    new CatletNetworkConfig { AdapterName = "eth0", Name = "flat-static-network" }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(updatedConfigCommand);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("flat-static-provider");
+                    settings.AddressesV4.Should().Equal("192.168.5.12");
+                    settings.GatewayV4.Should().Be("192.168.5.1");
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            // The overlay (floating) port and its assignments must be gone, leaving only the
+            // single static provider-subnet assignment on the catlet port.
+            var floatingPorts = await stateStore.For<FloatingNetworkPort>().ListAsync();
+            floatingPorts.Should().BeEmpty();
+
+            var assignment = (await stateStore.For<IpAssignment>().ListAsync())
+                .Should().ContainSingle().Subject;
+            assignment.Should().BeOfType<IpPoolAssignment>();
+            assignment.IpAddress.Should().Be("192.168.5.12");
+        });
     }
 
     [Fact]
@@ -1157,6 +1283,34 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     Name = "flat-provider",
                     Type = NetworkProviderType.Flat,
                 },
+                new NetworkProvider
+                {
+                    Name = "flat-static-provider",
+                    Type = NetworkProviderType.Flat,
+                    SwitchName = "test-switch",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = "default",
+                            Network = "192.168.5.0/24",
+                            Gateway = "192.168.5.1",
+                            DnsServers = ["9.9.9.9", "8.8.8.8"],
+                            DnsDomain = "example.com",
+                            Mtu = 1400,
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = "default",
+                                    FirstIp = "192.168.5.10",
+                                    NextIp = "192.168.5.12",
+                                    LastIp = "192.168.5.19",
+                                },
+                            ],
+                        },
+                    ],
+                },
             ]
         };
 
@@ -1445,6 +1599,16 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 Name = "flat-network",
                 Environment = EryphConstants.DefaultEnvironmentName,
                 NetworkProvider = "flat-provider",
+            });
+
+        await stateStore.For<VirtualNetwork>().AddAsync(
+            new VirtualNetwork
+            {
+                Id = Guid.Parse(FlatStaticNetworkId),
+                ProjectId = Guid.Parse(DefaultProjectId),
+                Name = "flat-static-network",
+                Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = "flat-static-provider",
             });
     }
 }

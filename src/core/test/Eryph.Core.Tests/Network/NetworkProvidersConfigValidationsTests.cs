@@ -325,11 +325,122 @@ public class NetworkProvidersConfigValidationsTests
             {
                 issue.Member.Should().Be("NetworkProviders[0].Vlan");
                 issue.Message.Should().Be("The flat network provider does not support the configuration of a VLAN.");
+            });
+    }
+
+    [Fact]
+    public void ValidateNetworkProvidersConfig_FlatProviderWithSubnet_ReturnsSuccess()
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.Flat,
+                    SwitchName = "test-switch",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = EryphConstants.DefaultSubnetName,
+                            Network = "192.168.2.0/24",
+                            Gateway = "192.168.2.1",
+                            DnsServers = ["9.9.9.9", "8.8.8.8"],
+                            DnsDomain = "example.com",
+                            Mtu = 1400,
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = EryphConstants.DefaultIpPoolName,
+                                    FirstIp = "192.168.2.100",
+                                    NextIp = "192.168.2.100",
+                                    LastIp = "192.168.2.150",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeSuccess();
+    }
+
+    [Fact]
+    public void ValidateNetworkProvidersConfig_FlatProviderWithoutSubnet_ReturnsSuccess()
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.Flat,
+                    SwitchName = "test-switch",
+                },
+            ],
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeSuccess();
+    }
+
+    [Fact]
+    public void ValidateNetworkProvidersConfig_FlatProviderWithInvalidSubnetSettings_ReturnsError()
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.Flat,
+                    SwitchName = "test-switch",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = EryphConstants.DefaultSubnetName,
+                            Network = "192.168.2.0/24",
+                            Gateway = "192.168.2.1",
+                            DnsServers = ["not-an-ip"],
+                            Mtu = 10,
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = EryphConstants.DefaultIpPoolName,
+                                    FirstIp = "192.168.2.100",
+                                    NextIp = "192.168.2.100",
+                                    LastIp = "192.168.2.150",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].DnsServers[0]");
+                issue.Message.Should().Be("The DNS server address 'not-an-ip' is invalid.");
             },
             issue =>
             {
-                issue.Member.Should().Be("NetworkProviders[0].Subnets");
-                issue.Message.Should().Be("The flat network provider does not support subnet configurations.");
+                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].Mtu");
+                issue.Message.Should().Be("The MTU must be at least 576.");
             });
     }
 

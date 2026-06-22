@@ -101,16 +101,17 @@ public class NetworkConfigRealizer(
 
             if (isFlatNetwork)
             {
-                //remove all existing overlay network objects if provider is a flat network
+                // Flat networks have no OVN overlay objects (router port, provider router port,
+                // virtual network subnets), so remove them. Catlet network ports are kept: their
+                // static IPs from the flat provider pool are managed by the catlet network update.
+                // Assignments that referenced the removed overlay subnets are cascade-deleted
+                // together with the subnets.
                 savedNetwork.RouterPort = null;
                 savedNetwork.Subnets.Clear();
                 foreach (var port in savedNetwork.NetworkPorts.ToSeq())
                 {
                     if (port is NetworkRouterPort or ProviderRouterPort)
                         savedNetwork.NetworkPorts.Remove(port);
-
-                    await stateStore.LoadCollectionAsync(port, x => x.IpAssignments);
-                    port.IpAssignments.Clear();
                 }
 
                 continue;

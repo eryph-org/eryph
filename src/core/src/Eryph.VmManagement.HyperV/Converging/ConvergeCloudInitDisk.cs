@@ -74,17 +74,11 @@ namespace Eryph.VmManagement.Converging
         private EitherAsync<Error, object> GenerateNetworkData(
             TypedPsObject<VMNetworkAdapter> adapter) =>
             from macAddress in EryphMacAddress.NewEither(adapter.Value.MacAddress).ToAsync()
-            // We must cast to object as LanguageExt does handle the anonymous type correctly
-            select (object)new
-            {
-                type = "physical",
-                name = adapter.Value.Name,
-                mac_address = macAddress.Value,
-                subnets = Context.Config.Networks.ToSeq()
-                    .Filter(x=>x.AdapterName == adapter.Value.Name)
-                    .Map(_ => new { type = "dhcp" })
-                    .ToArray()
-            };
+            select CloudInitNetworkData.CreateAdapterConfig(
+                adapter.Value.Name,
+                macAddress.Value,
+                Context.Config.Networks.ToSeq(),
+                Context.NetworkSettings.ToSeq());
 
         private EitherAsync<Error, Unit> GenerateConfigDriveDisk(
             string configDriveIsoPath,

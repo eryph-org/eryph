@@ -21,19 +21,28 @@ internal class ProviderIpManager(
     public EitherAsync<Error, Seq<IPAddress>> ConfigureFloatingPortIps(
         string providerName,
         FloatingNetworkPort port) =>
+        ConfigureProviderPortIps(providerName, port.SubnetName, port.PoolName, port);
+
+    // Assigns an IP from a provider subnet's pool to any network port. Floating ports use
+    // this for NAT/overlay; catlet ports on a flat network use it directly for static IPs.
+    public EitherAsync<Error, Seq<IPAddress>> ConfigureProviderPortIps(
+        string providerName,
+        string subnetName,
+        string poolName,
+        NetworkPort port) =>
         from ipAssignments in stateStore.For<IpAssignment>().IO.ListAsync(
             new IPAssignmentSpecs.GetByPortWithPoolAndSubnet(port.Id))
         let validDirectAssignments = ipAssignments
-            .Filter(a => a is not IpPoolAssignment && IsValidAssignment(a, providerName, port.SubnetName))
+            .Filter(a => a is not IpPoolAssignment && IsValidAssignment(a, providerName, subnetName))
         let validPoolAssignments = ipAssignments
             .OfType<IpPoolAssignment>().ToSeq()
-            .Filter(a => IsValidPoolAssignment(a, providerName, port.SubnetName, port.PoolName))
+            .Filter(a => IsValidPoolAssignment(a, providerName, subnetName, poolName))
         let invalidAssignments = ipAssignments.Except(validDirectAssignments).Except(validPoolAssignments)
         from _ in invalidAssignments
             .Map(a => stateStore.For<IpAssignment>().IO.DeleteAsync(a))
             .SequenceSerial()
         from newAssignment in validPoolAssignments.IsEmpty
-            ? from assignment in CreateAssignment(port, providerName, port.SubnetName, port.PoolName)
+            ? from assignment in CreateAssignment(port, providerName, subnetName, poolName)
               select Some(assignment)
             : RightAsync<Error, Option<IpPoolAssignment>>(None)
         select validPoolAssignments.Append(newAssignment).Append(validDirectAssignments)
@@ -41,7 +50,7 @@ internal class ProviderIpManager(
             .ToSeq();
 
     private EitherAsync<Error, IpPoolAssignment> CreateAssignment(
-        FloatingNetworkPort port,
+        NetworkPort port,
         string providerName,
         string subnetName,
         string ipPoolName) =>
