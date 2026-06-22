@@ -69,9 +69,11 @@ public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
 
     // OpenIddict's EF Core stores commit the delete path with a synchronous
     // RelationalTransaction.Commit() (inside an execution strategy), so EF Core
-    // invokes the synchronous interceptor callbacks rather than the async ones.
-    // These must mirror the async work: throwing here aborts the commit (500),
-    // and skipping the enqueue would lose the deletion from the config mirror.
+    // invokes these synchronous interceptor callbacks rather than the async ones.
+    // They must mirror the async work: throwing from the pre-commit callbacks
+    // (CreatedSavepoint/TransactionCommitting) aborts the commit and surfaces as a
+    // 500 - the original bug - while skipping the post-commit enqueue would silently
+    // lose the deletion from the on-disk config mirror.
     public override void CreatedSavepoint(
         DbTransaction transaction,
         TransactionEventData eventData)
@@ -118,5 +120,9 @@ public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
                 item.TransactionId, item.Changes);
             await _queue.EnqueueAsync(item, cancellationToken);
         }
+
+        // Reset after a committed transaction so a DbContext that is reused for a
+        // second transaction does not re-enqueue the already-exported changes.
+        _changes = HashSet<ChangeTrackingQueueItem<TChange>>.Empty;
     }
 }
