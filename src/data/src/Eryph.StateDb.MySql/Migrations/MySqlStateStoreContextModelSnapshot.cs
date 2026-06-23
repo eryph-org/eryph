@@ -17,7 +17,7 @@ namespace Eryph.StateDb.MySql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -379,7 +379,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("IpAssignment");
 
-                    b.HasDiscriminator().HasValue("IpAssignment");
+                    b.HasDiscriminator<string>("Discriminator").HasValue("IpAssignment");
 
                     b.UseTphMappingStrategy();
                 });
@@ -449,7 +449,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("NetworkPorts");
 
-                    b.HasDiscriminator().HasValue("NetworkPort");
+                    b.HasDiscriminator<string>("Discriminator").HasValue("NetworkPort");
 
                     b.UseTphMappingStrategy();
                 });
@@ -751,7 +751,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("Subnet");
 
-                    b.HasDiscriminator().HasValue("Subnet");
+                    b.HasDiscriminator<string>("Discriminator").HasValue("Subnet");
 
                     b.UseTphMappingStrategy();
                 });
@@ -1028,6 +1028,17 @@ namespace Eryph.StateDb.MySql.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.ProviderSubnet", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Subnet");
+
+                    b.Property<string>("DnsServersV4")
+                        .HasColumnType("longtext")
+                        .HasColumnName("ProviderSubnet_DnsServersV4");
+
+                    b.Property<string>("Gateway")
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("MTU")
+                        .HasColumnType("int")
+                        .HasColumnName("ProviderSubnet_MTU");
 
                     b.Property<string>("ProviderName")
                         .IsRequired()

@@ -110,6 +110,69 @@ public class NetworkProvidersConfigRealizerTests(
         ],
     };
 
+    private readonly NetworkProvidersConfiguration _flatStaticConfig = new()
+    {
+        NetworkProviders =
+        [
+            new NetworkProvider
+            {
+                Name = "flat-provider",
+                Type = NetworkProviderType.Flat,
+                SwitchName = "test-switch",
+                Subnets =
+                [
+                    new NetworkProviderSubnet
+                    {
+                        Name = "default",
+                        Network = "192.168.2.0/24",
+                        Gateway = "192.168.2.1",
+                        DnsServers = ["9.9.9.9", "8.8.8.8"],
+                        DnsDomain = "example.com",
+                        Mtu = 1400,
+                        IpPools =
+                        [
+                            new NetworkProviderIpPool
+                            {
+                                Name = "default",
+                                FirstIp = "192.168.2.100",
+                                NextIp = "192.168.2.100",
+                                LastIp = "192.168.2.150",
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    };
+
+    [Fact]
+    public async Task RealizeConfigAsync_FlatProviderWithSubnet_PersistsSubnetWithStaticSettings()
+    {
+        await WithScope(async (realizer, _) =>
+        {
+            await realizer.RealizeConfigAsync(_flatStaticConfig, default);
+        });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            var subnets = await stateStore.For<ProviderSubnet>().ListAsync(new GetAllSubnets());
+            var subnet = subnets.Should().ContainSingle().Subject;
+
+            subnet.ProviderName.Should().Be("flat-provider");
+            subnet.Name.Should().Be("default");
+            subnet.IpNetwork.Should().Be("192.168.2.0/24");
+            subnet.Gateway.Should().Be("192.168.2.1");
+            subnet.DnsServersV4.Should().Be("9.9.9.9,8.8.8.8");
+            subnet.DnsDomain.Should().Be("example.com");
+            subnet.MTU.Should().Be(1400);
+
+            var pool = subnet.IpPools.Should().ContainSingle().Subject;
+            pool.Name.Should().Be("default");
+            pool.FirstIp.Should().Be("192.168.2.100");
+            pool.LastIp.Should().Be("192.168.2.150");
+        });
+    }
+
     [Fact]
     public async Task RealizeConfigAsync_NoExistingSubnets_CreatesCorrectSubnets()
     {

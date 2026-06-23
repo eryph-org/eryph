@@ -97,9 +97,11 @@ public static class NetworkProvidersConfigValidations
         | ValidateProperty(toValidate, c => c.Vlan,
             NotAllowed<int>("The flat network provider does not support the configuration of a VLAN."),
             path)
-        | ValidateProperty(toValidate, c => c.Subnets,
-            NotAllowed<NetworkProviderSubnet[]>("The flat network provider does not support subnet configurations."),
-            path);
+        // Subnets are optional for flat providers. When subnets are configured,
+        // eryph assigns static IPs from their pools to the catlets and pushes the
+        // network configuration into the guest (cloud-init). Without subnets, the
+        // catlets rely on an external DHCP server on the flat network.
+        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path);
 
     private static Validation<ValidationIssue, Unit> ValidateNatOverlayProviderConfig(
         NetworkProvider toValidate,
@@ -164,6 +166,8 @@ public static class NetworkProvidersConfigValidations
             new ValidationIssue(path, $"The network '{toValidate.Network}' is invalid."))
         from _2 in ValidateProperty(toValidate, c => c.Gateway, i => ValidateIpAddress(i, ipNetwork), path, required: true)
                    | ValidateList(toValidate, c => c.IpPools, (i, p) => ValidateIpPool(i, ipNetwork, p), path, minCount: 1)
+                   | ValidateList(toValidate, c => c.DnsServers, ValidateDnsServer, path)
+                   | ValidateProperty(toValidate, c => c.Mtu, ValidateMtu, path)
         select unit;
 
     private static Validation<ValidationIssue, Unit> ValidateIpPool(
@@ -174,6 +178,20 @@ public static class NetworkProvidersConfigValidations
         | ValidateProperty(toValidate, c => c.FirstIp, i => ValidateIpAddress(i, ipNetwork), path, required: true)
         | ValidateProperty(toValidate, c => c.NextIp, i => ValidateIpAddress(i, ipNetwork), path, required: false)
         | ValidateProperty(toValidate, c => c.LastIp, i => ValidateIpAddress(i, ipNetwork), path, required: true);
+
+    private static Validation<ValidationIssue, Unit> ValidateDnsServer(
+        string ipAddress,
+        string path) =>
+        from _ in parseIPAddress(ipAddress).ToValidation(
+                Error.New($"The DNS server address '{ipAddress}' is invalid."))
+            .MapFail(e => new ValidationIssue(path, e.Message))
+        select unit;
+
+    private static Validation<Error, Unit> ValidateMtu(int mtu) =>
+        guard(mtu >= 576, Error.New("The MTU must be at least 576."))
+            .ToValidation()
+        | guard(mtu <= 9000, Error.New("The MTU must be at most 9000."))
+            .ToValidation();
 
     private static Validation<Error, BridgeName> ValidateBridgeName(
         string bridgeName) =>
