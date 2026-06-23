@@ -39,7 +39,9 @@ namespace Eryph.Agent
                     // no-op and the default console lifetime applies. (RunConsoleAsync would force the
                     // console lifetime and break service mode, so build + RunAsync like eryph-zero.)
                     .ConfigureInternalHost(hb =>
-                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-agent"))
+                    {
+                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-agent");
+                    })
                     .UseSimpleInjector(container)
                     // The agent is a WebModule: host Kestrel so it can serve the EGS remote-channel
                     // listener (/v1/channels/{token}). AgentChannelTls binds the mTLS endpoint (server
