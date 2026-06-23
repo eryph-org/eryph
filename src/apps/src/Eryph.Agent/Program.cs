@@ -40,7 +40,7 @@ namespace Eryph.Agent
                     // console lifetime and break service mode, so build + RunAsync like eryph-zero.)
                     .ConfigureInternalHost(hb =>
                     {
-                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-agent");
+                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-hostagent");
                     })
                     .UseSimpleInjector(container)
                     // The agent is a WebModule: host Kestrel so it can serve the EGS remote-channel

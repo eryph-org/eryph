@@ -24,7 +24,7 @@ namespace Eryph.Agent
     {
         public AgentApplicationInfoProvider()
         {
-            Name = "eryph-agent";
+            Name = "eryph-hostagent";
             var entryAssembly = Assembly.GetEntryAssembly()!;
             var fileVersionInfo = FileVersionInfo.GetVersionInfo(entryAssembly.Location);
             ProductVersion = fileVersionInfo.ProductVersion ?? "unknown";
