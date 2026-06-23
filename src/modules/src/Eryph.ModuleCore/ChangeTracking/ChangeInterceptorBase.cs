@@ -44,17 +44,7 @@ public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
         TransactionEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is null)
-        {
-            await base.CreatedSavepointAsync(transaction, eventData, cancellationToken);
-            return;
-        }
-
-        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
-            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
-
-        _changes = _changes.Union(currentChanges);
-
+        await DetectAndStoreChanges(eventData, cancellationToken);
         await base.CreatedSavepointAsync(transaction, eventData, cancellationToken);
     }
 
@@ -64,14 +54,7 @@ public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
         InterceptionResult result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is null)
-            return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
-
-        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
-            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
-
-        _changes = _changes.Union(currentChanges);
-
+        await DetectAndStoreChanges(eventData, cancellationToken);
         return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
     }
 
@@ -80,19 +63,23 @@ public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
         TransactionEndEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        foreach (var item in _changes)
-        {
-            _logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
-                item.TransactionId, item.Changes);
-            await _queue.EnqueueAsync(item, cancellationToken);
-        }
+        await EnqueueDetectedChanges(cancellationToken);
+        await base.TransactionCommittedAsync(transaction, eventData, cancellationToken);
     }
 
+    // OpenIddict's EF Core stores commit the delete path with a synchronous
+    // RelationalTransaction.Commit() (inside an execution strategy), so EF Core
+    // invokes these synchronous interceptor callbacks rather than the async ones.
+    // They must mirror the async work: throwing from the pre-commit callbacks
+    // (CreatedSavepoint/TransactionCommitting) aborts the commit and surfaces as a
+    // 500 - the original bug - while skipping the post-commit enqueue would silently
+    // lose the deletion from the on-disk config mirror.
     public override void CreatedSavepoint(
         DbTransaction transaction,
         TransactionEventData eventData)
     {
-        throw new NotSupportedException();
+        DetectAndStoreChanges(eventData).GetAwaiter().GetResult();
+        base.CreatedSavepoint(transaction, eventData);
     }
 
     public override InterceptionResult TransactionCommitting(
@@ -100,13 +87,42 @@ public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
         TransactionEventData eventData,
         InterceptionResult result)
     {
-        throw new NotSupportedException();
+        DetectAndStoreChanges(eventData).GetAwaiter().GetResult();
+        return base.TransactionCommitting(transaction, eventData, result);
     }
 
     public override void TransactionCommitted(
         DbTransaction transaction,
         TransactionEndEventData eventData)
     {
-        throw new NotSupportedException();
+        EnqueueDetectedChanges().GetAwaiter().GetResult();
+        base.TransactionCommitted(transaction, eventData);
+    }
+
+    private async Task DetectAndStoreChanges(
+        TransactionEventData eventData,
+        CancellationToken cancellationToken = default)
+    {
+        if (eventData.Context is null)
+            return;
+
+        var currentChanges = await DetectChanges(eventData.Context, cancellationToken)
+            .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
+
+        _changes = _changes.Union(currentChanges);
+    }
+
+    private async Task EnqueueDetectedChanges(CancellationToken cancellationToken = default)
+    {
+        foreach (var item in _changes)
+        {
+            _logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
+                item.TransactionId, item.Changes);
+            await _queue.EnqueueAsync(item, cancellationToken);
+        }
+
+        // Reset after a committed transaction so a DbContext that is reused for a
+        // second transaction does not re-enqueue the already-exported changes.
+        _changes = HashSet<ChangeTrackingQueueItem<TChange>>.Empty;
     }
 }
