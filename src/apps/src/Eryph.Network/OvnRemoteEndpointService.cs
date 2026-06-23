@@ -22,6 +22,7 @@ namespace Eryph.Network
         IComponentCertificateStore certificateStore,
         IOVNSettings ovnSettings,
         ISystemEnvironment systemEnvironment,
+        IHostApplicationLifetime applicationLifetime,
         ILoggerFactory loggerFactory)
         : BackgroundService
     {
@@ -30,21 +31,35 @@ namespace Eryph.Network
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             // The enrolled certificate is on disk by now: certificates-only enrollment blocks during
-            // container configuration until it succeeds, which runs before any hosted service starts.
+            // container configuration until it succeeds, which runs before any hosted service starts (and
+            // this process requires mTLS, so the store is always present). If the PEM material is missing
+            // anyway (e.g. a crash left only the PFX), fail fast rather than running on without listeners:
+            // the module still advertises the SSL endpoints, so a silent "no listeners" state would leave
+            // the controller/agents dialling a dead port.
             var pem = certificateStore.ReadClientCertificatePem();
             if (pem is null)
             {
-                _logger.LogError(
-                    "The component certificate is not available; the OVN databases will not be exposed "
-                    + "remotely. Check the component enrollment.");
+                FailFast(
+                    "The component certificate (PEM) is not available, so the OVN databases cannot be "
+                    + "exposed over SSL. Stopping so the service manager restarts the process and re-runs "
+                    + "enrollment; check the component enrollment if this persists.");
                 return;
             }
 
             // The database nodes start on their own threads; wait until both local sockets accept before
             // configuring the listeners (applying the plan talks to the databases over the local pipe).
+            // The databases are hosted by this process, so a database that never comes up is a broken
+            // process: fail fast (unless we are shutting down) for the same reason as above.
             if (!await WaitForDatabase(ovnSettings.NorthDBConnection, "northbound", stoppingToken)
                 || !await WaitForDatabase(ovnSettings.SouthDBConnection, "southbound", stoppingToken))
+            {
+                if (stoppingToken.IsCancellationRequested)
+                    return;
+                FailFast(
+                    "An OVN database did not become available, so the SSL listeners cannot be opened. "
+                    + "Stopping so the service manager restarts the process.");
                 return;
+            }
 
             // Listen on all interfaces (null address) so the controller and agents can dial from other
             // hosts; clients are authenticated by certificate against the component CA.
@@ -109,6 +124,17 @@ namespace Eryph.Network
                         "Failed to wait for the {Name} database: {Error}", name, error.Message);
                     return false;
                 });
+        }
+
+        // Stop the whole host with a non-zero exit code so the service manager (Windows SCM / systemd)
+        // restarts the process. This is deterministic regardless of the host's BackgroundService
+        // exception behaviour: a half-configured network process that advertises SSL endpoints it never
+        // opened is worse than a restart.
+        private void FailFast(string message)
+        {
+            _logger.LogCritical(message);
+            Environment.ExitCode = 1;
+            applicationLifetime.StopApplication();
         }
     }
 }

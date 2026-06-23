@@ -33,9 +33,12 @@ public class NetworkModule
 
     public NetworkModule(IConfiguration configuration)
     {
-        // The OVN databases are exposed remotely over SSL only when the process is enrolled for mTLS
-        // (the standalone network host). Co-located (eryph-zero, or a controller on the same host) the
-        // controller reaches them over the local pipe, so nothing is advertised.
+        // Whether to advertise (and open) the OVN databases' remote SSL endpoints: done whenever the
+        // process is enrolled for mTLS (the standalone network host), so any remote client — the
+        // controller when it runs elsewhere, and the agents' ovn-controller — can reach them. In-process
+        // (eryph-zero) mTLS is off, so nothing is advertised. This is independent of how the controller
+        // itself dials the northbound DB: that local-pipe-vs-SSL choice is made per co-location in
+        // OvnNorthboundConnectionProvider, not here.
         _remoteEnabled = bool.TryParse(configuration.GetSection("componentMtls")["enabled"], out var enabled)
                          && enabled;
         // The address remote clients dial. Defaults to the host FQDN identity (the same one used for

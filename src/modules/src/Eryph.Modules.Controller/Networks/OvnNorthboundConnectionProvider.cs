@@ -93,19 +93,26 @@ internal class OvnNorthboundConnectionProvider(
         // out-of-range port so a malformed endpoint fails here with a clear message rather than
         // producing an OvsDbConnection that fails obscurely on connect (NumberStyles.None rejects the
         // leading/trailing whitespace and sign that int.TryParse would otherwise accept).
-        var trimmed = endpoint.Trim();
+        var trimmed = (endpoint ?? "").Trim();
         var hostPort = trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
             ? trimmed[prefix.Length..]
             : throw new InvalidOperationException(
                 $"The advertised northbound endpoint '{endpoint}' must be of the form 'ssl:host:port'.");
         var lastColon = hostPort.LastIndexOf(':');
+        var host = lastColon > 0 ? hostPort[..lastColon] : "";
+        // An IPv6 literal must be bracketed ("ssl:[fe80::1]:6641"); a bare IPv6 host is ambiguous and
+        // OVN rejects it, so reject an unbracketed host that still contains ':' rather than passing it
+        // through to build a connection that fails obscurely.
+        var unbracketedIpv6 = host.Contains(':') && !(host.StartsWith('[') && host.EndsWith(']'));
         if (lastColon <= 0
-            || hostPort[..lastColon].Any(char.IsWhiteSpace)
+            || host.Any(char.IsWhiteSpace)
+            || unbracketedIpv6
             || !int.TryParse(hostPort[(lastColon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out var port)
             || port is < 1 or > 65535)
             throw new InvalidOperationException(
-                $"The advertised northbound endpoint '{endpoint}' is not of the form 'ssl:host:port'.");
-        return (hostPort[..lastColon], port);
+                $"The advertised northbound endpoint '{endpoint}' is not of the form 'ssl:host:port' "
+                + "(an IPv6 host must be bracketed, e.g. 'ssl:[fe80::1]:6641').");
+        return (host, port);
     }
 
     private async Task<OvsDbConnection> BuildSslConnection(string endpoint)

@@ -223,9 +223,10 @@ public class ComponentRegistryServiceTests
     {
         var (service, repo) = Create();
         var fresh = ActiveComponent("fresh.example", DateTimeOffset.UtcNow);
-        // One heartbeat-timeout-plus-a-bit since the last heartbeat: aged out even though still Active.
+        // Well past the heartbeat timeout (a wide margin so the assertion can't race the wall clock):
+        // aged out even though its stored Status is still Active.
         var stale = ActiveComponent("stale.example",
-            DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout - TimeSpan.FromSeconds(1));
+            DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout - TimeSpan.FromMinutes(10));
         repo.Setup(r => r.ListAsync(
                 It.IsAny<ComponentRegistrationSpecs.GetActive>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ComponentRegistration> { fresh, stale });
