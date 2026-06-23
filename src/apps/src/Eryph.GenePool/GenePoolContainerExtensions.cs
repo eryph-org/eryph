@@ -4,7 +4,6 @@ using Eryph.AppCore;
 using Eryph.Core;
 using Eryph.Modules.GenePool.Genetics;
 using Eryph.Rebus;
-using Eryph.VmManagement;
 using SimpleInjector;
 
 namespace Eryph.GenePool
@@ -21,7 +20,9 @@ namespace Eryph.GenePool
         {
             container.RegisterInstance(SelectGenePoolSettings());
             container.RegisterSingleton<IGenePoolApiKeyStore, GenePoolApiKeyStore>();
-            container.Register<IGenePoolPathProvider, HyperVGenePoolPathProvider>();
+            // Gene pool storage path comes from the node-local genepoolsettings.yaml, not the agent's
+            // host settings (the gene pool owns its own datastore config).
+            container.RegisterSingleton<IGenePoolPathProvider, GenePoolPathProvider>();
             container.RegisterSingleton<IApplicationInfoProvider, GenePoolApplicationInfoProvider>();
             container.Register<INetworkProviderManager, NetworkProviderManager>();
 

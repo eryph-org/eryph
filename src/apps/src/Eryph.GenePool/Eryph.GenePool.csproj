@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- The gene pool agent runs on a Hyper-V host: it uses the Hyper-V gene pool path
-         provider and the Windows hardware-id provider, so it is a Windows runtime exactly
-         like Eryph.Agent (with which it is co-deployed per host). -->
+    <!-- The gene pool agent runs on a Hyper-V host and uses the Windows hardware-id
+         provider, so it is a Windows runtime exactly like Eryph.Agent (with which it is
+         co-deployed per host). Its gene store path comes from its own genepoolsettings.yaml,
+         not the agent's host settings, so it no longer references Eryph.VmManagement.HyperV. -->
     <TargetFramework>net10.0-windows</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
@@ -20,6 +21,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.GenePoolModule\Eryph.Modules.GenePoolModule.csproj" />
-    <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj" />
   </ItemGroup>
 </Project>
