@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -87,16 +88,20 @@ internal class OvnNorthboundConnectionProvider(
     internal static (string Host, int Port) ParseSslEndpoint(string endpoint)
     {
         const string prefix = "ssl:";
-        var hostPort = endpoint.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            ? endpoint[prefix.Length..]
+        // Tolerate surrounding whitespace on the whole value (e.g. a stray trailing newline from
+        // config), but reject a missing/whitespace host, whitespace around the port, and an
+        // out-of-range port so a malformed endpoint fails here with a clear message rather than
+        // producing an OvsDbConnection that fails obscurely on connect (NumberStyles.None rejects the
+        // leading/trailing whitespace and sign that int.TryParse would otherwise accept).
+        var trimmed = endpoint.Trim();
+        var hostPort = trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? trimmed[prefix.Length..]
             : throw new InvalidOperationException(
                 $"The advertised northbound endpoint '{endpoint}' must be of the form 'ssl:host:port'.");
-        // Reject a missing/blank host and an out-of-range port so a malformed endpoint fails here with
-        // a clear message rather than producing an OvsDbConnection that fails obscurely on connect.
         var lastColon = hostPort.LastIndexOf(':');
         if (lastColon <= 0
-            || string.IsNullOrWhiteSpace(hostPort[..lastColon])
-            || !int.TryParse(hostPort[(lastColon + 1)..], out var port)
+            || hostPort[..lastColon].Any(char.IsWhiteSpace)
+            || !int.TryParse(hostPort[(lastColon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out var port)
             || port is < 1 or > 65535)
             throw new InvalidOperationException(
                 $"The advertised northbound endpoint '{endpoint}' is not of the form 'ssl:host:port'.");
@@ -125,10 +130,14 @@ internal class OvnNorthboundConnectionProvider(
         var fileSystem = systemEnvironment.FileSystem;
         // The materialised private key must not be readable by other local users. Create the directory
         // owner-restricted up front (the Dbosoft.OVN adminOnly flag is honoured from 2.1.1; this keeps
-        // the key protected on 2.1.0 too).
+        // the key protected on 2.1.0 too). Ensure all three files' paths with the same adminOnly flag
+        // so the permissions are consistent across platforms and Dbosoft.OVN versions, not just for the
+        // key (the cert and CA share the directory).
         var clientCertDirectory = Path.GetDirectoryName(fileSystem.ResolveOvsFilePath(keyFile, false))!;
         SecureDirectory.EnsureOwnerOnly(clientCertDirectory);
         fileSystem.EnsurePathForFileExists(keyFile, adminOnly: true);
+        fileSystem.EnsurePathForFileExists(certFile, adminOnly: true);
+        fileSystem.EnsurePathForFileExists(caFile, adminOnly: true);
         await fileSystem.WriteFileAsync(keyFile, pem.PrivateKeyPem);
         await fileSystem.WriteFileAsync(certFile, pem.CertificatePem);
         await fileSystem.WriteFileAsync(caFile, pem.CaBundlePem);
