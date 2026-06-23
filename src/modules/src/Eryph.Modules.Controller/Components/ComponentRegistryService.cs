@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 
@@ -106,10 +108,20 @@ internal sealed class ComponentRegistryService(
         await repository.UpdateAsync(registration, cancellationToken);
     }
 
-    // KNOWN GAP: there is no heartbeat-timeout transition yet — LastHeartbeat is recorded but
-    // nothing moves a silent component to Stale/Dead, so a crashed component stays Active and the
-    // controller keeps pushing config to its (dead) queue. Harmless in single-process eryph-zero;
-    // for a real broker this needs a periodic job that ages out registrations past a threshold.
-    public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken) =>
-        await repository.ListAsync(new ComponentRegistrationSpecs.GetActive(), cancellationToken);
+    // Liveness is evaluated at read time: a registration whose last heartbeat is older than the
+    // timeout is treated as inactive even though its stored Status is still Active. Every component
+    // (including eryph-zero's in-process modules) heartbeats on ComponentRegistrationDefaults
+    // .HeartbeatInterval, so a live one is at most that stale while a crashed or removed component
+    // (e.g. a network module that was split out and no longer runs here) ages out. Without this, a
+    // stale Network registration would still be returned and the OVN northbound provider could
+    // misdetect itself as co-located and dial the local pipe instead of the real remote database.
+    // Read-time filtering is also self-healing — a component that missed a beat reappears on its
+    // next heartbeat. (An explicit Stale/Dead status transition for health reporting, and ceasing
+    // to push config to dead queues, remain follow-up #380 work.)
+    public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
+    {
+        var cutoff = DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout;
+        var active = await repository.ListAsync(new ComponentRegistrationSpecs.GetActive(), cancellationToken);
+        return active.Where(r => r.LastHeartbeat >= cutoff).ToList();
+    }
 }

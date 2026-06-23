@@ -170,5 +170,7 @@ public class ComponentEnrollmentClientTests
         public string? GetClientCertificatePfxPath() => Current ? "fake.pfx" : null;
 
         public System.Security.Cryptography.X509Certificates.X509Certificate2Collection LoadCaTrustBundle() => [];
+
+        public ComponentCertificatePem? ReadClientCertificatePem() => null;
     }
 }

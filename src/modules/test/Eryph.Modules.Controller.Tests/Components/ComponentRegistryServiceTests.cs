@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -216,4 +217,34 @@ public class ComponentRegistryServiceTests
         existing.AppliedConfigVersions[ConfigDomain.NetworkProviders].Should().Be(9);
         repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task GetActive_excludes_components_past_the_heartbeat_timeout()
+    {
+        var (service, repo) = Create();
+        var fresh = ActiveComponent("fresh.example", DateTimeOffset.UtcNow);
+        // Well past the heartbeat timeout (a wide margin so the assertion can't race the wall clock):
+        // aged out even though its stored Status is still Active.
+        var stale = ActiveComponent("stale.example",
+            DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout - TimeSpan.FromMinutes(10));
+        repo.Setup(r => r.ListAsync(
+                It.IsAny<ComponentRegistrationSpecs.GetActive>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ComponentRegistration> { fresh, stale });
+
+        var result = await service.GetActiveAsync(CancellationToken.None);
+
+        result.Should().ContainSingle().Which.Should().BeSameAs(fresh);
+    }
+
+    private static ComponentRegistration ActiveComponent(string machineName, DateTimeOffset lastHeartbeat) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = Guid.NewGuid(),
+            ComponentType = ComponentType.Network,
+            MachineName = machineName,
+            InboundQueue = "q",
+            Status = ComponentRegistrationStatus.Active,
+            LastHeartbeat = lastHeartbeat,
+        };
 }

@@ -6,7 +6,7 @@ using System.Security.Principal;
 
 namespace Eryph.ModuleCore.Components;
 
-internal static class SecureDirectory
+public static class SecureDirectory
 {
     /// <summary>
     /// Creates the directory restricted to its owner on first creation, so private key material in it is

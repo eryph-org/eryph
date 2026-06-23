@@ -68,7 +68,6 @@ namespace Eryph.Controller
                             { "endpoints:base", "https://localhost:8443/" },
                             { "endpoints:compute", "https://localhost:8443/compute" },
                         }))
-                    .AddNetworkModule()
                     .AddControllerModule()
                     .UseSerilog()
                     .RunConsoleAsync().ConfigureAwait(false);

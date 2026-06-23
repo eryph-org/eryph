@@ -42,4 +42,11 @@ public interface IComponentCertificateStore
 
     /// <summary>The trusted CA roots (the bundle) used to validate the broker and peers.</summary>
     X509Certificate2Collection LoadCaTrustBundle();
+
+    /// <summary>
+    /// The enrolled client PEM material (private key, leaf-with-issuing-chain certificate and CA trust
+    /// bundle) as strings, or <see langword="null"/> when not enrolled. For consumers that configure
+    /// PEM-based TLS directly (e.g. OVN's <c>set-ssl</c>, which takes PEM strings, not a PKCS#12 file).
+    /// </summary>
+    ComponentCertificatePem? ReadClientCertificatePem();
 }

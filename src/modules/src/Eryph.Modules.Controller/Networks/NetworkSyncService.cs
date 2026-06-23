@@ -84,8 +84,9 @@ internal class NetworkSyncService(
             scope =>
                 from _ in unitAff
                 let sysEnv = scope.GetInstance<ISystemEnvironment>()
-                let ovnSettings = scope.GetInstance<IOVNSettings>()
-                let northboundTool = new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection)
+                let connectionProvider = scope.GetInstance<IOvnNorthboundConnectionProvider>()
+                from connection in connectionProvider.GetNorthboundConnection()
+                let northboundTool = new OVNControlTool(sysEnv, connection)
                 let realizer = new ClusterPlanNorthboundRealizer(sysEnv, northboundTool)
                 let clusterPlan = BuildClusterPlan(
                     clusterTopologyProvider.ChassisGroupName,
@@ -180,12 +181,13 @@ internal class NetworkSyncService(
             scope =>
                 from _ in unitAff
                 let sysEnv = scope.GetInstance<ISystemEnvironment>()
-                let ovnSettings = scope.GetInstance<IOVNSettings>()
+                let connectionProvider = scope.GetInstance<IOvnNorthboundConnectionProvider>()
+                from connection in connectionProvider.GetNorthboundConnection()
                 let planBuilder = scope.GetInstance<IProjectNetworkPlanBuilder>()
                 let logger = scope.GetInstance<ILogger>()
                 let networkPlanRealizer = new NetworkPlanRealizer(
                     sysEnv,
-                    new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection),
+                    new OVNControlTool(sysEnv, connection),
                     logger)
                 from networkPlan in planBuilder.GenerateNetworkPlan(projectId, providerConfig).ToAff(e => e)
                 from appliedNetworkPlan in networkPlanRealizer.ApplyNetworkPlan(networkPlan).ToAff(e => e)
