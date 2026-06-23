@@ -309,7 +309,7 @@ namespace Eryph.Modules.HostAgent
                 // Resolved inside the transport lambda (which runs at bus start) so it does not
                 // trigger premature container verification during ConfigureContainer.
                 .Transport(t =>
-                    container.GetService<IRebusTransportConfigurer>()
+                    container.GetInstance<IRebusTransportConfigurer>()
                         .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
                 .Options(x =>
                 {
