@@ -38,12 +38,14 @@ public class NetworkModule
         // controller reaches them over the local pipe, so nothing is advertised.
         _remoteEnabled = bool.TryParse(configuration.GetSection("componentMtls")["enabled"], out var enabled)
                          && enabled;
-        // The address remote clients dial. Defaults to the machine name; an operator behind NAT/DNS can
-        // override it. Only used when the databases are exposed remotely. A blank/whitespace override is
-        // treated as unset (and trimmed) so it cannot advertise a malformed endpoint like "ssl:   :6641".
+        // The address remote clients dial. Defaults to the host FQDN identity (the same one used for
+        // component registration and the mTLS certificate), which is resolvable across hosts/DNS domains
+        // — unlike the short machine name — and matches the certificate the controller validates on
+        // connect. An operator behind NAT/DNS can override it; a blank/whitespace override is treated as
+        // unset (and trimmed) so it cannot advertise a malformed endpoint like "ssl:   :6641".
         _advertisedHost = configuration["ovn:advertisedHost"]?.Trim() is { Length: > 0 } host
             ? host
-            : Environment.MachineName;
+            : ComponentIdentity.GetLocalHostId();
     }
 
     [UsedImplicitly]
