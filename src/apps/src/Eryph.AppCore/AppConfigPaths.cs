@@ -23,6 +23,8 @@ public static class AppConfigPaths
 
     public static string GetVmHostAgentConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "agentsettings"));
 
+    public static string GetGenePoolSettingsPath() => Ensure(Path.Combine(GetConfigRoot(), "genepool"));
+
     public static string GetProjectsConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "projects"));
 
     public static string GetProjectNetworksConfigPath() => Ensure(Path.Combine(GetProjectsConfigPath(), "networks"));

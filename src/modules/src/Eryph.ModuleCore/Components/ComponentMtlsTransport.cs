@@ -30,7 +30,10 @@ public static class ComponentMtlsTransport
         var mtls = configuration.GetSection("componentMtls");
         if (!bool.TryParse(mtls["enabled"], out var enabled) || !enabled)
         {
-            container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
+            // Register a constructed instance, not the type: RabbitMqRebusTransportConfigurer has two
+            // public constructors (plaintext and the mTLS certificate one), which SimpleInjector cannot
+            // auto-wire. The parameterless constructor is the plaintext dev path.
+            container.RegisterInstance<IRebusTransportConfigurer>(new RabbitMqRebusTransportConfigurer());
             return;
         }
 

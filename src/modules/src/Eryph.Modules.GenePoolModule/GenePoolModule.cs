@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Net.Http;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Messages.Components;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.GenePool.Inventory;
@@ -49,6 +52,16 @@ public class GenePoolModule
     {
         options.AddHostedService<GeneticsRequestWatcherService>();
         options.AddStartupHandler<StartBusModuleHandler>();
+
+        // Opt in to controller-driven component registration so the controller can route gene
+        // operations to this component's inbound queue (and track its liveness). GenePool consumes
+        // no distributed config domains, so it registers no realizers — it registers only to be
+        // discoverable and routable. The inbound queue must equal the bus endpoint configured below.
+        options.AddComponentRegistration(
+            ComponentType.GenePoolAgent,
+            $"{QueueNames.GenePool}.{Environment.MachineName}",
+            new Dictionary<string, string>());
+
         options.AddLogging();
     }
 
@@ -86,12 +99,15 @@ public class GenePoolModule
         container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationTaskHandler<>), Lifestyle.Scoped);
         container.AddRebusOperationsHandlers();
 
-        var localName = $"{QueueNames.GenePool}.{Environment.MachineName}";
         container.ConfigureRebus(configurer => configurer
             .Serialization(s => s.UseEryphSettings())
+            // Use the registered component inbound queue as the single source of truth for the bus
+            // endpoint name (it must match what AddComponentRegistration announced). Resolved inside
+            // the transport lambda (bus start) so it does not trigger premature container
+            // verification during ConfigureContainer.
             .Transport(t =>
-                container.GetService<IRebusTransportConfigurer>()
-                    .Configure(t, localName))
+                container.GetInstance<IRebusTransportConfigurer>()
+                    .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
             .Options(x =>
             {
                 x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength:5);

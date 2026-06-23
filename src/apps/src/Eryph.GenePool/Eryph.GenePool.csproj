@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- The gene pool agent runs on a Hyper-V host and uses the Windows hardware-id
+         provider, so it is a Windows runtime exactly like Eryph.Agent (with which it is
+         co-deployed per host). Its gene store path comes from its own genepoolsettings.yml,
+         not the agent's host settings, so it no longer references Eryph.VmManagement.HyperV. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <!-- Run as a Windows service on each Hyper-V host (like eryph-zero); no-op when run interactively. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.GenePoolModule\Eryph.Modules.GenePoolModule.csproj" />
+  </ItemGroup>
+</Project>
