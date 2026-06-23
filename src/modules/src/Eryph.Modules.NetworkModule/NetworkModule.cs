@@ -56,9 +56,12 @@ public class NetworkModule
         // Opt in to controller-driven component registration so the controller can track the network
         // process's liveness, route to its inbound queue, and resolve its OVN endpoints. The network
         // process consumes no distributed config domains, so it registers no realizers.
+        // Suffix the inbound queue with the host FQDN identity (not the short machine name) so queue
+        // names stay unique across DNS domains on a shared broker, matching the other components and
+        // ComponentIdentity's own queue-naming convention.
         options.AddComponentRegistration(
             ComponentType.Network,
-            $"{QueueNames.Network}.{Environment.MachineName}",
+            $"{QueueNames.Network}.{ComponentIdentity.GetLocalHostId()}",
             BuildAdvertisedEndpoints());
 
         options.AddLogging();

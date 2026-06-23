@@ -106,6 +106,28 @@ public class OvnNorthboundConnectionProviderTests
             .Should().Contain("has not advertised");
     }
 
+    [Fact]
+    public async Task GetNorthboundConnection_PrefersMostRecentlyHeartbeatingNetworkComponent()
+    {
+        var pipe = new LocalOVSWithOVNSettings().NorthDBConnection;
+        // A stale registration that still names this host (would be misdetected as co-located) and a
+        // fresher remote one. The provider must follow the live remote component, not the stale local.
+        var staleLocal = NetworkComponent(
+            ComponentIdentity.GetLocalHostId(), advertisedEndpoint: null,
+            lastHeartbeat: DateTimeOffset.UtcNow - TimeSpan.FromMinutes(10));
+        var freshRemote = NetworkComponent(
+            "remote-host.example", advertisedEndpoint: null, lastHeartbeat: DateTimeOffset.UtcNow);
+        var provider = CreateProvider([staleLocal, freshRemote], pipe);
+
+        var result = await provider.GetNorthboundConnection().Run();
+
+        // It picked the remote component (no endpoint advertised) and failed fast, rather than
+        // returning the local pipe it would have for the stale co-located registration.
+        result.IsFail.Should().BeTrue();
+        result.Match(Succ: _ => "", Fail: e => e.Message)
+            .Should().Contain("has not advertised");
+    }
+
     private static OvnNorthboundConnectionProvider CreateProvider(
         IReadOnlyList<ComponentRegistration> active, OvsDbConnection localPipe)
     {
@@ -120,7 +142,8 @@ public class OvnNorthboundConnectionProviderTests
             NullLogger<OvnNorthboundConnectionProvider>.Instance);
     }
 
-    private static ComponentRegistration NetworkComponent(string machineName, string? advertisedEndpoint)
+    private static ComponentRegistration NetworkComponent(
+        string machineName, string? advertisedEndpoint, DateTimeOffset? lastHeartbeat = null)
     {
         var advertised = new Dictionary<string, string>();
         if (advertisedEndpoint is not null)
@@ -132,6 +155,7 @@ public class OvnNorthboundConnectionProviderTests
             InboundQueue = "q",
             ComponentType = ComponentType.Network,
             AdvertisedEndpoints = advertised,
+            LastHeartbeat = lastHeartbeat ?? DateTimeOffset.UtcNow,
         };
     }
 

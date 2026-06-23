@@ -40,7 +40,13 @@ internal class OvnNorthboundConnectionProvider(
         Aff(async () =>
         {
             var components = await componentRegistry.GetActiveAsync(CancellationToken.None);
-            var network = components.FirstOrDefault(c => c.ComponentType == ComponentType.Network);
+            // Pick the most recently heartbeating Network component deterministically: the registry
+            // ages stale registrations out of the active set, but should two ever overlap (e.g. during
+            // a split-out migration) the freshest one is the live process to talk to.
+            var network = components
+                .Where(c => c.ComponentType == ComponentType.Network)
+                .OrderByDescending(c => c.LastHeartbeat)
+                .FirstOrDefault();
 
             // Co-located (in-process / same host) or no network component registered yet: the local pipe.
             if (network is null || IsColocated(network.MachineName, ComponentIdentity.GetLocalHostId()))

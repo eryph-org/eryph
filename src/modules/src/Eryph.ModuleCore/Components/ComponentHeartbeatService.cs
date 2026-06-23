@@ -21,7 +21,7 @@ internal sealed class ComponentHeartbeatService(
     ILogger<ComponentHeartbeatService> logger)
     : IHostedService
 {
-    private static readonly TimeSpan Interval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan Interval = ComponentRegistrationDefaults.HeartbeatInterval;
     private readonly CancellationTokenSource _stopping = new();
     private Task? _loop;
 
