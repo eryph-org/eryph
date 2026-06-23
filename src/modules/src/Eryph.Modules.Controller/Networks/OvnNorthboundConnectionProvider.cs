@@ -43,8 +43,7 @@ internal class OvnNorthboundConnectionProvider(
             var network = components.FirstOrDefault(c => c.ComponentType == ComponentType.Network);
 
             // Co-located (in-process / same host) or no network component registered yet: the local pipe.
-            if (network is null
-                || string.Equals(network.MachineName, Environment.MachineName, StringComparison.OrdinalIgnoreCase))
+            if (network is null || IsColocated(network.MachineName, ComponentIdentity.GetLocalHostId()))
                 return ovnSettings.NorthDBConnection;
 
             // The network component runs on a different host, so the controller no longer hosts OVN
@@ -67,6 +66,15 @@ internal class OvnNorthboundConnectionProvider(
 
             return await BuildSslConnection(endpoint);
         });
+
+    // Whether a registered component runs on this controller's host. Both names are the local host
+    // identity in the same form — the lower-cased FQDN from ComponentIdentity — so the network
+    // component's MachineName must be compared against ComponentIdentity.GetLocalHostId(), NOT
+    // Environment.MachineName: the short machine name never equals the component's FQDN on a
+    // domain-joined host, which would wrongly classify a co-located network module as remote and then
+    // fail because a co-located module advertises no remote endpoints. Case-insensitive, as DNS is.
+    internal static bool IsColocated(string componentMachineName, string localHostId) =>
+        string.Equals(componentMachineName, localHostId, StringComparison.OrdinalIgnoreCase);
 
     // The advertised endpoint has the form "ssl:<host>:<port>". The host may itself contain ':'
     // (an IPv6 literal), so the port is taken from the last ':' rather than splitting on every ':'.
