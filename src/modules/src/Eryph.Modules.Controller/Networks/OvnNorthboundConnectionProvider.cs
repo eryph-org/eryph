@@ -77,8 +77,13 @@ internal class OvnNorthboundConnectionProvider(
             ? endpoint[prefix.Length..]
             : throw new InvalidOperationException(
                 $"The advertised northbound endpoint '{endpoint}' must be of the form 'ssl:host:port'.");
+        // Reject a missing/blank host and an out-of-range port so a malformed endpoint fails here with
+        // a clear message rather than producing an OvsDbConnection that fails obscurely on connect.
         var lastColon = hostPort.LastIndexOf(':');
-        if (lastColon <= 0 || !int.TryParse(hostPort[(lastColon + 1)..], out var port))
+        if (lastColon <= 0
+            || string.IsNullOrWhiteSpace(hostPort[..lastColon])
+            || !int.TryParse(hostPort[(lastColon + 1)..], out var port)
+            || port is < 1 or > 65535)
             throw new InvalidOperationException(
                 $"The advertised northbound endpoint '{endpoint}' is not of the form 'ssl:host:port'.");
         return (hostPort[..lastColon], port);

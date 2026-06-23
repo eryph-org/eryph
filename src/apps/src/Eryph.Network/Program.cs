@@ -32,7 +32,9 @@ namespace Eryph.Network
                 // so module/config resolution works the same as interactive runs.
                 builder.UseContentRoot(AppContext.BaseDirectory);
 
-                var host = builder
+                // Dispose the host after RunAsync returns so hosted services and other resources are
+                // stopped/disposed before the process exits (and before Serilog flushes).
+                using var host = builder
                     .ConfigureInternalHost(hb =>
                     {
 #if WINDOWS

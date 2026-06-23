@@ -26,6 +26,10 @@ public class OvnNorthboundConnectionProviderTests
     [InlineData("ssl:host")]        // no port
     [InlineData("ssl:host:port")]   // non-numeric port
     [InlineData("ssl::6641")]       // empty host
+    [InlineData("ssl:   :6641")]    // whitespace-only host
+    [InlineData("ssl:host:0")]      // port below range
+    [InlineData("ssl:host:99999")]  // port above range
+    [InlineData("ssl:host:-5")]     // negative port
     [InlineData("host:6641")]       // no scheme
     public void ParseSslEndpoint_Invalid_Throws(string endpoint)
     {
