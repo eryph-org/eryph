@@ -20,7 +20,7 @@ namespace Eryph.GenePool
         {
             container.RegisterInstance(SelectGenePoolSettings());
             container.RegisterSingleton<IGenePoolApiKeyStore, GenePoolApiKeyStore>();
-            // Gene pool storage path comes from the node-local genepoolsettings.yaml, not the agent's
+            // Gene pool storage path comes from the node-local genepoolsettings.yml, not the agent's
             // host settings (the gene pool owns its own datastore config).
             container.RegisterSingleton<IGenePoolPathProvider, GenePoolPathProvider>();
             container.RegisterSingleton<IApplicationInfoProvider, GenePoolApplicationInfoProvider>();

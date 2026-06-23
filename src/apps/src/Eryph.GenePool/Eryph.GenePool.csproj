@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <!-- The gene pool agent runs on a Hyper-V host and uses the Windows hardware-id
          provider, so it is a Windows runtime exactly like Eryph.Agent (with which it is
-         co-deployed per host). Its gene store path comes from its own genepoolsettings.yaml,
+         co-deployed per host). Its gene store path comes from its own genepoolsettings.yml,
          not the agent's host settings, so it no longer references Eryph.VmManagement.HyperV. -->
     <TargetFramework>net10.0-windows</TargetFramework>
   </PropertyGroup>

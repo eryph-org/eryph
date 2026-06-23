@@ -34,13 +34,17 @@ namespace Eryph.GenePool
                 // eryph-zero). Hosuto otherwise defaults to Environment.CurrentDirectory.
                 builder.UseContentRoot(AppContext.BaseDirectory);
 
-                var host = builder
+                // Dispose the host after RunAsync returns so hosted services and other resources are
+                // stopped/disposed before the process exits (and before Serilog flushes).
+                using var host = builder
                     // Run as a Windows service on each Hyper-V host. UseWindowsService installs the
                     // service lifetime only when actually started as a service; interactively it is a
                     // no-op and the default console lifetime applies. (RunConsoleAsync would force the
                     // console lifetime and break service mode, so build + RunAsync like eryph-zero.)
                     .ConfigureInternalHost(hb =>
-                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-genepool"))
+                    {
+                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-genepool");
+                    })
                     .UseSimpleInjector(container)
                     .AddGenePoolModule()
                     .UseSerilog()

@@ -10,7 +10,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.GenePool
 {
     /// <summary>
-    /// Resolves the gene pool storage path from the node-local <c>genepoolsettings.yaml</c> (under the
+    /// Resolves the gene pool storage path from the node-local <c>genepoolsettings.yml</c> (under the
     /// component config root). This is the gene-pool counterpart to the agent reading its
     /// <c>agentsettings.yml</c>, and the split that separates the gene pool's storage configuration from
     /// the agent's: the gene pool owns its own datastore setting instead of deriving it from the agent's
@@ -24,7 +24,7 @@ namespace Eryph.GenePool
     internal sealed class GenePoolPathProvider : IGenePoolPathProvider
     {
         private static string ConfigFilePath =>
-            Path.Combine(AppConfigPaths.GetGenePoolSettingsPath(), "genepoolsettings.yaml");
+            Path.Combine(AppConfigPaths.GetGenePoolSettingsPath(), "genepoolsettings.yml");
 
         private static string DefaultGenePoolPath =>
             Path.Combine(
