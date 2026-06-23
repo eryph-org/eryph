@@ -98,7 +98,7 @@ public class NetworkModule
             // the transport lambda (bus start) so it does not trigger premature container verification
             // during ConfigureContainer.
             .Transport(t =>
-                container.GetService<IRebusTransportConfigurer>()
+                container.GetInstance<IRebusTransportConfigurer>()
                     .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
             .Options(x =>
             {

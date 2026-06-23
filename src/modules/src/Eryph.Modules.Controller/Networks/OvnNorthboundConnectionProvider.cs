@@ -47,13 +47,22 @@ internal class OvnNorthboundConnectionProvider(
                 || string.Equals(network.MachineName, Environment.MachineName, StringComparison.OrdinalIgnoreCase))
                 return ovnSettings.NorthDBConnection;
 
+            // The network component runs on a different host, so the controller no longer hosts OVN
+            // and the local pipe would not reach the northbound database. If the (remote) component has
+            // not advertised its endpoint yet, fail fast with an actionable message instead of dialing
+            // the local pipe — that would mask the misconfiguration behind an obscure connection error.
+            // The Aff is retried by callers, so a component that advertises late heals on the next try.
             if (!network.AdvertisedEndpoints.TryGetValue(OvnRemoteEndpoints.NorthboundName, out var endpoint)
                 || string.IsNullOrWhiteSpace(endpoint))
             {
                 logger.LogWarning(
-                    "The network component on '{Host}' advertised no '{Endpoint}' endpoint; falling back "
-                    + "to the local pipe.", network.MachineName, OvnRemoteEndpoints.NorthboundName);
-                return ovnSettings.NorthDBConnection;
+                    "The network component on '{Host}' advertised no '{Endpoint}' endpoint yet.",
+                    network.MachineName, OvnRemoteEndpoints.NorthboundName);
+                throw new InvalidOperationException(
+                    $"The network component on '{network.MachineName}' has not advertised its "
+                    + $"'{OvnRemoteEndpoints.NorthboundName}' endpoint. The controller cannot reach the "
+                    + "remote OVN northbound database; retry once the component advertises its endpoints "
+                    + "(ensure componentMtls is enabled on the network component).");
             }
 
             return await BuildSslConnection(endpoint);

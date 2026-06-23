@@ -44,9 +44,11 @@ namespace Eryph.Network
         {
             /// <summary>
             /// Locates the OVN program root. An operator may pin it via <c>ERYPH_OVN_PROGRAM_ROOT</c>
-            /// (the directory whose <c>usr\sbin\ovsdb-server.exe</c> exists) — used where the binaries
-            /// are not unpacked by eryph-zero (a dedicated network host, dev boxes). Otherwise it falls
-            /// back to the package eryph-zero unpacks under <c>%ProgramData%\eryph\ovn\run_*</c>.
+            /// (the OVN install root, i.e. the directory that contains the <c>ovs-vsctl.exe</c> binary
+            /// used as the marker below) — used where the binaries are not unpacked by eryph-zero (a
+            /// dedicated network host, dev boxes). Otherwise it falls back to the package eryph-zero
+            /// unpacks under <c>%ProgramData%\eryph\ovn\run_*</c>, picking the run directory that
+            /// contains <c>ovs-vsctl.exe</c>.
             /// </summary>
             public static string FindOvnProgramRoot()
             {
