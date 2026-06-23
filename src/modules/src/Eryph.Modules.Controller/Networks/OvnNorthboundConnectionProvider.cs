@@ -139,8 +139,10 @@ internal class OvnNorthboundConnectionProvider(
         // owner-restricted up front (the Dbosoft.OVN adminOnly flag is honoured from 2.1.1; this keeps
         // the key protected on 2.1.0 too). Ensure all three files' paths with the same adminOnly flag
         // so the permissions are consistent across platforms and Dbosoft.OVN versions, not just for the
-        // key (the cert and CA share the directory).
-        var clientCertDirectory = Path.GetDirectoryName(fileSystem.ResolveOvsFilePath(keyFile, false))!;
+        // key (the cert and CA share the directory). Resolve the directory with the SAME adminOnly value
+        // used to create the files: if the flag selects a different base path, resolving with the wrong
+        // value would secure (and verify) a different directory than the one the key lands in.
+        var clientCertDirectory = Path.GetDirectoryName(fileSystem.ResolveOvsFilePath(keyFile, true))!;
         SecureDirectory.EnsureOwnerOnly(clientCertDirectory);
         fileSystem.EnsurePathForFileExists(keyFile, adminOnly: true);
         fileSystem.EnsurePathForFileExists(certFile, adminOnly: true);
