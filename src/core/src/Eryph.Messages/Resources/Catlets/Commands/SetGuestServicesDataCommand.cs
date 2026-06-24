@@ -11,7 +11,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 public class SetGuestServicesDataCommand : IHasResource, ICommandWithName
 {
     public Guid CatletId { get; set; }
-    public string OperationName { get; set; }
+    public string? OperationName { get; set; }
     public Dictionary<string, string> Values { get; set; } = new();
     public List<string> RemoveKeys { get; set; } = [];
 

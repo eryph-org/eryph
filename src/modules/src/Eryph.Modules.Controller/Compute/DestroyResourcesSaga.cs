@@ -128,22 +128,22 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
     {
         Data.Data.State = DestroyResourceState.Initiated;
 
-        Data.Data.PendingCatlets = message.Resources
+        Data.Data.PendingCatlets = (message.Resources ?? [])
             .Where(r => r.Type == ResourceType.Catlet)
             .Select(r => r.Id)
             .ToHashSet();
 
-        Data.Data.PendingCatletSpecifications = message.Resources
+        Data.Data.PendingCatletSpecifications = (message.Resources ?? [])
             .Where(r => r.Type == ResourceType.CatletSpecification)
             .Select(r => r.Id)
             .ToHashSet();
 
-        Data.Data.PendingDisks = message.Resources
+        Data.Data.PendingDisks = (message.Resources ?? [])
             .Where(r => r.Type == ResourceType.VirtualDisk)
             .Select(r => r.Id)
             .ToHashSet();
 
-        Data.Data.PendingNetworks = message.Resources
+        Data.Data.PendingNetworks = (message.Resources ?? [])
             .Where(r => r.Type == ResourceType.VirtualNetwork)
             .Select(r => r.Id)
             .ToHashSet();

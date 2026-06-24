@@ -7,13 +7,13 @@ public class CreateVirtualDiskCommand : IHasCorrelationId, ICommandWithName
 {
     public Guid ProjectId { get; set; }
 
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
-    public string Environment { get; set; }
+    public string? Environment { get; set; }
 
-    public string DataStore { get; set; }
+    public string? DataStore { get; set; }
 
-    public string StorageIdentifier { get; set; }
+    public string? StorageIdentifier { get; set; }
 
     public int Size { get; set; }
 

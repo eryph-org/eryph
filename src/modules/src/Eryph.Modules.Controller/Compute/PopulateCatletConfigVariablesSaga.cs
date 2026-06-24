@@ -26,15 +26,19 @@ internal class PopulateCatletConfigVariablesSaga(
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message) =>
         FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
+            var config = Data.Data.Config ?? throw new InvalidOperationException("CatletConfig must not be null in PopulateCatletConfigVariablesSaga.");
             await Complete(new PopulateCatletConfigVariablesCommandResponse
             {
-                Config = Data.Data.Config!.CloneWith(c => { c.Variables = response.BuiltConfig.Variables; }),
+                Config = config.CloneWith(c => { c.Variables = (response.BuiltConfig ?? throw new InvalidOperationException(
+                    "The response is missing the built config.")).Variables; }),
             });
         });
 
     protected override async Task Initiated(PopulateCatletConfigVariablesCommand message)
     {
-        Data.Data.Config = message.Config;
+        var config = message.Config ?? throw new InvalidOperationException("CatletConfig must not be null in PopulateCatletConfigVariablesSaga.");
+
+        Data.Data.Config = config;
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
@@ -43,7 +47,7 @@ internal class PopulateCatletConfigVariablesSaga(
             AgentName = Data.Data.AgentName,
             ContentType = "application/yaml",
             Configuration = CatletConfigYamlSerializer.Serialize(
-                message.Config.CloneWith(c => { c.Project = null; })),
+                config.CloneWith(c => { c.Project = null; })),
             Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
         });
     }

@@ -12,13 +12,13 @@ public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
 
     public Guid SpecificationVersionId { get; set; }
 
-    public Architecture Architecture { get; set; }
+    public Architecture? Architecture { get; set; }
 
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
     public bool Redeploy { get; set; }
 
-    public IReadOnlyDictionary<string, string> Variables { get; set; }
+    public IReadOnlyDictionary<string, string>? Variables { get; set; }
 
     public string GetCommandName() => $"Deploy catlet specification {Name}";
 

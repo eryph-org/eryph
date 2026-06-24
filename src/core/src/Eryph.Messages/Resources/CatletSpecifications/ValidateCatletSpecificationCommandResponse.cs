@@ -9,7 +9,7 @@ public class ValidateCatletSpecificationCommandResponse
 {
     public bool IsValid { get; set; }
 
-    public CatletConfig BuiltConfig { get; set; }
+    public CatletConfig? BuiltConfig { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash>? ResolvedGenes { get; set; }
 }

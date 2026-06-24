@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Eryph.Core.Genetics;
 using System.Text.Json;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
@@ -49,15 +51,15 @@ public class OperationResultValueResolver(
             },
             ExpandNewCatletConfigCommandResponse expandResponse => new CatletConfigOperationResult
             {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),
+                Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config ?? throw new InvalidOperationException("ExpandNewCatletConfigCommandResponse.Config cannot be null")),
             },
             PopulateCatletConfigVariablesCommandResponse populateResponse => new CatletConfigOperationResult
             {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(populateResponse.Config),
+                Configuration = CatletConfigJsonSerializer.SerializeToElement(populateResponse.Config ?? throw new InvalidOperationException("PopulateCatletConfigVariablesCommandResponse.Config cannot be null")),
             },
             OpenSshChannelVMCommandResponse sshChannelResponse => new SshChannelOperationResult
             {
-                Token = sshChannelResponse.Token,
+                Token = sshChannelResponse.Token ?? throw new InvalidOperationException("OpenSshChannelVMCommandResponse.Token cannot be null"),
                 ExpiresAt = sshChannelResponse.ExpiresAt,
             },
             GetGuestServicesStatusVMCommandResponse statusResponse => new GuestServicesStatusOperationResult
@@ -72,8 +74,8 @@ public class OperationResultValueResolver(
                 CatletSpecificationOperationResult
                 {
                     Configuration = CatletConfigJsonSerializer.SerializeToElement(
-                        validateSpecificationResponse.BuiltConfig),
-                    Genes = validateSpecificationResponse.ResolvedGenes.ToDictionary(
+                        validateSpecificationResponse.BuiltConfig ?? throw new InvalidOperationException("ValidateCatletSpecificationCommandResponse.BuiltConfig cannot be null")),
+                    Genes = (validateSpecificationResponse.ResolvedGenes ?? new Dictionary<UniqueGeneIdentifier, GeneHash>()).ToDictionary(
                         k => k.Key.ToString(),
                         v => v.Value.ToString()),
                 },

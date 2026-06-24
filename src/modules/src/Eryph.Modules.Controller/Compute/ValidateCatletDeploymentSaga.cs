@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using System.Collections.Generic;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -37,15 +39,16 @@ public class ValidateCatletDeploymentSaga(
 
         return FailOrRun(message, async (PrepareGeneResponse response) =>
         {
-            Data.Data.PendingGenes = Data.Data.PendingGenes
+            Data.Data.PendingGenes = (Data.Data.PendingGenes ?? new Dictionary<UniqueGeneIdentifier, GeneHash>())
                 .ToHashMap()
-                .Remove(response.RequestedGene)
+                .Remove(response.RequestedGene ?? throw new InvalidOperationException(
+                    "The prepare-gene response is missing the requested gene."))
                 .ToDictionary();
 
             await bus.SendLocal(new UpdateGenesInventoryCommand
             {
                 AgentName = Data.Data.AgentName,
-                Inventory = [response.Inventory],
+                Inventory = [response.Inventory ?? throw new System.InvalidOperationException("Response inventory must not be null")],
                 Timestamp = response.Timestamp,
             });
 
@@ -63,7 +66,7 @@ public class ValidateCatletDeploymentSaga(
         Data.Data.AgentName = message.AgentName;
         Data.Data.Config = message.Config;
         Data.Data.State = ValidateCatletDeploymentSagaState.Initiated;
-        Data.Data.ResolvedGenes = message.ResolvedGenes;
+        Data.Data.ResolvedGenes = message.ResolvedGenes ?? throw new System.InvalidOperationException("ResolvedGenes must not be null");
 
         Data.Data.PendingGenes = message.ResolvedGenes
             .ToHashMap()

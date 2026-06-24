@@ -4,5 +4,5 @@ namespace Eryph.Messages.Resources;
 
 public interface IGenericResourcesCommand
 {
-    Resource[] Resources { get; set; }
+    Resource[]? Resources { get; set; }
 }

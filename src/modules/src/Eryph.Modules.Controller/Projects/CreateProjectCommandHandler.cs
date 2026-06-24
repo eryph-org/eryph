@@ -38,7 +38,7 @@ internal class CreateProjectCommandHandler : IHandleMessages<OperationTask<Creat
     {
         var stoppingToken = new CancellationTokenSource(10000);
 
-        var name = message.Command.ProjectName;
+        var name = message.Command.ProjectName ?? throw new InvalidOperationException("ProjectName is required");
         var validation = ProjectName.NewValidation(name);
         if (validation.IsFail)
         {

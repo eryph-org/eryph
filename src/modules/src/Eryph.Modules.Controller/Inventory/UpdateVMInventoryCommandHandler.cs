@@ -33,10 +33,12 @@ internal class UpdateVMInventoryCommandHandler(
 {
     public async Task Handle(UpdateInventoryCommand message)
     {
-        var vmHost = await vmHostDataService.GetVMHostByAgentName(message.AgentName);
+        var agentName = message.AgentName ?? throw new System.InvalidOperationException("AgentName is required");
+        var vmHost = await vmHostDataService.GetVMHostByAgentName(agentName);
         if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
             return;
 
-        await UpdateVms(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
+        var inventory = message.Inventory ?? throw new System.InvalidOperationException("Inventory is required");
+        await UpdateVms(message.Timestamp, [inventory], vmHost.ValueUnsafe());
     }
 }

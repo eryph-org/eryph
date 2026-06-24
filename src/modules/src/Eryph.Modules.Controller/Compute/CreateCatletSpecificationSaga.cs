@@ -36,14 +36,16 @@ internal class CreateCatletSpecificationSaga(
         return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
             Data.Data.PendingArchitectures = toHashSet(Data.Data.PendingArchitectures)
-                .Remove(response.Architecture)
+                .Remove(response.Architecture ?? throw new InvalidOperationException("Architecture cannot be null"))
                 .ToHashSet();
 
+            var builtConfig = response.BuiltConfig ?? throw new InvalidOperationException("BuiltConfig cannot be null");
+            var resolvedGenes = response.ResolvedGenes ?? throw new InvalidOperationException("ResolvedGenes cannot be null");
             var variantData = new CatletSpecificationVersionVariantSagaData
             {
                 Architecture = response.Architecture,
-                BuiltConfig = response.BuiltConfig,
-                ResolvedGenes = response.ResolvedGenes,
+                BuiltConfig = builtConfig,
+                ResolvedGenes = resolvedGenes,
             };
 
             Data.Data.Variants = Data.Data.Variants
@@ -77,7 +79,7 @@ internal class CreateCatletSpecificationSaga(
                 Environment = EryphConstants.DefaultEnvironmentName,
                 // Normize the name just to be sure. This also makes sure that
                 // a name has been provided. We should have validated this earlier though.
-                Name = CatletName.New(response.BuiltConfig.Name).Value,
+                Name = CatletName.New(builtConfig.Name).Value,
                 Architectures = Data.Data.Architectures!,
                 Versions = [specificationVersion],
             };
@@ -96,16 +98,17 @@ internal class CreateCatletSpecificationSaga(
     {
         Data.Data.State = CreateCatletSpecificationSagaState.Initiated;
         Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Architectures = message.Architectures;
+        var architectures = message.Architectures ?? throw new InvalidOperationException("Architectures cannot be null");
+        Data.Data.Architectures = architectures;
         Data.Data.ContentType = message.ContentType;
         Data.Data.Configuration = message.Configuration;
         Data.Data.Comment = message.Comment;
         Data.Data.SpecificationId = Guid.NewGuid();
         Data.Data.SpecificationVersionId = Guid.NewGuid();
         Data.Data.ProjectId = message.ProjectId;
-        Data.Data.PendingArchitectures = message.Architectures;
+        Data.Data.PendingArchitectures = architectures;
 
-        foreach (var architecture in Data.Data.PendingArchitectures)
+        foreach (var architecture in architectures)
             await StartNewTask(new BuildCatletSpecificationCommand
             {
                 AgentName = Data.Data.AgentName,

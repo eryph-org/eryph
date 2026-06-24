@@ -6,8 +6,8 @@ namespace Eryph.Messages.Projects;
 public class CreateProjectCommand : IHasCorrelationId, IHasProjectName
 {
     public bool NoDefaultNetwork { get; set; }
-    public string IdentityId { get; set; }
+    public string? IdentityId { get; set; }
     public Guid CorrelationId { get; set; }
-    public string ProjectName { get; set; }
+    public string? ProjectName { get; set; }
     public Guid TenantId { get; set; }
 }

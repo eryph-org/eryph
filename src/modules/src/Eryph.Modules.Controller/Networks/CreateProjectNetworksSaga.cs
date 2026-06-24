@@ -47,7 +47,8 @@ internal class CreateProjectNetworksSaga(
 
     protected override async Task Initiated(CreateNetworksCommand message)
     {
-        Data.Config = validator.NormalizeConfig(message.Config);
+        var config = message.Config ?? throw new System.InvalidOperationException("CreateNetworksCommand must include a Config.");
+        Data.Config = validator.NormalizeConfig(config);
         log.LogTrace("Update project networks. Config: {@Config}", Data.Config);
 
         var project = await projectRepository.GetBySpecAsync(

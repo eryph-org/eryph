@@ -7,7 +7,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 [SendMessageTo(MessageRecipient.VMHostAgent)]
 public class UpdateCatletConfigDriveCommand : IVMCommand, IHasResource
 {
-    public CatletConfig Config { get; set; }
+    public CatletConfig? Config { get; set; }
 
     public Guid MetadataId { get; set; }
 

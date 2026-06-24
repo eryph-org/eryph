@@ -8,9 +8,9 @@ namespace Eryph.Messages.Resources.CatletSpecifications;
 
 public class BuildCatletSpecificationGenePoolCommandResponse
 {
-    public CatletConfig BuiltConfig { get; set; }
+    public CatletConfig? BuiltConfig { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash>? ResolvedGenes { get; set; }
 
     public DateTimeOffset Timestamp { get; set; }
 

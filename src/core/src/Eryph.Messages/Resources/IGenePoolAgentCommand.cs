@@ -2,5 +2,5 @@
 
 public interface IGenePoolAgentCommand
 {
-    string AgentName { get; set; }
+    string? AgentName { get; set; }
 }

@@ -5,7 +5,7 @@ namespace Eryph.Messages.Projects;
 [SendMessageTo(MessageRecipient.Controllers)]
 public class AddProjectMemberCommand : IHasCorrelationId, IHasProjectId
 {
-    public string MemberId { get; set; }
+    public string? MemberId { get; set; }
 
     public Guid TenantId { get; set; }
 

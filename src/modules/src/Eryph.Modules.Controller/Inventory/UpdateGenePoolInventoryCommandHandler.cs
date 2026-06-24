@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Messages.Genes.Commands;
 using Eryph.StateDb;
@@ -19,7 +20,9 @@ internal class UpdateGenePoolInventoryCommandHandler(
 
     public async Task Handle(UpdateGenePoolInventoryCommand message)
     {
-        await AddOrUpdateGenes(message.AgentName, message.Timestamp, message.Inventory);
+        var agentName = message.AgentName ?? throw new InvalidOperationException("AgentName is required");
+        var inventory = message.Inventory ?? throw new InvalidOperationException("Inventory is required");
+        await AddOrUpdateGenes(agentName, message.Timestamp, inventory);
 
         // We cannot find the missing genes using the timestamp as the
         // updated genes have not yet been persisted to the database. If we want

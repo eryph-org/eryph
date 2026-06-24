@@ -49,7 +49,7 @@ internal class DestroyVirtualNetworksSaga(IWorkflow workflow, IStateStoreReposit
     {
         var destroyedNetworks = new List<Guid>();
         var toDestroy = new List<VirtualNetwork>();
-        foreach (var id in message.NetworkIds)
+        foreach (var id in message.NetworkIds ?? [])
         {
             var networkEntity = await networkRepository.GetByIdAsync(id);
             if (networkEntity == null)

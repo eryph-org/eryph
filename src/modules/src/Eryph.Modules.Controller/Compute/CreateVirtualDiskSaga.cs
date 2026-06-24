@@ -33,27 +33,29 @@ internal class CreateVirtualDiskSaga(
     {
         return FailOrRun(message, async (CreateVirtualDiskVMCommandResponse response) =>
         {
-            await lockManager.AcquireVhdLock(response.DiskInfo.DiskIdentifier);
+            var diskInfo = response.DiskInfo ?? throw new InvalidOperationException("DiskInfo is required.");
 
-            if (response.DiskInfo.Name is null || response.DiskInfo.DataStore is null
-                || response.DiskInfo.Environment is null)
+            await lockManager.AcquireVhdLock(diskInfo.DiskIdentifier);
+
+            if (diskInfo.Name is null || diskInfo.DataStore is null
+                || diskInfo.Environment is null)
                 throw new InvalidOperationException(
-                    $"The created virtual disk {response.DiskInfo.DiskIdentifier} is missing the "
+                    $"The created virtual disk {diskInfo.DiskIdentifier} is missing the "
                     + "name, data store, or environment.");
 
             await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
             {
                 ProjectId = Data.Data.ProjectId,
                 Id = Data.Data.DiskId,
-                Name = response.DiskInfo.Name,
-                DataStore = response.DiskInfo.DataStore,
-                Environment = response.DiskInfo.Environment,
-                FileName = response.DiskInfo.FileName,
-                Path = response.DiskInfo.Path,
-                SizeBytes = response.DiskInfo.SizeBytes,
-                UsedSizeBytes = response.DiskInfo.UsedSizeBytes,
-                DiskIdentifier = response.DiskInfo.DiskIdentifier,
-                StorageIdentifier = response.DiskInfo.StorageIdentifier,
+                Name = diskInfo.Name,
+                DataStore = diskInfo.DataStore,
+                Environment = diskInfo.Environment,
+                FileName = diskInfo.FileName,
+                Path = diskInfo.Path,
+                SizeBytes = diskInfo.SizeBytes,
+                UsedSizeBytes = diskInfo.UsedSizeBytes,
+                DiskIdentifier = diskInfo.DiskIdentifier,
+                StorageIdentifier = diskInfo.StorageIdentifier,
             });
 
             await Complete();

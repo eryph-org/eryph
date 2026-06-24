@@ -12,7 +12,7 @@ public class UpdateCatletMetadataCommand : IHostAgentCommand, IVMCommand, IHasRe
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 
-    [PrivateIdentifier] public string AgentName { get; set; }
+    [PrivateIdentifier] public string? AgentName { get; set; }
 
     public Guid VmId { get; set; }
 

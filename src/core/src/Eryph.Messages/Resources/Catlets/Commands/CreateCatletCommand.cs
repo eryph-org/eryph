@@ -8,9 +8,9 @@ public class CreateCatletCommand : IHasCorrelationId, ICommandWithName
 {
     public Guid TenantId { get; set; }
 
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
-    public CatletConfig Config { get; set; }
+    public CatletConfig? Config { get; set; }
 
     public string GetCommandName() => $"Create catlet {Name}";
 

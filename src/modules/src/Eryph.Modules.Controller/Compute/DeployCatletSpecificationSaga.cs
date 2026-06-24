@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Functional;
@@ -140,7 +141,7 @@ internal class DeployCatletSpecificationSaga(
             storageIdentifierGenerator.Generate());
 
         var updatedVariables = CatletConfigVariableApplier
-            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables)
+            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables ?? new Dictionary<string, string>())
             .ToEither()
             .MapLeft(errors => Error.New("Some variables are invalid.", Error.Many(errors)));
         if (updatedVariables.IsLeft)

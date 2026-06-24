@@ -4,5 +4,5 @@ namespace Eryph.Messages.Resources;
 
 public interface IHasResources
 {
-    Resource[] Resources { get; }
+    Resource[]? Resources { get; }
 }

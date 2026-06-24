@@ -34,7 +34,8 @@ internal class ExpandNewCatletConfigSaga(
         {
             Data.Data.State = ExpandNewCatletConfigSagaState.SpecificationBuilt;
 
-            var configWithProject = response.BuiltConfig.CloneWith(c => { c.Project = Data.Data.ProjectName!.Value; });
+            var builtConfig = response.BuiltConfig ?? throw new InvalidOperationException("BuiltConfig is required");
+            var configWithProject = builtConfig.CloneWith(c => { c.Project = Data.Data.ProjectName!.Value; });
 
             var configWithSystemVariables = CatletSystemDataFeeding.FeedSystemVariables(
                 configWithProject, "#catletId", "#vmId");
@@ -70,7 +71,8 @@ internal class ExpandNewCatletConfigSaga(
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
-        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+        var config = message.Config ?? throw new InvalidOperationException("Config is required");
+        Data.Data.ProjectName = Optional(config.Project).Filter(notEmpty).Match(
             n => ProjectName.New(n),
             () => ProjectName.New(EryphConstants.DefaultProjectName));
 
@@ -79,7 +81,7 @@ internal class ExpandNewCatletConfigSaga(
             AgentName = Data.Data.AgentName,
             ContentType = "application/yaml",
             Configuration = CatletConfigYamlSerializer.Serialize(
-                message.Config.CloneWith(c => { c.Project = null; })),
+                config.CloneWith(c => { c.Project = null; })),
             Architecture = Data.Data.Architecture,
         });
     }

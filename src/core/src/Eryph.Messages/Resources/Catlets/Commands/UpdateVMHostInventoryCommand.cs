@@ -10,11 +10,11 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class UpdateVMHostInventoryCommand
 {
-    public VMHostMachineData HostInventory { get; set; }
+    public VMHostMachineData? HostInventory { get; set; }
 
-    public List<VirtualMachineData> VMInventory { get; set; }
+    public List<VirtualMachineData>? VMInventory { get; set; }
 
-    public List<DiskInfo> DiskInventory { get; set; }
+    public List<DiskInfo>? DiskInventory { get; set; }
 
     public DateTimeOffset Timestamp { get; set; }
 }

@@ -32,7 +32,7 @@ public class Create(
         return new CreateCatletSpecificationCommand
         {
             CorrelationId = request.CorrelationId.GetOrGenerate(),
-            Comment = request.Comment,
+            Comment = request.Comment ?? "",
             ProjectId = request.ProjectId,
             ContentType = request.Configuration.ContentType,
             Configuration = request.Configuration.Content,

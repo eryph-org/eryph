@@ -7,5 +7,5 @@ public class UpdateProjectNetworkPlanResponse
 {
     public Guid ProjectId { get; set; }
 
-    public NetworkNeighborRecord[] UpdatedAddresses { get; set; }
+    public NetworkNeighborRecord[]? UpdatedAddresses { get; set; }
 }

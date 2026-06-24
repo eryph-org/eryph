@@ -31,7 +31,7 @@ internal class UpdateNetworksSaga(IWorkflow workflow, IBus bus)
                     return;
 
                 Data.ProjectsCompleted.Add(response.ProjectId);
-                Data.UpdatedAddresses.AddRange(response.UpdatedAddresses);
+                Data.UpdatedAddresses.AddRange(response.UpdatedAddresses ?? []);
                 if (Data.ProjectsCompleted.Count == Data.ProjectIds?.Length)
                 {
                     await bus.Advanced.Topics.Publish(
@@ -57,7 +57,7 @@ internal class UpdateNetworksSaga(IWorkflow workflow, IBus bus)
     {
         Data.ProjectIds = message.Projects;
 
-        foreach (var project in message.Projects)
+        foreach (var project in message.Projects ?? [])
             await StartNewTask(
                 new UpdateProjectNetworkPlanCommand
                 {

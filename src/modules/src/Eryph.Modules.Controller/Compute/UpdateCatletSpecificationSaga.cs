@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Eryph.Core.Genetics;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -30,20 +32,22 @@ internal class UpdateCatletSpecificationSaga(
 
         return FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
         {
-            Data.Data.PendingArchitectures = toHashSet(Data.Data.PendingArchitectures)
-                .Remove(response.Architecture)
+            var architecture = response.Architecture ?? throw new InvalidOperationException(
+                "The build response is missing the architecture.");
+            Data.Data.PendingArchitectures = toHashSet(Data.Data.PendingArchitectures ?? new HashSet<Architecture>())
+                .Remove(architecture)
                 .ToHashSet();
 
             var variantData = new CatletSpecificationVersionVariantSagaData
             {
-                Architecture = response.Architecture,
-                BuiltConfig = response.BuiltConfig,
-                ResolvedGenes = response.ResolvedGenes,
+                Architecture = architecture,
+                BuiltConfig = response.BuiltConfig ?? throw new InvalidOperationException("BuiltConfig is required"),
+                ResolvedGenes = response.ResolvedGenes ?? throw new InvalidOperationException("ResolvedGenes is required"),
             };
 
             Data.Data.Variants = Data.Data.Variants
                 .ToHashMap()
-                .AddOrUpdate(response.Architecture, variantData)
+                .AddOrUpdate(architecture, variantData)
                 .ToDictionary();
 
             if (Data.Data.PendingArchitectures.Count > 0)
@@ -100,9 +104,9 @@ internal class UpdateCatletSpecificationSaga(
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.ContentType = message.ContentType;
         Data.Data.OriginalConfig = message.Configuration;
-        Data.Data.Architectures = message.Architectures;
+        Data.Data.Architectures = message.Architectures ?? throw new InvalidOperationException("Architectures is required");
         Data.Data.Comment = message.Comment;
-        Data.Data.PendingArchitectures = message.Architectures;
+        Data.Data.PendingArchitectures = message.Architectures ?? throw new InvalidOperationException("Architectures is required");
 
         foreach (var architecture in Data.Data.PendingArchitectures)
             await StartNewTask(new BuildCatletSpecificationCommand

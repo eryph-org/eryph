@@ -6,9 +6,9 @@ namespace Eryph.Messages.Genes.Commands;
 
 public class PrepareGeneResponse
 {
-    public UniqueGeneIdentifier RequestedGene { get; set; }
+    public UniqueGeneIdentifier? RequestedGene { get; set; }
 
     public DateTimeOffset Timestamp { get; set; }
 
-    public GeneData Inventory { get; set; }
+    public GeneData? Inventory { get; set; }
 }

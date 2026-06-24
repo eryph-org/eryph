@@ -37,9 +37,11 @@ internal class CreateCatletSaga(
         {
             Data.Data.State = CreateCatletSagaState.SpecificationBuilt;
 
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
+            var resolvedGenes = response.ResolvedGenes ?? throw new InvalidOperationException("ResolvedGenes from BuildCatletSpecificationCommand must not be null.");
+            Data.Data.ResolvedGenes = resolvedGenes;
+            var builtConfig = response.BuiltConfig ?? throw new InvalidOperationException("BuiltConfig from BuildCatletSpecificationCommand must not be null.");
             Data.Data.BuiltConfig = CatletConfigInstantiator.Instantiate(
-                response.BuiltConfig,
+                builtConfig,
                 storageIdentifierGenerator.Generate());
 
             Data.Data.BuiltConfig.Project = Data.Data.ProjectName!.Value;
@@ -96,7 +98,8 @@ internal class CreateCatletSaga(
         Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
-        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+        var config = message.Config ?? throw new InvalidOperationException("Config from CreateCatletCommand must not be null.");
+        Data.Data.ProjectName = Optional(config.Project).Filter(notEmpty).Match(
             n => ProjectName.New(n),
             () => ProjectName.New(EryphConstants.DefaultProjectName));
         var project = await stateStore.For<Project>()
@@ -111,7 +114,7 @@ internal class CreateCatletSaga(
 
         Data.Data.ContentType = "application/yaml";
         Data.Data.OriginalConfig = CatletConfigYamlSerializer.Serialize(
-            message.Config.CloneWith(c => { c.Project = null; }));
+            config.CloneWith(c => { c.Project = null; }));
 
         await StartNewTask(new BuildCatletSpecificationCommand
         {

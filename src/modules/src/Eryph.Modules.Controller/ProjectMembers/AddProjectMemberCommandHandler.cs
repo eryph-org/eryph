@@ -47,10 +47,12 @@ internal class AddProjectMemberCommandHandler(
             return;
         }
 
+        var memberId = message.Command.MemberId ?? throw new InvalidOperationException("Member ID is required");
+
         var roleAssignment = new ProjectRoleAssignment
         {
             Id = message.Command.CorrelationId,
-            IdentityId = message.Command.MemberId,
+            IdentityId = memberId,
             ProjectId = existingProject.Id,
             RoleId = roleId,
         };

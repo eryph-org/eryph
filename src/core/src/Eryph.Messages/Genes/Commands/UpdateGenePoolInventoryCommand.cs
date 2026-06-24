@@ -15,9 +15,9 @@ namespace Eryph.Messages.Genes.Commands;
 [SendMessageTo(MessageRecipient.Controllers)]
 public class UpdateGenePoolInventoryCommand
 {
-    [PrivateIdentifier] public string AgentName { get; set; }
+    [PrivateIdentifier] public string? AgentName { get; set; }
 
-    public List<GeneData> Inventory { get; set; }
+    public List<GeneData>? Inventory { get; set; }
 
     public DateTimeOffset Timestamp { get; set; }
 }

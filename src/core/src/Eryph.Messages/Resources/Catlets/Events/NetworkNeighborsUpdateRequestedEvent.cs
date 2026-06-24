@@ -3,5 +3,5 @@
 [SubscribesMessage(MessageSubscriber.VMHostAgents)]
 public class NetworkNeighborsUpdateRequestedEvent
 {
-    public NetworkNeighborRecord[] UpdatedAddresses { get; set; }
+    public NetworkNeighborRecord[]? UpdatedAddresses { get; set; }
 }

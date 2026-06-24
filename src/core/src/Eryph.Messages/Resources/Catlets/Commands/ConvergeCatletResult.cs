@@ -7,7 +7,7 @@ public class ConvergeCatletResult
 {
     public Guid VmId { get; set; }
 
-    public VirtualMachineData Inventory { get; set; }
+    public VirtualMachineData? Inventory { get; set; }
 
     public DateTimeOffset Timestamp { get; set; }
 }

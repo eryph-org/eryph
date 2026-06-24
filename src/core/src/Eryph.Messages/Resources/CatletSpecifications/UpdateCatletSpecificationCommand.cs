@@ -11,11 +11,11 @@ public class UpdateCatletSpecificationCommand : IHasCorrelationId, IHasResource
 {
     public Guid SpecificationId { get; set; }
 
-    public string ContentType { get; set; }
+    public string? ContentType { get; set; }
 
-    public string Configuration { get; set; }
+    public string? Configuration { get; set; }
 
-    public ISet<Architecture> Architectures { get; set; }
+    public ISet<Architecture>? Architectures { get; set; }
 
     [MaybeNull] public string Comment { get; set; }
 

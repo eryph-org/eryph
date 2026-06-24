@@ -9,7 +9,7 @@ public class PrepareCatletConfigCommand : IHasCorrelationId, IHasResource
 {
     public Guid CatletId { get; set; }
 
-    public CatletConfig Config { get; set; }
+    public CatletConfig? Config { get; set; }
 
     public Guid CorrelationId { get; set; }
 

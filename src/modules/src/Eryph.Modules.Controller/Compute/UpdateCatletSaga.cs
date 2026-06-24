@@ -110,7 +110,9 @@ internal class UpdateCatletSaga(
         var networkPorts = await stateStore.Read<CatletNetworkPort>().ListAsync(
             new CatletNetworkPortSpecs.GetByCatletMetadataId(catlet.MetadataId));
 
-        var validationResult = PrepareConfig(message.Config,
+        var updateConfig = message.Config ?? throw new InvalidOperationException(
+            $"The update command for catlet {catlet.Id} has no configuration.");
+        var validationResult = PrepareConfig(updateConfig,
             metadata.Metadata.Config ?? throw new InvalidOperationException(
                 $"The metadata for catlet {catlet.Id} has no configuration."),
             catlet, networkPorts);

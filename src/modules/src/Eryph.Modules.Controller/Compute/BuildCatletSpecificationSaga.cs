@@ -1,4 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using Eryph.Core.Genetics;
+using System.Threading.Tasks;
 using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -51,7 +54,7 @@ internal class BuildCatletSpecificationSaga(
                 Timestamp = response.Timestamp,
             });
 
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
+            Data.Data.ResolvedGenes = response.ResolvedGenes ?? new Dictionary<UniqueGeneIdentifier, GeneHash>();
             Data.Data.BuiltConfig = response.BuiltConfig;
 
             await Complete(new BuildCatletSpecificationCommandResponse
@@ -71,8 +74,11 @@ internal class BuildCatletSpecificationSaga(
         Data.Data.Architecture = message.Architecture;
         Data.Data.AgentName = message.AgentName;
 
+        var contentType = Data.Data.ContentType ?? throw new System.InvalidOperationException("ContentType is required");
+        var configuration = Data.Data.Configuration ?? throw new System.InvalidOperationException("Configuration is required");
+
         var parsedConfig = ParseCatletSpecificationConfig(
-            Data.Data.ContentType, Data.Data.Configuration);
+            contentType, configuration);
         if (parsedConfig.IsLeft)
         {
             await Fail(Error.Many(parsedConfig.LeftToSeq()).Print());

@@ -49,7 +49,9 @@ internal class DeployCatletSaga(
             await lockManager.AcquireVmLock(response.VmId);
             Data.Data.State = DeployCatletSagaState.VmCreated;
 
-            Data.Data.VmId = response.Inventory.VmId;
+            var inventory = response.Inventory ?? throw new InvalidOperationException(
+                "The inventory response is missing from the CreateCatletVMCommand result.");
+            Data.Data.VmId = inventory.VmId;
 
             var catletMetadata = new CatletMetadataContent
             {
@@ -64,7 +66,7 @@ internal class DeployCatletSaga(
                 {
                     Id = Data.Data.MetadataId,
                     CatletId = Data.Data.CatletId,
-                    VmId = response.Inventory.VmId,
+                    VmId = inventory.VmId,
                     Metadata = catletMetadata,
                     IsDeprecated = false,
                     SecretDataHidden = false,
@@ -78,8 +80,8 @@ internal class DeployCatletSaga(
                 Id = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
-                VmId = response.Inventory.VmId,
-                Name = response.Inventory.Name ?? throw new InvalidOperationException(
+                VmId = inventory.VmId,
+                Name = inventory.Name ?? throw new InvalidOperationException(
                     $"The inventory for catlet {Data.Data.CatletId} is missing the name."),
                 Environment = Data.Data.Config!.Environment!,
                 DataStore = Data.Data.Config!.Store!,
@@ -177,10 +179,13 @@ internal class DeployCatletSaga(
         {
             Data.Data.State = DeployCatletSagaState.VmUpdated;
 
+            var responseInventory = response.Inventory ?? throw new InvalidOperationException(
+                "The inventory response is missing from the UpdateCatletVMCommand result.");
+
             await bus.SendLocal(new UpdateInventoryCommand
             {
                 AgentName = Data.Data.AgentName,
-                Inventory = response.Inventory,
+                Inventory = responseInventory,
                 Timestamp = response.Timestamp,
             });
 
@@ -197,7 +202,7 @@ internal class DeployCatletSaga(
                     Data.Data.Config ?? throw new InvalidOperationException(
                         "The catlet configuration is missing from the deployment saga state."),
                     Data.Data.CatletId, Data.Data.VmId),
-                VmId = response.Inventory.VmId,
+                VmId = responseInventory.VmId,
                 CatletId = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,
                 SecretDataHidden = metadata.SecretDataHidden,
@@ -237,7 +242,8 @@ internal class DeployCatletSaga(
         Data.Data.Architecture = message.Architecture;
         Data.Data.ContentType = message.ContentType;
         Data.Data.OriginalConfig = message.OriginalConfig;
-        Data.Data.ResolvedGenes = message.ResolvedGenes;
+        Data.Data.ResolvedGenes = message.ResolvedGenes ?? throw new InvalidOperationException(
+            "The resolved genes are missing from the DeployCatletCommand.");
         Data.Data.SpecificationId = message.SpecificationId;
         Data.Data.SpecificationVersionId = message.SpecificationVersionId;
 
@@ -250,7 +256,9 @@ internal class DeployCatletSaga(
                 return;
             }
 
-            Data.Data.Config = message.Config.CloneWith(c => { c.Project = project.Name; });
+            var config = message.Config ?? throw new InvalidOperationException(
+                "The catlet configuration is missing from the DeployCatletCommand.");
+            Data.Data.Config = config.CloneWith(c => { c.Project = project.Name; });
 
             if (Data.Data.SpecificationId.HasValue)
             {
@@ -290,14 +298,18 @@ internal class DeployCatletSaga(
 
         Data.Data.MetadataId = catlet.MetadataId;
         Data.Data.VmId = catlet.VmId;
-        Data.Data.Config = message.Config.CloneWith(c => { c.Project = catlet.Project.Name; });
+        var updateConfig = message.Config ?? throw new InvalidOperationException(
+            "The catlet configuration is missing from the DeployCatletCommand.");
+        Data.Data.Config = updateConfig.CloneWith(c => { c.Project = catlet.Project.Name; });
 
+        var feedConfig = Data.Data.Config ?? throw new InvalidOperationException(
+            "The catlet configuration is missing from the deployment saga state.");
         await StartNewTask(new UpdateCatletNetworksCommand
         {
             CatletId = Data.Data.CatletId,
             CatletMetadataId = Data.Data.MetadataId,
             Config = CatletSystemDataFeeding.FeedSystemVariables(
-                Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
+                feedConfig, Data.Data.CatletId, Data.Data.VmId),
             ProjectId = Data.Data.ProjectId,
         });
     }

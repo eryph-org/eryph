@@ -10,13 +10,13 @@ public class ValidateCatletDeploymentCommand : IHasCorrelationId, ICommandWithNa
 {
     public Guid ProjectId { get; set; }
 
-    public string AgentName { get; set; }
+    public string? AgentName { get; set; }
 
-    public Architecture Architecture { get; set; }
+    public Architecture? Architecture { get; set; }
 
-    public CatletConfig Config { get; set; }
+    public CatletConfig? Config { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash>? ResolvedGenes { get; set; }
 
     public string GetCommandName() => "Validate catlet deployment";
 

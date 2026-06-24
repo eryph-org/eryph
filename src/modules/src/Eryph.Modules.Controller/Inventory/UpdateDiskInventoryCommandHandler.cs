@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.Controller.DataServices;
@@ -35,16 +36,19 @@ internal class UpdateDiskInventoryCommandHandler(
 
     public async Task Handle(UpdateDiskInventoryCommand message)
     {
-        var vmHost = await vmHostDataService.GetVMHostByAgentName(message.AgentName);
+        var agentName = message.AgentName ?? throw new InvalidOperationException("AgentName is required");
+        var inventory = message.Inventory ?? throw new InvalidOperationException("Inventory is required");
+
+        var vmHost = await vmHostDataService.GetVMHostByAgentName(agentName);
         if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
             return;
 
-        var diskIdentifiers = CollectDiskIdentifiers(message.Inventory.ToSeq());
+        var diskIdentifiers = CollectDiskIdentifiers(inventory.ToSeq());
         foreach (var diskIdentifier in diskIdentifiers) await _lockManager.AcquireVhdLock(diskIdentifier);
 
-        foreach (var diskInfo in message.Inventory)
-            await AddOrUpdateDisk(message.AgentName, message.Timestamp, diskInfo);
+        foreach (var diskInfo in inventory)
+            await AddOrUpdateDisk(agentName, message.Timestamp, diskInfo);
 
-        await CheckDisks(message.Timestamp, message.AgentName);
+        await CheckDisks(message.Timestamp, agentName);
     }
 }

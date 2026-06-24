@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Eryph.Messages.Genes.Commands;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -13,6 +14,8 @@ internal class UpdateGenesInventoryCommandHandler(
 {
     public async Task Handle(UpdateGenesInventoryCommand message)
     {
-        await AddOrUpdateGenes(message.AgentName, message.Timestamp, message.Inventory);
+        var agentName = message.AgentName ?? throw new InvalidOperationException("Agent name is required");
+        var genes = message.Inventory ?? throw new InvalidOperationException("Inventory is required");
+        await AddOrUpdateGenes(agentName, message.Timestamp, genes);
     }
 }

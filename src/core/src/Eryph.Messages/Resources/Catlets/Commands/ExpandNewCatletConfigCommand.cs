@@ -6,7 +6,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 [SendMessageTo(MessageRecipient.Controllers)]
 public class ExpandNewCatletConfigCommand : IHasCorrelationId
 {
-    public CatletConfig Config { get; set; }
+    public CatletConfig? Config { get; set; }
 
     public bool ShowSecrets { get; set; }
 

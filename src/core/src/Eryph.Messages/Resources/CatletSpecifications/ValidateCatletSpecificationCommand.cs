@@ -7,11 +7,11 @@ namespace Eryph.Messages.Resources.CatletSpecifications;
 [SendMessageTo(MessageRecipient.Controllers)]
 public class ValidateCatletSpecificationCommand : ICommandWithName, IHasCorrelationId
 {
-    public string ContentType { get; set; }
+    public string? ContentType { get; set; }
 
-    public string Configuration { get; set; }
+    public string? Configuration { get; set; }
 
-    public ISet<Architecture> Architectures { get; set; }
+    public ISet<Architecture>? Architectures { get; set; }
 
     public string GetCommandName() => "Validate catlet specification";
 

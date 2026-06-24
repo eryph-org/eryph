@@ -9,9 +9,9 @@ public class PlacementVerificationCompletedEvent
 {
     public Guid CorrelationId { get; set; }
 
-    [PrivateIdentifier] public string AgentName { get; set; }
+    [PrivateIdentifier] public string? AgentName { get; set; }
 
-    public Architecture Architecture { get; set; }
+    public Architecture? Architecture { get; set; }
 
     public bool Confirmed { get; set; }
 }

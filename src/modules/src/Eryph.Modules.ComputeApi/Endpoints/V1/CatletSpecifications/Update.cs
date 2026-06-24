@@ -32,7 +32,7 @@ public class Update(
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             ContentType = request.Body.Configuration.ContentType,
             Configuration = request.Body.Configuration.Content,
-            Comment = request.Body.Comment,
+            Comment = request.Body.Comment ?? "",
             Architectures = request.Body.Architectures.ToSeq()
                 .Map(Architecture.New)
                 .DefaultIfEmpty(Architecture.New(EryphConstants.DefaultArchitecture))

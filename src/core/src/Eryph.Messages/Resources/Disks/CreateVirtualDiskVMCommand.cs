@@ -11,17 +11,17 @@ public class CreateVirtualDiskVMCommand : IHasResource, IHostAgentCommand
 
     public int Size { get; set; }
 
-    public CatletDriveName Name { get; set; }
+    public CatletDriveName? Name { get; set; }
 
-    public ProjectName ProjectName { get; set; }
+    public ProjectName? ProjectName { get; set; }
 
-    public EnvironmentName Environment { get; set; }
+    public EnvironmentName? Environment { get; set; }
 
-    public DataStoreName DataStore { get; set; }
+    public DataStoreName? DataStore { get; set; }
 
-    public StorageIdentifier StorageIdentifier { get; set; }
+    public StorageIdentifier? StorageIdentifier { get; set; }
 
     public Resource Resource => new(ResourceType.VirtualDisk, DiskId);
 
-    [PrivateIdentifier] public string AgentName { get; set; }
+    [PrivateIdentifier] public string? AgentName { get; set; }
 }

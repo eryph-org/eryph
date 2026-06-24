@@ -2,5 +2,5 @@
 
 public interface IHostAgentCommand
 {
-    string AgentName { get; set; }
+    string? AgentName { get; set; }
 }

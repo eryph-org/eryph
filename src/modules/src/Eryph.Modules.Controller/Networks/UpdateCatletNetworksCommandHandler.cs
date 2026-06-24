@@ -44,7 +44,8 @@ public class UpdateCatletNetworksCommandHandler(
     public EitherAsync<Error, Seq<MachineNetworkSettings>> UpdateNetworks(
         UpdateCatletNetworksCommand command) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let usedPortNames = command.Config.Networks
+        let config = command.Config ?? throw new InvalidOperationException("UpdateCatletNetworksCommand.Config is required")
+        let usedPortNames = config.Networks
             .ToSeq()
             .Map(cfg => GetPortName(command.CatletId, cfg.AdapterName))
         from unusedPorts in stateStore.For<CatletNetworkPort>().IO.ListAsync(
@@ -52,7 +53,7 @@ public class UpdateCatletNetworksCommandHandler(
         from __ in unusedPorts
             .Map(RemovePort)
             .SequenceSerial()
-        from settings in command.Config.Networks
+        from settings in config.Networks
             .ToSeq()
             .Map(cfg => UpdateNetwork(command.CatletMetadataId, command, cfg))
             .SequenceSerial()
@@ -62,7 +63,9 @@ public class UpdateCatletNetworksCommandHandler(
         Guid catletMetadataId,
         UpdateCatletNetworksCommand command,
         CatletNetworkConfig networkConfig) =>
-        from environmentName in Optional(command.Config.Environment)
+        from _ in RightAsync<Error, Unit>(unit)
+        let config = command.Config ?? throw new InvalidOperationException("UpdateCatletNetworksCommand.Config is required")
+        from environmentName in Optional(config.Environment)
             .Map(EnvironmentName.NewEither)
             .Sequence().ToAsync()
             .Map(n => n.IfNone(EnvironmentName.New(EryphConstants.DefaultEnvironmentName)))
@@ -89,7 +92,7 @@ public class UpdateCatletNetworksCommandHandler(
             .ToEither(Error.New($"Network provider {validNetwork.NetworkProvider} not found."))
             .ToAsync()
         let isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat
-        let networkAdapterConfig = command.Config.NetworkAdapters
+        let networkAdapterConfig = config.NetworkAdapters
             .ToSeq()
             .Find(x => x.Name == networkConfig.AdapterName)
         let allowMacAddressSpoofing = Optional(networkProvider.MacAddressSpoofing)
@@ -126,8 +129,8 @@ public class UpdateCatletNetworksCommandHandler(
             Error.New($"Router guard cannot be disabled for adapter '{networkConfig.AdapterName}': "
                       + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow the deactivation of the router guard."))
         let fixedMacAddress = networkAdapterConfig.Bind(x => Optional(x.MacAddress))
-        let hostname = Optional(command.Config.Hostname).Filter(notEmpty)
-                       | Optional(command.Config.Name).Filter(notEmpty)
+        let hostname = Optional(config.Hostname).Filter(notEmpty)
+                       | Optional(config.Name).Filter(notEmpty)
         from networkPort in AddOrUpdateAdapterPort(
             validNetwork, command.CatletId, catletMetadataId,
             networkConfig.AdapterName, hostname.IfNoneUnsafe((string?)null), fixedMacAddress)

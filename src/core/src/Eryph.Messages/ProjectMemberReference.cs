@@ -9,5 +9,5 @@ public class ProjectMemberReference : ITaskReference
     public Guid AssignmentId { get; set; }
     public TaskReferenceType ReferenceType => TaskReferenceType.ProjectMember;
     public string ReferenceId => AssignmentId.ToString();
-    public string ProjectName { get; set; }
+    public string? ProjectName { get; set; }
 }
