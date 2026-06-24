@@ -35,6 +35,12 @@ internal class CreateVirtualDiskSaga(
         {
             await lockManager.AcquireVhdLock(response.DiskInfo.DiskIdentifier);
 
+            if (response.DiskInfo.Name is null || response.DiskInfo.DataStore is null
+                || response.DiskInfo.Environment is null)
+                throw new InvalidOperationException(
+                    $"The created virtual disk {response.DiskInfo.DiskIdentifier} is missing the "
+                    + "name, data store, or environment.");
+
             await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
             {
                 ProjectId = Data.Data.ProjectId,

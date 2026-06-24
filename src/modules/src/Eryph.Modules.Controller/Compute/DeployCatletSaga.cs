@@ -79,7 +79,8 @@ internal class DeployCatletSaga(
                 MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
                 VmId = response.Inventory.VmId,
-                Name = response.Inventory.Name,
+                Name = response.Inventory.Name ?? throw new InvalidOperationException(
+                    $"The inventory for catlet {Data.Data.CatletId} is missing the name."),
                 Environment = Data.Data.Config!.Environment!,
                 DataStore = Data.Data.Config!.Store!,
                 StorageIdentifier = Data.Data.Config!.Location!,

@@ -18,21 +18,21 @@ internal static class MachineNetworkInfoExtensions
             CatletId = machineId,
             MacAddress = mn.MacAddress,
             PortName = mn.PortName,
-            DnsServerAddresses = mn.DnsServers,
-            IpV4Addresses = mn.IPAddresses.Select(IPAddress.Parse)
+            DnsServerAddresses = mn.DnsServers ?? [],
+            IpV4Addresses = (mn.IPAddresses ?? []).Select(IPAddress.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
                 .Select(n => n.ToString()).ToArray(),
-            IpV6Addresses = mn.IPAddresses.Select(IPAddress.Parse)
+            IpV6Addresses = (mn.IPAddresses ?? []).Select(IPAddress.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
                 .Select(n => n.ToString()).ToArray(),
-            IPv4DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse)
+            IPv4DefaultGateway = (mn.DefaultGateways ?? []).Select(IPAddress.Parse)
                 .FirstOrDefault(n => n.AddressFamily == AddressFamily.InterNetwork)?.ToString(),
-            IPv6DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse)
+            IPv6DefaultGateway = (mn.DefaultGateways ?? []).Select(IPAddress.Parse)
                 .FirstOrDefault(n => n.AddressFamily == AddressFamily.InterNetworkV6)?.ToString(),
-            IpV4Subnets = mn.Subnets.Select(IPNetwork2.Parse)
+            IpV4Subnets = (mn.Subnets ?? []).Select(IPNetwork2.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
                 .Select(n => n.ToString()).ToArray(),
-            IpV6Subnets = mn.Subnets.Select(IPNetwork2.Parse)
+            IpV6Subnets = (mn.Subnets ?? []).Select(IPNetwork2.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
                 .Select(n => n.ToString()).ToArray(),
         });

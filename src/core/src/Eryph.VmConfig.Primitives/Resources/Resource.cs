@@ -18,7 +18,7 @@ public struct Resource(ResourceType resourceType, Guid resourceId) : IComparable
         return Id.Equals(other.Id) && Type == other.Type;
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is Resource other && Equals(other);
     }

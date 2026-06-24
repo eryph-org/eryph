@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.Abstractions;
 using System.Text;
 using System.Threading;
@@ -37,7 +38,9 @@ internal class CatletMetadataChangeHandler(
             Id = metadata.Id,
             CatletId = metadata.CatletId,
             VmId = metadata.VmId,
-            Metadata = CatletMetadataContentJsonSerializer.SerializeToElement(metadata.Metadata),
+            Metadata = CatletMetadataContentJsonSerializer.SerializeToElement(
+                metadata.Metadata ?? throw new InvalidOperationException(
+                    $"The metadata for catlet {metadata.CatletId} has no content.")),
             IsDeprecated = metadata.IsDeprecated,
             SecretDataHidden = metadata.SecretDataHidden,
             SpecificationId = metadata.SpecificationId,

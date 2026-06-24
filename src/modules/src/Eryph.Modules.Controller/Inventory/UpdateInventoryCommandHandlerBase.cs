@@ -56,9 +56,9 @@ internal class UpdateInventoryCommandHandlerBase
         IReadOnlyList<VirtualMachineData> vmInfos,
         CatletFarm host)
     {
-        var diskInfos = vmInfos.SelectMany(x => x.Drives)
+        var diskInfos = vmInfos.SelectMany(x => x.Drives ?? [])
             .Select(d => d.Disk)
-            .Where(d => d != null)
+            .OfType<DiskInfo>()
             .ToSeq();
 
         // Acquire all necessary locks in the beginning to minimize the potential for deadlocks.
@@ -226,7 +226,7 @@ internal class UpdateInventoryCommandHandlerBase
     }
 
     protected async Task<Option<Project>> FindProject(
-        string projectName, Guid? optionalProjectId)
+        string? projectName, Guid? optionalProjectId)
     {
         if (optionalProjectId.GetValueOrDefault() != Guid.Empty)
             return await _stateStore.For<Project>().GetByIdAsync(optionalProjectId.GetValueOrDefault());
@@ -239,7 +239,7 @@ internal class UpdateInventoryCommandHandlerBase
                 EryphConstants.DefaultTenantId, projectName));
     }
 
-    protected async Task<Project> FindRequiredProject(string projectName,
+    protected async Task<Project> FindRequiredProject(string? projectName,
         Guid? projectId)
     {
         if (string.IsNullOrWhiteSpace(projectName))
@@ -256,26 +256,37 @@ internal class UpdateInventoryCommandHandlerBase
         CatletFarm hostMachine,
         DateTimeOffset timestamp,
         Guid catletId,
-        Project project) =>
-        from _ in Task.FromResult(unit)
-        from drives in vmInfo.Drives.ToSeq()
-            .Map(d => VirtualMachineDriveDataToCatletDrive(d, hostMachine.Name, timestamp))
-            .SequenceSerial()
-        select new Catlet
-        {
-            Id = catletId,
-            Project = project,
-            ProjectId = project.Id,
-            VmId = vmInfo.VmId,
-            Name = vmInfo.Name,
-            Status = vmInfo.Status.ToCatletStatus(),
-            LastSeen = timestamp,
-            LastSeenState = timestamp,
-            Host = hostMachine,
-            AgentName = hostMachine.Name,
-            DataStore = vmInfo.DataStore,
-            Environment = vmInfo.Environment,
-            Path = vmInfo.VMPath,
+        Project project)
+    {
+        // A managed VM (it passed the metadata check) always reports these required
+        // identity fields; treat a missing value as an inconsistent inventory.
+        var name = vmInfo.Name ?? throw new InvalidOperationException(
+            $"The inventory data for VM {vmInfo.VmId} is missing the name.");
+        var dataStore = vmInfo.DataStore ?? throw new InvalidOperationException(
+            $"The inventory data for VM {vmInfo.VmId} is missing the data store.");
+        var environment = vmInfo.Environment ?? throw new InvalidOperationException(
+            $"The inventory data for VM {vmInfo.VmId} is missing the environment.");
+
+        return
+            from _ in Task.FromResult(unit)
+            from drives in vmInfo.Drives.ToSeq()
+                .Map(d => VirtualMachineDriveDataToCatletDrive(d, hostMachine.Name, timestamp))
+                .SequenceSerial()
+            select new Catlet
+            {
+                Id = catletId,
+                Project = project,
+                ProjectId = project.Id,
+                VmId = vmInfo.VmId,
+                Name = name,
+                Status = vmInfo.Status.ToCatletStatus(),
+                LastSeen = timestamp,
+                LastSeenState = timestamp,
+                Host = hostMachine,
+                AgentName = hostMachine.Name,
+                DataStore = dataStore,
+                Environment = environment,
+                Path = vmInfo.VMPath,
             Frozen = vmInfo.Frozen,
             StorageIdentifier = vmInfo.StorageIdentifier,
             MetadataId = vmInfo.MetadataId,
@@ -286,17 +297,20 @@ internal class UpdateInventoryCommandHandlerBase
             MaximumMemory = vmInfo.Memory?.Maximum ?? 0,
             Features = MapFeatures(vmInfo),
             SecureBootTemplate = vmInfo.Firmware?.SecureBootTemplate,
-            NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
+            NetworkAdapters = (vmInfo.NetworkAdapters ?? []).Select(a => new CatletNetworkAdapter
             {
-                Id = a.Id,
+                Id = a.Id ?? throw new InvalidOperationException(
+                    $"The inventory data for VM {vmInfo.VmId} has a network adapter without an ID."),
                 CatletId = catletId,
-                Name = a.AdapterName,
+                Name = a.AdapterName ?? throw new InvalidOperationException(
+                    $"The inventory data for VM {vmInfo.VmId} has a network adapter without a name."),
                 SwitchName = a.VirtualSwitchName,
                 MacAddress = a.MacAddress,
             }).ToList(),
             Drives = drives.ToList(),
             ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(catletId) ?? []).ToList(),
         };
+    }
 
     private async Task<CatletDrive> VirtualMachineDriveDataToCatletDrive(
         VirtualMachineDriveData driveData,
@@ -309,7 +323,8 @@ internal class UpdateInventoryCommandHandlerBase
 
         return new CatletDrive
         {
-            Id = driveData.Id,
+            Id = driveData.Id ?? throw new InvalidOperationException(
+                "The inventory data contains a drive without an ID."),
             Type = driveData.Type ?? CatletDriveType.Dvd,
             AttachedDisk = disk.IfNoneUnsafe(() => null),
         };
@@ -370,6 +385,10 @@ internal class UpdateInventoryCommandHandlerBase
         if (project.BeingDeleted)
             return None;
 
+        if (diskInfo.Name is null || diskInfo.DataStore is null || diskInfo.Environment is null)
+            throw new InvalidOperationException(
+                $"The inventory data for disk {diskInfo.Id} is missing the name, data store, or environment.");
+
         disk = new VirtualDisk
         {
             Id = diskInfo.Id,
@@ -380,7 +399,7 @@ internal class UpdateInventoryCommandHandlerBase
             StorageIdentifier = diskInfo.StorageIdentifier,
             Project = project,
             FileName = diskInfo.FileName,
-            Path = diskInfo.Path.ToLowerInvariant(),
+            Path = diskInfo.Path?.ToLowerInvariant(),
             GeneSet = diskInfo.Gene?.Id.GeneSet.Value,
             GeneName = diskInfo.Gene?.Id.GeneName.Value,
             GeneArchitecture = diskInfo.Gene?.Architecture.Value,
@@ -440,10 +459,10 @@ internal class UpdateInventoryCommandHandlerBase
         var virtualDisks = await _stateStore.For<VirtualDisk>().ListAsync(
             new VirtualDiskSpecs.GetByLocation(
                 project.Id,
-                diskInfo.DataStore,
-                diskInfo.Environment,
-                diskInfo.StorageIdentifier,
-                diskInfo.Name,
+                diskInfo.DataStore ?? "",
+                diskInfo.Environment ?? "",
+                diskInfo.StorageIdentifier ?? "",
+                diskInfo.Name ?? "",
                 diskInfo.DiskIdentifier));
 
         return virtualDisks.Length() > 1

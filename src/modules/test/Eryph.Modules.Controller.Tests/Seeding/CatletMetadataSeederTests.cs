@@ -107,13 +107,14 @@ public abstract class CatletMetadataSeederTests(
             metadata.IsDeprecated.Should().BeTrue();
             metadata.SecretDataHidden.Should().BeTrue();
             metadata.Genes.Should().BeEmpty();
-            metadata.Metadata.Should().NotBeNull();
-            metadata.Metadata!.Architecture.Value.Should().Be(EryphConstants.DefaultArchitecture);
-            metadata.Metadata.Config.Should().NotBeNull();
-            metadata.Metadata.Config.Parent.Should().BeNull();
-            metadata.Metadata.PinnedGenes.Should().BeEmpty();
-            metadata.Metadata.ContentType.Should().BeEmpty();
-            metadata.Metadata.OriginalConfig.Should().BeEmpty();
+            var content = metadata.Metadata ?? throw new InvalidOperationException("The catlet metadata content is null.");
+            var architecture = content.Architecture ?? throw new InvalidOperationException("The architecture is null.");
+            architecture.Value.Should().Be(EryphConstants.DefaultArchitecture);
+            var config = content.Config ?? throw new InvalidOperationException("The catlet config is null.");
+            config.Parent.Should().BeNull();
+            content.PinnedGenes.Should().BeEmpty();
+            content.ContentType.Should().BeEmpty();
+            content.OriginalConfig.Should().BeEmpty();
         });
 
         var backupContent = await MockFileSystem.File.ReadAllTextAsync(
@@ -162,9 +163,11 @@ public abstract class CatletMetadataSeederTests(
             var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(metadataId);
             metadata.Should().NotBeNull();
             metadata!.IsDeprecated.Should().BeTrue();
-            metadata.Metadata.Should().NotBeNull();
-            metadata.Metadata!.Architecture.Value.Should().Be("hyperv/amd64");
-            metadata.Metadata.Config.Parent.Should().Be("dbosoft/ubuntu-22.04/starter");
+            var content = metadata!.Metadata ?? throw new InvalidOperationException("The catlet metadata content is null.");
+            var architecture = content.Architecture ?? throw new InvalidOperationException("The architecture is null.");
+            architecture.Value.Should().Be("hyperv/amd64");
+            var config = content.Config ?? throw new InvalidOperationException("The catlet config is null.");
+            config.Parent.Should().Be("dbosoft/ubuntu-22.04/starter");
         });
     }
 
@@ -194,9 +197,11 @@ public abstract class CatletMetadataSeederTests(
         {
             var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(metadataId);
             metadata.Should().NotBeNull();
-            metadata!.Metadata.Should().NotBeNull();
-            metadata.Metadata!.Architecture.Value.Should().Be(EryphConstants.DefaultArchitecture);
-            metadata.Metadata.Config.Parent.Should().Be("some/parent/tag");
+            var content = metadata!.Metadata ?? throw new InvalidOperationException("The catlet metadata content is null.");
+            var architecture = content.Architecture ?? throw new InvalidOperationException("The architecture is null.");
+            architecture.Value.Should().Be(EryphConstants.DefaultArchitecture);
+            var config = content.Config ?? throw new InvalidOperationException("The catlet config is null.");
+            config.Parent.Should().Be("some/parent/tag");
         });
     }
 

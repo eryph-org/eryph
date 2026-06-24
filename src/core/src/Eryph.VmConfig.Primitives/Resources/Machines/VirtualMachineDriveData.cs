@@ -5,7 +5,7 @@ namespace Eryph.Resources.Machines;
 
 public class VirtualMachineDriveData
 {
-    public string Id { get; set; }
+    public string? Id { get; set; }
 
     public int ControllerLocation { get; set; }
 
@@ -24,5 +24,5 @@ public class VirtualMachineDriveData
     /// Can be <see langword="null"/> when e.g. the VHD has
     /// been deleted but is still attached to a VM in Hyper-V.
     /// </remarks>
-    public DiskInfo Disk { get; set; }
+    public DiskInfo? Disk { get; set; }
 }

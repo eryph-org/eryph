@@ -4,5 +4,5 @@ namespace Eryph.Resources.Machines;
 
 public class VMHostMachineData : MachineData
 {
-    public NetworkProvidersConfiguration NetworkProviderConfiguration { get; set; }
+    public NetworkProvidersConfiguration? NetworkProviderConfiguration { get; set; }
 }

@@ -39,7 +39,9 @@ internal class UpdateVMHostInventoryCommandHandler(
 
     public async Task Handle(UpdateVMHostInventoryCommand message)
     {
-        var vmHost = await vmHostDataService.GetVMHostByAgentName(message.HostInventory.Name)
+        var vmHost = await vmHostDataService.GetVMHostByAgentName(
+                message.HostInventory.Name ?? throw new InvalidOperationException(
+                    "The host inventory is missing the host name."))
             .IfNoneAsync(async () => await vmHostDataService.AddNewVMHost(new CatletFarm
             {
                 Id = Guid.NewGuid(),

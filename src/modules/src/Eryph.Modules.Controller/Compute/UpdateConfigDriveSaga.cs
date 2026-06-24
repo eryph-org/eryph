@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core.Genetics;
@@ -50,7 +51,9 @@ internal class UpdateConfigDriveSaga(
         await StartNewTask(new UpdateCatletConfigDriveCommand
         {
             Config = CatletSystemDataFeeding.FeedSystemVariables(
-                metadata.Metadata.Config, catlet.Id, catlet.VmId),
+                metadata.Metadata.Config ?? throw new InvalidOperationException(
+                    $"The metadata for catlet {catlet.Id} has no configuration."),
+                catlet.Id, catlet.VmId),
             VmId = catlet.VmId,
             CatletId = catlet.Id,
             MetadataId = catlet.MetadataId,
