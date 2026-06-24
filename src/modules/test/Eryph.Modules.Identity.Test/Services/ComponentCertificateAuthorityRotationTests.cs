@@ -30,6 +30,14 @@ public class ComponentCertificateAuthorityRotationTests
         return X509CertificateLoader.LoadCertificate(issued.Leaf.RawData);
     }
 
+    // Issues a server certificate so the server-TLS intermediate exists in the store (it is minted
+    // lazily on first server-cert issuance, just like the client intermediate).
+    private static void IssueServerLeaf(ComponentCertificateAuthority ca, string dnsName)
+    {
+        using var key = RSA.Create(2048);
+        using var issued = ca.IssueServerCertificate([dnsName], key);
+    }
+
     // Builds leaf -> intermediate -> root against the CA's own trust bundle + issuing intermediates,
     // exactly as a relying party would. Disposes the borrowed CA certificate handles.
     private static bool ChainsToTrust(ComponentCertificateAuthority ca, X509Certificate2 leaf)
@@ -85,7 +93,10 @@ public class ComponentCertificateAuthorityRotationTests
     public void Issuing_intermediates_include_both_generations_during_the_overlap()
     {
         var ca = CreateCa();
+        // Issue both a client and a server leaf so both tier intermediates exist (they are minted
+        // lazily on first issuance), establishing one generation of each before rotation.
         using var _ = IssueClientLeaf(ca, "agent1.eryph.local");
+        IssueServerLeaf(ca, "agent1.eryph.local");
 
         var before = ca.GetIssuingCaCertificates();
         var beforeCount = before.Count;

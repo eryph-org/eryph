@@ -35,12 +35,26 @@ public sealed class ComponentEnrollmentClient(
         if (!force && store.HasCurrentCertificate())
             return;
 
+        var haveValid = store.HasValidCertificate();
+
+        // A forced renewal needs a valid certificate to authenticate the renew endpoint. With none
+        // (missing/expired), renewal cannot succeed and the one-time enrollment token was consumed at
+        // first enrollment, so the token path cannot recover it either — surface that clearly instead of
+        // a silent, doomed token attempt. Recovery is re-enrollment (a fresh enrollment file).
+        if (force && !haveValid)
+        {
+            logger.LogError(
+                "Cannot force a renewal for {ComponentType}: no valid certificate to authenticate with. "
+                + "The component must be re-enrolled (a new enrollment token) to recover.",
+                identity.ComponentType);
+            return;
+        }
+
         // If a still-valid certificate exists, the component renews by authenticating with that
         // certificate (mTLS) — the one-time token cannot be reused. A forced refresh of a still-current
         // certificate takes this path too. Otherwise it has no usable certificate and must enroll with
-        // the token. A forced refresh never blocks (it is a background operation, like a due renewal).
-        var haveValid = store.HasValidCertificate();
-        await EnrollWithRetryAsync(blocking: !haveValid && !force, renew: haveValid, cancellationToken);
+        // the token (blocking, so startup waits for the identity service).
+        await EnrollWithRetryAsync(blocking: !haveValid, renew: haveValid, cancellationToken);
     }
 
     private async Task EnrollWithRetryAsync(bool blocking, bool renew, CancellationToken cancellationToken)

@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -458,6 +459,47 @@ public class ComponentEnrollmentServiceTests
 
         // Ensured once at enrollment and again (idempotently) at renewal.
         broker.Ensured.Should().Equal(enrolled.ComponentId, enrolled.ComponentId);
+    }
+
+    [Fact]
+    public async Task Renew_succeeds_even_when_broker_user_provisioning_fails()
+    {
+        // The certificate is renewed before the broker user is re-ensured, and the user already exists
+        // from enrollment, so a broker-management failure on renewal must NOT fail the renewal (which
+        // would drop the freshly issued certificate). Best-effort: log and return the new certificate.
+        var ca = CreateCa();
+        var enrolled = await new ComponentEnrollmentService(
+                ca, new StubPolicy(true), [], NullLogger<ComponentEnrollmentService>.Instance)
+            .EnrollAsync(new ComponentEnrollmentRequest
+            {
+                ComponentType = ComponentType.VMHostAgent,
+                Fqdn = "agent1.eryph.local",
+                PublicKey = NewPublicKey(),
+            });
+
+        using var leaf = X509CertificateLoader.LoadCertificate(enrolled.Certificate);
+        var sut = new ComponentEnrollmentService(
+            ca, new StubPolicy(true), [new ThrowingBrokerProvisioner()],
+            NullLogger<ComponentEnrollmentService>.Instance);
+
+        var renewed = await sut.RenewAsync(leaf, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        }, CancellationToken.None);
+
+        renewed.ComponentId.Should().Be(enrolled.ComponentId);
+        renewed.Certificate.Should().NotBeEmpty();
+    }
+
+    private sealed class ThrowingBrokerProvisioner : IComponentBrokerProvisioner
+    {
+        public Task EnsureComponentAsync(Guid componentId, CancellationToken cancellationToken = default) =>
+            throw new HttpRequestException("broker management API unavailable");
+
+        public Task RemoveComponentAsync(Guid componentId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class RecordingBrokerProvisioner : IComponentBrokerProvisioner

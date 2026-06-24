@@ -100,6 +100,21 @@ public class ComponentEnrollmentClientTests
     }
 
     [Fact]
+    public async Task EnsureEnrolledAsync_force_with_no_valid_certificate_does_not_attempt_enrollment()
+    {
+        // A forced renewal of an expired/absent certificate cannot succeed (nothing to authenticate the
+        // renew endpoint, and the one-time token is already spent), so it must NOT fall through to a
+        // doomed token-enroll attempt — it surfaces the problem (logged) and makes no transport call.
+        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var store = new FakeStore { Current = false, Valid = false };
+
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+
+        transport.Calls.Should().Be(0);
+        store.SaveCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task EnsureEnrolledAsync_fails_fast_on_a_non_transient_error_instead_of_retrying_forever()
     {
         // No valid certificate (blocking), but the failure is non-transient (a 401 from a used/expired

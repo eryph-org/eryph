@@ -106,9 +106,22 @@ public sealed class ComponentEnrollmentService(
         using var keys = ImportRequestKeys(request);
         var result = Issue(componentId, fqdn, keys);
 
-        // Keep the broker user in step with the renewed certificate (idempotent): a component that has
-        // been re-enrolled after a decommission, or whose user was never created, is healed on renewal.
-        await EnsureBrokerUserAsync(componentId, cancellationToken);
+        // Re-ensure the broker user, but best-effort: the certificate has already been renewed and the
+        // user was created at enrollment, so a transient broker-management failure must NOT fail the
+        // renewal (which would drop the freshly issued certificate and, on the endpoint, surface as a
+        // 500). It is logged for the operator; the next renewal re-ensures it.
+        try
+        {
+            await EnsureBrokerUserAsync(componentId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Renewed the certificate for component {ComponentId} but failed to re-ensure its broker "
+                + "user; the existing user from enrollment remains in effect.",
+                componentId);
+        }
 
         logger.LogInformation(
             "Renewed component certificate(s) for component {ComponentId} ({Fqdn}; server cert: {HasServer}).",
@@ -233,8 +246,19 @@ public sealed class ComponentEnrollmentService(
         if (string.IsNullOrWhiteSpace(fqdn))
             throw new ComponentEnrollmentException("The certificate has no common name (component host).");
 
-        var urn = EnumerateSanUris(certificate)
-            .FirstOrDefault(u => u.StartsWith(ComponentUrnPrefix, StringComparison.OrdinalIgnoreCase));
+        string? urn;
+        try
+        {
+            urn = EnumerateSanUris(certificate)
+                .FirstOrDefault(u => u.StartsWith(ComponentUrnPrefix, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception ex) when (ex is AsnContentException or CryptographicException or FormatException)
+        {
+            // A malformed subjectAltName must be rejected as an untrusted request, not bubble up as a 500.
+            throw new ComponentEnrollmentException(
+                "The certificate's subject alternative names could not be parsed.", ex);
+        }
+
         if (urn is null || !Guid.TryParse(urn[ComponentUrnPrefix.Length..], out var componentId))
             throw new ComponentEnrollmentException(
                 "The certificate does not carry a component identity URN; cannot renew.");

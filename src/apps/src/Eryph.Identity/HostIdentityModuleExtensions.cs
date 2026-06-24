@@ -91,8 +91,17 @@ namespace Eryph.Identity
                         provisioner.EnsureComponentAsync(componentId).GetAwaiter().GetResult();
                         return;
                     }
-                    catch (HttpRequestException ex) when (DateTime.UtcNow < deadline)
+                    catch (HttpRequestException ex)
                     {
+                        // Fail fast once the deadline passes (identity cannot join the bus without its own
+                        // broker user) with an actionable message rather than letting the raw transport
+                        // exception bubble out of host startup.
+                        if (DateTime.UtcNow >= deadline)
+                            throw new InvalidOperationException(
+                                "The RabbitMQ management API was unreachable after 2 minutes; cannot "
+                                + "provision the identity broker user, so the identity host cannot start. "
+                                + "Check broker:managementUrl and that the broker is running.", ex);
+
                         logger.LogInformation(
                             "Broker management API not ready yet ({Message}); retrying identity broker-user "
                             + "provisioning.", ex.Message);

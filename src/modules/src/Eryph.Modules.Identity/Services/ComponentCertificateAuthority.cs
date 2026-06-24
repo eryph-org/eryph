@@ -60,11 +60,13 @@ public class ComponentCertificateAuthority(
         // ALL valid generations are returned, not just the newest: during a CA rotation overlap a leaf
         // issued under the previous intermediate must still chain (e.g. to validate it at renewal), so
         // the superseded-but-still-valid intermediate has to be available alongside the new one.
+        // Read-only: enumerate the intermediates already in the store. Unlike GetIntermediate this never
+        // issues — a validation/chain-building caller (RenewAsync) must not mint CA material as a side
+        // effect, and issuing a fresh intermediate would not help validate a leaf signed by an older one
+        // anyway. If a tier has no intermediate yet (no leaf ever issued), it simply contributes none.
         var result = new List<X509Certificate2>();
         foreach (var tier in new[] { ClientCa, ServerCa })
         {
-            // Ensure the tier exists (issues it on first use), then collect every valid generation.
-            GetIntermediate(tier).Dispose();
             foreach (var certificate in storeService.GetFromMyStore(tier.SubjectName))
             {
                 if (IsValidCa(certificate))
