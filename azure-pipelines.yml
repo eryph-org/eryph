@@ -107,6 +107,14 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)\src\data\src\Eryph.StateDb.Design\
       pwsh: true
 
+  - task: PowerShell@2
+    displayName: Generate identity migration SQL
+    inputs:
+      filePath: $(Build.SourcesDirectory)\src\data\src\Eryph.IdentityDb.Design\Generate-MigrationSql.ps1
+      arguments: -Output $(Build.ArtifactStagingDirectory)\zero_build\migrations
+      workingDirectory: $(Build.SourcesDirectory)\src\data\src\Eryph.IdentityDb.Design\
+      pwsh: true
+
   - task: AzureCLI@2
     displayName: 'Sign executables'
     condition: ne(variables['Build.Reason'], 'PullRequest')
