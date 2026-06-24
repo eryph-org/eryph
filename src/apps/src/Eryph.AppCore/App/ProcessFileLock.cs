@@ -15,7 +15,7 @@ public sealed class ProcessFileLock : IDisposable, IAsyncDisposable
     private readonly FileStream _lockStream;
 
 
-    public ProcessFileLock(string filePath, IDictionary<string, object> metadata = null)
+    public ProcessFileLock(string filePath, IDictionary<string, object>? metadata = null)
     {
         _filePath = filePath;
 
@@ -64,7 +64,7 @@ public sealed class ProcessFileLock : IDisposable, IAsyncDisposable
         Dispose(false);
     }
 
-    public void SetMetadata(IDictionary<string, object> metadata)
+    public void SetMetadata(IDictionary<string, object>? metadata)
     {
         _lockStream.Seek(0, SeekOrigin.Begin);
 
