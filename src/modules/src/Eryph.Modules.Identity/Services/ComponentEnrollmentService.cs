@@ -14,6 +14,15 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.Modules.Identity.Services;
 
 /// <inheritdoc cref="IComponentEnrollmentService"/>
+/// <remarks>
+/// Trust model: the component CA is the boundary. Only a CA-enrolled component reaches enrollment/renewal
+/// or the bus, and all enrolled components are mutually trusted control-plane services (no multi-tenancy).
+/// Consequently the issued identity is always derived server-side (never from the request), but the
+/// requested SERVER-certificate DNS names are honored as given for an authenticated component — a
+/// component may legitimately serve shared names (e.g. a load-balancer host). What is bounded here is the
+/// authenticated identity (client cert) and the DEFAULT server name (the cert-derived FQDN on renewal),
+/// not which additional server names a trusted component may request.
+/// </remarks>
 public sealed class ComponentEnrollmentService(
     IComponentCertificateAuthority certificateAuthority,
     IComponentEnrollmentPolicy policy,
@@ -34,8 +43,9 @@ public sealed class ComponentEnrollmentService(
 
         // Validate and import everything the request carries BEFORE authorizing, because authorizing
         // redeems the one-time token. A recoverable client error (malformed key bytes, an invalid
-        // server DNS name) must not consume a token that is still valid for a corrected retry.
-        using var keys = ImportRequestKeys(request);
+        // server DNS name) must not consume a token that is still valid for a corrected retry. The
+        // default server name is the request FQDN here (the token binds it; validated above).
+        using var keys = ImportRequestKeys(request, request.Fqdn);
 
         // Authorize last: redeeming the one-time token is the final gate before issuance.
         if (!await policy.IsAuthorizedAsync(request, cancellationToken))
@@ -117,7 +127,12 @@ public sealed class ComponentEnrollmentService(
         if (!IsValidDnsName(fqdn))
             throw new ComponentEnrollmentException("The certificate's host name is not a valid DNS name.");
 
-        using var keys = ImportRequestKeys(request);
+        // The default server DNS name is the CERTIFICATE-derived FQDN, never request.Fqdn: on the renew
+        // path request.Fqdn is unauthenticated, so a renewing component could otherwise obtain a server
+        // certificate for an unrelated host by omitting server_dns_names. Explicitly requested server
+        // names are still honored within the per-component trust model (see the class remarks); the
+        // authenticated identity bounds only the default.
+        using var keys = ImportRequestKeys(request, fqdn);
         var result = Issue(componentId, fqdn, keys);
 
         // Re-ensure the broker user, but best-effort: the certificate has already been renewed and the
@@ -151,9 +166,18 @@ public sealed class ComponentEnrollmentService(
             await provisioner.EnsureComponentAsync(componentId, cancellationToken);
     }
 
+    // The most server DNS names a single request may carry (a real component lists a handful); a larger
+    // array is only an attempt to force per-name validation/issuance work. Mirrors the enroll endpoint's
+    // ComponentEnrollmentValidations cap, enforced here too so the (anonymous) renew path is bounded.
+    private const int MaxServerDnsNames = 16;
+
     // Imports and validates the public keys + server DNS names a request carries. Held in a disposable
     // so both the enroll (token) and renew (certificate) paths free the key handles the same way.
-    private static RequestKeys ImportRequestKeys(ComponentEnrollmentRequest request)
+    // <paramref name="defaultServerDnsName"/> is the trusted host name to cover when the request lists no
+    // explicit server names: the token-bound FQDN for enroll, the CERTIFICATE-derived FQDN for renew (so
+    // a renewing component cannot obtain a server certificate for an unrelated host via the request's
+    // FQDN field, which is not authenticated on the renew path).
+    private static RequestKeys ImportRequestKeys(ComponentEnrollmentRequest request, string defaultServerDnsName)
     {
         if (request.PublicKey is null || request.PublicKey.Length == 0)
             throw new ComponentEnrollmentException("The request must include the component public key.");
@@ -169,15 +193,22 @@ public sealed class ComponentEnrollmentService(
             throw new ComponentEnrollmentException("The request public key is invalid.", ex);
         }
 
-        // Cover every requested server name (default to the FQDN) — none is silently dropped, and
-        // each must be a valid DNS name or the whole request is rejected.
+        // Cover every requested server name (default to the trusted host name) — none is silently
+        // dropped, and each must be a valid DNS name or the whole request is rejected.
         RSA? serverKey = null;
         IReadOnlyList<string>? serverDnsNames = null;
         if (request.ServerPublicKey is { Length: > 0 })
         {
+            if (request.ServerDnsNames is { Count: > MaxServerDnsNames })
+            {
+                subjectKey.Dispose();
+                throw new ComponentEnrollmentException(
+                    $"At most {MaxServerDnsNames} server DNS names may be requested.");
+            }
+
             var dnsNames = request.ServerDnsNames is { Count: > 0 }
                 ? request.ServerDnsNames.ToList()
-                : [request.Fqdn];
+                : [defaultServerDnsName];
             if (dnsNames.Any(string.IsNullOrWhiteSpace) || !dnsNames.All(IsValidDnsName))
             {
                 subjectKey.Dispose();

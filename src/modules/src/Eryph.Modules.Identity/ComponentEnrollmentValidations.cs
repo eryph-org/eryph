@@ -19,6 +19,7 @@ namespace Eryph.Modules.Identity;
 /// </summary>
 public static class ComponentEnrollmentValidations
 {
+    /// <summary>Validates a token-based enrollment request (the enroll endpoint).</summary>
     public static Validation<ValidationIssue, EnrollComponentRequest> Validate(EnrollComponentRequest request)
     {
         var issues = new List<ValidationIssue>();
@@ -32,15 +33,40 @@ public static class ComponentEnrollmentValidations
                 "$.token",
                 $"The enrollment token must not exceed {EnrollmentTokenCodec.MaxTokenLength} characters."));
 
-        // Reject an out-of-range component type up front. The authoritative type binding is the signed
-        // token, but an undefined enum value should never reach the issue path.
-        if (!Enum.IsDefined(request.ComponentType))
-            issues.Add(new ValidationIssue("$.component_type", "The component type is not a known value."));
-
+        // The FQDN is required on enroll (the token binds it; it also names the certificate). Renewal
+        // does not validate it — the FQDN is taken from the presented certificate, not the request.
         if (string.IsNullOrWhiteSpace(request.Fqdn))
             issues.Add(new ValidationIssue("$.fqdn", "The component FQDN is required."));
         else if (!ComponentEnrollmentService.IsValidDnsName(request.Fqdn))
             issues.Add(new ValidationIssue("$.fqdn", "The component FQDN is not a valid DNS name."));
+
+        AddShapeIssues(request, issues);
+        return Result(request, issues);
+    }
+
+    /// <summary>
+    /// Validates a renewal request (the renew endpoint). Renewal authenticates with the component's
+    /// current certificate (mutual TLS), not a token, so the token is neither required nor validated, and
+    /// the FQDN is taken from the certificate (not the request) — but the public-key encoding and the
+    /// server-DNS-name caps are enforced identically, so the (anonymous) renew endpoint is as bounded as
+    /// enroll against oversized/malformed input.
+    /// </summary>
+    public static Validation<ValidationIssue, EnrollComponentRequest> ValidateForRenewal(EnrollComponentRequest request)
+    {
+        var issues = new List<ValidationIssue>();
+        AddShapeIssues(request, issues);
+        return Result(request, issues);
+    }
+
+    // The request-shape checks common to enrollment and renewal: component type, public key encoding, and
+    // the server certificate's key + DNS-name caps. The FQDN is intentionally NOT required/validated here
+    // — enroll binds it via the token and renew derives it from the certificate.
+    private static void AddShapeIssues(EnrollComponentRequest request, List<ValidationIssue> issues)
+    {
+        // Reject an out-of-range component type up front. The authoritative type binding is the signed
+        // token, but an undefined enum value should never reach the issue path.
+        if (!Enum.IsDefined(request.ComponentType))
+            issues.Add(new ValidationIssue("$.component_type", "The component type is not a known value."));
 
         if (string.IsNullOrWhiteSpace(request.PublicKey))
             issues.Add(new ValidationIssue("$.public_key", "The component public key is required."));
@@ -77,11 +103,13 @@ public static class ComponentEnrollmentValidations
                 "$.server_dns_names",
                 "Server DNS names require a server public key ($.server_public_key)."));
         }
+    }
 
-        return issues.Count == 0
+    private static Validation<ValidationIssue, EnrollComponentRequest> Result(
+        EnrollComponentRequest request, List<ValidationIssue> issues) =>
+        issues.Count == 0
             ? Validation<ValidationIssue, EnrollComponentRequest>.Success(request)
             : Validation<ValidationIssue, EnrollComponentRequest>.Fail(issues.ToSeq());
-    }
 
     // A SubjectPublicKeyInfo for RSA-4096 is ~550 bytes (~740 base64 chars); 4 KB is far above any key
     // we issue against yet bounds the decode/import work an anonymous caller can force with oversized input.

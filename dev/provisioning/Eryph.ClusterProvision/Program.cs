@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Eryph.Modules.Identity.Services;
 using Eryph.Rebus;
 using Eryph.Security.Cryptography;
@@ -138,7 +139,9 @@ void IssueClient(string componentId, string fqdn, string crtPath, string keyPath
     using var key = keyService.GenerateRsaKey(2048);
     var issued = ca.IssueComponentCertificate(componentId, fqdn, key);
     File.WriteAllText(crtPath, issued.Leaf.ExportCertificatePem());
-    File.WriteAllText(keyPath, key.ExportPkcs8PrivateKeyPem());
+    // Owner-only (0600): the private key must not be world-readable in the shared volume, matching how
+    // every other key file in the codebase is written (SecureFile / FileCertificateKeyService).
+    SecureFile.WriteOwnerOnly(keyPath, Encoding.ASCII.GetBytes(key.ExportPkcs8PrivateKeyPem()));
     Console.WriteLine($"Issued client (leaf-only) cert for '{fqdn}' ({componentId}): {crtPath}, {keyPath}");
 }
 
@@ -341,7 +344,9 @@ void IssueServer(string dns, string crtPath, string keyPath)
     foreach (var c in issued.IssuingChain)
         w.WriteLine(c.ExportCertificatePem());
 
-    File.WriteAllText(keyPath, key.ExportPkcs8PrivateKeyPem());
+    // Owner-only (0600): the private key must not be world-readable in the shared volume, matching how
+    // every other key file in the codebase is written (SecureFile / FileCertificateKeyService).
+    SecureFile.WriteOwnerOnly(keyPath, Encoding.ASCII.GetBytes(key.ExportPkcs8PrivateKeyPem()));
 
     Console.WriteLine(
         $"Issued server cert for '{dns}': {crtPath} (leaf + {issued.IssuingChain.Count} chain cert(s)), key {keyPath}");

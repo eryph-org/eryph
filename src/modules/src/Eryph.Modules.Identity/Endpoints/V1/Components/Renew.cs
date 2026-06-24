@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
@@ -40,6 +41,13 @@ public class Renew(IComponentEnrollmentService enrollmentService)
     {
         if (request is null || !ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        // Validate the request shape (key encoding, server-DNS-name caps) before doing any work — the
+        // same bounds the enroll endpoint applies, minus the token (renewal authenticates with the
+        // certificate). Not sensitive, so a detailed 400 is fine.
+        var validation = ComponentEnrollmentValidations.ValidateForRenewal(request);
+        if (validation.IsFail)
+            return ValidationProblem(validation.ToModelStateDictionary());
 
         var clientCertificate = HttpContext.Connection.ClientCertificate;
         if (clientCertificate is null)

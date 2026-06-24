@@ -40,6 +40,10 @@ public static class ComponentBrokerProvisioning
         var httpClient = new HttpClient
         {
             BaseAddress = new Uri(settings.ManagementUrl.TrimEnd('/') + "/"),
+            // Bound each management call so a hanging API surfaces as a quick timeout (retried by the
+            // identity self-provision loop within its deadline) instead of the 100s default, which would
+            // stall host startup.
+            Timeout = TimeSpan.FromSeconds(15),
         };
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic",

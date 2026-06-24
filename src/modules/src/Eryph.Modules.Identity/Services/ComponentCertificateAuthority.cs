@@ -189,7 +189,11 @@ public class ComponentCertificateAuthority(
         var san = new SubjectAlternativeNameBuilder();
         san.AddDnsName(fqdn);
         // The stable component id as a URN SAN so a peer can map the authenticated certificate to
-        // the exact component identity rather than the (human-oriented) CN.
+        // the exact component identity rather than the (human-oriented) CN. This MUST remain the only
+        // (and therefore first) URI-type SAN: the broker authenticates components with
+        // ssl_cert_login_from = subject_alternative_name / san_type = uri / san_index = 0, i.e. it takes
+        // the FIRST URI SAN as the AMQP user name. Adding another URI SAN before it would change the
+        // derived broker user and break authentication.
         san.AddUri(new Uri($"urn:eryph:component:{componentId}"));
 
         return Issue(ClientCa, subject.Build(), $"eryph component {fqdn}", subjectPublicKey, ClientAuthOid, san, validDays);
