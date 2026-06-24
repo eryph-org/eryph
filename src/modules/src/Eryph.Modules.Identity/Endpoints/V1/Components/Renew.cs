@@ -49,7 +49,10 @@ public class Renew(IComponentEnrollmentService enrollmentService)
         if (validation.IsFail)
             return ValidationProblem(validation.ToModelStateDictionary());
 
-        var clientCertificate = HttpContext.Connection.ClientCertificate;
+        // Use GetClientCertificateAsync, not the Connection.ClientCertificate property: with
+        // ClientCertificateMode.AllowCertificate the certificate may be loaded lazily from the TLS
+        // feature, so the synchronous property can be null even when the client presented one.
+        var clientCertificate = await HttpContext.Connection.GetClientCertificateAsync(cancellationToken);
         if (clientCertificate is null)
             return Problem(
                 statusCode: Status401Unauthorized,

@@ -83,7 +83,9 @@ namespace Eryph.Identity
             private static void EnsureIdentityBrokerUser(
                 IConfiguration configuration, Guid componentId, ILogger logger)
             {
-                var provisioner = ComponentBrokerProvisioning.CreateRabbitMq(configuration);
+                // This is a one-off provisioner (not the registered singleton), so dispose it — and its
+                // HttpClient — when done rather than leaking the handler.
+                using var provisioner = ComponentBrokerProvisioning.CreateRabbitMq(configuration);
                 var deadline = DateTime.UtcNow + TimeSpan.FromMinutes(2);
                 while (true)
                 {

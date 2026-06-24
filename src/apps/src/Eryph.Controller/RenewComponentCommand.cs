@@ -9,9 +9,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Eryph.Controller
 {
     /// <summary>
-    /// Operator command that makes a component renew its certificate now, in-process, instead of waiting
-    /// for the scheduled renewal window — useful to roll certificates onto a rotated CA or to verify
-    /// renewal. It looks up the component's inbound queue in the registry and sends a
+    /// Control-node break-glass command that makes a component renew its certificate now, in-process,
+    /// instead of waiting for the scheduled renewal window — useful to roll certificates onto a rotated
+    /// CA or to verify renewal, and reachable even when the user-facing API/identity is unavailable. The
+    /// normal operator surface for this is a (planned) ComputeApi endpoint; this command stays as the
+    /// break-glass path. It looks up the component's inbound queue in the registry and sends a
     /// <see cref="RenewComponentCertificateCommand"/> straight to it (over the bus, with this control
     /// node's certificate). Usage:
     /// <code>eryph-controller renew-component (--component-id &lt;guid&gt; | --type &lt;ComponentType&gt; --fqdn &lt;host&gt;)</code>

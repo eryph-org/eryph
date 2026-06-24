@@ -29,8 +29,9 @@ public static class ComponentBrokerProvisioning
     /// <summary>
     /// Builds a standalone RabbitMQ provisioner from configuration, for a host that must provision a
     /// broker user outside the enrollment flow (the identity service creating its own user at startup).
+    /// Returns the disposable concrete type so a one-off caller can dispose it (and its HttpClient).
     /// </summary>
-    public static IComponentBrokerProvisioner CreateRabbitMq(IConfiguration configuration) =>
+    public static RabbitMqBrokerProvisioner CreateRabbitMq(IConfiguration configuration) =>
         Build(ReadSettings(configuration));
 
     private static RabbitMqBrokerProvisioner Build(Settings settings)

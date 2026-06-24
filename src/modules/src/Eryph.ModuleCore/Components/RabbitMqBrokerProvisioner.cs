@@ -14,10 +14,17 @@ namespace Eryph.ModuleCore.Components;
 /// via the component's certificate — never with a password. The <see cref="HttpClient"/> supplies the
 /// management base address and admin credentials (Basic auth).
 /// </summary>
+/// <remarks>
+/// Owns its <see cref="HttpClient"/> and disposes it: as a registered singleton the container disposes
+/// it at shutdown; a one-off instance (the identity host's own-user provisioning) must be disposed by
+/// its caller so it does not leak a handler/socket.
+/// </remarks>
 public sealed class RabbitMqBrokerProvisioner(
     HttpClient httpClient, RabbitMqBrokerManagementOptions options)
-    : IComponentBrokerProvisioner
+    : IComponentBrokerProvisioner, IDisposable
 {
+    public void Dispose() => httpClient.Dispose();
+
     public async Task EnsureComponentAsync(Guid componentId, CancellationToken cancellationToken = default)
     {
         var user = ComponentBrokerIdentity.UserName(componentId);
