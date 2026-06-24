@@ -62,11 +62,19 @@ public class ComponentCertificateAuthorityRotationTests
         }
     }
 
-    private static IReadOnlyList<X509Certificate2> Roots(ComponentCertificateAuthority ca)
+    // Returns the count of trusted roots and disposes the borrowed certificate handles internally —
+    // never returns disposed instances (which a failing assertion could try to render).
+    private static int RootCount(ComponentCertificateAuthority ca)
     {
         var roots = ca.GetTrustedCaCertificates();
-        foreach (var root in roots) root.Dispose();
-        return roots;
+        try
+        {
+            return roots.Count;
+        }
+        finally
+        {
+            foreach (var root in roots) root.Dispose();
+        }
     }
 
     [Fact]
@@ -74,11 +82,11 @@ public class ComponentCertificateAuthorityRotationTests
     {
         var ca = CreateCa();
         using var leafBefore = IssueClientLeaf(ca, "agent1.eryph.local");
-        Roots(ca).Should().ContainSingle("only the initial root exists before rotation");
+        RootCount(ca).Should().Be(1, "only the initial root exists before rotation");
 
         ca.RotateRootCertificateAuthority();
 
-        Roots(ca).Should().HaveCount(2, "the previous root stays trusted during the overlap");
+        RootCount(ca).Should().Be(2, "the previous root stays trusted during the overlap");
         using var leafAfter = IssueClientLeaf(ca, "agent1.eryph.local");
 
         // Distinct certificates issued across the rotation (sanity check the second issue happened).
@@ -127,7 +135,7 @@ public class ComponentCertificateAuthorityRotationTests
 
         ca.RetireSupersededCertificateAuthorities();
 
-        Roots(ca).Should().ContainSingle("only the current signing root remains after retirement");
+        RootCount(ca).Should().Be(1, "only the current signing root remains after retirement");
         ChainsToTrust(ca, newLeaf).Should().BeTrue("the current-generation leaf still validates");
         ChainsToTrust(ca, oldLeaf).Should().BeFalse(
             "the superseded generation was removed, so a leaf issued under it no longer chains");
@@ -141,7 +149,7 @@ public class ComponentCertificateAuthorityRotationTests
 
         ca.RetireSupersededCertificateAuthorities();
 
-        Roots(ca).Should().ContainSingle();
+        RootCount(ca).Should().Be(1);
         ChainsToTrust(ca, leaf).Should().BeTrue("the only generation must remain trusted");
     }
 
@@ -159,7 +167,7 @@ public class ComponentCertificateAuthorityRotationTests
         var act = () => ca.RotateRootCertificateAuthority();
 
         act.Should().NotThrow();
-        Roots(ca).Should().HaveCount(2, "both generations are trusted after a successful rotation");
+        RootCount(ca).Should().Be(2, "both generations are trusted after a successful rotation");
     }
 
     // A key service that refuses to overwrite an existing persisted key name, like Windows CNG
