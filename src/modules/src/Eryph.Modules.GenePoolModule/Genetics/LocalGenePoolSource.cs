@@ -37,8 +37,7 @@ namespace Eryph.Modules.GenePool.Genetics;
 [UsedImplicitly]
 internal class LocalGenePoolSource(
     IFileSystemService fileSystem,
-    IGenePoolPathProvider genePoolPathProvider,
-    ILogger log)
+    IGenePoolPathProvider genePoolPathProvider)
     : ILocalGenePool
 {
     private const string GenesFileName = "genes.json";
@@ -122,7 +121,8 @@ internal class LocalGenePoolSource(
             let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
             from _2 in Aff<CancelRt, Unit>(async rt =>
             {
-                fileSystem.EnsureDirectoryExists(Path.GetDirectoryName(genePath));
+                fileSystem.EnsureDirectoryExists(Path.GetDirectoryName(genePath)
+                    ?? throw new InvalidOperationException($"Could not determine the directory of the gene path '{genePath}'."));
                 var streams = new List<Stream>();
                 try
                 {
@@ -198,7 +198,8 @@ internal class LocalGenePoolSource(
                 if (fileSystem.FileExists(genePath))
                     fileSystem.DeleteFile(genePath);
 
-                var geneFolder = Path.GetDirectoryName(genePath);
+                var geneFolder = Path.GetDirectoryName(genePath)
+                    ?? throw new InvalidOperationException($"Could not determine the directory of the gene path '{genePath}'.");
                 fileSystem.EnsureDirectoryExists(geneFolder);
                 await using var sourceStream = new MemoryStream(geneContentInfo.Content);
                 await using var decompressionStream = CompressionStreamFactory.CreateDecompressionStream(
@@ -320,7 +321,8 @@ internal class LocalGenePoolSource(
                 if (fileSystem.FileExists(genePath))
                     fileSystem.DeleteFile(genePath);
 
-                fileSystem.EnsureDirectoryExists(Path.GetDirectoryName(genePath));
+                fileSystem.EnsureDirectoryExists(Path.GetDirectoryName(genePath)
+                    ?? throw new InvalidOperationException($"Could not determine the directory of the gene path '{genePath}'."));
                 await fileSystem.WriteAllTextAsync(genePath, content, rt.CancellationToken);
                 return unit;
             })
@@ -358,7 +360,7 @@ internal class LocalGenePoolSource(
                 return None;
 
             var json = await fileSystem.ReadAllTextAsync(manifestPath, rt.CancellationToken);
-            return Some(JsonSerializer.Deserialize<GeneManifestData>(json, GeneModelDefaults.SerializerOptions));
+            return Optional(JsonSerializer.Deserialize<GeneManifestData>(json, GeneModelDefaults.SerializerOptions));
         })
         let actualGeneHash = manifest.Map(GeneManifestUtils.ComputeHash)
         from _2 in guard(
@@ -420,7 +422,8 @@ internal class LocalGenePoolSource(
             return new GenesInfo();
 
         var json = await fileSystem.ReadAllTextAsync(Path.Combine(geneSetPath, GenesFileName), CancellationToken.None);
-        return JsonSerializer.Deserialize<GenesInfo>(json);
+        return JsonSerializer.Deserialize<GenesInfo>(json)
+            ?? throw new InvalidOperationException($"Could not deserialize the genes info from '{Path.Combine(geneSetPath, GenesFileName)}'.");
     }
 
     private async Task WriteGenesInfo(string geneSetPath, GenesInfo genesInfo)

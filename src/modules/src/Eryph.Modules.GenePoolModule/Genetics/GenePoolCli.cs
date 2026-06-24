@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using Azure.Core;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ConfigModel;
@@ -154,7 +155,7 @@ public static class GenePoolCli<RT> where RT : struct,
                 .GetAsync(new GetUserRequestOptions { Expand = new ExpandFromUser { GenepoolOrgs = true } },
                     cancelToken);
 
-            return response;
+            return response ?? throw new InvalidOperationException("Gene pool returned no user data.");
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, GetMeResponse>(e)))
         from _ in stopSpinner
         select response;

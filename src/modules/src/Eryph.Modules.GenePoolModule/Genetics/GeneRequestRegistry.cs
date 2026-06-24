@@ -35,7 +35,9 @@ internal sealed class GeneRequestRegistry(
         OperationTask<PrepareGeneCommand> task,
         CancellationToken cancellationToken)
     {
-        var geneInfo = (task.Command.Id, task.Command.Hash);
+        var geneId = task.Command.Id ?? throw new InvalidOperationException("The gene request command is missing the gene identifier.");
+        var geneHash = task.Command.Hash ?? throw new InvalidOperationException("The gene request command is missing the gene hash.");
+        var geneInfo = (geneId, geneHash);
 
         int position;
         await _semaphore.WaitAsync(cancellationToken);

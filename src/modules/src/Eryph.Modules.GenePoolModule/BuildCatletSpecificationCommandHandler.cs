@@ -27,12 +27,24 @@ internal class BuildCatletSpecificationCommandHandler(
         HandleCommand(message.Command).FailOrComplete(messaging, message);
 
     private EitherAsync<Error, BuildCatletSpecificationGenePoolCommandResponse> HandleCommand(
-        BuildCatletSpecificationGenePoolCommand genePoolCommand) =>
-        from result in CatletSpecificationBuilder.Build(
-            genePoolCommand.CatletConfig,
-            genePoolCommand.CatletArchitecture,
-            genePoolReader,
-            CancellationToken.None)
+        BuildCatletSpecificationGenePoolCommand genePoolCommand)
+    {
+        var catletConfig = genePoolCommand.CatletConfig;
+        if (catletConfig is null)
+            return LeftAsync<Error, BuildCatletSpecificationGenePoolCommandResponse>(
+                Error.New("Missing catlet configuration"));
+
+        var catletArchitecture = genePoolCommand.CatletArchitecture;
+        if (catletArchitecture is null)
+            return LeftAsync<Error, BuildCatletSpecificationGenePoolCommandResponse>(
+                Error.New("Missing catlet architecture"));
+
+        return
+            from result in CatletSpecificationBuilder.Build(
+                catletConfig,
+                catletArchitecture,
+                genePoolReader,
+                CancellationToken.None)
         let timestamp = DateTimeOffset.UtcNow
         from geneData in InventorizeGenes(result.ResolvedGenes.Keys.ToSeq())
         select new BuildCatletSpecificationGenePoolCommandResponse
@@ -42,6 +54,7 @@ internal class BuildCatletSpecificationCommandHandler(
             Inventory = geneData.ToList(),
             Timestamp = timestamp,
         };
+    }
 
     private EitherAsync<Error, Seq<GeneData>> InventorizeGenes(
         Seq<UniqueGeneIdentifier> genes) =>
