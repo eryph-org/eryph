@@ -62,6 +62,12 @@ public static class ComponentBrokerProvisioning
         if (string.IsNullOrWhiteSpace(managementUrl))
             throw new InvalidOperationException(
                 "broker:managementUrl must be set so the split runtime can manage per-component broker users.");
+        // Validate the shape here (absolute http/https) so a malformed value fails with an actionable
+        // message instead of a cryptic UriFormatException later when the HttpClient base address is built.
+        if (!Uri.TryCreate(managementUrl, UriKind.Absolute, out var managementUri)
+            || (managementUri.Scheme != Uri.UriSchemeHttp && managementUri.Scheme != Uri.UriSchemeHttps))
+            throw new InvalidOperationException(
+                $"broker:managementUrl ('{managementUrl}') must be an absolute http/https URL.");
         var managementUser = broker["managementUser"];
         var managementPassword = broker["managementPassword"];
         if (string.IsNullOrWhiteSpace(managementUser) || string.IsNullOrWhiteSpace(managementPassword))

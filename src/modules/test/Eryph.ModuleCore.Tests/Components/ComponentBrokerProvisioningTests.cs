@@ -28,10 +28,14 @@ public class ComponentBrokerProvisioningTests
 
     [Theory]
     // Each required setting missing in turn must fail fast — the broker management endpoint and an admin
-    // credential are the operator's contract, not something to default silently.
+    // credential are the operator's contract, not something to default silently. A malformed (non-
+    // absolute / wrong-scheme) management URL fails fast too, with an actionable error rather than a
+    // cryptic UriFormatException when the HttpClient base address is built.
     [InlineData(null, "guest", "guest")]
     [InlineData("http://rabbit:15672", null, "guest")]
     [InlineData("http://rabbit:15672", "guest", null)]
+    [InlineData("not-a-url", "guest", "guest")]
+    [InlineData("ftp://rabbit:15672", "guest", "guest")]
     public void CreateRabbitMq_throws_when_required_configuration_is_missing(
         string? url, string? user, string? password)
     {
