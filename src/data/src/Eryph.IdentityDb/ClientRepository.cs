@@ -11,7 +11,7 @@ public class ClientRepository<TDbContext>(TDbContext dbContext) : IClientReposit
 {
     protected readonly TDbContext DbContext = dbContext;
 
-    public Task<ClientApplicationEntity> GetClientAsync(string id)
+    public Task<ClientApplicationEntity?> GetClientAsync(string id)
     {
         return QueryClients()
             .Where(x => x.Id == id)
@@ -19,7 +19,7 @@ public class ClientRepository<TDbContext>(TDbContext dbContext) : IClientReposit
             .SingleOrDefaultAsync();
     }
 
-    public Task<ClientApplicationEntity> GetTrackedClientAsync(string id)
+    public Task<ClientApplicationEntity?> GetTrackedClientAsync(string id)
     {
         return QueryClients()
             .Where(x => x.ClientId == id)
@@ -43,7 +43,8 @@ public class ClientRepository<TDbContext>(TDbContext dbContext) : IClientReposit
     public async Task<string> AddClientAsync(ClientApplicationEntity client)
     {
         await DbContext.AddAsync(client);
-        return client.Id;
+        return client.Id ?? throw new System.InvalidOperationException(
+            "The client has no ID after being added.");
     }
 
     public Task AddClientsAsync(IEnumerable<ClientApplicationEntity> clients)

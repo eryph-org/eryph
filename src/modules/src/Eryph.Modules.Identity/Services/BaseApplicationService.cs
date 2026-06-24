@@ -125,7 +125,7 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>(
     {
         await applicationManager.PopulateAsync(descriptor, application, cancellationToken);
         descriptor.TenantId = application.TenantId;
-        descriptor.AppRoles.UnionWith(application.AppRoles.Split(',',
+        descriptor.AppRoles.UnionWith((application.AppRoles ?? "").Split(',',
             StringSplitOptions.RemoveEmptyEntries).Select(Guid.Parse));
 
         var permissions = await applicationManager.GetPermissionsAsync(application, cancellationToken);

@@ -8,5 +8,5 @@ public class ApplicationEntity : OpenIddictEntityFrameworkCoreApplication<string
     public IdentityApplicationType IdentityApplicationType { get; set; }
     public Guid TenantId { get; set; }
 
-    public string AppRoles { get; set; }
+    public string? AppRoles { get; set; }
 }

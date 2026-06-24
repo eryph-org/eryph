@@ -7,7 +7,7 @@ namespace Eryph.IdentityDb;
 
 public interface IClientRepository
 {
-    Task<ClientApplicationEntity> GetClientAsync(string id);
+    Task<ClientApplicationEntity?> GetClientAsync(string id);
     IQueryable<ClientApplicationEntity> QueryClients();
 
     Task<int> SaveAllChangesAsync();
@@ -16,6 +16,6 @@ public interface IClientRepository
     Task AddClientsAsync(IEnumerable<ClientApplicationEntity> clients);
     Task UpdateClientAsync(ClientApplicationEntity client);
     Task RemoveClientAsync(ClientApplicationEntity client);
-    Task<ClientApplicationEntity> GetTrackedClientAsync(string clientId);
+    Task<ClientApplicationEntity?> GetTrackedClientAsync(string clientId);
     void RemoveClientRelations(ClientApplicationEntity client);
 }

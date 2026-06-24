@@ -7,5 +7,5 @@ public class ClientApplicationEntity : ApplicationEntity
         IdentityApplicationType = IdentityApplicationType.Client;
     }
 
-    public string Certificate { get; set; }
+    public string? Certificate { get; set; }
 }
