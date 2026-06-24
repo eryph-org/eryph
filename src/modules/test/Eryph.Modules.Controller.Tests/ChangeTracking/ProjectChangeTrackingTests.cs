@@ -130,7 +130,7 @@ public abstract class ProjectChangeTrackingTests(
         var config = await ReadConfig(ProjectId);
         _expectedConfig.Assignments =
         [
-            .. _expectedConfig.Assignments,
+            .. (_expectedConfig.Assignments ?? []),
             new ProjectRoleAssignmentConfigModel
             {
                 IdentityId = secondIdentityId,

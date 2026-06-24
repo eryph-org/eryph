@@ -120,9 +120,10 @@ public abstract class VirtualNetworkChangeTrackingTests(
         var networksConfig = await ReadNetworksConfig();
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
+        var ports = _expectedPortsConfig.CatletNetworkPorts ?? throw new InvalidOperationException("CatletNetworkPorts must not be null");
         _expectedPortsConfig.CatletNetworkPorts =
         [
-            .._expectedPortsConfig.CatletNetworkPorts,
+            ..ports,
             new CatletNetworkPortConfigModel
             {
                 CatletMetadataId = CatletMetadataId,
@@ -152,8 +153,9 @@ public abstract class VirtualNetworkChangeTrackingTests(
         var networksConfig = await ReadNetworksConfig();
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.CatletNetworkPorts[0].AddressName = "test";
-        _expectedPortsConfig.CatletNetworkPorts[0].MacAddress = "42:00:42:00:00:02";
+        var catletPorts = _expectedPortsConfig.CatletNetworkPorts ?? throw new InvalidOperationException("CatletNetworkPorts must not be null");
+        catletPorts[0].AddressName = "test";
+        catletPorts[0].MacAddress = "42:00:42:00:00:02";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -195,9 +197,11 @@ public abstract class VirtualNetworkChangeTrackingTests(
         var networksConfig = await ReadNetworksConfig();
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.CatletNetworkPorts[0].IpAssignments =
+        var catletPorts = _expectedPortsConfig.CatletNetworkPorts ?? throw new InvalidOperationException("CatletNetworkPorts must not be null");
+        var ipAssignments = catletPorts[0].IpAssignments ?? throw new InvalidOperationException("IpAssignments must not be null");
+        catletPorts[0].IpAssignments =
         [
-            .._expectedPortsConfig.CatletNetworkPorts[0].IpAssignments,
+            ..ipAssignments,
             new IpAssignmentConfigModel
             {
                 IpAddress = "10.0.0.150",
@@ -222,7 +226,9 @@ public abstract class VirtualNetworkChangeTrackingTests(
         var networksConfig = await ReadNetworksConfig();
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.CatletNetworkPorts[0].IpAssignments[0].IpAddress = "10.0.0.110";
+        var catletPorts = _expectedPortsConfig.CatletNetworkPorts ?? throw new InvalidOperationException("CatletNetworkPorts must not be null");
+        var ipAssignments = catletPorts[0].IpAssignments ?? throw new InvalidOperationException("IpAssignments must not be null");
+        ipAssignments[0].IpAddress = "10.0.0.110";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -240,7 +246,9 @@ public abstract class VirtualNetworkChangeTrackingTests(
         var networksConfig = await ReadNetworksConfig();
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.CatletNetworkPorts[0].IpAssignments = [];
+        var catletPort = _expectedPortsConfig.CatletNetworkPorts?[0]
+            ?? throw new InvalidOperationException("The expected ports configuration is incomplete.");
+        catletPort.IpAssignments = [];
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -330,9 +338,11 @@ public abstract class VirtualNetworkChangeTrackingTests(
         });
 
         var networksConfig = await ReadNetworksConfig();
-        _expectedNetworksConfig.Networks![0].Subnets![0].IpPools =
+        var networks = _expectedNetworksConfig.Networks ?? throw new InvalidOperationException("Networks must not be null");
+        var subnets = networks[0].Subnets ?? throw new InvalidOperationException("Subnets must not be null");
+        subnets[0].IpPools =
         [
-            ..(_expectedNetworksConfig.Networks![0].Subnets![0].IpPools ?? []),
+            ..(subnets[0].IpPools ?? []),
             new IpPoolConfig
             {
                 Name = "new-pool",
@@ -357,7 +367,10 @@ public abstract class VirtualNetworkChangeTrackingTests(
         });
 
         var networksConfig = await ReadNetworksConfig();
-        _expectedNetworksConfig.Networks![0].Subnets![0].IpPools![0].NextIp = "10.0.0.111";
+        var networks = _expectedNetworksConfig.Networks ?? throw new InvalidOperationException("Networks must not be null");
+        var subnets = networks[0].Subnets ?? throw new InvalidOperationException("Subnets must not be null");
+        var pools = subnets[0].IpPools ?? throw new InvalidOperationException("IpPools must not be null");
+        pools[0].NextIp = "10.0.0.111";
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
@@ -374,10 +387,13 @@ public abstract class VirtualNetworkChangeTrackingTests(
         });
 
         var networksConfig = await ReadNetworksConfig();
-        _expectedNetworksConfig.Networks![0].Subnets![0].IpPools = null;
+        var networks = _expectedNetworksConfig.Networks ?? throw new InvalidOperationException("Networks must not be null");
+        var subnets = networks[0].Subnets ?? throw new InvalidOperationException("Subnets must not be null");
+        subnets[0].IpPools = null;
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.CatletNetworkPorts[0].IpAssignments = [];
+        var catletPorts = _expectedPortsConfig.CatletNetworkPorts ?? throw new InvalidOperationException("CatletNetworkPorts must not be null");
+        catletPorts[0].IpAssignments = [];
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -399,9 +415,11 @@ public abstract class VirtualNetworkChangeTrackingTests(
         });
 
         var networksConfig = await ReadNetworksConfig();
-        _expectedNetworksConfig.Networks![0].Subnets =
+        var networks = _expectedNetworksConfig.Networks ?? throw new InvalidOperationException("Networks must not be null");
+        var subnets = networks[0].Subnets ?? throw new InvalidOperationException("Subnets must not be null");
+        networks[0].Subnets =
         [
-            .._expectedNetworksConfig.Networks![0].Subnets!,
+            ..subnets,
             new NetworkSubnetConfig
             {
                 Name = "new-subnet",
@@ -425,10 +443,12 @@ public abstract class VirtualNetworkChangeTrackingTests(
         });
 
         var networksConfig = await ReadNetworksConfig();
-        _expectedNetworksConfig.Networks![0].Subnets = null;
+        var networks = _expectedNetworksConfig.Networks ?? throw new InvalidOperationException("Networks must not be null");
+        networks[0].Subnets = null;
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.CatletNetworkPorts[0].IpAssignments = [];
+        var catletPorts = _expectedPortsConfig.CatletNetworkPorts ?? throw new InvalidOperationException("CatletNetworkPorts must not be null");
+        catletPorts[0].IpAssignments = [];
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 

@@ -43,7 +43,7 @@ internal class CatletSpecificationVersionChangeHandler(
                 .ToHashSet(),
             ContentType = specificationVersion.ContentType,
             OriginalConfig = specificationVersion.Configuration,
-            Comment = specificationVersion.Comment,
+            Comment = specificationVersion.Comment ?? "",
             CreatedAt = specificationVersion.CreatedAt,
             Variants = specificationVersion.Variants
                 .Map(v =>

@@ -4,9 +4,9 @@ namespace Eryph.Configuration.Model;
 
 public class ProjectConfigModel
 {
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
     public Guid TenantId { get; set; }
 
-    public ProjectRoleAssignmentConfigModel[] Assignments { get; set; }
+    public ProjectRoleAssignmentConfigModel[]? Assignments { get; set; }
 }

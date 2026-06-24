@@ -2,5 +2,5 @@
 
 public class FloatingNetworkPortsConfigModel
 {
-    public FloatingNetworkPortConfigModel[] FloatingPorts { get; set; }
+    public FloatingNetworkPortConfigModel[]? FloatingPorts { get; set; }
 }

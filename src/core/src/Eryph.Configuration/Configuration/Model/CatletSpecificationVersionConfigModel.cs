@@ -10,7 +10,7 @@ public class CatletSpecificationVersionConfigModel
 
     public Guid SpecificationId { get; set; }
 
-    public ISet<string> Architectures { get; set; }
+    public ISet<string>? Architectures { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 

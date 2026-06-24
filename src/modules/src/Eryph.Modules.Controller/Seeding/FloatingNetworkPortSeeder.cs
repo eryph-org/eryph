@@ -36,11 +36,13 @@ internal class FloatingNetworkPortSeeder(
         if (config is null)
             throw new SeederException("The port configuration for network providers is invalid");
 
-        foreach (var portConfig in config.FloatingPorts)
+        foreach (var portConfig in config.FloatingPorts ?? [])
         {
             var existingPort = await stateStore.For<FloatingNetworkPort>()
                 .GetBySpecAsync(new FloatingNetworkPortSpecs.GetByName(
-                        portConfig.ProviderName, portConfig.SubnetName, portConfig.Name),
+                        portConfig.ProviderName ?? throw new System.InvalidOperationException("The floating port config is missing the provider name."),
+                        portConfig.SubnetName ?? throw new System.InvalidOperationException("The floating port config is missing the subnet name."),
+                        portConfig.Name ?? throw new System.InvalidOperationException("The floating port config is missing the name.")),
                     stoppingToken);
             if (existingPort is not null)
                 continue;
@@ -52,10 +54,10 @@ internal class FloatingNetworkPortSeeder(
             var port = new FloatingNetworkPort
             {
                 Name = portConfig.Name,
-                MacAddress = portConfig.MacAddress,
+                MacAddress = portConfig.MacAddress ?? throw new System.InvalidOperationException("The floating port config is missing the MAC address."),
                 ProviderName = portConfig.ProviderName,
                 SubnetName = portConfig.SubnetName,
-                PoolName = portConfig.PoolName,
+                PoolName = portConfig.PoolName ?? throw new System.InvalidOperationException("The floating port config is missing the pool name."),
                 IpAssignments = assignments.OfType<IpAssignment>().ToList(),
             };
 
@@ -71,7 +73,7 @@ internal class FloatingNetworkPortSeeder(
         CancellationToken stoppingToken)
     {
         var subnet = await stateStore.For<ProviderSubnet>().GetBySpecAsync(
-            new SubnetSpecs.GetByProviderName(providerName, config.SubnetName),
+            new SubnetSpecs.GetByProviderName(providerName, config.SubnetName ?? throw new System.InvalidOperationException("SubnetName is required")),
             stoppingToken);
         if (subnet is null)
             throw new SeederException(
@@ -91,7 +93,7 @@ internal class FloatingNetworkPortSeeder(
                     $"Cannot seed IP assignment {config.IpAddress} because IP pool {pool.Name} has no first IP.");
 
             var startIp = IPAddress.Parse(pool.FirstIp);
-            var assignedIp = IPAddress.Parse(config.IpAddress);
+            var assignedIp = IPAddress.Parse(config.IpAddress ?? throw new System.InvalidOperationException("IpAddress is required"));
 
             assignment = new IpPoolAssignment
             {

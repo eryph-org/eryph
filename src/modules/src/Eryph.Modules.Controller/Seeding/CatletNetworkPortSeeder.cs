@@ -30,7 +30,7 @@ internal class CatletNetworkPortSeeder(
         if (config is null)
             throw new SeederException($"The network port configuration for project {entityId} is invalid");
 
-        foreach (var portConfig in config.CatletNetworkPorts) await SeedPort(entityId, portConfig, cancellationToken);
+        foreach (var portConfig in config.CatletNetworkPorts ?? []) await SeedPort(entityId, portConfig, cancellationToken);
 
         await stateStore.SaveChangesAsync(cancellationToken);
     }
@@ -41,14 +41,14 @@ internal class CatletNetworkPortSeeder(
         CancellationToken cancellationToken)
     {
         var network = await stateStore.For<VirtualNetwork>().GetBySpecAsync(
-            new VirtualNetworkSpecs.GetByName(projectId, portConfig.VirtualNetworkName, portConfig.EnvironmentName),
+            new VirtualNetworkSpecs.GetByName(projectId, portConfig.VirtualNetworkName ?? throw new InvalidOperationException("VirtualNetworkName is required"), portConfig.EnvironmentName ?? throw new InvalidOperationException("EnvironmentName is required")),
             cancellationToken);
         if (network is null)
             throw new SeederException(
                 $"Cannot seed port {portConfig.Name} because network {portConfig.VirtualNetworkName} does not exist in environment {portConfig.EnvironmentName}");
 
         var exists = await stateStore.For<CatletNetworkPort>().AnyAsync(
-            new CatletNetworkPortSpecs.GetByName(network.Id, portConfig.Name),
+            new CatletNetworkPortSpecs.GetByName(network.Id, portConfig.Name ?? throw new InvalidOperationException("Name is required")),
             cancellationToken);
         if (exists)
             return;
@@ -60,9 +60,9 @@ internal class CatletNetworkPortSeeder(
         {
             floatingPort = await stateStore.For<FloatingNetworkPort>().GetBySpecAsync(
                 new FloatingNetworkPortSpecs.GetByName(
-                    portConfig.FloatingNetworkPort.ProviderName,
-                    portConfig.FloatingNetworkPort.SubnetName,
-                    portConfig.FloatingNetworkPort.Name),
+                    portConfig.FloatingNetworkPort.ProviderName ?? throw new InvalidOperationException("ProviderName is required"),
+                    portConfig.FloatingNetworkPort.SubnetName ?? throw new InvalidOperationException("SubnetName is required"),
+                    portConfig.FloatingNetworkPort.Name ?? throw new InvalidOperationException("Name is required")),
                 cancellationToken);
 
             if (floatingPort is null)
@@ -76,8 +76,8 @@ internal class CatletNetworkPortSeeder(
 
         var port = new CatletNetworkPort
         {
-            Name = portConfig.Name,
-            MacAddress = portConfig.MacAddress,
+            Name = portConfig.Name ?? throw new InvalidOperationException("Name is required"),
+            MacAddress = portConfig.MacAddress ?? "",
             FloatingPort = floatingPort,
             Network = network,
             CatletMetadataId = portConfig.CatletMetadataId,
@@ -111,8 +111,8 @@ internal class CatletNetworkPortSeeder(
                 throw new SeederException(
                     $"Cannot seed IP assignment {config.IpAddress} because IP pool {pool.Name} has no first IP.");
 
-            var startIp = IPAddress.Parse(pool.FirstIp);
-            var assignedIp = IPAddress.Parse(config.IpAddress);
+            var startIp = IPAddress.Parse(pool.FirstIp ?? throw new InvalidOperationException("FirstIp is required"));
+            var assignedIp = IPAddress.Parse(config.IpAddress ?? throw new InvalidOperationException("IpAddress is required"));
 
             assignment = new IpPoolAssignment
             {

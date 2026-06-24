@@ -2,5 +2,5 @@
 
 public class CatletNetworkPortsConfigModel
 {
-    public CatletNetworkPortConfigModel[] CatletNetworkPorts { get; set; }
+    public CatletNetworkPortConfigModel[]? CatletNetworkPorts { get; set; }
 }

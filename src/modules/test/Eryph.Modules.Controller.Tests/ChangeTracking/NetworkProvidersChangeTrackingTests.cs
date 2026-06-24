@@ -113,9 +113,11 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
         _savedProvidersConfig.Should().BeEquivalentTo(GetProvidersConfig());
         var portsConfig = await ReadPortsConfig();
+        var floatingPorts = _expectedPortsConfig.FloatingPorts
+            ?? throw new InvalidOperationException("FloatingPorts collection is null");
         _expectedPortsConfig.FloatingPorts =
         [
-            .._expectedPortsConfig.FloatingPorts,
+            ..floatingPorts,
             new FloatingNetworkPortConfigModel
             {
                 Name = "new-floating-port",
@@ -142,7 +144,9 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
         _savedProvidersConfig.Should().BeEquivalentTo(GetProvidersConfig());
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.FloatingPorts[0].MacAddress = "42:00:42:00:00:02";
+        var floatingPorts = _expectedPortsConfig.FloatingPorts
+            ?? throw new InvalidOperationException("FloatingPorts collection is null");
+        floatingPorts[0].MacAddress = "42:00:42:00:00:02";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -184,9 +188,13 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
         _savedProvidersConfig.Should().BeEquivalentTo(GetProvidersConfig());
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.FloatingPorts[0].IpAssignments =
+        var floatingPorts = _expectedPortsConfig.FloatingPorts
+            ?? throw new InvalidOperationException("FloatingPorts collection is null");
+        var ipAssignments = floatingPorts[0].IpAssignments
+            ?? throw new InvalidOperationException("IpAssignments collection is null");
+        floatingPorts[0].IpAssignments =
         [
-            .._expectedPortsConfig.FloatingPorts[0].IpAssignments,
+            ..ipAssignments,
             new IpAssignmentConfigModel
             {
                 IpAddress = "10.0.0.150",
@@ -210,7 +218,11 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
         _savedProvidersConfig.Should().BeEquivalentTo(GetProvidersConfig());
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.FloatingPorts[0].IpAssignments[0].IpAddress = "10.0.0.110";
+        var floatingPorts = _expectedPortsConfig.FloatingPorts
+            ?? throw new InvalidOperationException("FloatingPorts collection is null");
+        var ipAssignments = floatingPorts[0].IpAssignments
+            ?? throw new InvalidOperationException("IpAssignments collection is null");
+        ipAssignments[0].IpAddress = "10.0.0.110";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -227,7 +239,9 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
         _savedProvidersConfig.Should().BeEquivalentTo(GetProvidersConfig());
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.FloatingPorts[0].IpAssignments = [];
+        var floatingPorts = _expectedPortsConfig.FloatingPorts
+            ?? throw new InvalidOperationException("FloatingPorts collection is null");
+        floatingPorts[0].IpAssignments = [];
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 

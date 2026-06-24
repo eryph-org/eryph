@@ -2,9 +2,9 @@
 
 public class FloatingNetworkPortReferenceConfigModel
 {
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
-    public string ProviderName { get; set; }
+    public string? ProviderName { get; set; }
 
-    public string SubnetName { get; set; }
+    public string? SubnetName { get; set; }
 }

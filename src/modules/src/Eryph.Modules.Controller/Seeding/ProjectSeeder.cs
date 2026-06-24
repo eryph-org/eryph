@@ -49,12 +49,12 @@ internal class ProjectSeeder(
         project = new Project
         {
             Id = entityId,
-            Name = projectConfig.Name,
+            Name = projectConfig.Name ?? throw new InvalidOperationException("Project name cannot be null"),
             TenantId = tenantId,
             ProjectRoles = projectConfig.Assignments?.Map(ac => new ProjectRoleAssignment
             {
-                IdentityId = ac.IdentityId,
-                RoleId = RoleNames.GetRoleId(ac.RoleName)
+                IdentityId = ac.IdentityId ?? throw new InvalidOperationException("Identity ID cannot be null"),
+                RoleId = RoleNames.GetRoleId(ac.RoleName ?? throw new InvalidOperationException("Role name cannot be null"))
                     .ToEither(Error.New($"The role {ac.RoleName} does not exist"))
                     .IfLeft(e => e.ToException().Rethrow<Guid>()),
             }).ToList() ?? [],
