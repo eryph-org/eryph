@@ -8,15 +8,16 @@ namespace Eryph.Rebus;
 
 public static class RabbitMqConnectionCheck
 {
-    public static string ConnectionString => Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING");
+    public static string? ConnectionString => Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING");
 
     public static async Task WaitForRabbitMq(TimeSpan timeout)
     {
-        if (string.IsNullOrWhiteSpace(ConnectionString))
+        var connectionString = ConnectionString;
+        if (string.IsNullOrWhiteSpace(connectionString))
             throw new ApplicationException(
                 "missing RABBITMQ connection string (set environment variable RABBITMQ_CONNECTIONSTRING");
 
-        var factory = new ConnectionFactory { Uri = new Uri(ConnectionString) };
+        var factory = new ConnectionFactory { Uri = new Uri(connectionString) };
 
         var cancellationSource = new CancellationTokenSource(timeout);
         while (!cancellationSource.IsCancellationRequested)
