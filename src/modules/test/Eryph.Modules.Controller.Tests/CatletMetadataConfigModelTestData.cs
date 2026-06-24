@@ -40,7 +40,7 @@ internal static class CatletMetadataConfigModelTestData
     internal static readonly CatletMetadataContent Content = new()
     {
         Architecture = Architecture.New("hyperv/amd64"),
-        Config = new CatletConfig()
+        Config = new CatletConfig
         {
             Name = "test-catlet",
             Parent = "acme/acme-os/1.0",

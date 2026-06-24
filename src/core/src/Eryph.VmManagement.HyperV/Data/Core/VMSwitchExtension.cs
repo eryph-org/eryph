@@ -9,8 +9,7 @@ public class VMSwitchExtension
 
     public bool Enabled { get; init; }
 
-    [PrivateIdentifier]
-    public string SwitchName { get; init; }
+    [PrivateIdentifier] public string SwitchName { get; init; }
 
     public Guid SwitchId { get; init; }
 }

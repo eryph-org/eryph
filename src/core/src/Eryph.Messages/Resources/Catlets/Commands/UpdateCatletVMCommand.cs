@@ -6,26 +6,24 @@ using Eryph.Core.Genetics;
 using Eryph.Resources;
 using Eryph.Resources.Machines;
 
-namespace Eryph.Messages.Resources.Catlets.Commands
+namespace Eryph.Messages.Resources.Catlets.Commands;
+
+[SendMessageTo(MessageRecipient.VMHostAgent)]
+public class UpdateCatletVMCommand : IHostAgentCommand, IVMCommand, IHasResource
 {
-    [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class UpdateCatletVMCommand : IHostAgentCommand, IVMCommand, IHasResource
-    {
-        public CatletConfig Config { get; set; }
+    public CatletConfig Config { get; set; }
 
-        public Guid VmId { get; set; }
+    public Guid MetadataId { get; set; }
 
-        public Guid CatletId { get; set; }
+    public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 
-        public Guid MetadataId { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
 
-        public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
 
-        public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
+    [PrivateIdentifier] public string AgentName { get; set; }
 
-        [PrivateIdentifier]
-        public string AgentName { get; set; }
+    public Guid VmId { get; set; }
 
-        public Resource Resource => new(ResourceType.Catlet, CatletId);
-    }
+    public Guid CatletId { get; set; }
 }

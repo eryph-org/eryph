@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -23,7 +22,7 @@ public class Stop(
     {
         return new StopCatletCommand
         {
-            CatletId = model.Id, 
+            CatletId = model.Id,
             Mode = request.Body.Mode,
         };
     }
@@ -31,10 +30,10 @@ public class Stop(
     [Authorize(Policy = "compute:catlets:control")]
     [HttpPut("catlets/{id}/stop")]
     [SwaggerOperation(
-        Summary = "Stop a catlet",
-        Description = "Stop a catlet",
-        OperationId = "Catlets_Stop",
-        Tags = ["Catlets"])
+            Summary = "Stop a catlet",
+            Description = "Stop a catlet",
+            OperationId = "Catlets_Stop",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] StopCatletRequest request,

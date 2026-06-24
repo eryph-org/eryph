@@ -1,8 +1,8 @@
-﻿using Eryph.Core.VmAgent;
+﻿using Eryph.Core;
+using Eryph.Core.VmAgent;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Sys.Traits;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Configuration;

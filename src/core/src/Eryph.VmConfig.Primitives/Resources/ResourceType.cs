@@ -9,6 +9,5 @@ public enum ResourceType
     CatletSpecification,
     VirtualDisk,
     VirtualNetwork,
-    CatletFarm
+    CatletFarm,
 }
-

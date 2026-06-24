@@ -3,5 +3,5 @@
 public enum AgentServiceOperation
 {
     Stop,
-    Start
+    Start,
 }

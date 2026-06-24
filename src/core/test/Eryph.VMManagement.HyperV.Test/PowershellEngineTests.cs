@@ -13,14 +13,22 @@ namespace Eryph.VmManagement.HyperV.Test;
 /// </summary>
 public sealed class PowershellEngineTests : IDisposable
 {
-    private readonly PowershellEngineLock _engineLock = new();
     private readonly PowershellEngine _engine;
+    private readonly PowershellEngineLock _engineLock = new();
 
     public PowershellEngineTests()
     {
         _engine = new PowershellEngine(NullLogger.Instance, _engineLock);
         Environment.SetEnvironmentVariable("ERYPH_UNITTEST_A", "a");
         Environment.SetEnvironmentVariable("ERYPH_UNITTEST_B", "b");
+    }
+
+    public void Dispose()
+    {
+        _engine.Dispose();
+        _engineLock.Dispose();
+        Environment.SetEnvironmentVariable("ERYPH_UNITTEST_A", null);
+        Environment.SetEnvironmentVariable("ERYPH_UNITTEST_B", null);
     }
 
     [Fact]
@@ -124,7 +132,11 @@ public sealed class PowershellEngineTests : IDisposable
 
         var result = await _engine.GetObjectAsync<EnvVar>(
             command,
-            p => { progress.Add(p); return Task.CompletedTask; });
+            p =>
+            {
+                progress.Add(p);
+                return Task.CompletedTask;
+            });
 
         result.Should().BeRight().Which.Should().BeSome();
         progress.Should().Equal(25, 50, 75);
@@ -225,7 +237,7 @@ public sealed class PowershellEngineTests : IDisposable
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectsAsync<EnvVar>(command, cancellationToken: cts.Token);
-        
+
         start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
         var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
         error.Message.Should().Be("The operation has been cancelled before the global lock could be acquired.");
@@ -247,7 +259,11 @@ public sealed class PowershellEngineTests : IDisposable
 
         var result = await _engine.GetObjectsAsync<EnvVar>(
             command,
-            p => { progress.Add(p); return Task.CompletedTask; });
+            p =>
+            {
+                progress.Add(p);
+                return Task.CompletedTask;
+            });
 
         result.Should().BeRight().Which.Should().HaveCount(2);
         progress.Should().Equal(25, 50, 75);
@@ -335,7 +351,7 @@ public sealed class PowershellEngineTests : IDisposable
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectValueAsync<string>(command, cancellationToken: cts.Token);
-        
+
         start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
         var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
         error.Message.Should().Be("The operation has been cancelled before the global lock could be acquired.");
@@ -357,7 +373,11 @@ public sealed class PowershellEngineTests : IDisposable
 
         var result = await _engine.GetObjectValueAsync<string>(
             command,
-            p => { progress.Add(p); return Task.CompletedTask; });
+            p =>
+            {
+                progress.Add(p);
+                return Task.CompletedTask;
+            });
 
         result.Should().BeRight().Which.Should().BeSome();
         progress.Should().Equal(25, 50, 75);
@@ -456,7 +476,7 @@ public sealed class PowershellEngineTests : IDisposable
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectValuesAsync<string>(command, cancellationToken: cts.Token);
-        
+
         start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
         var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
         error.Message.Should().Be("The operation has been cancelled before the global lock could be acquired.");
@@ -478,7 +498,11 @@ public sealed class PowershellEngineTests : IDisposable
 
         var result = await _engine.GetObjectValuesAsync<string>(
             command,
-            p => { progress.Add(p); return Task.CompletedTask; });
+            p =>
+            {
+                progress.Add(p);
+                return Task.CompletedTask;
+            });
 
         result.Should().BeRight().Which.Should().Equal("a", "b");
         progress.Should().Equal(25, 50, 75);
@@ -583,7 +607,11 @@ public sealed class PowershellEngineTests : IDisposable
 
         var result = await _engine.RunAsync(
             command,
-            p => { progress.Add(p); return Task.CompletedTask; });
+            p =>
+            {
+                progress.Add(p);
+                return Task.CompletedTask;
+            });
 
         result.Should().BeRight();
         progress.Should().Equal(25, 50, 75);
@@ -688,18 +716,14 @@ public sealed class PowershellEngineTests : IDisposable
 
         var result = await _engine.RunOutOfProcessAsync(
             command,
-            p => { progress.Add(p); return Task.CompletedTask; });
+            p =>
+            {
+                progress.Add(p);
+                return Task.CompletedTask;
+            });
 
         result.Should().BeRight();
         progress.Should().Equal(25, 50, 75);
-    }
-
-    public void Dispose()
-    {
-        _engine.Dispose();
-        _engineLock.Dispose();
-        Environment.SetEnvironmentVariable("ERYPH_UNITTEST_A", null);
-        Environment.SetEnvironmentVariable("ERYPH_UNITTEST_B", null);
     }
 
     private class EnvVar

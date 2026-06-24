@@ -1,6 +1,5 @@
 ﻿using Eryph.Core.Sys;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Tests.Sys;
@@ -16,14 +15,13 @@ public class ProcessRunnerTests
     {
         var result = await Run(ProcessRunner<TestRuntime>.runProcess(
             "powershell.exe", @"-C ""exit 1"""));
-        
+
         result.Should().BeSuccess().Which.ExitCode.Should().Be(1);
     }
 
     [Fact]
     public async Task RunProcess_ProcessHasStandardOutput_ReturnsStandardOutput()
     {
-
         var result = await Run(ProcessRunner<TestRuntime>.runProcess(
             "powershell.exe", @"-C ""Write-Output 'my test'"";"));
 
@@ -35,48 +33,40 @@ public class ProcessRunnerTests
     [Fact]
     public async Task RunProcess_ProcessHasStandardErrorAndErrorShouldBeIncluded_ReturnsStandardError()
     {
-
         var result = await Run(ProcessRunner<TestRuntime>.runProcess(
-            "powershell.exe", @"-C ""Write-Output 'test output'; [System.Console]::Error.WriteLine('test error')""", "", true));
+            "powershell.exe", @"-C ""Write-Output 'test output'; [System.Console]::Error.WriteLine('test error')""", "",
+            true));
 
         var processResult = result.Should().BeSuccess().Subject;
         processResult.ExitCode.Should().Be(0);
         processResult.Output.Should().Be("test output\r\n\r\ntest error\r\n");
     }
-    
+
     [Fact]
     public async Task RunProcess_ProcessHasStandardErrorAndErrorShouldNotBeIncluded_DoesNotReturnStandardError()
     {
-
         var result = await Run(ProcessRunner<TestRuntime>.runProcess(
-            "powershell.exe", @"-C ""Write-Output 'test output'; [System.Console]::Error.WriteLine('test error')""", "", false));
+            "powershell.exe", @"-C ""Write-Output 'test output'; [System.Console]::Error.WriteLine('test error')"""));
 
         var processResult = result.Should().BeSuccess().Subject;
         processResult.ExitCode.Should().Be(0);
         processResult.Output.Should().Be("test output\r\n");
     }
 
-    private async ValueTask<Fin<ProcessRunnerResult>> Run(Aff<TestRuntime, ProcessRunnerResult> logic)
+    private static async ValueTask<Fin<ProcessRunnerResult>> Run(Aff<TestRuntime, ProcessRunnerResult> logic)
     {
         using var cts = new CancellationTokenSource();
         return await logic.Run(new TestRuntime(cts));
     }
 
-    private readonly struct TestRuntime : HasProcessRunner<TestRuntime>
+    private readonly struct TestRuntime(CancellationTokenSource cancellationTokenSource) : HasProcessRunner<TestRuntime>
     {
-        private readonly CancellationTokenSource _cancellationTokenSource;
-
-        public TestRuntime(CancellationTokenSource cancellationTokenSource)
-        {
-            _cancellationTokenSource = cancellationTokenSource;
-        }
-
         public TestRuntime LocalCancel => new(new CancellationTokenSource());
 
-        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
+        public CancellationToken CancellationToken => CancellationTokenSource.Token;
 
-        public CancellationTokenSource CancellationTokenSource => _cancellationTokenSource;
-        
+        public CancellationTokenSource CancellationTokenSource { get; } = cancellationTokenSource;
+
         public Eff<TestRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
     }
 }

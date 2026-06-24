@@ -12,15 +12,13 @@ public static class NetworkPortSpecs
         {
             Query.Where(x => x.Id == id);
         }
-
     }
 
     public sealed class GetByNetworkAndName : Specification<VirtualNetworkPort>, ISingleResultSpecification
     {
         public GetByNetworkAndName(Guid networkId, string name)
         {
-            Query.Where( x => x.NetworkId == networkId && x.Name == name);
+            Query.Where(x => x.NetworkId == networkId && x.Name == name);
         }
-
     }
 }

@@ -4,31 +4,30 @@ using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
-using Eryph.StateDb.TestBase;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.TestBase;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 
 public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
 {
-    protected readonly WebModuleFactory<ComputeApiModule> Factory;
+    protected const string LocationName = "test-location";
+    protected const string EnvironmentName = "test-environment";
+    protected const string StoreName = "test-store";
+    protected const string DiskName = "test-disk";
+    protected const int DiskSize = 42;
+    protected const string ParentDiskName = "test-parent-disk";
+    protected const int ParentDiskSize = 43;
 
     protected static readonly Guid OtherClientId = Guid.NewGuid();
     protected static readonly Guid CatletId = Guid.NewGuid();
     protected static readonly Guid CatletMetadataId = Guid.NewGuid();
 
-    protected const string LocationName = "test-location";
-    protected const string EnvironmentName = "test-environment";
-    protected const string StoreName = "test-store";
-
     protected static readonly Guid DiskId = Guid.NewGuid();
-    protected const string DiskName = "test-disk";
-    protected const int DiskSize = 42;
 
     protected static readonly Guid ParentDiskId = Guid.NewGuid();
-    protected const string ParentDiskName = "test-parent-disk";
-    protected const int ParentDiskSize = 43;
+    protected readonly WebModuleFactory<ComputeApiModule> Factory;
 
     protected VirtualDiskTestBase(ITestOutputHelper outputHelper)
         : base(outputHelper)
@@ -48,7 +47,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
         await WithScope(async stateStore =>
         {
             var parentDisk = await stateStore.For<VirtualDisk>().AddAsync(
-                new VirtualDisk()
+                new VirtualDisk
                 {
                     Id = ParentDiskId,
                     ProjectId = EryphConstants.DefaultProjectId,
@@ -62,7 +61,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
                 });
 
             await stateStore.For<VirtualDisk>().AddAsync(
-                new VirtualDisk()
+                new VirtualDisk
                 {
                     Id = DiskId,
                     ProjectId = EryphConstants.DefaultProjectId,
@@ -116,7 +115,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
         await WithScope(async stateStore =>
         {
             await stateStore.For<ProjectRoleAssignment>().AddAsync(
-                new ProjectRoleAssignment()
+                new ProjectRoleAssignment
                 {
                     ProjectId = EryphConstants.DefaultProjectId,
                     IdentityId = OtherClientId.ToString(),

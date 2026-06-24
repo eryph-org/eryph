@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 
 namespace Eryph.StateDb.TestBase;
 
@@ -20,7 +15,7 @@ public class SqliteFixture : IDatabaseFixture
     public Task DisposeAsync() => Task.CompletedTask;
 
     public string GetConnectionString(string databaseName) =>
-        new SqliteConnectionStringBuilder()
+        new SqliteConnectionStringBuilder
         {
             DataSource = databaseName,
             Mode = SqliteOpenMode.Memory,

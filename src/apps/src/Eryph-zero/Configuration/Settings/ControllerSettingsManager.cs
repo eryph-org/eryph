@@ -3,7 +3,6 @@ using Eryph.Core;
 using Eryph.Core.Settings;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero.Configuration.Settings;
@@ -19,11 +18,9 @@ public class ControllerSettingsManager : IControllerSettingsManager
             var configFilePath = Path.Combine(path, "controllersettings.yml");
 
             if (!File.Exists(configFilePath))
-            {
                 await File.WriteAllTextAsync(
                     configFilePath,
                     ControllerSettingsYamlSerializer.Serialize(new ControllerSettings()));
-            }
 
             return await File.ReadAllTextAsync(configFilePath);
         }).ToEither();

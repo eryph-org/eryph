@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.IO.Abstractions;
-using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -14,7 +13,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
@@ -70,7 +68,7 @@ public class RemoveVirtualDiskCommandHandler(
 
     private Unit DeleteFiles(string vhdPath)
     {
-        if(!fileSystem.File.Exists(vhdPath))
+        if (!fileSystem.File.Exists(vhdPath))
             return unit;
 
         fileSystem.File.Delete(vhdPath);

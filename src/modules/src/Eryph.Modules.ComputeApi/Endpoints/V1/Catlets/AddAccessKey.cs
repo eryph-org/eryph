@@ -49,12 +49,12 @@ public class AddAccessKey(
     [Authorize(Policy = "compute:catlets:remote-access")]
     [HttpPost("catlets/{id}/guest-services/access-keys")]
     [SwaggerOperation(
-        Summary = "Authorize a guest-services access key on a catlet",
-        Description =
-            "Starts an operation that authorizes the caller's SSH public key in the catlet's guest "
-            + "services so it can be used to connect the SSH channel.",
-        OperationId = "Catlets_AddAccessKey",
-        Tags = ["Catlets"])
+            Summary = "Authorize a guest-services access key on a catlet",
+            Description =
+                "Starts an operation that authorizes the caller's SSH public key in the catlet's guest "
+                + "services so it can be used to connect the SSH channel.",
+            OperationId = "Catlets_AddAccessKey",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] AddAccessKeyRequest request,
@@ -76,17 +76,19 @@ public class AddAccessKey(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: "The public key must not contain line breaks or quote characters.");
 
-        if (request.Body.ExpiresAt is { } pastExpiry && pastExpiry <= DateTimeOffset.UtcNow)
-            return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: "The expiry must be in the future.");
-
-        if (request.Body.ExpiresAt is { } expiresAt
-            && expiresAt > DateTimeOffset.UtcNow.AddSeconds(SshChannelLimits.MaxTtlSeconds))
-            return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The expiry must be at most {SshChannelLimits.MaxTtlSeconds} seconds in the future.");
-
-        return await base.HandleAsync(request, cancellationToken);
+        switch (request.Body.ExpiresAt)
+        {
+            case { } pastExpiry when pastExpiry <= DateTimeOffset.UtcNow:
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: "The expiry must be in the future.");
+            case { } expiresAt
+                when expiresAt > DateTimeOffset.UtcNow.AddSeconds(SshChannelLimits.MaxTtlSeconds):
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: $"The expiry must be at most {SshChannelLimits.MaxTtlSeconds} seconds in the future.");
+            default:
+                return await base.HandleAsync(request, cancellationToken);
+        }
     }
 }

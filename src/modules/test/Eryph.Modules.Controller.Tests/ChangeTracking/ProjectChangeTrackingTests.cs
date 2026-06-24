@@ -27,9 +27,9 @@ public abstract class ProjectChangeTrackingTests(
     ITestOutputHelper outputHelper)
     : ChangeTrackingTestBase(databaseFixture, outputHelper)
 {
+    private const string IdentityId = "test-identity";
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid AssignmentId = Guid.NewGuid();
-    private const string IdentityId = "test-identity";
 
     private readonly ProjectConfigModel _expectedConfig = new()
     {
@@ -37,7 +37,7 @@ public abstract class ProjectChangeTrackingTests(
         TenantId = EryphConstants.DefaultTenantId,
         Assignments =
         [
-            new ProjectRoleAssignmentConfigModel()
+            new ProjectRoleAssignmentConfigModel
             {
                 IdentityId = IdentityId,
                 RoleName = "contributor",
@@ -51,7 +51,7 @@ public abstract class ProjectChangeTrackingTests(
         var newProjectId = Guid.NewGuid();
         await WithHostScope(async stateStore =>
         {
-            await stateStore.For<Project>().AddAsync(new Project()
+            await stateStore.For<Project>().AddAsync(new Project
             {
                 Id = newProjectId,
                 Name = "new-project",
@@ -62,7 +62,7 @@ public abstract class ProjectChangeTrackingTests(
         });
 
         var config = await ReadConfig(newProjectId);
-        config.Should().BeEquivalentTo(new ProjectConfigModel()
+        config.Should().BeEquivalentTo(new ProjectConfigModel
         {
             Name = "new-project",
             TenantId = EryphConstants.DefaultTenantId,
@@ -118,7 +118,7 @@ public abstract class ProjectChangeTrackingTests(
         {
             var project = await stateStore.For<Project>().GetByIdAsync(ProjectId);
             await stateStore.LoadCollectionAsync(project!, p => p.ProjectRoles);
-            project!.ProjectRoles.Add(new ProjectRoleAssignment()
+            project!.ProjectRoles.Add(new ProjectRoleAssignment
             {
                 IdentityId = secondIdentityId,
                 RoleId = EryphConstants.BuildInRoles.Reader,
@@ -131,7 +131,7 @@ public abstract class ProjectChangeTrackingTests(
         _expectedConfig.Assignments =
         [
             .. _expectedConfig.Assignments,
-            new ProjectRoleAssignmentConfigModel()
+            new ProjectRoleAssignmentConfigModel
             {
                 IdentityId = secondIdentityId,
                 RoleName = "reader",
@@ -172,14 +172,14 @@ public abstract class ProjectChangeTrackingTests(
     {
         await SeedDefaultTenantAndProject();
 
-        await stateStore.For<Project>().AddAsync(new Project()
+        await stateStore.For<Project>().AddAsync(new Project
         {
             Id = ProjectId,
             Name = "test-project",
             TenantId = EryphConstants.DefaultTenantId,
             ProjectRoles =
             [
-                new ProjectRoleAssignment()
+                new ProjectRoleAssignment
                 {
                     Id = AssignmentId,
                     IdentityId = "test-identity",

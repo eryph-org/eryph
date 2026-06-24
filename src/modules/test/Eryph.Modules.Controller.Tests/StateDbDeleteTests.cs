@@ -30,7 +30,7 @@ public class SqliteStateDbTests(
 public abstract class StateDbDeleteTests(
     ITestOutputHelper outputHelper,
     IDatabaseFixture databaseFixture
-    ) : StateDbTestBase(databaseFixture, outputHelper)
+) : StateDbTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid VirtualNetworkId = Guid.NewGuid();
@@ -48,19 +48,19 @@ public abstract class StateDbDeleteTests(
         {
             var stateStore = scope.GetInstance<IStateStore>();
 
-            await stateStore.For<Project>().AddAsync(new Project()
+            await stateStore.For<Project>().AddAsync(new Project
             {
                 Id = ProjectId,
                 Name = "test-project",
                 TenantId = EryphConstants.DefaultTenantId,
             });
 
-            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata()
+            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
             {
                 Id = CatletMetadataId,
             });
 
-            await stateStore.For<VirtualNetwork>().AddAsync(new VirtualNetwork()
+            await stateStore.For<VirtualNetwork>().AddAsync(new VirtualNetwork
             {
                 Id = VirtualNetworkId,
                 Name = "virtual-test-network",
@@ -69,28 +69,28 @@ public abstract class StateDbDeleteTests(
                 ProjectId = ProjectId,
                 Subnets =
                 [
-                    new VirtualNetworkSubnet()
-                {
-                    Id = VirtualSubnetId,
-                    Name = "virtual-test-subnet",
-                    IpNetwork = "10.0.0.0/20",
-                    MTU = 1400,
-                    IpPools =
-                    [
-                        new IpPool()
-                        {
-                            Id = VirtualIpPoolId,
-                            Name = "virtual-test-pool",
-                            FirstIp = "10.0.0.100",
-                            NextIp = "10.0.0.110",
-                            LastIp = "10.0.0.200",
-                        },
-                    ],
-                },
-            ],
+                    new VirtualNetworkSubnet
+                    {
+                        Id = VirtualSubnetId,
+                        Name = "virtual-test-subnet",
+                        IpNetwork = "10.0.0.0/20",
+                        MTU = 1400,
+                        IpPools =
+                        [
+                            new IpPool
+                            {
+                                Id = VirtualIpPoolId,
+                                Name = "virtual-test-pool",
+                                FirstIp = "10.0.0.100",
+                                NextIp = "10.0.0.110",
+                                LastIp = "10.0.0.200",
+                            },
+                        ],
+                    },
+                ],
             });
 
-            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
+            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
@@ -100,7 +100,7 @@ public abstract class StateDbDeleteTests(
                 PoolName = "provider-test-pool",
             });
 
-            await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort()
+            await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort
             {
                 Id = CatletPortId,
                 Name = "test-catlet-port",
@@ -110,7 +110,7 @@ public abstract class StateDbDeleteTests(
                 MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
-                    new IpPoolAssignment()
+                    new IpPoolAssignment
                     {
                         Id = IpAssignmentId,
                         SubnetId = VirtualSubnetId,
@@ -151,7 +151,7 @@ public abstract class StateDbDeleteTests(
         {
             var stateStore = scope.GetInstance<IStateStore>();
             var configRealizer = new NetworkProvidersConfigRealizer(stateStore);
-            await configRealizer.RealizeConfigAsync(GetProvidersConfig(), default);
+            await configRealizer.RealizeConfigAsync(GetProvidersConfig(), CancellationToken.None);
             await scope.GetInstance<IStateStore>().SaveChangesAsync();
         }
 
@@ -161,7 +161,7 @@ public abstract class StateDbDeleteTests(
             var subnets = await stateStore.For<ProviderSubnet>().ListAsync(
                 new ProviderSubnetSpecs.GetForChangeTracking());
 
-            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
+            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
@@ -171,7 +171,7 @@ public abstract class StateDbDeleteTests(
                 MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
-                    new IpPoolAssignment()
+                    new IpPoolAssignment
                     {
                         Id = IpAssignmentId,
                         SubnetId = subnets[0].Id,
@@ -209,29 +209,29 @@ public abstract class StateDbDeleteTests(
         await SeedDefaultTenantAndProject();
     }
 
-    private NetworkProvidersConfiguration GetProvidersConfig() => new()
+    private static NetworkProvidersConfiguration GetProvidersConfig() => new()
     {
         NetworkProviders =
         [
-            new NetworkProvider()
+            new NetworkProvider
             {
                 Name = "test-provider",
                 Type = NetworkProviderType.NatOverlay,
                 Subnets =
                 [
-                    new NetworkProviderSubnet()
+                    new NetworkProviderSubnet
                     {
                         Name = "provider-test-subnet",
                         Network = "10.0.0.0/24",
                         IpPools =
                         [
-                            new NetworkProviderIpPool()
+                            new NetworkProviderIpPool
                             {
                                 Name = "provider-test-pool",
                                 FirstIp = "10.0.0.100",
                                 NextIp = "10.0.0.100",
                                 LastIp = "10.0.0.200",
-                            }
+                            },
                         ],
                     },
                 ],

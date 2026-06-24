@@ -224,6 +224,7 @@ public sealed class ComponentEnrollmentService(
                 subjectKey.Dispose();
                 throw new ComponentEnrollmentException("The request server public key is invalid.", ex);
             }
+
             serverDnsNames = dnsNames;
         }
 
@@ -284,7 +285,7 @@ public sealed class ComponentEnrollmentService(
     // component cannot claim another identity.
     private static (Guid ComponentId, string Fqdn) ReadComponentIdentity(X509Certificate2 certificate)
     {
-        var fqdn = certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
+        var fqdn = certificate.GetNameInfo(X509NameType.SimpleName, false);
         if (string.IsNullOrWhiteSpace(fqdn))
             throw new ComponentEnrollmentException("The certificate has no common name (component host).");
 
@@ -323,7 +324,7 @@ public sealed class ComponentEnrollmentService(
         while (sequence.HasData)
         {
             var tag = sequence.PeekTag();
-            if (tag.TagClass == TagClass.ContextSpecific && tag.TagValue == 6)
+            if (tag is { TagClass: TagClass.ContextSpecific, TagValue: 6 })
                 yield return sequence.ReadCharacterString(UniversalTagNumber.IA5String, uriTag);
             else
                 sequence.ReadEncodedValue();

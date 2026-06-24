@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -47,8 +44,8 @@ public class OperationRequestHandler<TEntity>(
         {
             if (!await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin))
                 return Problem(
-                    statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have super admin access.");
+                    StatusCodes.Status403Forbidden,
+                    "You do not have super admin access.");
         }
         else if (typeof(TEntity) == typeof(CatletSpecificationVersion))
         {
@@ -59,7 +56,7 @@ public class OperationRequestHandler<TEntity>(
         {
             return new NotFoundResult();
         }
-        
+
         var command = createOperationFunc();
         var result = await StartOperation(command);
 

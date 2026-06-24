@@ -1,5 +1,5 @@
 ﻿using Eryph.Modules.HostAgent.Inventory;
-using Eryph.VmManagement.TestBase;
+using Eryph.VmManagement.HyperV.TestBase;
 using Eryph.VmManagement.Wmi;
 using static LanguageExt.Prelude;
 
@@ -17,7 +17,7 @@ public class VmChangeWatcherServiceTests
             ("OtherEnabledState", Optional<object>(null)),
             ("HealthState", Optional<object>(MsvmConstants.HealthState.Ok)),
             ("OperationalStatus", Optional<object>(new[] { MsvmConstants.OperationalStatus.Ok }))
-            ));
+        ));
 
         var wmiEvent = new WmiEvent(DateTimeOffset.UtcNow, wmiObject);
 
@@ -53,8 +53,10 @@ public class VmChangeWatcherServiceTests
     {
         var wmiObject = new WmiObject(HashMap(
             ("__CLASS", Optional<object>("Msvm_GuestNetworkAdapterConfiguration")),
-            ("InstanceID", Optional<object>(@"Microsoft:GuestNetwork\2FE70974-C81A-4F3A-BF4E-7BE405B88C97\596574F5-A810-43EF-B349-D20783874CE5"))
-            ));
+            ("InstanceID",
+                Optional<object>(
+                    @"Microsoft:GuestNetwork\2FE70974-C81A-4F3A-BF4E-7BE405B88C97\596574F5-A810-43EF-B349-D20783874CE5"))
+        ));
 
         var wmiEvent = new WmiEvent(DateTimeOffset.UtcNow, wmiObject);
 

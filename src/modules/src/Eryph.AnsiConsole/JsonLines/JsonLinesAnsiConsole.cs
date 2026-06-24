@@ -16,8 +16,9 @@ public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower) },
         });
 
-    private readonly IAnsiConsole _outputConsole;
     private readonly IAnsiConsole _innerConsole;
+
+    private readonly IAnsiConsole _outputConsole;
     private readonly StringWriter _writer;
 
     public JsonLinesAnsiConsole(IAnsiConsole outputConsole)
@@ -80,9 +81,9 @@ public class JsonLinesAnsiConsole : IJsonLinesAnsiConsole
         var output = new JsonLineResult
         {
             ExitCode = 0,
-            Result = result?.ReplaceLineEndings("\n")
+            Result = result?.ReplaceLineEndings("\n"),
         };
-        
+
         Write(output);
     }
 

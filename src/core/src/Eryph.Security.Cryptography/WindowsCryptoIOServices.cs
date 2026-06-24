@@ -16,14 +16,14 @@ public class WindowsCryptoIOServices : ICryptoIOServices
     {
         try
         {
-            if(!File.Exists(privateKeyFile))
+            if (!File.Exists(privateKeyFile))
                 return null;
 
             var protectedData = await File.ReadAllBytesAsync(privateKeyFile);
             var data = ProtectedData.Unprotect(protectedData, entropy, DataProtectionScope.LocalMachine);
             var key = RSA.Create();
             key.ImportFromPem(Encoding.UTF8.GetString(data));
-            
+
             return key;
         }
         catch (Exception)

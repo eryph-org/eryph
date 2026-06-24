@@ -5,7 +5,6 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -21,12 +20,13 @@ public static class CatletBreeding
         from cpu in BreedCpu(parentConfig.Cpu, childConfig.Cpu)
         from memory in BreedMemory(parentConfig.Memory, childConfig.Memory)
         from drives in BreedDrives(Seq(parentConfig.Drives), Seq(childConfig.Drives))
-        from networkAdapters in BreedNetworkAdapters(Seq(parentConfig.NetworkAdapters), Seq(childConfig.NetworkAdapters))
+        from networkAdapters in BreedNetworkAdapters(Seq(parentConfig.NetworkAdapters),
+            Seq(childConfig.NetworkAdapters))
         from networks in BreedNetworks(Seq(parentConfig.Networks), Seq(childConfig.Networks))
         from variables in BreedVariables(Seq(parentConfig.Variables), Seq(childConfig.Variables))
         from fodder in BreedFodder(Seq(parentConfig.Fodder), Seq(childConfig.Fodder))
         from capabilities in BreedCapabilities(Seq(parentConfig.Capabilities), Seq(childConfig.Capabilities))
-        select new CatletConfig()
+        select new CatletConfig
         {
             // Basic catlet configuration like name and placement information
             // is not inherited from parent
@@ -54,16 +54,16 @@ public static class CatletBreeding
         Option<CatletCpuConfig> parentConfig,
         Option<CatletCpuConfig> childConfig) =>
         BreedOptional(parentConfig, childConfig,
-            (parent, child) => new CatletCpuConfig()
+            (parent, child) => new CatletCpuConfig
             {
-                Count = child.Count ?? parent.Count
+                Count = child.Count ?? parent.Count,
             });
 
     private static Either<Error, Option<CatletMemoryConfig>> BreedMemory(
         Option<CatletMemoryConfig> parentConfig,
         Option<CatletMemoryConfig> childConfig) =>
         BreedOptional(parentConfig, childConfig,
-            (parent, child) => new CatletMemoryConfig()
+            (parent, child) => new CatletMemoryConfig
             {
                 Minimum = child.Minimum ?? parent.Minimum,
                 Maximum = child.Maximum ?? parent.Maximum,
@@ -86,7 +86,7 @@ public static class CatletBreeding
                         source.Bind(GeneIdentifier.NewOption).IsSome && diskType != CatletDriveType.Vhd,
                         Error.New("The drive must be a plain VHD when using a gene pool source."))
                     .ToEither()
-                select new CatletDriveConfig()
+                select new CatletDriveConfig
                 {
                     Name = child.Name,
                     Mutation = child.Mutation,
@@ -103,7 +103,7 @@ public static class CatletBreeding
         Seq<CatletNetworkAdapterConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
             CatletNetworkAdapterName.NewEither,
-            (parent, child) => new CatletNetworkAdapterConfig()
+            (parent, child) => new CatletNetworkAdapterConfig
             {
                 Name = child.Name,
                 Mutation = child.Mutation,
@@ -118,7 +118,7 @@ public static class CatletBreeding
         Seq<CatletNetworkConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
             EryphNetworkName.NewEither,
-            (parent, child) => new CatletNetworkConfig()
+            (parent, child) => new CatletNetworkConfig
             {
                 Name = child.Name,
                 Mutation = child.Mutation,
@@ -142,7 +142,7 @@ public static class CatletBreeding
         // Validate that there are no duplicate variable names as it would break the breeding.
         // Normally, these cases should have been caught by the validation earlier.
         from _ in ValidateDistinct(parentsWithNames)
-            .MapLeft(e => Error.New("Some variable names in the parent config are not unique.", e)) 
+            .MapLeft(e => Error.New("Some variable names in the parent config are not unique.", e))
         from __ in ValidateDistinct(childrenWithNames)
             .MapLeft(e => Error.New("Some variable names in the child config are not unique.", e))
         let childrenMap = childrenWithNames.Map(v => (v.Name, v.Config)).ToHashMap()
@@ -151,8 +151,8 @@ public static class CatletBreeding
                 // Merging a variable config is potentially problematic, e.g. the merge could
                 // remove the secret flag without the user realizing the variable's value is
                 // sensitive. Hence, a child variable always completely replaces the parent variable.
-                Some: c => p with { Config = c.Clone() },
-                None: () => p with { Config = p.Config.Clone() }))
+                c => p with { Config = c.Clone() },
+                () => p with { Config = p.Config.Clone() }))
         let mergedNames = merged.Map(v => v.Name).ToHashSet()
         let additional = childrenWithNames
             .Filter(c => !mergedNames.Contains(c.Name))
@@ -178,7 +178,7 @@ public static class CatletBreeding
         from __ in ValidateDistinct(childrenWithKeys)
             .MapLeft(e => Error.New("Some fodder in the child config is not unique.", e))
         from ___ in FodderConfigValidations.ValidateNoMultipleTagsForGeneSet(
-            parentsWithKeys.Append(childrenWithKeys).Map(fwk => fwk.Key.Source).Somes())
+                parentsWithKeys.Append(childrenWithKeys).Map(fwk => fwk.Key.Source).Somes())
             .ToEither()
             .MapLeft(errors => Error.New(
                 "The parent and child config use one or more gene sets with multiple tags.",
@@ -186,12 +186,13 @@ public static class CatletBreeding
         let childrenMap = childrenWithKeys.Map(v => (v.Key, v.Config)).ToHashMap()
         let merged = parentsWithKeys
             .Filter(p => p.Key.Source.IsSome || !p.Config.Remove.GetValueOrDefault())
-            .Filter(p => p.Key.Source.IsSome || childrenMap.Find(p.Key).Filter(c => c.Remove.GetValueOrDefault()).IsNone)
+            .Filter(p =>
+                p.Key.Source.IsSome || childrenMap.Find(p.Key).Filter(c => c.Remove.GetValueOrDefault()).IsNone)
             .Map(p => p with
             {
                 Config = childrenMap.Find(p.Key).Match(
-                    Some: c => MergeFodder(p.Config, c),
-                    None: () => p.Config.Clone())
+                    c => MergeFodder(p.Config, c),
+                    () => p.Config.Clone()),
             })
         let mergedFodderKeys = merged.Map(v => v.Key).ToHashSet()
         let additional = childrenWithKeys
@@ -224,7 +225,7 @@ public static class CatletBreeding
         Seq<CatletCapabilityConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
             CatletCapabilityName.NewEither,
-            (parent, child) => new CatletCapabilityConfig()
+            (parent, child) => new CatletCapabilityConfig
             {
                 Name = child.Name,
                 Details = child.Details?.ToArray() ?? parent.Details?.ToArray(),
@@ -233,13 +234,13 @@ public static class CatletBreeding
     private static Either<Error, Option<TConfig>> BreedOptional<TConfig>(
         Option<TConfig> parentConfig,
         Option<TConfig> childConfig,
-        Func<TConfig,TConfig,TConfig> breed)
+        Func<TConfig, TConfig, TConfig> breed)
         where TConfig : ICloneableConfig<TConfig> =>
         parentConfig.Match(
-            Some: parent => childConfig.Match(
-                Some: child => breed(parent, child),
-                None: parent.Clone()),
-            None: childConfig.Map(c => c.Clone()));
+            parent => childConfig.Match(
+                child => breed(parent, child),
+                parent.Clone()),
+            childConfig.Map(c => c.Clone()));
 
     private static Either<Error, Seq<TConfig>> BreedMutateable<TConfig, TName>(
         Seq<TConfig> parentConfigs,
@@ -250,16 +251,16 @@ public static class CatletBreeding
         where TName : EryphName<TName> =>
         from parentsWithNames in parentConfigs
             .Map(c => from name in parseName(c.Name)
-                      select new ConfigWithName<TConfig, TName>(name, c))
+                select new ConfigWithName<TConfig, TName>(name, c))
             .Sequence()
         from childrenWithNames in childConfigs
             .Map(c => from name in parseName(c.Name)
-                      select new ConfigWithName<TConfig, TName>(name, c))
+                select new ConfigWithName<TConfig, TName>(name, c))
             .Sequence()
         // Validate that there are no duplicate names as it would break the breeding.
         // Normally, these cases should have been caught by the validation earlier.
         from _ in ValidateDistinct(parentsWithNames)
-            .MapLeft(e => Error.New("Some names in the parent config are not unique.", e)) 
+            .MapLeft(e => Error.New("Some names in the parent config are not unique.", e))
         from __ in ValidateDistinct(childrenWithNames)
             .MapLeft(e => Error.New("Some names in the child config are not unique.", e))
         let childrenMap = childrenWithNames.Map(v => (v.Name, v.Config)).ToHashMap()
@@ -267,10 +268,10 @@ public static class CatletBreeding
             .Filter(p => p.Config.Mutation != MutationType.Remove)
             .Filter(p => childrenMap.Find(p.Name).Filter(c => c.Mutation is MutationType.Remove).IsNone)
             .Map(p => childrenMap.Find(p.Name).Match(
-                    Some: c => Optional(c.Mutation).Filter(m => m == MutationType.Overwrite).Match(
-                            Some: _ => c.Clone(),
-                            None: () => merge(p.Config, c)),
-                    None: () => p.Config.Clone())
+                    c => Optional(c.Mutation).Filter(m => m == MutationType.Overwrite).Match(
+                        _ => c.Clone(),
+                        () => merge(p.Config, c)),
+                    () => p.Config.Clone())
                 .Map(c => p with { Config = c }))
             .Sequence()
         let mergedNames = merged.Map(v => v.Name).ToHashSet()
@@ -282,9 +283,6 @@ public static class CatletBreeding
             .OrderBy(c => c.Name)
             .ToSeq()
             .Map(c => c.Config);
-
-    private sealed record ConfigWithName<TConfig, TName>(TName Name, TConfig Config)
-        where TName : EryphName<TName>;
 
     private static Either<Error, Unit> ValidateDistinct(
         Seq<FodderWithKey> fodderWithKeys) =>
@@ -300,4 +298,7 @@ public static class CatletBreeding
                 configsWithNames, cwn => cwn.Name, nameof(TName))
             .ToEither()
             .MapLeft(Error.Many);
+
+    private sealed record ConfigWithName<TConfig, TName>(TName Name, TConfig Config)
+        where TName : EryphName<TName>;
 }

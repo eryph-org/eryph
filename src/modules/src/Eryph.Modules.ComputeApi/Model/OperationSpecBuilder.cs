@@ -12,24 +12,24 @@ public class OperationSpecBuilder(IUserRightsProvider userRightsProvider)
     : ISingleEntitySpecBuilder<OperationRequest, OperationModel>,
         IListEntitySpecBuilder<OperationsListRequest, OperationModel>
 {
-    public ISingleResultSpecification<OperationModel>? GetSingleEntitySpec(
-        OperationRequest request,
-        AccessRight accessRight)
+    public ISpecification<OperationModel> GetEntitiesSpec(OperationsListRequest request)
     {
-        if (!Guid.TryParse(request.Id, out var operationId))
-            return null;
-            
-        return new OperationSpecs.GetById(
-            operationId,
+        return new OperationSpecs.GetAll(
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetProjectRoles(AccessRight.Read),
             request.Expand,
             request.LogTimestamp);
     }
 
-    public ISpecification<OperationModel> GetEntitiesSpec(OperationsListRequest request)
+    public ISingleResultSpecification<OperationModel>? GetSingleEntitySpec(
+        OperationRequest request,
+        AccessRight accessRight)
     {
-        return new OperationSpecs.GetAll(
+        if (!Guid.TryParse(request.Id, out var operationId))
+            return null;
+
+        return new OperationSpecs.GetById(
+            operationId,
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetProjectRoles(AccessRight.Read),
             request.Expand,

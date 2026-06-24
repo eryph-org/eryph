@@ -6,24 +6,14 @@ using Microsoft.AspNetCore.Http;
 
 namespace Eryph.Modules.AspNetCore;
 
-public class UserInfoProvider : IUserInfoProvider
+public class UserInfoProvider(IHttpContextAccessor contextAccessor) : IUserInfoProvider
 {
-    private readonly IHttpContextAccessor _contextAccessor;
-
-    public UserInfoProvider(IHttpContextAccessor contextAccessor)
-    {
-        _contextAccessor = contextAccessor;
-    }
-
     public string GetUserId()
     {
         var principal = GetClaimsPrincipal();
-        
-        var userId = principal.FindFirstValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
-        if (string.IsNullOrEmpty(userId))
-            throw new InvalidOperationException("The authenticated principal does not contain a user ID.");
 
-        return userId;
+        var userId = principal.FindFirstValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        return string.IsNullOrEmpty(userId) ? throw new InvalidOperationException("The authenticated principal does not contain a user ID.") : userId;
     }
 
     public Guid GetUserTenantId()
@@ -33,21 +23,18 @@ public class UserInfoProvider : IUserInfoProvider
         var tenantId = principal.FindFirstValue("tid")
                        ?? principal.FindFirstValue("http://schemas.microsoft.com/identity/claims/tenantid");
 
-        if (!Guid.TryParse(tenantId, out var validTenantId))
-            throw new InvalidOperationException("The authenticated principal does not contain a tenant ID.");
-
-        return validTenantId;
+        return !Guid.TryParse(tenantId, out var validTenantId) ? throw new InvalidOperationException("The authenticated principal does not contain a tenant ID.") : validTenantId;
     }
 
     public Guid[] GetUserRoles()
     {
         var principal = GetClaimsPrincipal();
-        
+
         // we expect multiple claims for each role 
         var rolesClaims = principal.FindAll(ClaimTypes.Role);
 
         var roles = rolesClaims
-            .Select(c => Guid.TryParse(c.Value, out var guid) ? (Guid?) guid : null)
+            .Select(c => Guid.TryParse(c.Value, out var guid) ? (Guid?)guid : null)
             .Where(r => r.HasValue)
             .Select(r => r!.Value)
             .ToArray();
@@ -62,10 +49,6 @@ public class UserInfoProvider : IUserInfoProvider
 
     private ClaimsPrincipal GetClaimsPrincipal()
     {
-        if (_contextAccessor.HttpContext is null)
-            throw new InvalidOperationException("The HttpContext is missing.");
-        
-        return _contextAccessor.HttpContext.User;
-        
+        return contextAccessor.HttpContext is null ? throw new InvalidOperationException("The HttpContext is missing.") : contextAccessor.HttpContext.User;
     }
 }

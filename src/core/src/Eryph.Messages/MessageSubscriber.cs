@@ -1,10 +1,9 @@
-﻿namespace Eryph.Messages
+﻿namespace Eryph.Messages;
+
+public enum MessageSubscriber
 {
-    public enum MessageSubscriber
-    {
-        Controllers,
-        VMHostAgents,
-        ApiEndpoints,
-        IdentityEndpoints
-    }
+    Controllers,
+    VMHostAgents,
+    ApiEndpoints,
+    IdentityEndpoints,
 }

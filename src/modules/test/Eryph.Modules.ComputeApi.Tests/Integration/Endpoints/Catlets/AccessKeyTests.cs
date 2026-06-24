@@ -33,7 +33,7 @@ public class AccessKeyTests(ITestOutputHelper outputHelper)
             .PostAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/access-keys",
                 new { publicKey = PublicKey, ttl = "PT8H", expiresAt },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
@@ -54,7 +54,7 @@ public class AccessKeyTests(ITestOutputHelper outputHelper)
             .PostAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/access-keys",
                 new { publicKey = PublicKey },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
@@ -70,7 +70,7 @@ public class AccessKeyTests(ITestOutputHelper outputHelper)
             .PostAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/access-keys",
                 new { publicKey = PublicKey },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();
@@ -84,7 +84,7 @@ public class AccessKeyTests(ITestOutputHelper outputHelper)
             .PostAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/access-keys",
                 new { publicKey = "" },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();
@@ -100,7 +100,7 @@ public class AccessKeyTests(ITestOutputHelper outputHelper)
             .PostAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/access-keys",
                 new { publicKey = PublicKey, expiresAt },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();

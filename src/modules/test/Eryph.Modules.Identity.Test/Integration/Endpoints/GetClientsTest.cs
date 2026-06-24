@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,16 +17,12 @@ using Xunit;
 namespace Eryph.Modules.Identity.Test.Integration.Endpoints;
 
 [Collection("Token certificate collection")]
-public class GetClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
+public class GetClientsTest(
+    WebModuleFactory<IdentityModule> factory,
+    TokenCertificateFixture tokenCertificates)
+    : IClassFixture<WebModuleFactory<IdentityModule>>
 {
-    private readonly WebModuleFactory<IdentityModule> _factory;
-
-    public GetClientsTest(
-        WebModuleFactory<IdentityModule> factory,
-        TokenCertificateFixture tokenCertificates)
-    {
-        _factory = factory.WithIdentityHost(tokenCertificates);
-    }
+    private readonly WebModuleFactory<IdentityModule> _factory = factory.WithIdentityHost(tokenCertificates);
 
     private WebModuleFactory<IdentityModule> SetupClients()
     {
@@ -41,7 +38,7 @@ public class GetClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
                     TenantId = EryphConstants.DefaultTenantId,
                     ClientId = "test2",
                     DisplayName = "Test Client 2",
-                    Scopes = { "compute:write" }
+                    Scopes = { "compute:write" },
                 }, false, CancellationToken.None).GetAwaiter().GetResult();
             });
         });
@@ -58,10 +55,10 @@ public class GetClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "identity:read", false)
             .GetAsync("v1/clients/test2");
 
-        response.Should().HaveStatusCode(System.Net.HttpStatusCode.OK);
+        response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var client = await response.Content.ReadFromJsonAsync<Client>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         client.Should().NotBeNull();
         client.Id.Should().Be("test2");

@@ -1,7 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -38,13 +37,13 @@ public class GetGuestServicesStatus(
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlets/{id}/guest-services")]
     [SwaggerOperation(
-        Summary = "Get the guest services of a catlet",
-        Description =
-            "Starts an operation that reads the catlet guest's services state: the agent status and "
-            + "version, the provisioning state and the current shell. Track the returned operation; "
-            + "its result carries the state.",
-        OperationId = "Catlets_GetGuestServices",
-        Tags = ["Catlets"])
+            Summary = "Get the guest services of a catlet",
+            Description =
+                "Starts an operation that reads the catlet guest's services state: the agent status and "
+                + "version, the provisioning state and the current shell. Track the returned operation; "
+                + "its result carries the state.",
+            OperationId = "Catlets_GetGuestServices",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

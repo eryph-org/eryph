@@ -1,8 +1,8 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel.Json;
-using Eryph.Core;
-using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.CatletSpecifications;
 using Eryph.ModuleCore;
@@ -11,12 +11,6 @@ using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -25,42 +19,10 @@ namespace Eryph.Modules.Controller.Compute;
 internal class UpdateCatletSpecificationSaga(
     IStateStore stateStore,
     IWorkflow workflow)
-    : OperationTaskWorkflowSaga<UpdateCatletSpecificationCommand, EryphSagaData<UpdateCatletSpecificationSagaData>>(workflow),
+    : OperationTaskWorkflowSaga<UpdateCatletSpecificationCommand, EryphSagaData<UpdateCatletSpecificationSagaData>>(
+            workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
 {
-    protected override async Task Initiated(UpdateCatletSpecificationCommand message)
-    {
-        Data.Data.State = UpdateCatletSpecificationSagaState.Initiated;
-        Data.Data.SpecificationId = message.SpecificationId;
-
-        var specification = await stateStore.For<CatletSpecification>()
-            .GetByIdAsync(message.SpecificationId);
-        if (specification is null)
-        {
-            await Fail($"The catlet specification {message.SpecificationId} does not exist.");
-            return;
-        }
-
-        Data.Data.SpecificationVersionId = Guid.NewGuid();
-        Data.Data.AgentName = Environment.MachineName;
-        Data.Data.ContentType = message.ContentType;
-        Data.Data.OriginalConfig = message.Configuration;
-        Data.Data.Architectures = message.Architectures;
-        Data.Data.Comment = message.Comment;
-        Data.Data.PendingArchitectures = message.Architectures;
-
-        foreach (var architecture in Data.Data.PendingArchitectures)
-        {
-            await StartNewTask(new BuildCatletSpecificationCommand
-            {
-                AgentName = Data.Data.AgentName,
-                ContentType = message.ContentType,
-                Configuration = message.Configuration,
-                Architecture = architecture,
-            });
-        }
-    }
-
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
     {
         if (Data.Data.State >= UpdateCatletSpecificationSagaState.SpecificationBuilt)
@@ -99,7 +61,7 @@ internal class UpdateCatletSpecificationSaga(
 
             specification.Name = Data.Data.Variants.Values.First().BuiltConfig.Name!;
             specification.Architectures = Data.Data.Variants.Keys.ToHashSet();
-            
+
             var specificationVersion = new CatletSpecificationVersion
             {
                 Id = Data.Data.SpecificationVersionId,
@@ -121,7 +83,39 @@ internal class UpdateCatletSpecificationSaga(
         });
     }
 
-    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<UpdateCatletSpecificationSagaData>> config)
+    protected override async Task Initiated(UpdateCatletSpecificationCommand message)
+    {
+        Data.Data.State = UpdateCatletSpecificationSagaState.Initiated;
+        Data.Data.SpecificationId = message.SpecificationId;
+
+        var specification = await stateStore.For<CatletSpecification>()
+            .GetByIdAsync(message.SpecificationId);
+        if (specification is null)
+        {
+            await Fail($"The catlet specification {message.SpecificationId} does not exist.");
+            return;
+        }
+
+        Data.Data.SpecificationVersionId = Guid.NewGuid();
+        Data.Data.AgentName = Environment.MachineName;
+        Data.Data.ContentType = message.ContentType;
+        Data.Data.OriginalConfig = message.Configuration;
+        Data.Data.Architectures = message.Architectures;
+        Data.Data.Comment = message.Comment;
+        Data.Data.PendingArchitectures = message.Architectures;
+
+        foreach (var architecture in Data.Data.PendingArchitectures)
+            await StartNewTask(new BuildCatletSpecificationCommand
+            {
+                AgentName = Data.Data.AgentName,
+                ContentType = message.ContentType,
+                Configuration = message.Configuration,
+                Architecture = architecture,
+            });
+    }
+
+    protected override void CorrelateMessages(
+        ICorrelationConfig<EryphSagaData<UpdateCatletSpecificationSagaData>> config)
     {
         base.CorrelateMessages(config);
 

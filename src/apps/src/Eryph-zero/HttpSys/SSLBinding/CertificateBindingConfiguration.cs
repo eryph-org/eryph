@@ -58,13 +58,13 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
                     pSslHash = handleHash.AddrOfPinnedObject(),
                     SslHashLength = hash.Length,
                     pDefaultSslCtlIdentifier = options.SslCtlIdentifier,
-                    pDefaultSslCtlStoreName = options.SslCtlStoreName
+                    pDefaultSslCtlStoreName = options.SslCtlStoreName,
                 };
 
                 var configSslSet = new HttpApi.HTTP_SERVICE_CONFIG_SSL_SET
                 {
                     ParamDesc = configSslParam,
-                    KeyDesc = httpServiceConfigSslKey
+                    KeyDesc = httpServiceConfigSslKey,
                 };
 
                 var pInputConfigInfo = Marshal.AllocCoTaskMem(
@@ -115,7 +115,7 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
 
     public void Delete(IPEndPoint endPoint)
     {
-        Delete(new[] { endPoint });
+        Delete([endPoint]);
     }
 
     public void Delete(IPEndPoint[] endPoints)
@@ -136,7 +136,7 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
 
                     var configSslSet = new HttpApi.HTTP_SERVICE_CONFIG_SSL_SET
                     {
-                        KeyDesc = httpServiceConfigSslKey
+                        KeyDesc = httpServiceConfigSslKey,
                     };
 
                     var pInputConfigInfo = Marshal.AllocCoTaskMem(
@@ -177,7 +177,7 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
                 var inputConfigInfoQuery = new HttpApi.HTTP_SERVICE_CONFIG_SSL_QUERY
                 {
                     QueryDesc = HttpApi.HTTP_SERVICE_CONFIG_QUERY_TYPE.HttpServiceConfigQueryExact,
-                    KeyDesc = sslKey
+                    KeyDesc = sslKey,
                 };
 
                 var pInputConfigInfo = Marshal.AllocCoTaskMem(
@@ -198,37 +198,38 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
                         returnLength,
                         out returnLength,
                         IntPtr.Zero);
-                    if (retVal == HttpApi.ERROR_FILE_NOT_FOUND)
-                        return;
-
-                    if (HttpApi.ERROR_INSUFFICIENT_BUFFER == retVal)
+                    switch (retVal)
                     {
-                        pOutputConfigInfo = Marshal.AllocCoTaskMem(returnLength);
-                        try
-                        {
-                            retVal = HttpApi.HttpQueryServiceConfiguration(IntPtr.Zero,
-                                HttpApi.HTTP_SERVICE_CONFIG_ID.HttpServiceConfigSSLCertInfo,
-                                pInputConfigInfo,
-                                inputConfigInfoSize,
-                                pOutputConfigInfo,
-                                returnLength,
-                                out returnLength,
-                                IntPtr.Zero);
+                        case HttpApi.ERROR_FILE_NOT_FOUND:
+                            return;
+                        case HttpApi.ERROR_INSUFFICIENT_BUFFER:
+                            pOutputConfigInfo = Marshal.AllocCoTaskMem(returnLength);
+                            try
+                            {
+                                retVal = HttpApi.HttpQueryServiceConfiguration(IntPtr.Zero,
+                                    HttpApi.HTTP_SERVICE_CONFIG_ID.HttpServiceConfigSSLCertInfo,
+                                    pInputConfigInfo,
+                                    inputConfigInfoSize,
+                                    pOutputConfigInfo,
+                                    returnLength,
+                                    out returnLength,
+                                    IntPtr.Zero);
+                                HttpApi.ThrowWin32ExceptionIfError(retVal);
+
+                                var outputConfigInfo =
+                                    (HttpApi.HTTP_SERVICE_CONFIG_SSL_SET)
+                                    Marshal.PtrToStructure(pOutputConfigInfo, typeof(HttpApi.HTTP_SERVICE_CONFIG_SSL_SET));
+                                result = CreateCertificateBindingInfo(outputConfigInfo);
+                            }
+                            finally
+                            {
+                                Marshal.FreeCoTaskMem(pOutputConfigInfo);
+                            }
+
+                            break;
+                        default:
                             HttpApi.ThrowWin32ExceptionIfError(retVal);
-
-                            var outputConfigInfo =
-                                (HttpApi.HTTP_SERVICE_CONFIG_SSL_SET)
-                                Marshal.PtrToStructure(pOutputConfigInfo, typeof(HttpApi.HTTP_SERVICE_CONFIG_SSL_SET));
-                            result = CreateCertificateBindingInfo(outputConfigInfo);
-                        }
-                        finally
-                        {
-                            Marshal.FreeCoTaskMem(pOutputConfigInfo);
-                        }
-                    }
-                    else
-                    {
-                        HttpApi.ThrowWin32ExceptionIfError(retVal);
+                            break;
                     }
                 }
                 finally
@@ -257,7 +258,7 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
                     var inputConfigInfoQuery = new HttpApi.HTTP_SERVICE_CONFIG_SSL_QUERY
                     {
                         QueryDesc = HttpApi.HTTP_SERVICE_CONFIG_QUERY_TYPE.HttpServiceConfigQueryNext,
-                        dwToken = token
+                        dwToken = token,
                     };
 
                     var pInputConfigInfo = Marshal.AllocCoTaskMem(
@@ -348,7 +349,7 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
             UseDsMappers = HasFlag(configInfo.ParamDesc.DefaultFlags,
                 HttpApi.HTTP_SERVICE_CONFIG_SSL_FLAG.USE_DS_MAPPER),
             DoNotPassRequestsToRawFilters = HasFlag(configInfo.ParamDesc.DefaultFlags,
-                HttpApi.HTTP_SERVICE_CONFIG_SSL_FLAG.NO_RAW_FILTER)
+                HttpApi.HTTP_SERVICE_CONFIG_SSL_FLAG.NO_RAW_FILTER),
         };
         var result = new CertificateBinding(GetThumbprint(hash), storeName, ipPort, appId, options);
         return result;

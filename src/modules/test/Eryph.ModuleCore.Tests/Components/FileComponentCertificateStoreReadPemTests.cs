@@ -1,8 +1,5 @@
-using System;
-using System.IO;
-using FluentAssertions;
 using Eryph.ModuleCore.Components;
-using Xunit;
+using FluentAssertions;
 
 namespace Eryph.ModuleCore.Tests.Components;
 
@@ -15,7 +12,14 @@ public class FileComponentCertificateStoreReadPemTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, true); } catch { /* best effort */ }
+        try
+        {
+            Directory.Delete(_dir, true);
+        }
+        catch
+        {
+            /* best effort */
+        }
     }
 
     private FileComponentCertificateStore Store() => new(_dir, TimeSpan.FromDays(45));

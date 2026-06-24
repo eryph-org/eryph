@@ -10,30 +10,30 @@ public class CatletGeneCollectingTests
     [Fact]
     public void CollectGenes_ValidSources_ReturnsGeneIdentifiers()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Drives =
             [
-                new CatletDriveConfig()
+                new CatletDriveConfig
                 {
-                    Source = "gene:dbosoft/test/1.0:sda"
+                    Source = "gene:dbosoft/test/1.0:sda",
                 },
             ],
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
-                    Source = "gene:dbosoft/test/1.0:test-fodder"
+                    Source = "gene:dbosoft/test/1.0:test-fodder",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
-                    Source = "gene:dbosoft/test/1.0:test-fodder"
+                    Source = "gene:dbosoft/test/1.0:test-fodder",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
-                    Source = "gene:dbosoft/test/1.0:catlet"
+                    Source = "gene:dbosoft/test/1.0:catlet",
                 },
-            ]
+            ],
         };
 
         var result = CatletGeneCollecting.CollectGenes(config);
@@ -59,13 +59,13 @@ public class CatletGeneCollectingTests
     [Fact]
     public void CollectGenes_DriveSourceIsAPath_IgnoresDriveSource()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Drives =
             [
-                new CatletDriveConfig()
+                new CatletDriveConfig
                 {
-                    Source = @"Z:\test\test.vhdx"
+                    Source = @"Z:\test\test.vhdx",
                 },
             ],
         };
@@ -78,22 +78,22 @@ public class CatletGeneCollectingTests
     [Fact]
     public void CollectGenes_InvalidSources_ReturnsFail()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Drives =
             [
-                new CatletDriveConfig()
+                new CatletDriveConfig
                 {
-                    Source = "gene:invalid|geneset:invalid|drive|gene"
+                    Source = "gene:invalid|geneset:invalid|drive|gene",
                 },
             ],
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
-                    Source = "gene:invalid|geneset:invalid|fodder|gene"
+                    Source = "gene:invalid|geneset:invalid|fodder|gene",
                 },
-            ]
+            ],
         };
 
         var result = CatletGeneCollecting.CollectGenes(config);

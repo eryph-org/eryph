@@ -5,8 +5,6 @@ using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
-using Traits = LanguageExt.Sys.Traits;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePoolModule.Test;
@@ -24,7 +22,7 @@ public readonly struct TestRuntime :
     /// <summary>
     /// Constructor
     /// </summary>
-    TestRuntime(RuntimeEnv<TestRuntime> env) =>
+    private TestRuntime(RuntimeEnv<TestRuntime> env) =>
         this.env = env;
 
     /// <summary>
@@ -35,7 +33,7 @@ public readonly struct TestRuntime :
             "Runtime Env not set. Perhaps because of using default(Runtime) or new Runtime() rather than Runtime.New()");
 
     public static TestRuntime New() =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(
+        new(new RuntimeEnv<TestRuntime>(
             new CancellationTokenSource()));
 
     /// <summary>
@@ -44,7 +42,7 @@ public readonly struct TestRuntime :
     /// <remarks>Used by localCancel to create new cancellation context for its sub-environment</remarks>
     /// <returns>New runtime</returns>
     public TestRuntime LocalCancel =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(
+        new(new RuntimeEnv<TestRuntime>(
             new CancellationTokenSource(),
             Env.Encoding,
             Env.Console,
@@ -62,7 +60,7 @@ public readonly struct TestRuntime :
     /// Directly access the cancellation token source
     /// </summary>
     /// <returns>CancellationTokenSource</returns>
-    public CancellationTokenSource CancellationTokenSource => 
+    public CancellationTokenSource CancellationTokenSource =>
         Env.Source;
 
     /// <summary>
@@ -76,50 +74,44 @@ public readonly struct TestRuntime :
     /// Access the console environment
     /// </summary>
     /// <returns>Console environment</returns>
-    public Eff<TestRuntime, Traits.ConsoleIO> ConsoleEff =>
-        Eff<TestRuntime, Traits.ConsoleIO>(
-            rt => new LanguageExt.Sys.Test.ConsoleIO(rt.Env.Console));
+    public Eff<TestRuntime, ConsoleIO> ConsoleEff =>
+        Eff<TestRuntime, ConsoleIO>(rt => new LanguageExt.Sys.Test.ConsoleIO(rt.Env.Console));
 
     /// <summary>
     /// Access the file environment
     /// </summary>
     /// <returns>File environment</returns>
-    public Eff<TestRuntime, Traits.FileIO> FileEff =>
+    public Eff<TestRuntime, FileIO> FileEff =>
         from n in Time<TestRuntime>.now
-        from r in Eff<TestRuntime, Traits.FileIO>(
-            rt => new LanguageExt.Sys.Test.FileIO(rt.Env.FileSystem, n))
+        from r in Eff<TestRuntime, FileIO>(rt => new LanguageExt.Sys.Test.FileIO(rt.Env.FileSystem, n))
         select r;
 
     /// <summary>
     /// Access the directory environment
     /// </summary>
     /// <returns>Directory environment</returns>
-    public Eff<TestRuntime, Traits.DirectoryIO> DirectoryEff =>
+    public Eff<TestRuntime, DirectoryIO> DirectoryEff =>
         from n in Time<TestRuntime>.now
-        from r in Eff<TestRuntime, Traits.DirectoryIO>(
-            rt => new LanguageExt.Sys.Test.DirectoryIO(rt.Env.FileSystem, n))
+        from r in Eff<TestRuntime, DirectoryIO>(rt => new LanguageExt.Sys.Test.DirectoryIO(rt.Env.FileSystem, n))
         select r;
 
     /// <summary>
     /// Access the time environment
     /// </summary>
     /// <returns>Time environment</returns>
-    public Eff<TestRuntime, Traits.TimeIO> TimeEff =>
-        Eff<TestRuntime, Traits.TimeIO>(
-            rt => new LanguageExt.Sys.Test.TimeIO(rt.Env.TimeSpec));
+    public Eff<TestRuntime, TimeIO> TimeEff =>
+        Eff<TestRuntime, TimeIO>(rt => new LanguageExt.Sys.Test.TimeIO(rt.Env.TimeSpec));
 
     /// <summary>
     /// Access the operating-system environment
     /// </summary>
     /// <returns>Operating-system environment environment</returns>
-    public Eff<TestRuntime, Traits.EnvironmentIO> EnvironmentEff =>
-        Eff<TestRuntime, Traits.EnvironmentIO>(
-            rt => new LanguageExt.Sys.Test.EnvironmentIO(rt.Env.SysEnv));
+    public Eff<TestRuntime, EnvironmentIO> EnvironmentEff =>
+        Eff<TestRuntime, EnvironmentIO>(rt => new LanguageExt.Sys.Test.EnvironmentIO(rt.Env.SysEnv));
 
     public Eff<TestRuntime, ILogger> Logger(string category) =>
         Eff<TestRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
 
     public Eff<TestRuntime, ILogger<T>> Logger<T>() =>
         Eff<TestRuntime, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
-
 }

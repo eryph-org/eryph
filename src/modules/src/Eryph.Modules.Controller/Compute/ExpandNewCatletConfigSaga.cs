@@ -1,4 +1,6 @@
-﻿using Dbosoft.Functional;
+﻿using System;
+using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
@@ -13,9 +15,6 @@ using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Threading.Tasks;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -26,32 +25,6 @@ internal class ExpandNewCatletConfigSaga(
     : OperationTaskWorkflowSaga<ExpandNewCatletConfigCommand, EryphSagaData<ExpandNewCatletConfigSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
 {
-    protected override async Task Initiated(ExpandNewCatletConfigCommand message)
-    {
-        Data.Data.State = ExpandNewCatletConfigSagaState.Initiated;
-        Data.Data.Config = message.Config;
-        Data.Data.ShowSecrets = message.ShowSecrets;
-
-        Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
-
-        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
-            Some: n => ProjectName.New(n),
-            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
-
-        await StartNewTask(new BuildCatletSpecificationCommand
-        {
-            AgentName = Data.Data.AgentName,
-            ContentType = "application/yaml",
-            Configuration = CatletConfigYamlSerializer.Serialize(
-                message.Config.CloneWith(c =>
-                {
-                    c.Project = null;
-                })),
-            Architecture = Data.Data.Architecture,
-        });
-    }
-
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
     {
         if (Data.Data.State >= ExpandNewCatletConfigSagaState.SpecificationBuilt)
@@ -61,10 +34,7 @@ internal class ExpandNewCatletConfigSaga(
         {
             Data.Data.State = ExpandNewCatletConfigSagaState.SpecificationBuilt;
 
-            var configWithProject = response.BuiltConfig.CloneWith(c =>
-            {
-                c.Project = Data.Data.ProjectName!.Value;
-            });
+            var configWithProject = response.BuiltConfig.CloneWith(c => { c.Project = Data.Data.ProjectName!.Value; });
 
             var configWithSystemVariables = CatletSystemDataFeeding.FeedSystemVariables(
                 configWithProject, "#catletId", "#vmId");
@@ -88,6 +58,29 @@ internal class ExpandNewCatletConfigSaga(
             {
                 Config = CatletConfigNormalizer.Trim(redactedConfig),
             });
+        });
+    }
+
+    protected override async Task Initiated(ExpandNewCatletConfigCommand message)
+    {
+        Data.Data.State = ExpandNewCatletConfigSagaState.Initiated;
+        Data.Data.Config = message.Config;
+        Data.Data.ShowSecrets = message.ShowSecrets;
+
+        Data.Data.AgentName = Environment.MachineName;
+        Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
+
+        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+            n => ProjectName.New(n),
+            () => ProjectName.New(EryphConstants.DefaultProjectName));
+
+        await StartNewTask(new BuildCatletSpecificationCommand
+        {
+            AgentName = Data.Data.AgentName,
+            ContentType = "application/yaml",
+            Configuration = CatletConfigYamlSerializer.Serialize(
+                message.Config.CloneWith(c => { c.Project = null; })),
+            Architecture = Data.Data.Architecture,
         });
     }
 

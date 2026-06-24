@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Versioning;
@@ -19,13 +18,6 @@ public class WindowsCertificateStoreService : ICertificateStoreService
         AddToStore(certificate, StoreName.Root);
     }
 
-    private static void AddToStore(X509Certificate2 certificate, StoreName storeName)
-    {
-        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadWrite);
-        machineStore.Add(certificate);
-    }
-
     public IReadOnlyList<X509Certificate2> GetFromMyStore(X500DistinguishedName subjectName)
     {
         return GetFromStore(subjectName, StoreName.My);
@@ -34,20 +26,6 @@ public class WindowsCertificateStoreService : ICertificateStoreService
     public IReadOnlyList<X509Certificate2> GetFromRootStore(X500DistinguishedName subjectName)
     {
         return GetFromStore(subjectName, StoreName.Root);
-    }
-
-    private static IReadOnlyList<X509Certificate2> GetFromStore(
-        X500DistinguishedName subjectName,
-        StoreName storeName)
-    {
-        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadOnly);
-
-        return machineStore.Certificates.Find(
-                X509FindType.FindBySubjectDistinguishedName,
-                subjectName.Name,
-                false)
-            .ToList();
     }
 
     public void RemoveFromMyStore(PublicKey subjectKey)
@@ -68,6 +46,27 @@ public class WindowsCertificateStoreService : ICertificateStoreService
     public void RemoveFromRootStore(X500DistinguishedName subjectName)
     {
         RemoveFromStore(subjectName, StoreName.Root);
+    }
+
+    private static void AddToStore(X509Certificate2 certificate, StoreName storeName)
+    {
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadWrite);
+        machineStore.Add(certificate);
+    }
+
+    private static IReadOnlyList<X509Certificate2> GetFromStore(
+        X500DistinguishedName subjectName,
+        StoreName storeName)
+    {
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadOnly);
+
+        return machineStore.Certificates.Find(
+                X509FindType.FindBySubjectDistinguishedName,
+                subjectName.Name,
+                false)
+            .ToList();
     }
 
     private static void RemoveFromStore(X500DistinguishedName subjectName, StoreName storeName)

@@ -2,7 +2,6 @@
 using Eryph.Core;
 using Eryph.StateDb.Model;
 using FluentAssertions;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.CatletManagement.Tests;
@@ -54,7 +53,7 @@ public class CatletConfigGeneratorTests
                         Environment = "test-environment",
                         DataStore = "test-disk-store",
                         StorageIdentifier = "test-disk-location",
-                        SizeBytes = 100 *1024 * 1024 * 1024L,
+                        SizeBytes = 100 * 1024 * 1024 * 1024L,
                         Parent = new VirtualDisk
                         {
                             Id = Guid.NewGuid(),
@@ -63,24 +62,24 @@ public class CatletConfigGeneratorTests
                             DataStore = EryphConstants.DefaultDataStoreName,
                             GeneSet = "acme/acme-os/1.0",
                             GeneName = "sda",
-                            SizeBytes = 100 *1024 * 1024 * 1024L,
-                        }
-                    }
+                            SizeBytes = 100 * 1024 * 1024 * 1024L,
+                        },
+                    },
                 },
                 new CatletDrive
                 {
-                    Id = @"Microsoft:853F42A8-62CC-437F-832B-BAA91727B586\4ABB4F48-A547-4152-AEC3-4F4A7B0E111C\0\1\D"
-                }
+                    Id = @"Microsoft:853F42A8-62CC-437F-832B-BAA91727B586\4ABB4F48-A547-4152-AEC3-4F4A7B0E111C\0\1\D",
+                },
             ],
             NetworkAdapters =
             [
                 new CatletNetworkAdapter
                 {
-                    Id =  @"Microsoft:853F42A8-62CC-437F-832B-BAA91727B586\7C18C0B3-4331-45DD-BBC5-19BB4330E15A",
+                    Id = @"Microsoft:853F42A8-62CC-437F-832B-BAA91727B586\7C18C0B3-4331-45DD-BBC5-19BB4330E15A",
                     Name = "eth0",
                     MacAddress = "02:04:06:08:0a:0c",
                     SwitchName = EryphConstants.OverlaySwitchName,
-                }
+                },
             ],
         };
 
@@ -107,7 +106,7 @@ public class CatletConfigGeneratorTests
                         Name = "test-pool",
                     },
                 },
-            ]
+            ],
         });
 
         var result = CatletConfigGenerator.Generate(catlet, networkPorts, originalConfig);

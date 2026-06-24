@@ -17,7 +17,7 @@ public static class CatletSpecificationVersionGeneExtensions
                 new GeneIdentifier(GeneSetIdentifier.New(g.GeneSet), GeneName.New(g.Name)),
                 Architecture.New(g.Architecture)),
             g => GeneHash.New(g.Hash));
-    
+
 
     public static IList<CatletSpecificationVersionVariantGene> ToGenesList(
         this IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> genes,

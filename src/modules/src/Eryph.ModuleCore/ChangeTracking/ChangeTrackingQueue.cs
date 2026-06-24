@@ -21,14 +21,14 @@ public interface IChangeTrackingQueue<TChange>
 
 public class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
 {
-    private bool _enabled;
-
     private readonly Channel<ChangeTrackingQueueItem<TChange>> _channel =
         Channel.CreateBounded<ChangeTrackingQueueItem<TChange>>(
             new BoundedChannelOptions(5)
             {
                 FullMode = BoundedChannelFullMode.Wait,
             });
+
+    private bool _enabled;
 
     public void Enable() => _enabled = true;
 
@@ -44,7 +44,7 @@ public class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
         ChangeTrackingQueueItem<TChange> item,
         CancellationToken cancellationToken = default)
     {
-        if(!_enabled)
+        if (!_enabled)
             return;
 
         await _channel.Writer.WriteAsync(item, cancellationToken);

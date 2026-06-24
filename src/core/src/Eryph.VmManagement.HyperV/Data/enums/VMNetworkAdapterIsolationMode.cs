@@ -1,10 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMNetworkAdapterIsolationMode : byte
 {
-    public enum VMNetworkAdapterIsolationMode : byte
-    {
-        None,
-        NativeVirtualSubnet,
-        ExternalVirtualSubnet,
-        Vlan
-    }
+    None,
+    NativeVirtualSubnet,
+    ExternalVirtualSubnet,
+    Vlan,
 }

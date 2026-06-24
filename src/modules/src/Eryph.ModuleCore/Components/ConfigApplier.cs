@@ -45,7 +45,8 @@ internal sealed class ConfigApplier(
         {
             success = false;
             error = $"No realizer registered for configuration domain {bundle.Domain}.";
-            logger.LogWarning("Received configuration for domain {Domain} but no realizer is registered.", bundle.Domain);
+            logger.LogWarning("Received configuration for domain {Domain} but no realizer is registered.",
+                bundle.Domain);
         }
         else
         {

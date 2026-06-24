@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
-using Eryph.Core;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Components;
@@ -13,7 +11,6 @@ using Eryph.ModuleCore.Networks;
 using Eryph.ModuleCore.Startup;
 using Eryph.Rebus;
 using JetBrains.Annotations;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebus.Config;
@@ -28,7 +25,6 @@ namespace Eryph.Modules.Network;
 [UsedImplicitly]
 public class NetworkModule
 {
-
     [UsedImplicitly]
     public void AddSimpleInjector(SimpleInjectorAddOptions options)
     {
@@ -46,7 +42,7 @@ public class NetworkModule
         options.AddComponentRegistration(
             ComponentType.Network,
             $"{QueueNames.Network}.{ComponentIdentity.GetLocalHostId()}",
-            advertisedEndpoints: null);
+            null);
 
         options.AddLogging();
     }

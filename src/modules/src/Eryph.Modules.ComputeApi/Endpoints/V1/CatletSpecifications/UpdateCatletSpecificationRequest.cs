@@ -1,8 +1,8 @@
-﻿using Eryph.Modules.AspNetCore.ApiProvider.Model;
+﻿using System;
+using System.Collections.Generic;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 

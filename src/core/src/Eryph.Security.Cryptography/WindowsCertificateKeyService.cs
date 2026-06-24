@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.Security.Cryptography;
 
@@ -28,8 +23,8 @@ public class WindowsCertificateKeyService : ICertificateKeyService
                 ExportPolicy = CngExportPolicies.None,
                 Parameters =
                 {
-                    new CngProperty("Length", BitConverter.GetBytes(keyLength), CngPropertyOptions.None)
-                }
+                    new CngProperty("Length", BitConverter.GetBytes(keyLength), CngPropertyOptions.None),
+                },
             });
 
         return new RSACng(cngKey);

@@ -25,15 +25,6 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
         _certificates.Where(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData))
             .Select(Clone).ToList();
 
-    private static X509Certificate2 Clone(X509Certificate2 certificate) =>
-        // Keep the key in-memory (EphemeralKeySet) so this "in-memory" store never persists keys to the
-        // Windows user key store, and Exportable so the clone can itself be cloned again (the store clones
-        // on both add and read; a non-exportable key would make a second export throw).
-        X509CertificateLoader.LoadPkcs12(
-            certificate.Export(X509ContentType.Pkcs12),
-            password: null,
-            keyStorageFlags: X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable);
-
     public void RemoveFromMyStore(X500DistinguishedName subjectName) =>
         RemoveAndDispose(c => c.SubjectName.RawData.SequenceEqual(subjectName.RawData));
 
@@ -47,6 +38,24 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
             && string.Equals(certSki.SubjectKeyIdentifier, ski, StringComparison.OrdinalIgnoreCase));
     }
 
+    // The component CA only uses the "my" store; root-store operations are not exercised here.
+    public void AddToRootStore(X509Certificate2 certificate) => throw new NotSupportedException();
+
+    public IReadOnlyList<X509Certificate2> GetFromRootStore(X500DistinguishedName subjectName) => [];
+
+    public void RemoveFromRootStore(X500DistinguishedName subjectName) => throw new NotSupportedException();
+
+    public void RemoveFromRootStore(PublicKey subjectKey) => throw new NotSupportedException();
+
+    private static X509Certificate2 Clone(X509Certificate2 certificate) =>
+        // Keep the key in-memory (EphemeralKeySet) so this "in-memory" store never persists keys to the
+        // Windows user key store, and Exportable so the clone can itself be cloned again (the store clones
+        // on both add and read; a non-exportable key would make a second export throw).
+        X509CertificateLoader.LoadPkcs12(
+            certificate.Export(X509ContentType.Pkcs12),
+            null,
+            X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable);
+
     // Dispose the certificates as they are removed so the in-memory store does not leak native handles
     // across the test run (it retains its own clones; removed ones are no longer referenced).
     private void RemoveAndDispose(Predicate<X509Certificate2> match) =>
@@ -57,15 +66,6 @@ internal sealed class InMemoryCertificateStore : ICertificateStoreService
             c.Dispose();
             return true;
         });
-
-    // The component CA only uses the "my" store; root-store operations are not exercised here.
-    public void AddToRootStore(X509Certificate2 certificate) => throw new NotSupportedException();
-
-    public IReadOnlyList<X509Certificate2> GetFromRootStore(X500DistinguishedName subjectName) => [];
-
-    public void RemoveFromRootStore(X500DistinguishedName subjectName) => throw new NotSupportedException();
-
-    public void RemoveFromRootStore(PublicKey subjectKey) => throw new NotSupportedException();
 }
 
 /// <summary>In-memory <see cref="ICertificateKeyService"/> that retains generated keys by name.</summary>
@@ -93,16 +93,16 @@ internal sealed class InMemoryKeyService : ICertificateKeyService
     public RSA? GetPersistedRsaKey(string keyName) =>
         _keys.TryGetValue(keyName, out var stored) ? Clone(stored) : null;
 
+    public void DeletePersistedKey(string keyName)
+    {
+        if (_keys.Remove(keyName, out var key))
+            key.Dispose();
+    }
+
     private static RSA Clone(RSA key)
     {
         var copy = RSA.Create();
         copy.ImportRSAPrivateKey(key.ExportRSAPrivateKey(), out _);
         return copy;
-    }
-
-    public void DeletePersistedKey(string keyName)
-    {
-        if (_keys.Remove(keyName, out var key))
-            key.Dispose();
     }
 }

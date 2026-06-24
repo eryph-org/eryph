@@ -1,6 +1,5 @@
 using System;
 using Eryph.ConfigModel.Catlets;
-using LanguageExt;
 
 namespace Eryph.Modules.Controller;
 

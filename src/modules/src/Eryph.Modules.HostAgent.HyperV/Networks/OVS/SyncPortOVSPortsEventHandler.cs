@@ -1,22 +1,18 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Eryph.Modules.HostAgent.Inventory;
-using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
-using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Data.enums;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using SimpleInjector;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 using static OvsPortCommands<AgentRuntime>;
-using static VmManagement.Sys.Logger<AgentRuntime>;
 
 [UsedImplicitly]
 internal class SyncPortOVSPortsEventHandler(
@@ -63,6 +59,9 @@ internal class SyncPortOVSPortsEventHandler(
             _ => FailEff<VMPortChange>(Error.New($"The virtual machine state {@event.State} is not supported")),
         }
         from _ in syncOvsPorts(@event.VmId, portChange)
-            .MapFail(e => Error.New($"Failed to sync the network ports of the VM {@event.VmId} after it changed to state {@event.State}", e))
+            .MapFail(e =>
+                Error.New(
+                    $"Failed to sync the network ports of the VM {@event.VmId} after it changed to state {@event.State}",
+                    e))
         select unit;
 }

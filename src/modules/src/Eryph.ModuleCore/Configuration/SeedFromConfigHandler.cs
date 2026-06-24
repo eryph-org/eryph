@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
@@ -19,30 +18,23 @@ namespace Eryph.ModuleCore.Configuration;
 /// This handler intentionally implements <see cref="IHostedService"/> as
 /// the startup should wait for the seeding to complete before continuing.
 /// </remarks>
-public class SeedFromConfigHandler<TModule> : IHostedService where TModule : class
+public class SeedFromConfigHandler<TModule>(
+    IEnumerable<DependencyMetadata<IConfigSeeder<TModule>>> seeders,
+    Container container)
+    : IHostedService
+    where TModule : class
 {
-    private readonly IEnumerable<DependencyMetadata<IConfigSeeder<TModule>>> _seeders;
-    private readonly Container _container;
-
-    public SeedFromConfigHandler(
-        IEnumerable<DependencyMetadata<IConfigSeeder<TModule>>> seeders,
-        Container container)
-    {
-        _seeders = seeders;
-        _container = container;
-    }
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        foreach (var configSeeder in _seeders)
+        foreach (var configSeeder in seeders)
         {
-            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+            await using var scope = AsyncScopedLifestyle.BeginScope(container);
             var logger = scope.GetInstance<ILogger<SeedFromConfigHandler<TModule>>>();
             using (_ = logger.BeginWarmupProgressScope())
             {
                 logger.LogInformation("Executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
             }
-            
+
             await configSeeder.GetInstance().Execute(cancellationToken);
         }
     }

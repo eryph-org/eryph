@@ -13,23 +13,24 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class List(
-    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
+    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk>
+        listRequestHandler,
     IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.VirtualDisk> specBuilder)
-    : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
+    : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler,
+        specBuilder)
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("virtualdisks")]
     [SwaggerOperation(
-        Summary = "List all virtual disks",
-        Description = "List all virtual disks",
-        OperationId = "VirtualDisks_List",
-        Tags = ["Virtual Disks"])
+            Summary = "List all virtual disks",
+            Description = "List all virtual disks",
+            OperationId = "VirtualDisks_List",
+            Tags = ["Virtual Disks"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(ListResponse<VirtualDisk>),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(ListResponse<VirtualDisk>), "application/json"),
     ]
     public override Task<ActionResult<ListResponse<VirtualDisk>>> HandleAsync(
         [FromRoute] ListFilteredByProjectRequest request,

@@ -41,24 +41,23 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/projects",
-                new NewProjectRequest()
+                new NewProjectRequest
                 {
                     CorrelationId = Guid.NewGuid(),
                     Name = "test-project",
                 },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
-        
+
         var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
-        messages.Should().SatisfyRespectively(
-            m =>
-            {
-                m.TenantId.Should().Be(EryphConstants.DefaultTenantId);
-                m.ProjectName.Should().Be("test-project");
-                m.IdentityId.Should().BeNull();
-            });
+        messages.Should().SatisfyRespectively(m =>
+        {
+            m.TenantId.Should().Be(EryphConstants.DefaultTenantId);
+            m.ProjectName.Should().Be("test-project");
+            m.IdentityId.Should().BeNull();
+        });
     }
 
     [Fact]
@@ -67,24 +66,23 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, UserId, "compute:write", true)
             .PostAsJsonAsync("v1/projects",
-                new NewProjectRequest()
+                new NewProjectRequest
                 {
                     CorrelationId = Guid.NewGuid(),
                     Name = "test-project",
                 },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
-        messages.Should().SatisfyRespectively(
-            m =>
-            {
-                m.TenantId.Should().Be(EryphConstants.DefaultTenantId);
-                m.ProjectName.Should().Be("test-project");
-                m.IdentityId.Should().BeNull();
-            });
+        messages.Should().SatisfyRespectively(m =>
+        {
+            m.TenantId.Should().Be(EryphConstants.DefaultTenantId);
+            m.ProjectName.Should().Be("test-project");
+            m.IdentityId.Should().BeNull();
+        });
     }
 
     [Fact]
@@ -93,23 +91,22 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, UserId, "compute:write", false)
             .PostAsJsonAsync("v1/projects",
-                new NewProjectRequest()
+                new NewProjectRequest
                 {
                     CorrelationId = Guid.NewGuid(),
                     Name = "test-project",
                 },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
-        messages.Should().SatisfyRespectively(
-            m =>
-            {
-                m.TenantId.Should().Be(EryphConstants.DefaultTenantId);
-                m.ProjectName.Should().Be("test-project");
-                m.IdentityId.Should().Be(UserId.ToString());
-            });
+        messages.Should().SatisfyRespectively(m =>
+        {
+            m.TenantId.Should().Be(EryphConstants.DefaultTenantId);
+            m.ProjectName.Should().Be("test-project");
+            m.IdentityId.Should().Be(UserId.ToString());
+        });
     }
 }

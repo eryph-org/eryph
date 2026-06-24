@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -41,7 +40,8 @@ internal class CatletStateChangedEventHandler(
         }
         else
         {
-            logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent state information is dated {LastSeen:O}.",
+            logger.LogDebug(
+                "Skipping state update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent state information is dated {LastSeen:O}.",
                 catlet.Id, message.Timestamp, catlet.LastSeenState);
         }
 
@@ -51,7 +51,8 @@ internal class CatletStateChangedEventHandler(
         var metadata = await metadataService.GetMetadata(catlet.MetadataId);
         if (metadata is null || metadata.IsDeprecated || metadata.Metadata is null)
         {
-            logger.LogDebug("Skipping state update for catlet {CatletId}. The catlet's metadata is deprecated or unusable.",
+            logger.LogDebug(
+                "Skipping state update for catlet {CatletId}. The catlet's metadata is deprecated or unusable.",
                 catlet.Id);
             return;
         }
@@ -59,13 +60,13 @@ internal class CatletStateChangedEventHandler(
         if (metadata.SecretDataHidden)
             return;
 
-        var anySensitive = metadata.Metadata.Config.Fodder.ToSeq().Exists(
-                               f => f.Secret.GetValueOrDefault()
-                                    || f.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault()))
+        var anySensitive = metadata.Metadata.Config.Fodder.ToSeq().Exists(f => f.Secret.GetValueOrDefault()
+                                                                               || f.Variables.ToSeq().Exists(v =>
+                                                                                   v.Secret.GetValueOrDefault()))
                            || metadata.Metadata.Config.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
         if (!anySensitive)
             return;
-        
+
         await metadataService.MarkSecretDataHidden(catlet.MetadataId);
 
         await opDispatcher.StartNew(
@@ -73,7 +74,7 @@ internal class CatletStateChangedEventHandler(
             messageContext.GetTraceId(),
             new UpdateConfigDriveCommand
             {
-                CatletId = catlet.Id
+                CatletId = catlet.Id,
             });
     }
 }

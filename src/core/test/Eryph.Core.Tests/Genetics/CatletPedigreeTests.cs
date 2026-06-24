@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
-using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Tests.Genetics;
@@ -97,7 +89,7 @@ public class CatletPedigreeTests
                 {
                     Name = "test_capability",
                     Mutation = MutationType.Remove,
-                }
+                },
             ],
             Drives =
             [
@@ -105,7 +97,7 @@ public class CatletPedigreeTests
                 {
                     Name = "sda",
                     Mutation = MutationType.Remove,
-                }
+                },
             ],
             Networks =
             [
@@ -113,7 +105,7 @@ public class CatletPedigreeTests
                 {
                     Name = "test-network",
                     Mutation = MutationType.Remove,
-                }
+                },
             ],
             NetworkAdapters =
             [
@@ -121,16 +113,16 @@ public class CatletPedigreeTests
                 {
                     Name = "eth0",
                     Mutation = MutationType.Remove,
-                }
+                },
             ],
-            Fodder = 
+            Fodder =
             [
                 new FodderConfig
                 {
                     Name = "test-fodder",
                     Remove = true,
-                }
-            ]
+                },
+            ],
         };
 
         var result = CatletPedigree.Breed(config, Empty, Empty);

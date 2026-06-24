@@ -6,30 +6,29 @@ namespace Eryph.Modules.AspNetCore.TestBase;
 
 public static class HttpClientExtensions
 {
-    public static HttpClient SetEryphToken(
-        this HttpClient client,
-        Guid tenantId,
-        Guid identityId,
-        string scope,
-        bool isSuperAdmin) =>
-        client.SetEryphToken(tenantId, identityId.ToString(), scope, isSuperAdmin);
-
-    public static HttpClient SetEryphToken(
-        this HttpClient client,
-        Guid tenantId,
-        string identityId,
-        string scope,
-        bool isSuperAdmin)
+    extension(HttpClient client)
     {
-        client.SetFakeBearerToken(new Dictionary<string, object>
-        {
-            ["iss"] = "fake",
-            ["sub"] = identityId,
-            ["scope"] = scope,
-            ["tid"] = tenantId,
-            [ClaimTypes.Role] = isSuperAdmin ? EryphConstants.SuperAdminRole : Guid.NewGuid()
-        });
+        public HttpClient SetEryphToken(Guid tenantId,
+            Guid identityId,
+            string scope,
+            bool isSuperAdmin) =>
+            client.SetEryphToken(tenantId, identityId.ToString(), scope, isSuperAdmin);
 
-        return client;
+        public HttpClient SetEryphToken(Guid tenantId,
+            string identityId,
+            string scope,
+            bool isSuperAdmin)
+        {
+            client.SetFakeBearerToken(new Dictionary<string, object>
+            {
+                ["iss"] = "fake",
+                ["sub"] = identityId,
+                ["scope"] = scope,
+                ["tid"] = tenantId,
+                [ClaimTypes.Role] = isSuperAdmin ? EryphConstants.SuperAdminRole : Guid.NewGuid(),
+            });
+
+            return client;
+        }
     }
 }

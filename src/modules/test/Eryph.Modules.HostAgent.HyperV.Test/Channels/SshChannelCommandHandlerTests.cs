@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Threading;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.HostAgent.Channels;
@@ -17,15 +15,17 @@ public class SshChannelCommandHandlerTests
         ["eryph:guest-services:client-public-key:client-123"] = "ssh-ed25519 AAAAExampleKey operator@host",
     };
 
-    private readonly Mock<ITaskMessaging> _messaging = new();
     private readonly Mock<IChannelService> _channelService = new();
+
+    private readonly Mock<ITaskMessaging> _messaging = new();
 
     [Fact]
     public async Task OpenSshChannel_RegistersChannelAndCompletesWithToken()
     {
         var expiresAt = new DateTimeOffset(2030, 1, 2, 3, 4, 20, TimeSpan.Zero);
         _channelService
-            .Setup(c => c.RegisterChannel(VmId, It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.RegisterChannel(VmId, It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChannelRegistration
             {
                 Token = "the-token",
@@ -47,7 +47,8 @@ public class SshChannelCommandHandlerTests
                 It.Is<object>(o =>
                     o is OpenSshChannelVMCommandResponse
                     && ((OpenSshChannelVMCommandResponse)o).Token == "the-token"
-                    && ((OpenSshChannelVMCommandResponse)o).AgentEndpoint == "wss://agent.test:9700/v1/channels/the-token"
+                    && ((OpenSshChannelVMCommandResponse)o).AgentEndpoint ==
+                    "wss://agent.test:9700/v1/channels/the-token"
                     && ((OpenSshChannelVMCommandResponse)o).ExpiresAt == expiresAt),
                 It.IsAny<IDictionary<string, string>?>()),
             Times.Once);
@@ -87,7 +88,8 @@ public class SshChannelCommandHandlerTests
     public async Task OpenSshChannel_WithoutAccessKey_RegistersChannelWithoutWrite()
     {
         _channelService
-            .Setup(c => c.RegisterChannel(VmId, It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.RegisterChannel(VmId, It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChannelRegistration
             {
                 Token = "the-token",
@@ -104,7 +106,8 @@ public class SshChannelCommandHandlerTests
         }));
 
         _channelService.Verify(
-            c => c.RegisterChannel(VmId, It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()),
+            c => c.RegisterChannel(VmId, It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
         _messaging.Verify(
             m => m.CompleteTask(

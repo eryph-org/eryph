@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.VmManagement.Data;
-using Eryph.VmManagement.TestBase;
+﻿using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.enums;
+using Eryph.VmManagement.HyperV.TestBase;
 using Eryph.VmManagement.Wmi;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Xunit;
-
 using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
 using static LanguageExt.Prelude;
 
@@ -49,7 +44,9 @@ public class WmiMsvmUtilsTests
     {
         var wmiObject = new WmiObject(HashMap(
             ("__CLASS", Optional<object>("Msvm_GuestNetworkAdapterConfiguration")),
-            ("InstanceID", Optional<object>(@"Microsoft:GuestNetwork\2FE70974-C81A-4F3A-BF4E-7BE405B88C97\596574F5-A810-43EF-B349-D20783874CE5"))));
+            ("InstanceID",
+                Optional<object>(
+                    @"Microsoft:GuestNetwork\2FE70974-C81A-4F3A-BF4E-7BE405B88C97\596574F5-A810-43EF-B349-D20783874CE5"))));
 
         var result = getVmId(wmiObject).Run();
 

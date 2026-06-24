@@ -28,7 +28,8 @@ internal class IdentityDatabaseResetHandler(
         {
             using (_ = logger.BeginWarmupProgressScope())
             {
-                logger.LogInformation("The identity database is missing migrations. Going to recreate the identity database...");
+                logger.LogInformation(
+                    "The identity database is missing migrations. Going to recreate the identity database...");
             }
 
             await database.EnsureDeletedAsync(cancellationToken);

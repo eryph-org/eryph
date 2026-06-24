@@ -16,26 +16,23 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 public class Get(
     IClientService clientService,
     IUserInfoProvider userInfoProvider)
-    : EndpointBaseAsync
-        .WithRequest<GetClientRequest>
-        .WithActionResult<Client>
+    : EndpointBaseAsync.WithRequest<GetClientRequest>.WithActionResult<Client>
 {
     [Authorize(Policy = "identity:clients:read")]
     [HttpGet("clients/{id}")]
     [SwaggerOperation(
-        Summary = "Get a client",
-        Description = "Get a client",
-        OperationId = "Clients_Get",
-        Tags = ["Clients"])
+            Summary = "Get a client",
+            Description = "Get a client",
+            OperationId = "Clients_Get",
+            Tags = ["Clients"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(Client),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(Client), "application/json"),
     ]
     public override async Task<ActionResult<Client>> HandleAsync(
-        [FromRoute] GetClientRequest request, 
+        [FromRoute] GetClientRequest request,
         CancellationToken cancellationToken = default)
     {
         var tenantId = userInfoProvider.GetUserTenantId();

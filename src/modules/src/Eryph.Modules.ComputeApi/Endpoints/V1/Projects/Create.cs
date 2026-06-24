@@ -11,13 +11,12 @@ using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.StateDb.Model;
-using Microsoft.AspNetCore.Authorization;
 using LanguageExt;
 using LanguageExt.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
@@ -30,10 +29,10 @@ public class Create(
     [Authorize(Policy = "compute:projects:write")]
     [HttpPost("projects")]
     [SwaggerOperation(
-        Summary = "Create a new project",
-        Description = "Create a project",
-        OperationId = "Projects_Create",
-        Tags = ["Projects"])
+            Summary = "Create a new project",
+            Description = "Create a project",
+            OperationId = "Projects_Create",
+            Tags = ["Projects"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewProjectRequest request,
@@ -58,7 +57,7 @@ public class Create(
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             ProjectName = ProjectName.New(request.Name).Value,
             IdentityId = isSuperAdmin ? null : userRightsProvider.GetUserId(),
-            TenantId = userRightsProvider.GetUserTenantId()
+            TenantId = userRightsProvider.GetUserTenantId(),
         };
     }
 

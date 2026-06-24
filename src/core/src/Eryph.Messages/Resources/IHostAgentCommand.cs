@@ -1,7 +1,6 @@
-﻿namespace Eryph.Messages.Resources
+﻿namespace Eryph.Messages.Resources;
+
+public interface IHostAgentCommand
 {
-    public interface IHostAgentCommand
-    {
-        string AgentName { get; set; }
-    }
+    string AgentName { get; set; }
 }

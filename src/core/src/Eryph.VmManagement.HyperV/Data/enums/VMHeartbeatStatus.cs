@@ -1,15 +1,14 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMHeartbeatStatus
 {
-    public enum VMHeartbeatStatus
-    {
-        Unknown,
-        Disabled,
-        NoContact,
-        Error,
-        LostCommunication,
-        OkApplicationsUnknown,
-        OkApplicationsHealthy,
-        OkApplicationsCritical,
-        Paused
-    }
+    Unknown,
+    Disabled,
+    NoContact,
+    Error,
+    LostCommunication,
+    OkApplicationsUnknown,
+    OkApplicationsHealthy,
+    OkApplicationsCritical,
+    Paused,
 }

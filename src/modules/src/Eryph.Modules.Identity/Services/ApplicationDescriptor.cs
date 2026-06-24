@@ -8,8 +8,8 @@ namespace Eryph.Modules.Identity.Services;
 public class ApplicationDescriptor : OpenIddictApplicationDescriptor, ICloneable
 {
     /// <summary>
-    /// Gets or sets the application type of the application. The default value <see cref="IdentityApplicationType.OAuth"/> is a standard
-    /// oauth application. The value <see cref="IdentityApplicationType.Client"/> is a eryph client.
+    /// Gets or sets the application type of the application. The default value <see cref="IdentityDb.IdentityApplicationType.OAuth"/> is a standard
+    /// oauth application. The value <see cref="IdentityDb.IdentityApplicationType.Client"/> is a eryph client.
     /// </summary>
     public IdentityApplicationType IdentityApplicationType { get; set; }
 
@@ -21,7 +21,7 @@ public class ApplicationDescriptor : OpenIddictApplicationDescriptor, ICloneable
     /// <summary>
     /// Gets the Roles associated with the application.
     /// </summary>
-    public HashSet<Guid> AppRoles { get; } = new();
+    public HashSet<Guid> AppRoles { get; } = [];
 
 
     /// <summary>
@@ -47,15 +47,9 @@ public class ApplicationDescriptor : OpenIddictApplicationDescriptor, ICloneable
             TenantId = TenantId,
         };
 
-        foreach (var displayName in DisplayNames)
-        {
-            copy.DisplayNames.Add(displayName.Key, displayName.Value);
-        }
+        foreach (var displayName in DisplayNames) copy.DisplayNames.Add(displayName.Key, displayName.Value);
 
-        foreach (var property in Properties)
-        {
-            copy.Properties.Add(property.Key, property.Value);
-        }
+        foreach (var property in Properties) copy.Properties.Add(property.Key, property.Value);
 
         copy.Permissions.UnionWith(Permissions);
         copy.AppRoles.UnionWith(AppRoles);
@@ -65,7 +59,5 @@ public class ApplicationDescriptor : OpenIddictApplicationDescriptor, ICloneable
         copy.Requirements.UnionWith(Requirements);
 
         return copy;
-
     }
-
 }

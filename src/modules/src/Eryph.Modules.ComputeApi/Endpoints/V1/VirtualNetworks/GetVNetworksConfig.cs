@@ -38,16 +38,15 @@ public class GetVNetworksConfig(
     // ReSharper disable once StringLiteralTypo
     [HttpGet("projects/{project_id}/virtualnetworks/config")]
     [SwaggerOperation(
-        Summary = "Get the virtual network configuration of a project",
-        Description = "Get the virtual network configuration of a project",
-        OperationId = "VirtualNetworks_GetConfig",
-        Tags = ["Virtual Networks"])
+            Summary = "Get the virtual network configuration of a project",
+            Description = "Get the virtual network configuration of a project",
+            OperationId = "VirtualNetworks_GetConfig",
+            Tags = ["Virtual Networks"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(VirtualNetworkConfiguration),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(VirtualNetworkConfiguration), "application/json"),
     ]
     public override Task<ActionResult<VirtualNetworkConfiguration>> HandleAsync(
         [FromRoute] ProjectRequest request,

@@ -4,7 +4,6 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Variables;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -36,10 +35,7 @@ public static class CatletConfigVariableApplier
         HashMap<VariableName, string> valuesByName) =>
         from name in VariableName.NewValidation(config.Name)
         from value in valuesByName.Find(name).Match(
-            Some: v => VariableConfigValidations.ValidateVariableValue(v, config.Type),
-            None: () => Success<Error, string>(config.Value))
-        select config.CloneWith(c =>
-        {
-            c.Value = value;
-        });
+            v => VariableConfigValidations.ValidateVariableValue(v, config.Type),
+            () => Success<Error, string>(config.Value))
+        select config.CloneWith(c => { c.Value = value; });
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace Eryph.Security.Cryptography;
 
@@ -52,7 +53,7 @@ public sealed class FileCertificateStoreService(string directory) : ICertificate
         var path = Path.Combine(storeDirectory, certificate.Thumbprint + (hasKey ? ".pfx" : ".crt"));
         var bytes = hasKey
             ? certificate.Export(X509ContentType.Pkcs12)
-            : System.Text.Encoding.ASCII.GetBytes(certificate.ExportCertificatePem());
+            : Encoding.ASCII.GetBytes(certificate.ExportCertificatePem());
         SecureFile.WriteOwnerOnly(path, bytes);
     }
 
@@ -63,12 +64,10 @@ public sealed class FileCertificateStoreService(string directory) : ICertificate
         // key/cert handle, so the non-matches must not be leaked on a long-running, repeatedly-querying host.
         var matches = new List<X509Certificate2>();
         foreach (var certificate in LoadAll(storeDirectory))
-        {
             if (SubjectMatches(certificate, subjectName))
                 matches.Add(certificate);
             else
                 certificate.Dispose();
-        }
         return matches;
     }
 
@@ -127,7 +126,7 @@ public sealed class FileCertificateStoreService(string directory) : ICertificate
     private static X509Certificate2 Load(string path) =>
         path.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase)
             ? X509CertificateLoader.LoadPkcs12(
-                File.ReadAllBytes(path), password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet)
+                File.ReadAllBytes(path), null)
             : X509Certificate2.CreateFromPem(File.ReadAllText(path));
 
     private static bool SubjectMatches(X509Certificate2 certificate, X500DistinguishedName subjectName) =>
@@ -140,6 +139,7 @@ public sealed class FileCertificateStoreService(string directory) : ICertificate
             .OfType<X509SubjectKeyIdentifierExtension>()
             .FirstOrDefault();
         return certSki is not null
-            && string.Equals(certSki.SubjectKeyIdentifier, ski.SubjectKeyIdentifier, StringComparison.OrdinalIgnoreCase);
+               && string.Equals(certSki.SubjectKeyIdentifier, ski.SubjectKeyIdentifier,
+                   StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -8,24 +8,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Network;
 
-public class SyncedOVNDatabaseNode : OVNDatabaseNode
+public class SyncedOVNDatabaseNode(
+    IAgentControlService agentControlService,
+    ISystemEnvironment systemEnvironment,
+    IOVNSettings ovnSettings,
+    ILoggerFactory loggerFactory)
+    : OVNDatabaseNode(systemEnvironment, ovnSettings, loggerFactory)
 {
-    private readonly IAgentControlService _agentControlService;
-
-    public SyncedOVNDatabaseNode(
-        IAgentControlService agentControlService,
-        ISystemEnvironment systemEnvironment,
-        IOVNSettings ovnSettings,
-        ILoggerFactory loggerFactory)
-        : base(systemEnvironment, ovnSettings, loggerFactory)
-    {
-        _agentControlService = agentControlService;
-    }
-
     public override EitherAsync<Error, Unit> Stop(
         bool ensureNodeStopped,
-        CancellationToken cancellationToken = default) => 
-        from stopController in Prelude.TryAsync(() =>_agentControlService.SendControlEvent(
+        CancellationToken cancellationToken = default) =>
+        from stopController in Prelude.TryAsync(() => agentControlService.SendControlEvent(
                 AgentService.OVNController,
                 AgentServiceOperation.Stop,
                 cancellationToken))

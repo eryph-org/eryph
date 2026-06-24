@@ -28,7 +28,8 @@ public class VMDriveStorageSettings
         Seq<UniqueGeneIdentifier> resolvedGenes)
     {
         return config.Drives.ToSeq()
-            .Map((index, c) => FromDriveConfig(vmHostAgentConfig, storageSettings, c, getVhdInfo, testVhd, resolvedGenes, index))
+            .Map((index, c) =>
+                FromDriveConfig(vmHostAgentConfig, storageSettings, c, getVhdInfo, testVhd, resolvedGenes, index))
             .ToSeq().SequenceSerial();
     }
 
@@ -46,6 +47,7 @@ public class VMDriveStorageSettings
 
         //later, when adding controller config support, we will have to add a logic to 
         //set location relative to the free slots for each controller   
+        // ReSharper disable once InlineTemporaryVariable
         var controllerLocation = index;
 
         return Optional(driveConfig.Type).IfNone(CatletDriveType.Vhd) switch
@@ -75,7 +77,8 @@ public class VMDriveStorageSettings
         int controllerNumber,
         int controllerLocation) =>
         from dataStoreName in DataStoreName.NewEither(driveConfig.Store)
-            .MapLeft(e => Error.New($"The configured data store of the catlet drive '{driveConfig.Name}' is invalid.", e))
+            .MapLeft(e =>
+                Error.New($"The configured data store of the catlet drive '{driveConfig.Name}' is invalid.", e))
             .ToAsync()
         let driveStorageNames = new StorageNames
         {
@@ -84,14 +87,14 @@ public class VMDriveStorageSettings
             DataStoreName = dataStoreName.Value,
         }
         let storageIdentifier = Optional(driveConfig.Location).Filter(notEmpty).Match(
-            Some: s => s,
-            None: storageSettings.StorageIdentifier)
+            s => s,
+            storageSettings.StorageIdentifier)
         from resolvedPath in driveStorageNames.ResolveVolumeStorageBasePath(vmHostAgentConfig)
         from parentOptions in Optional(driveConfig.Source)
             .Filter(notEmpty)
             .Map(src => from dss in DiskStorageSettings.FromSourceString(vmHostAgentConfig, resolvedGenes, src)
-                            .ToEitherAsync(Error.New($"The catlet drive source '{driveConfig.Source}' is invalid."))
-                        select dss)
+                    .ToEitherAsync(Error.New($"The catlet drive source '{driveConfig.Source}' is invalid."))
+                select dss)
             .Sequence()
         let parentPath = parentOptions.Map(p => Path.Combine(p.Path, p.FileName))
         let generation = parentOptions.Map(p => p.Generation + 1).IfNone(0)
@@ -114,14 +117,15 @@ public class VMDriveStorageSettings
         let vhdSize = vhdInfo.Map(i => i.Size)
         from parentVhdInfo in parentPath
             .Map(p => from ovi in getVhdInfo(p)
-                      from vi in ovi.ToEitherAsync(Error.New($"The catlet drive source '{driveConfig.Source}' does not exist."))
-                      select vi)
+                from vi in ovi.ToEitherAsync(
+                    Error.New($"The catlet drive source '{driveConfig.Source}' does not exist."))
+                select vi)
             .Sequence()
         from _2 in parentPath
             .Map(p => from isUsable in testVhd(p)
-                      from _  in guard(isUsable,
-                          Error.New($"The catlet drive source '{driveConfig.Source}' is considered unusable by Hyper-V."))
-                      select unit)
+                from _ in guard(isUsable,
+                    Error.New($"The catlet drive source '{driveConfig.Source}' is considered unusable by Hyper-V."))
+                select unit)
             .Sequence()
         let parentVhdMinimumSize = parentVhdInfo.Bind(i => Optional(i.MinimumSize))
         let parentVhdSize = parentVhdInfo.Map(i => i.Size)
@@ -151,7 +155,7 @@ public class VMDriveStorageSettings
                 IsUsable = true,
             },
             ControllerNumber = controllerNumber,
-            ControllerLocation = controllerLocation
+            ControllerLocation = controllerLocation,
         }
         select (VMDriveStorageSettings)planned;
 }

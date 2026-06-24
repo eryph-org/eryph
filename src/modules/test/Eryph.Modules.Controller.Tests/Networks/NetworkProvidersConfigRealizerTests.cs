@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ardalis.Specification;
+﻿using Ardalis.Specification;
 using Eryph.Core.Network;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
@@ -41,14 +36,14 @@ public class NetworkProvidersConfigRealizerTests(
                                 Name = "default",
                                 FirstIp = "10.249.248.10",
                                 NextIp = "10.249.248.12",
-                                LastIp = "10.249.248.19"
+                                LastIp = "10.249.248.19",
                             },
                             new NetworkProviderIpPool
                             {
                                 Name = "second-provider-pool",
                                 FirstIp = "10.249.248.20",
                                 NextIp = "10.249.248.22",
-                                LastIp = "10.249.248.29"
+                                LastIp = "10.249.248.29",
                             },
                         ],
                     },
@@ -64,7 +59,7 @@ public class NetworkProvidersConfigRealizerTests(
                                 Name = "default",
                                 FirstIp = "10.249.249.10",
                                 NextIp = "10.249.249.12",
-                                LastIp = "10.249.249.19"
+                                LastIp = "10.249.249.19",
                             },
                         ],
                     },
@@ -74,38 +69,6 @@ public class NetworkProvidersConfigRealizerTests(
             {
                 Name = "flat-provider",
                 Type = NetworkProviderType.Flat,
-            },
-        ]
-    };
-
-    private readonly NetworkProvidersConfiguration _simpleConfig = new()
-    {
-        NetworkProviders =
-        [
-            new NetworkProvider
-            {
-                Name = "default",
-                Type = NetworkProviderType.NatOverlay,
-                BridgeName = "br-nat",
-                Subnets =
-                [
-                    new NetworkProviderSubnet
-                    {
-                        Name = "default",
-                        Network = "10.249.248.0/24",
-                        Gateway = "10.249.248.1",
-                        IpPools =
-                        [
-                            new NetworkProviderIpPool
-                            {
-                                Name = "default",
-                                FirstIp = "10.249.248.10",
-                                NextIp = "10.249.248.12",
-                                LastIp = "10.249.248.19"
-                            },
-                        ],
-                    },
-                ],
             },
         ],
     };
@@ -145,13 +108,42 @@ public class NetworkProvidersConfigRealizerTests(
         ],
     };
 
+    private readonly NetworkProvidersConfiguration _simpleConfig = new()
+    {
+        NetworkProviders =
+        [
+            new NetworkProvider
+            {
+                Name = "default",
+                Type = NetworkProviderType.NatOverlay,
+                BridgeName = "br-nat",
+                Subnets =
+                [
+                    new NetworkProviderSubnet
+                    {
+                        Name = "default",
+                        Network = "10.249.248.0/24",
+                        Gateway = "10.249.248.1",
+                        IpPools =
+                        [
+                            new NetworkProviderIpPool
+                            {
+                                Name = "default",
+                                FirstIp = "10.249.248.10",
+                                NextIp = "10.249.248.12",
+                                LastIp = "10.249.248.19",
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    };
+
     [Fact]
     public async Task RealizeConfigAsync_FlatProviderWithSubnet_PersistsSubnetWithStaticSettings()
     {
-        await WithScope(async (realizer, _) =>
-        {
-            await realizer.RealizeConfigAsync(_flatStaticConfig, default);
-        });
+        await WithScope(async (realizer, _) => { await realizer.RealizeConfigAsync(_flatStaticConfig, CancellationToken.None); });
 
         await WithScope(async (_, stateStore) =>
         {
@@ -176,10 +168,7 @@ public class NetworkProvidersConfigRealizerTests(
     [Fact]
     public async Task RealizeConfigAsync_NoExistingSubnets_CreatesCorrectSubnets()
     {
-        await WithScope(async (realizer, _) =>
-        {
-            await realizer.RealizeConfigAsync(_complexConfig, default);
-        });
+        await WithScope(async (realizer, _) => { await realizer.RealizeConfigAsync(_complexConfig, CancellationToken.None); });
 
         await WithScope(async (_, stateStore) =>
         {
@@ -220,10 +209,7 @@ public class NetworkProvidersConfigRealizerTests(
     [Fact]
     public async Task RealizeConfigAsync_ExistingSubnets_RemovesOldSubnets()
     {
-        await WithScope(async (realizer, _) =>
-        {
-            await realizer.RealizeConfigAsync(_complexConfig, default);
-        });
+        await WithScope(async (realizer, _) => { await realizer.RealizeConfigAsync(_complexConfig, CancellationToken.None); });
 
         await WithScope(async (_, stateStore) =>
         {
@@ -234,59 +220,49 @@ public class NetworkProvidersConfigRealizerTests(
             poolCount.Should().Be(3);
         });
 
-        await WithScope(async (realizer, _) =>
-        {
-            await realizer.RealizeConfigAsync(_simpleConfig, default);
-        });
+        await WithScope(async (realizer, _) => { await realizer.RealizeConfigAsync(_simpleConfig, CancellationToken.None); });
 
         await WithScope(async (_, stateStore) =>
         {
             var subnets = await stateStore.For<ProviderSubnet>().ListAsync(new GetAllSubnets());
-            subnets.Should().SatisfyRespectively(
-                subnet =>
-                {
-                    subnet.Name.Should().Be("default");
-                    subnet.IpNetwork.Should().Be("10.249.248.0/24");
+            subnets.Should().SatisfyRespectively(subnet =>
+            {
+                subnet.Name.Should().Be("default");
+                subnet.IpNetwork.Should().Be("10.249.248.0/24");
 
-                    subnet.IpPools.Should().SatisfyRespectively(
-                        pool =>
-                        {
-                            pool.Name.Should().Be("default");
-                            pool.FirstIp.Should().Be("10.249.248.10");
-                            pool.NextIp.Should().Be("10.249.248.12");
-                            pool.LastIp.Should().Be("10.249.248.19");
-                        });
+                subnet.IpPools.Should().SatisfyRespectively(pool =>
+                {
+                    pool.Name.Should().Be("default");
+                    pool.FirstIp.Should().Be("10.249.248.10");
+                    pool.NextIp.Should().Be("10.249.248.12");
+                    pool.LastIp.Should().Be("10.249.248.19");
                 });
+            });
         });
     }
 
     [Fact]
     public async Task RealizeConfigAsync_IpRangeOfExistingPoolIsChanged_ExistingPoolIsUpdated()
     {
-        await WithScope(async (realizer, _) =>
-        {
-            await realizer.RealizeConfigAsync(_simpleConfig, default);
-        });
+        await WithScope(async (realizer, _) => { await realizer.RealizeConfigAsync(_simpleConfig, CancellationToken.None); });
 
-        Guid ipPoolId = Guid.Empty;
+        var ipPoolId = Guid.Empty;
         await WithScope(async (_, stateStore) =>
         {
             var subnets = await stateStore.For<ProviderSubnet>().ListAsync(new GetAllSubnets());
-            subnets.Should().SatisfyRespectively(
-                subnet =>
-                {
-                    subnet.Name.Should().Be("default");
-                    subnet.IpNetwork.Should().Be("10.249.248.0/24");
+            subnets.Should().SatisfyRespectively(subnet =>
+            {
+                subnet.Name.Should().Be("default");
+                subnet.IpNetwork.Should().Be("10.249.248.0/24");
 
-                    subnet.IpPools.Should().SatisfyRespectively(
-                        pool =>
-                        {
-                            pool.Name.Should().Be("default");
-                            pool.FirstIp.Should().Be("10.249.248.10");
-                            pool.NextIp.Should().Be("10.249.248.12");
-                            pool.LastIp.Should().Be("10.249.248.19");
-                        });
+                subnet.IpPools.Should().SatisfyRespectively(pool =>
+                {
+                    pool.Name.Should().Be("default");
+                    pool.FirstIp.Should().Be("10.249.248.10");
+                    pool.NextIp.Should().Be("10.249.248.12");
+                    pool.LastIp.Should().Be("10.249.248.19");
                 });
+            });
             ipPoolId = subnets.Should().ContainSingle()
                 .Which.IpPools.Should().ContainSingle()
                 .Which.Id;
@@ -295,28 +271,26 @@ public class NetworkProvidersConfigRealizerTests(
         await WithScope(async (realizer, _) =>
         {
             _simpleConfig.NetworkProviders[0].Subnets[0].IpPools[0].LastIp = "10.249.248.100";
-            await realizer.RealizeConfigAsync(_simpleConfig, default);
+            await realizer.RealizeConfigAsync(_simpleConfig, CancellationToken.None);
         });
 
         await WithScope(async (_, stateStore) =>
         {
             var subnets = await stateStore.For<ProviderSubnet>().ListAsync(new GetAllSubnets());
-            subnets.Should().SatisfyRespectively(
-                subnet =>
-                {
-                    subnet.Name.Should().Be("default");
-                    subnet.IpNetwork.Should().Be("10.249.248.0/24");
+            subnets.Should().SatisfyRespectively(subnet =>
+            {
+                subnet.Name.Should().Be("default");
+                subnet.IpNetwork.Should().Be("10.249.248.0/24");
 
-                    subnet.IpPools.Should().SatisfyRespectively(
-                        pool =>
-                        {
-                            pool.Id.Should().Be(ipPoolId);
-                            pool.Name.Should().Be("default");
-                            pool.FirstIp.Should().Be("10.249.248.10");
-                            pool.NextIp.Should().Be("10.249.248.12");
-                            pool.LastIp.Should().Be("10.249.248.100");
-                        });
+                subnet.IpPools.Should().SatisfyRespectively(pool =>
+                {
+                    pool.Id.Should().Be(ipPoolId);
+                    pool.Name.Should().Be("default");
+                    pool.FirstIp.Should().Be("10.249.248.10");
+                    pool.NextIp.Should().Be("10.249.248.12");
+                    pool.LastIp.Should().Be("10.249.248.100");
                 });
+            });
         });
     }
 

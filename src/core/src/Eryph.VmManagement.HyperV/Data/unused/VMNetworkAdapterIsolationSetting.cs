@@ -1,13 +1,14 @@
-﻿namespace Eryph.VmManagement.Data
+﻿using Eryph.VmManagement.Data.enums;
+
+namespace Eryph.VmManagement.Data.unused;
+
+public sealed class VMNetworkAdapterIsolationSetting
 {
-    public sealed class VMNetworkAdapterIsolationSetting
-    {
-        public VMNetworkAdapterIsolationMode IsolationMode { get; private set; }
+    public VMNetworkAdapterIsolationMode IsolationMode { get; private set; }
 
-        public bool AllowUntaggedTraffic { get; private set; }
+    public bool AllowUntaggedTraffic { get; private set; }
 
-        public int DefaultIsolationID { get; private set; }
+    public int DefaultIsolationID { get; private set; }
 
-        public OnOffState MultiTenantStack { get; private set; }
-    }
+    public OnOffState MultiTenantStack { get; private set; }
 }

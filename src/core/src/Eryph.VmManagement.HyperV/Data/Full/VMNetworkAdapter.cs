@@ -2,6 +2,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Eryph.ConfigModel;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
+using Eryph.VmManagement.Data.unused;
 
 namespace Eryph.VmManagement.Data.Full;
 
@@ -49,8 +51,7 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
 
     //public bool ClusterMonitored { get; private set; }
 
-    [PrivateIdentifier]
-    public string MacAddress { get; init; }
+    [PrivateIdentifier] public string MacAddress { get; init; }
 
     //public string TestReplicaPoolName { get; private set; }
 
@@ -70,7 +71,6 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
     //public bool IsExternalAdapter { get; private set; }
 
 
-
     //public VMNetworkAdapterAclSetting[] AclList { get; private set; }
 
 
@@ -84,17 +84,17 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
 
     public VMNetworkAdapterVlanSetting VlanSetting { get; init; }
 
-    [PrivateIdentifier]
-    public string SwitchName { get; init; }
+    [PrivateIdentifier] public string SwitchName { get; init; }
 
     /// <summary>
     /// The name of the VM to which this adapter belongs. Only populated
     /// when the adapter belongs to a VM.
     /// </summary>
-    [PrivateIdentifier] [MaybeNull] public string VMName { get; init; }
-
     [PrivateIdentifier]
-    public Guid SwitchId { get; init; }
+    [MaybeNull]
+    public string VMName { get; init; }
+
+    [PrivateIdentifier] public Guid SwitchId { get; init; }
 
     /// <summary>
     /// The ID of the VM to which this adapter belongs. Only populated

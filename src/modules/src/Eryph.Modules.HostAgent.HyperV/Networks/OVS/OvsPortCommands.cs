@@ -8,7 +8,6 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Networks.OVS;
@@ -20,7 +19,9 @@ internal class OvsPortCommands<RT> where RT : struct,
     HasLogger<RT>,
     HasPowershell<RT>
 {
-    private OvsPortCommands() { }
+    private OvsPortCommands()
+    {
+    }
 
     public static Aff<RT, Unit> syncOvsPorts(
         TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -50,7 +51,7 @@ internal class OvsPortCommands<RT> where RT : struct,
         from portNames in adapters
             // Do not use GetConfiguredPortName() as we need to be backwards
             // compatible with older port names.
-            .Map(a  => getPortName(a.Id))
+            .Map(a => getPortName(a.Id))
             .SequenceSerial()
         from _ in change is VMPortChange.Add
             ? addPorts(portNames)
@@ -78,10 +79,10 @@ internal class OvsPortCommands<RT> where RT : struct,
         from ct in cancelToken<RT>()
         from optionalInterface in ovsControl.GetInterface(portName, ct).ToAff()
         from @interface in optionalInterface.Match(
-            Some: i =>
+            i =>
                 from _1 in logDebug("Interface for port '{PortName}' found. No need to add the port.", portName)
                 select i,
-            None: () =>
+            () =>
                 from _1 in logDebug("Interface for port '{PortName}' not found. Adding port...", portName)
                 from _2 in ovsControl.AddPortWithIFaceId("br-int", portName, ct).ToAff()
                 from oi in ovsControl.GetInterface(portName, ct).ToAff()
@@ -89,13 +90,13 @@ internal class OvsPortCommands<RT> where RT : struct,
                 select i)
         from _1 in @interface.LinkState == "up"
             ? from _1 in logDebug("Interface on port '{PortName}' is up.", portName)
-              select unit
+            select unit
             : from _1 in logDebug("Interface on port '{PortName}' is not up. OVS Error state: {OvsError}",
-                  portName, @interface.Error)
-              from _2 in ovsControl.RemovePort("br-int", portName, ct).ToAff()
-              from _3 in FailAff<RT, Unit>(
-                  Error.New($"Interface on port '{portName}' is not up. OVS Error state: '{@interface.Error}'."))
-              select unit
+                portName, @interface.Error)
+            from _2 in ovsControl.RemovePort("br-int", portName, ct).ToAff()
+            from _3 in FailAff<RT, Unit>(
+                Error.New($"Interface on port '{portName}' is not up. OVS Error state: '{@interface.Error}'."))
+            select unit
         select unit;
 
     private static Aff<RT, Unit> removePorts(Seq<string> portNames) =>
@@ -115,11 +116,11 @@ internal class OvsPortCommands<RT> where RT : struct,
         from ovsControl in default(RT).OVS
         from ct in cancelToken<RT>()
         from optionalInterface in ovsControl.GetInterface(portName, ct).ToAff()
-        from _  in optionalInterface.Match(
-            Some: _ => from _1 in logDebug("Interface on port '{PortName}' found. Removing port...", portName)
-                       from _2 in ovsControl.RemovePort("br-int", portName, ct).ToAff()
-                       select unit,
-            None: () => logDebug("Port '{PortName}' not found, nothing to remove.", portName))
+        from _ in optionalInterface.Match(
+            _ => from _1 in logDebug("Interface on port '{PortName}' found. Removing port...", portName)
+                from _2 in ovsControl.RemovePort("br-int", portName, ct).ToAff()
+                select unit,
+            () => logDebug("Port '{PortName}' not found, nothing to remove.", portName))
         select unit;
 
     private static Aff<RT, Unit> logDebug(string message, params object?[] args) =>

@@ -1,4 +1,4 @@
-﻿namespace Eryph.VmManagement.Data;
+﻿namespace Eryph.VmManagement.Data.enums;
 
 /// <summary>
 /// The values for <c>State</c> as returned by the

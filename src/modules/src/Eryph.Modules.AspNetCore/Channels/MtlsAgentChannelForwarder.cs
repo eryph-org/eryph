@@ -66,14 +66,14 @@ public sealed class MtlsAgentChannelForwarder(
     private async Task<ClientWebSocket> DialAsync(Uri agentEndpoint, string token, CancellationToken cancellationToken)
     {
         var certificateStore = (IComponentCertificateStore?)container.GetRegistration(
-            typeof(IComponentCertificateStore))?.GetInstance()
-            ?? throw new InvalidOperationException(
-                "Component mTLS is not configured: no certificate store is available to dial the agent. "
-                + "The remote SSH channel requires the split runtime with component enrollment enabled.");
+                                   typeof(IComponentCertificateStore))?.GetInstance()
+                               ?? throw new InvalidOperationException(
+                                   "Component mTLS is not configured: no certificate store is available to dial the agent. "
+                                   + "The remote SSH channel requires the split runtime with component enrollment enabled.");
 
         var clientCertificate = certificateStore.LoadClientCertificate()
-            ?? throw new InvalidOperationException(
-                "The component is not enrolled: no mTLS client certificate is available to dial the agent.");
+                                ?? throw new InvalidOperationException(
+                                    "The component is not enrolled: no mTLS client certificate is available to dial the agent.");
 
         var trustAnchors = certificateStore.LoadCaTrustBundle();
 

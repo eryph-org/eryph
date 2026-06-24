@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Eryph.Core;
 using Eryph.Core.Settings;
 using Eryph.DistributedLock;
@@ -15,7 +9,6 @@ using Eryph.StateDb.Model;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.Components;
@@ -43,15 +36,6 @@ public class ConfigDistributionServiceTests
     // no-op holder (AcquireLock returns a completed ValueTask by default) is sufficient.
     private static IDistributedLockScopeHolder NoOpLock() =>
         new Mock<IDistributedLockScopeHolder>().Object;
-
-    /// <summary>A config source whose payload the test controls directly.</summary>
-    private sealed class StubSource(ConfigDomain domain, string payload) : IConfigSource
-    {
-        public ConfigDomain Domain => domain;
-
-        public Task<string> BuildPayloadAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(payload);
-    }
 
     private static ConfigDistributionService CreateService(
         Mock<IStateStoreRepository<ConfigRecord>> records,
@@ -82,8 +66,8 @@ public class ConfigDistributionServiceTests
         bundles[0].Version.Should().Be(1);
 
         var payload = JsonSerializer.Deserialize<PlacementConfig>(bundles[0].Payload)!;
-        payload.Datastores.Should().BeEquivalentTo(new[] { "ds1" });
-        payload.Environments.Should().BeEquivalentTo(new[] { "env1" });
+        payload.Datastores.Should().BeEquivalentTo("ds1");
+        payload.Environments.Should().BeEquivalentTo("env1");
     }
 
     [Fact]
@@ -250,6 +234,16 @@ public class ConfigDistributionServiceTests
         var bundle = await service.RefreshAsync(ConfigDomain.PlacementConfig, CancellationToken.None);
 
         bundle.Should().BeNull();
-        records.Verify(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()), Times.Never);
+        records.Verify(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    /// <summary>A config source whose payload the test controls directly.</summary>
+    private sealed class StubSource(ConfigDomain domain, string payload) : IConfigSource
+    {
+        public ConfigDomain Domain => domain;
+
+        public Task<string> BuildPayloadAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(payload);
     }
 }

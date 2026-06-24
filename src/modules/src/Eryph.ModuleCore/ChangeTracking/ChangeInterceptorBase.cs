@@ -1,4 +1,3 @@
-using System;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,19 +20,11 @@ namespace Eryph.ModuleCore.ChangeTracking;
 /// is created. Otherwise, we would miss deleted entities as EF Core seems
 /// to remove them from the change tracker after the <c>SaveChangesAsync()</c>.
 /// </remarks>
-public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
+public abstract class ChangeInterceptorBase<TChange>(
+    IChangeTrackingQueue<TChange> queue,
+    ILogger logger) : DbTransactionInterceptor
 {
-    private readonly IChangeTrackingQueue<TChange> _queue;
-    private readonly ILogger _logger;
     private HashSet<ChangeTrackingQueueItem<TChange>> _changes = HashSet<ChangeTrackingQueueItem<TChange>>.Empty;
-
-    protected ChangeInterceptorBase(
-        IChangeTrackingQueue<TChange> queue,
-        ILogger logger)
-    {
-        _queue = queue;
-        _logger = logger;
-    }
 
     protected abstract Task<Seq<TChange>> DetectChanges(
         DbContext dbContext,
@@ -116,9 +107,9 @@ public abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
     {
         foreach (var item in _changes)
         {
-            _logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
+            logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
                 item.TransactionId, item.Changes);
-            await _queue.EnqueueAsync(item, cancellationToken);
+            await queue.EnqueueAsync(item, cancellationToken);
         }
 
         // Reset after a committed transaction so a DbContext that is reused for a

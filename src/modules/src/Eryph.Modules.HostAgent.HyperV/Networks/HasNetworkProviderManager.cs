@@ -7,5 +7,4 @@ public interface HasNetworkProviderManager<RT>
     where RT : struct, HasNetworkProviderManager<RT>
 {
     Eff<RT, INetworkProviderManager> NetworkProviderManager { get; }
-
 }

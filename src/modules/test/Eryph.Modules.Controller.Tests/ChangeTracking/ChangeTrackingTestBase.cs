@@ -2,9 +2,7 @@
 using System.IO.Abstractions.TestingHelpers;
 using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
-using Eryph.Modules.Controller.Seeding;
 using Eryph.StateDb;
-using Eryph.StateDb.Sqlite;
 using Eryph.StateDb.TestBase;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,8 +18,6 @@ public abstract class ChangeTrackingTestBase(
     ITestOutputHelper outputHelper)
     : StateDbTestBase(databaseFixture, outputHelper)
 {
-    protected readonly MockFileSystem MockFileSystem = new();
-    protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
     protected readonly ChangeTrackingConfig ChangeTrackingConfig = new()
     {
         TrackChanges = true,
@@ -35,11 +31,14 @@ public abstract class ChangeTrackingTestBase(
         CatletSpecificationVersionsConfigPath = @"Z:\catlets\specversions",
     };
 
+    protected readonly MockFileSystem MockFileSystem = new();
+    protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
+
     protected IHost CreateHost()
     {
         var container = new Container();
         container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-            
+
         ConfigureDatabase(container);
         container.RegisterInstance(ChangeTrackingConfig);
         container.RegisterInstance<IFileSystem>(MockFileSystem);

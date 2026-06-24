@@ -16,6 +16,10 @@ internal class StartupHandlerService<THandler>(Container container) : IHostedSer
     // the token passed to StartAsync only covers startup, not the application lifetime.
     private readonly CancellationTokenSource _stopping = new();
 
+    // Disposed by the host after StopAsync (background work has observed the cancellation by then);
+    // releases the CancellationTokenSource's wait handle so it does not leak across host start/stop.
+    public void Dispose() => _stopping.Dispose();
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
@@ -28,7 +32,7 @@ internal class StartupHandlerService<THandler>(Container container) : IHostedSer
         // Cancel on startup abort too, not only on shutdown: while StartAsync runs, a cancelled startup
         // token should stop the handler as well. (After StartAsync returns, shutdown is signalled via
         // StopAsync; background work keeps observing _stopping.Token.)
-        using var registration = cancellationToken.Register(
+        await using var registration = cancellationToken.Register(
             static state => ((CancellationTokenSource)state!).Cancel(), _stopping);
         await handler.ExecuteAsync(_stopping.Token);
         logger.LogDebug("Startup handler {Handler} executed.", typeof(THandler).Name);
@@ -39,8 +43,4 @@ internal class StartupHandlerService<THandler>(Container container) : IHostedSer
         _stopping.Cancel();
         return Task.CompletedTask;
     }
-
-    // Disposed by the host after StopAsync (background work has observed the cancellation by then);
-    // releases the CancellationTokenSource's wait handle so it does not leak across host start/stop.
-    public void Dispose() => _stopping.Dispose();
 }

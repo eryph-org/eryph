@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using Eryph.Modules.Controller.Components;
@@ -47,20 +43,20 @@ public class ComponentRegistryServiceTests
             MachineName = "host.example.test",
             Version = "1.0",
             InboundQueue = "eryph.identity.host",
-            KnownConfigVersions = known ?? new(),
-            AdvertisedEndpoints = advertised ?? new(),
+            KnownConfigVersions = known ?? new Dictionary<ConfigDomain, long>(),
+            AdvertisedEndpoints = advertised ?? new Dictionary<string, string>(),
         };
 
     [Fact]
     public async Task Upsert_inserts_new_registration_with_advertised_endpoints()
     {
-        var (service, repo) = Create(existing: null);
+        var (service, repo) = Create();
         var componentId = Guid.NewGuid();
 
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.Identity,
-                advertised: new() { ["identity"] = "https://host/identity" },
-                known: new() { [ConfigDomain.Endpoints] = 2 }),
+                new Dictionary<string, string> { ["identity"] = "https://host/identity" },
+                new Dictionary<ConfigDomain, long> { [ConfigDomain.Endpoints] = 2 }),
             CancellationToken.None);
 
         repo.Verify(r => r.AddAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -84,13 +80,13 @@ public class ComponentRegistryServiceTests
             MachineName = "old",
             InboundQueue = "old.queue",
             Status = ComponentRegistrationStatus.Stale,
-            AdvertisedEndpoints = new() { ["identity"] = "https://old/identity" },
+            AdvertisedEndpoints = new Dictionary<string, string> { ["identity"] = "https://old/identity" },
         };
         var (service, repo) = Create(existing);
 
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.Identity,
-                advertised: new() { ["identity"] = "https://new/identity" }),
+                new Dictionary<string, string> { ["identity"] = "https://new/identity" }),
             CancellationToken.None);
 
         repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
@@ -111,13 +107,15 @@ public class ComponentRegistryServiceTests
             ComponentType = ComponentType.VMHostAgent,
             MachineName = "host",
             InboundQueue = "q",
-            AppliedConfigVersions = new() { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 4 },
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
+                { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 4 },
         };
         var (service, _) = Create(existing);
 
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.VMHostAgent,
-                known: new() { [ConfigDomain.PlacementConfig] = 3, [ConfigDomain.Endpoints] = 9 }),
+                known: new Dictionary<ConfigDomain, long>
+                    { [ConfigDomain.PlacementConfig] = 3, [ConfigDomain.Endpoints] = 9 }),
             CancellationToken.None);
 
         // Existing higher value is kept; reported higher value wins.
@@ -139,7 +137,7 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Stale,
-            AppliedConfigVersions = new() { [ConfigDomain.PlacementConfig] = 5 },
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.PlacementConfig] = 5 },
         };
         var (service, repo) = Create(existing);
 
@@ -168,7 +166,8 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Active,
-            AppliedConfigVersions = new() { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 3 },
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
+                { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 3 },
         };
         var (service, repo) = Create(existing);
 
@@ -185,7 +184,7 @@ public class ComponentRegistryServiceTests
     [Fact]
     public async Task RecordHeartbeat_is_a_noop_when_not_registered()
     {
-        var (service, repo) = Create(existing: null);
+        var (service, repo) = Create();
 
         await service.RecordHeartbeatAsync(
             Guid.NewGuid(), Guid.NewGuid(),
@@ -205,7 +204,7 @@ public class ComponentRegistryServiceTests
             ComponentType = ComponentType.VMHostAgent,
             MachineName = "host",
             InboundQueue = "q",
-            AppliedConfigVersions = new() { [ConfigDomain.NetworkProviders] = 7 },
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.NetworkProviders] = 7 },
         };
         var (service, repo) = Create(existing);
 
@@ -231,7 +230,7 @@ public class ComponentRegistryServiceTests
             DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout - TimeSpan.FromMinutes(10));
         repo.Setup(r => r.ListAsync(
                 It.IsAny<ComponentRegistrationSpecs.GetActive>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ComponentRegistration> { fresh, stale });
+            .ReturnsAsync([fresh, stale]);
 
         var result = await service.GetActiveAsync(CancellationToken.None);
 
@@ -315,7 +314,7 @@ public class ComponentRegistryServiceTests
     [Fact]
     public async Task Revoke_is_a_noop_when_the_component_is_not_registered()
     {
-        var (service, repo) = Create(existing: null);
+        var (service, repo) = Create();
 
         var removed = await service.RemoveRegistrationAsync(Guid.NewGuid(), CancellationToken.None);
 

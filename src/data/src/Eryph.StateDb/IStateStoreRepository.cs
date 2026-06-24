@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Ardalis.Specification;
+﻿using Ardalis.Specification;
 
-namespace Eryph.StateDb
+namespace Eryph.StateDb;
+
+public interface IStateStoreRepository<T> : IRepositoryBase<T> where T : class
 {
-    public interface IStateStoreRepository<T> : IRepositoryBase<T> where T : class
-    {
-        T Detach(T entity);
-
-        IRepositoryBaseIO<T> IO { get; }
-    }
+    IRepositoryBaseIO<T> IO { get; }
+    T Detach(T entity);
 }

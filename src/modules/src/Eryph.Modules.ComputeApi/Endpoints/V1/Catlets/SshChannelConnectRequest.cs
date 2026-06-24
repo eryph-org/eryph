@@ -10,6 +10,5 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 /// </summary>
 public class SshChannelConnectRequest : SingleEntityRequest
 {
-    [FromQuery(Name = "token")]
-    public string Token { get; set; } = "";
+    [FromQuery(Name = "token")] public string Token { get; set; } = "";
 }

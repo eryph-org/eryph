@@ -1,4 +1,5 @@
 ﻿using LanguageExt;
+
 // ReSharper disable InconsistentNaming
 
 namespace Eryph.Modules.HostAgent.Networks;

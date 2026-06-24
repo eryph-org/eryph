@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -24,33 +21,6 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
     IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>,
     IHandleMessages<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>
 {
-    protected override async Task Initiated(DestroyResourcesCommand message)
-    {
-        Data.Data.State = DestroyResourceState.Initiated;
-
-        Data.Data.PendingCatlets = message.Resources
-            .Where(r => r.Type == ResourceType.Catlet)
-            .Select(r => r.Id)
-            .ToHashSet();
-
-        Data.Data.PendingCatletSpecifications = message.Resources
-            .Where(r => r.Type == ResourceType.CatletSpecification)
-            .Select(r => r.Id)
-            .ToHashSet();
-
-        Data.Data.PendingDisks = message.Resources
-            .Where(r => r.Type == ResourceType.VirtualDisk)
-            .Select(r => r.Id)
-            .ToHashSet();
-
-        Data.Data.PendingNetworks = message.Resources
-            .Where(r => r.Type == ResourceType.VirtualNetwork)
-            .Select(r => r.Id)
-            .ToHashSet();
-
-        await StartCatletTasks();
-    }
-
     public Task Handle(OperationTaskStatusEvent<DestroyCatletCommand> message)
     {
         if (Data.Data.State >= DestroyResourceState.CatletsDestroyed)
@@ -143,9 +113,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
                 .ToHashSet();
 
             if (Data.Data.PendingNetworks.Count > 0)
-            {
                 await Fail($"Some networks were not removed: {string.Join(", ", Data.Data.PendingNetworks)}");
-            }
 
             if (Data.Data.PendingCatletSpecifications.Count > 0
                 || Data.Data.PendingDisks.Count > 0
@@ -154,6 +122,33 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
 
             await CompleteWithResponse();
         });
+    }
+
+    protected override async Task Initiated(DestroyResourcesCommand message)
+    {
+        Data.Data.State = DestroyResourceState.Initiated;
+
+        Data.Data.PendingCatlets = message.Resources
+            .Where(r => r.Type == ResourceType.Catlet)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        Data.Data.PendingCatletSpecifications = message.Resources
+            .Where(r => r.Type == ResourceType.CatletSpecification)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        Data.Data.PendingDisks = message.Resources
+            .Where(r => r.Type == ResourceType.VirtualDisk)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        Data.Data.PendingNetworks = message.Resources
+            .Where(r => r.Type == ResourceType.VirtualNetwork)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        await StartCatletTasks();
     }
 
     protected override void CorrelateMessages(
@@ -179,9 +174,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
         }
 
         foreach (var catletId in Data.Data.PendingCatlets)
-        {
             await StartNewTask(new DestroyCatletCommand { CatletId = catletId });
-        }
     }
 
     private async Task StartOtherTasks()
@@ -198,28 +191,22 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
         }
 
         foreach (var catletSpecificationId in Data.Data.PendingCatletSpecifications)
-        {
             await StartNewTask(new DestroyCatletSpecificationCommand
             {
-                SpecificationId = catletSpecificationId
+                SpecificationId = catletSpecificationId,
             });
-        }
 
         foreach (var diskId in Data.Data.PendingDisks)
-        {
             await StartNewTask(new DestroyVirtualDiskCommand
             {
-                DiskId = diskId
+                DiskId = diskId,
             });
-        }
 
         if (Data.Data.PendingNetworks.Count > 0)
-        {
             await StartNewTask(new DestroyVirtualNetworksCommand
             {
-                NetworkIds = Data.Data.PendingNetworks.ToArray()
+                NetworkIds = Data.Data.PendingNetworks.ToArray(),
             });
-        }
     }
 
     private void Collect(DestroyResourcesResponse response)
@@ -238,7 +225,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
         await Complete(new DestroyResourcesResponse
         {
             DestroyedResources = Data.Data.DestroyedResources.ToList(),
-            DetachedResources = Data.Data.DetachedResources.ToList()
+            DetachedResources = Data.Data.DetachedResources.ToList(),
         });
     }
 }

@@ -20,7 +20,7 @@ public class CatletMetadata
 
     internal string MetadataJson
     {
-        get => Metadata is null ? "": CatletMetadataContentJsonSerializer.Serialize(Metadata);
+        get => Metadata is null ? "" : CatletMetadataContentJsonSerializer.Serialize(Metadata);
         set => Metadata = string.IsNullOrEmpty(value) ? null : CatletMetadataContentJsonSerializer.Deserialize(value);
     }
 

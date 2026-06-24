@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
-using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Sys;
@@ -10,9 +9,6 @@ using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
-using Spectre.Console.Testing;
-using Traits = LanguageExt.Sys.Traits;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.HyperV.Test;
@@ -34,7 +30,7 @@ public readonly struct TestRuntime :
     /// <summary>
     /// Constructor
     /// </summary>
-    TestRuntime(RuntimeEnv<TestRuntime> env) =>
+    private TestRuntime(RuntimeEnv<TestRuntime> env) =>
         this.env = env;
 
     /// <summary>
@@ -49,7 +45,7 @@ public readonly struct TestRuntime :
         ISyncClient syncClient,
         IHostNetworkCommands<TestRuntime> hostNetworkCommands,
         INetworkProviderManager networkProviderManager) =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(
+        new(new RuntimeEnv<TestRuntime>(
             new CancellationTokenSource(),
             ovsControl,
             syncClient,
@@ -62,7 +58,7 @@ public readonly struct TestRuntime :
     /// <remarks>Used by localCancel to create new cancellation context for its sub-environment</remarks>
     /// <returns>New runtime</returns>
     public TestRuntime LocalCancel =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(
+        new(new RuntimeEnv<TestRuntime>(
             new CancellationTokenSource(),
             Env.Encoding,
             Env.FileSystem,
@@ -84,7 +80,7 @@ public readonly struct TestRuntime :
     /// Directly access the cancellation token source
     /// </summary>
     /// <returns>CancellationTokenSource</returns>
-    public CancellationTokenSource CancellationTokenSource => 
+    public CancellationTokenSource CancellationTokenSource =>
         Env.Source;
 
     /// <summary>
@@ -98,37 +94,33 @@ public readonly struct TestRuntime :
     /// Access the file environment
     /// </summary>
     /// <returns>File environment</returns>
-    public Eff<TestRuntime, Traits.FileIO> FileEff =>
+    public Eff<TestRuntime, FileIO> FileEff =>
         from n in Time<TestRuntime>.now
-        from r in Eff<TestRuntime, Traits.FileIO>(
-            rt => new LanguageExt.Sys.Test.FileIO(rt.Env.FileSystem, n))
+        from r in Eff<TestRuntime, FileIO>(rt => new LanguageExt.Sys.Test.FileIO(rt.Env.FileSystem, n))
         select r;
 
     /// <summary>
     /// Access the directory environment
     /// </summary>
     /// <returns>Directory environment</returns>
-    public Eff<TestRuntime, Traits.DirectoryIO> DirectoryEff =>
+    public Eff<TestRuntime, DirectoryIO> DirectoryEff =>
         from n in Time<TestRuntime>.now
-        from r in Eff<TestRuntime, Traits.DirectoryIO>(
-            rt => new LanguageExt.Sys.Test.DirectoryIO(rt.Env.FileSystem, n))
+        from r in Eff<TestRuntime, DirectoryIO>(rt => new LanguageExt.Sys.Test.DirectoryIO(rt.Env.FileSystem, n))
         select r;
 
     /// <summary>
     /// Access the time environment
     /// </summary>
     /// <returns>Time environment</returns>
-    public Eff<TestRuntime, Traits.TimeIO> TimeEff =>
-        Eff<TestRuntime, Traits.TimeIO>(
-            rt => new LanguageExt.Sys.Test.TimeIO(rt.Env.TimeSpec));
+    public Eff<TestRuntime, TimeIO> TimeEff =>
+        Eff<TestRuntime, TimeIO>(rt => new LanguageExt.Sys.Test.TimeIO(rt.Env.TimeSpec));
 
     /// <summary>
     /// Access the operating-system environment
     /// </summary>
     /// <returns>Operating-system environment environment</returns>
-    public Eff<TestRuntime, Traits.EnvironmentIO> EnvironmentEff =>
-        Eff<TestRuntime, Traits.EnvironmentIO>(
-            rt => new LanguageExt.Sys.Test.EnvironmentIO(rt.Env.SysEnv));
+    public Eff<TestRuntime, EnvironmentIO> EnvironmentEff =>
+        Eff<TestRuntime, EnvironmentIO>(rt => new LanguageExt.Sys.Test.EnvironmentIO(rt.Env.SysEnv));
 
     public Eff<TestRuntime, IOVSControl> OVS =>
         Eff<TestRuntime, IOVSControl>(rt => rt.Env.OVSControl);
@@ -137,11 +129,10 @@ public readonly struct TestRuntime :
         Eff<TestRuntime, ISyncClient>(rt => rt.Env.SyncClient);
 
     public Eff<TestRuntime, IHostNetworkCommands<TestRuntime>> HostNetworkCommands =>
-        Eff<TestRuntime, IHostNetworkCommands<TestRuntime>>(
-            rt => rt.Env.HostNetworkCommands);
+        Eff<TestRuntime, IHostNetworkCommands<TestRuntime>>(rt => rt.Env.HostNetworkCommands);
+
     public Eff<TestRuntime, INetworkProviderManager> NetworkProviderManager =>
-        Eff<TestRuntime, INetworkProviderManager>(
-            rt => rt.Env.NetworkProviderManager);
+        Eff<TestRuntime, INetworkProviderManager>(rt => rt.Env.NetworkProviderManager);
 
     public Eff<TestRuntime, AnsiConsoleIO> AnsiConsoleEff =>
         Eff<TestRuntime, AnsiConsoleIO>(rt => new LiveAnsiConsoleIO(rt.Env.AnsiConsole));
@@ -151,5 +142,4 @@ public readonly struct TestRuntime :
 
     public Eff<TestRuntime, ILogger<T>> Logger<T>() =>
         Eff<TestRuntime, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
-
 }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core.Genetics;
 
@@ -16,7 +11,7 @@ public class CatletConfigRedactorTests
     {
         var config = new CatletConfig
         {
-            Fodder = 
+            Fodder =
             [
                 new FodderConfig
                 {
@@ -36,11 +31,11 @@ public class CatletConfigRedactorTests
                         {
                             Value = "secret fodder value",
                             Secret = true,
-                        }
-                    ]
-                }
+                        },
+                    ],
+                },
             ],
-            Variables = 
+            Variables =
             [
                 new VariableConfig
                 {
@@ -50,8 +45,8 @@ public class CatletConfigRedactorTests
                 {
                     Value = "secret value",
                     Secret = true,
-                }
-            ]
+                },
+            ],
         };
 
         var result = CatletConfigRedactor.RedactSecrets(config);

@@ -1,33 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
-using LanguageExt;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeSecureBootTests
 {
-    private readonly ConvergeFixture _fixture = new();
     private readonly ConvergeSecureBoot _convergeTask;
+    private readonly ConvergeFixture _fixture = new();
     private readonly TypedPsObject<VirtualMachineInfo> _vmInfo;
     private AssertCommand? _executedCommand;
 
     public ConvergeSecureBootTests()
     {
-        _convergeTask = new(_fixture.Context);
-        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo()
+        _convergeTask = new ConvergeSecureBoot(_fixture.Context);
+        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             State = VirtualMachineState.Off,
         });
@@ -38,7 +32,8 @@ public class ConvergeSecureBootTests
         };
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public async Task Converge_EnablesSecureBootWhenNecessary(
         bool secureBoot,
         bool? shouldSecureBoot)
@@ -53,7 +48,7 @@ public class ConvergeSecureBootTests
                     Details = shouldSecureBoot.Value
                         ? [EryphConstants.CapabilityDetails.Enabled]
                         : [EryphConstants.CapabilityDetails.Disabled],
-                }
+                },
             ],
             false => null,
         };
@@ -96,7 +91,7 @@ public class ConvergeSecureBootTests
             {
                 Name = EryphConstants.Capabilities.SecureBoot,
                 Details = ["template:TestTemplate"],
-            }
+            },
         ];
 
         _fixture.Engine.GetValuesCallback = (_, command) =>

@@ -24,10 +24,12 @@ namespace Eryph.Modules.Identity.Test.ChangeTracking;
 public class ClientApplicationChangeTrackingTests : IDisposable
 {
     private static readonly Guid TenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "eryph-id-client-ct-" + Guid.NewGuid().ToString("N"));
-    private readonly IFileSystem _fileSystem = new FileSystem();
     private readonly IdentityChangeTrackingConfig _config;
+
+    private readonly string _dir =
+        Path.Combine(Path.GetTempPath(), "eryph-id-client-ct-" + Guid.NewGuid().ToString("N"));
+
+    private readonly IFileSystem _fileSystem = new FileSystem();
 
     public ClientApplicationChangeTrackingTests()
     {
@@ -36,6 +38,12 @@ public class ClientApplicationChangeTrackingTests : IDisposable
             SeedDatabase = true,
             ClientsConfigPath = Path.Combine(_dir, "clients"),
         };
+    }
+
+    public void Dispose()
+    {
+        if (_fileSystem.Directory.Exists(_dir))
+            _fileSystem.Directory.Delete(_dir, true);
     }
 
     [Fact]
@@ -105,11 +113,5 @@ public class ClientApplicationChangeTrackingTests : IDisposable
         await handler.HandleChangeAsync(new ClientApplicationChange("client-2", TenantId));
 
         _fileSystem.File.Exists(path).Should().BeFalse("a removed client must remove its mirror file");
-    }
-
-    public void Dispose()
-    {
-        if (_fileSystem.Directory.Exists(_dir))
-            _fileSystem.Directory.Delete(_dir, recursive: true);
     }
 }

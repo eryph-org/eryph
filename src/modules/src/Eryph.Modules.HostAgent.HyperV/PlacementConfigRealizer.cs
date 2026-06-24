@@ -5,7 +5,6 @@ using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
-using Eryph.VmManagement;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.HostAgent;
@@ -46,7 +45,7 @@ internal sealed class PlacementConfigRealizer(
         // agent does not reject them, but the controller will never place on them.
         var local = await hostSettingsProvider.GetHostSettings()
             .Bind(vmHostAgentConfigurationManager.GetCurrentConfiguration)
-            .Match(Right: c => c, Left: _ => (VmHostAgentConfiguration)null);
+            .Match(c => c, _ => null);
 
         if (local is null)
             return;

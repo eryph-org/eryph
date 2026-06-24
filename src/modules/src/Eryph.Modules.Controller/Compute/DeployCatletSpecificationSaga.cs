@@ -28,93 +28,27 @@ internal class DeployCatletSpecificationSaga(
     IReadonlyStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository,
     IStorageIdentifierGenerator storageIdentifierGenerator,
     IWorkflow workflow)
-    : OperationTaskWorkflowSaga<DeployCatletSpecificationCommand, EryphSagaData<DeployCatletSpecificationSagaData>>(workflow),
+    : OperationTaskWorkflowSaga<DeployCatletSpecificationCommand, EryphSagaData<DeployCatletSpecificationSagaData>>(
+            workflow),
         IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DeployCatletCommand>>
 {
-    protected override async Task Initiated(DeployCatletSpecificationCommand message)
+    public Task Handle(OperationTaskStatusEvent<DeployCatletCommand> message)
     {
-        var specification = await specificationRepository.GetBySpecAsync(
-            new CatletSpecificationSpecs.GetByIdReadOnly(message.SpecificationId));
-        if (specification is null)
+        if (Data.Data.State >= DeployCatletSpecificationSagaState.Deployed)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (DeployCatletCommandResponse response) =>
         {
-            await Fail($"The specification {message.SpecificationId} does not exist.");
-            return;
-        }
-
-        var specificationVersion = await specificationVersionRepository.GetBySpecAsync(
-            new CatletSpecificationVersionSpecs.GetByIdReadOnly(message.SpecificationId, message.SpecificationVersionId));
-        if (specificationVersion is null)
-        {
-            await Fail($"The specification version {message.SpecificationVersionId} does not exist.");
-            return;
-        }
-
-        Data.Data.State = DeployCatletSpecificationSagaState.Initiated;
-        Data.Data.SpecificationId = specification.Id;
-        Data.Data.SpecificationVersionId = specificationVersion.Id;
-        Data.Data.ProjectId = specification.ProjectId;
-        Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Redeploy = message.Redeploy;
-        Data.Data.ContentType = specificationVersion.ContentType;
-        Data.Data.Configuration = specificationVersion.Configuration;
-        Data.Data.Architecture = message.Architecture;
-
-        var specificationVersionVariant = specificationVersion.Variants
-            .FirstOrDefault(v => v.Architecture == Data.Data.Architecture);
-        if (specificationVersionVariant is null)
-        {
-            await Fail($"The specification version {message.SpecificationVersionId} does not support the architecture {Data.Data.Architecture}.");
-            return;
-        }
-
-        Data.Data.ResolvedGenes = specificationVersionVariant.PinnedGenes.ToGenesDictionary();
-        
-        var builtConfig = CatletConfigInstantiator.Instantiate(
-            CatletConfigJsonSerializer.Deserialize(specificationVersionVariant.BuiltConfig),
-            storageIdentifierGenerator.Generate());
-
-        var updatedVariables = CatletConfigVariableApplier
-            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables)
-            .ToEither()
-            .MapLeft(errors => Error.New("Some variables are invalid.", Error.Many(errors)));
-        if (updatedVariables.IsLeft)
-        {
-            await Fail(Error.Many(updatedVariables.LeftToSeq()).Print());
-            return;
-        }
-
-        Data.Data.BuiltConfig = builtConfig.CloneWith(c =>
-        {
-            c.Variables = updatedVariables.ValueUnsafe().ToArray();
-        });
-
-        var existingCatlet = await catletRepository.GetBySpecAsync(
-            new CatletSpecs.GetBySpecificationId(specification.Id));
-        if (existingCatlet is null)
-        {
-            Data.Data.State = DeployCatletSpecificationSagaState.CatletDestroyed;
-            await StartNewTask(new ValidateCatletDeploymentCommand
+            Data.Data.State = DeployCatletSpecificationSagaState.Deployed;
+            // The ID of the deployed catlet is returned explicitly as
+            // multiple catlets might be associated with the operation
+            // (the deleted one and the new one).
+            await Complete(new DeployCatletSpecificationCommandResponse
             {
-                ProjectId = Data.Data.ProjectId,
-                AgentName = Data.Data.AgentName,
-                Architecture = Data.Data.Architecture,
-                Config = Data.Data.BuiltConfig,
-                ResolvedGenes = Data.Data.ResolvedGenes,
+                CatletId = response.CatletId,
             });
-            return;
-        }
-
-        if (!message.Redeploy)
-        {
-            await Fail($"The catlet specification {specification.Id} is already deployed as catlet {existingCatlet.Id}.");
-            return;
-        }
-
-        await StartNewTask(new DestroyCatletCommand
-        {
-            CatletId = existingCatlet.Id,
         });
     }
 
@@ -161,21 +95,88 @@ internal class DeployCatletSpecificationSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<DeployCatletCommand> message)
+    protected override async Task Initiated(DeployCatletSpecificationCommand message)
     {
-        if (Data.Data.State >= DeployCatletSpecificationSagaState.Deployed)
-            return Task.CompletedTask;
-
-        return FailOrRun(message, async (DeployCatletCommandResponse response) =>
+        var specification = await specificationRepository.GetBySpecAsync(
+            new CatletSpecificationSpecs.GetByIdReadOnly(message.SpecificationId));
+        if (specification is null)
         {
-            Data.Data.State = DeployCatletSpecificationSagaState.Deployed;
-            // The ID of the deployed catlet is returned explicitly as
-            // multiple catlets might be associated with the operation
-            // (the deleted one and the new one).
-            await Complete(new DeployCatletSpecificationCommandResponse
+            await Fail($"The specification {message.SpecificationId} does not exist.");
+            return;
+        }
+
+        var specificationVersion = await specificationVersionRepository.GetBySpecAsync(
+            new CatletSpecificationVersionSpecs.GetByIdReadOnly(message.SpecificationId,
+                message.SpecificationVersionId));
+        if (specificationVersion is null)
+        {
+            await Fail($"The specification version {message.SpecificationVersionId} does not exist.");
+            return;
+        }
+
+        Data.Data.State = DeployCatletSpecificationSagaState.Initiated;
+        Data.Data.SpecificationId = specification.Id;
+        Data.Data.SpecificationVersionId = specificationVersion.Id;
+        Data.Data.ProjectId = specification.ProjectId;
+        Data.Data.AgentName = Environment.MachineName;
+        Data.Data.Redeploy = message.Redeploy;
+        Data.Data.ContentType = specificationVersion.ContentType;
+        Data.Data.Configuration = specificationVersion.Configuration;
+        Data.Data.Architecture = message.Architecture;
+
+        var specificationVersionVariant = specificationVersion.Variants
+            .FirstOrDefault(v => v.Architecture == Data.Data.Architecture);
+        if (specificationVersionVariant is null)
+        {
+            await Fail(
+                $"The specification version {message.SpecificationVersionId} does not support the architecture {Data.Data.Architecture}.");
+            return;
+        }
+
+        Data.Data.ResolvedGenes = specificationVersionVariant.PinnedGenes.ToGenesDictionary();
+
+        var builtConfig = CatletConfigInstantiator.Instantiate(
+            CatletConfigJsonSerializer.Deserialize(specificationVersionVariant.BuiltConfig),
+            storageIdentifierGenerator.Generate());
+
+        var updatedVariables = CatletConfigVariableApplier
+            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables)
+            .ToEither()
+            .MapLeft(errors => Error.New("Some variables are invalid.", Error.Many(errors)));
+        if (updatedVariables.IsLeft)
+        {
+            await Fail(Error.Many(updatedVariables.LeftToSeq()).Print());
+            return;
+        }
+
+        Data.Data.BuiltConfig = builtConfig.CloneWith(c => { c.Variables = updatedVariables.ValueUnsafe().ToArray(); });
+
+        var existingCatlet = await catletRepository.GetBySpecAsync(
+            new CatletSpecs.GetBySpecificationId(specification.Id));
+        if (existingCatlet is null)
+        {
+            Data.Data.State = DeployCatletSpecificationSagaState.CatletDestroyed;
+            await StartNewTask(new ValidateCatletDeploymentCommand
             {
-                CatletId = response.CatletId,
+                ProjectId = Data.Data.ProjectId,
+                AgentName = Data.Data.AgentName,
+                Architecture = Data.Data.Architecture,
+                Config = Data.Data.BuiltConfig,
+                ResolvedGenes = Data.Data.ResolvedGenes,
             });
+            return;
+        }
+
+        if (!message.Redeploy)
+        {
+            await Fail(
+                $"The catlet specification {specification.Id} is already deployed as catlet {existingCatlet.Id}.");
+            return;
+        }
+
+        await StartNewTask(new DestroyCatletCommand
+        {
+            CatletId = existingCatlet.Id,
         });
     }
 

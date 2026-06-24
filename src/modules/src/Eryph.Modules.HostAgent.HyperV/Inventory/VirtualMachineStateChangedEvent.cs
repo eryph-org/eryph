@@ -1,5 +1,6 @@
 ﻿using System;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.enums;
 
 namespace Eryph.Modules.HostAgent.Inventory;
 
@@ -10,6 +11,6 @@ internal class VirtualMachineStateChangedEvent
     public VirtualMachineState? State { get; set; }
 
     public TimeSpan UpTime { get; set; }
-    
+
     public DateTimeOffset Timestamp { get; set; }
 }

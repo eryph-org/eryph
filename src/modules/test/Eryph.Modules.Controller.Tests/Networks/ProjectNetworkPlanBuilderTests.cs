@@ -1,24 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations;
-using Eryph.ConfigModel.Networks;
+﻿using Eryph.ConfigModel.Networks;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.Controller.Networks;
-using Eryph.StateDb.Model;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
-using LanguageExt;
-using LanguageExt.Common;
-using Moq;
-using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 using Xunit.Abstractions;
-using System.Linq.Expressions;
-
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
@@ -61,16 +49,16 @@ public class ProjectNetworkPlanBuilderTests(
     [Fact]
     public async Task GenerateNetworkPlan_DefaultConfig_GeneratesValidNetworkPlan()
     {
-        await using(var scope = CreateScope())
+        await using (var scope = CreateScope())
         {
             var providerConfigRealizer = scope.GetInstance<INetworkProvidersConfigRealizer>();
-            await providerConfigRealizer.RealizeConfigAsync(_networkProvidersConfig, default);
+            await providerConfigRealizer.RealizeConfigAsync(_networkProvidersConfig, CancellationToken.None);
 
-            var networkConfig = new ProjectNetworksConfig()
+            var networkConfig = new ProjectNetworksConfig
             {
                 Networks =
                 [
-                    new NetworkConfig()
+                    new NetworkConfig
                     {
                         Name = EryphConstants.DefaultNetworkName,
                         Address = "10.0.100.0/24",

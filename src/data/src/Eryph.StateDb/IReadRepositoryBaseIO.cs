@@ -24,7 +24,8 @@ public interface IReadRepositoryBaseIO<T> where T : class
     /// A task that represents the asynchronous operation.
     /// The task result contains the <typeparamref name="T" />, or <see langword="null"/>.
     /// </returns>
-    EitherAsync<Error,Option<T>> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull;
+    EitherAsync<Error, Option<T>> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+        where TId : notnull;
 
     /// <summary>
     /// Finds an entity that matches the encapsulated query logic of the <paramref name="specification"/>.
@@ -34,7 +35,8 @@ public interface IReadRepositoryBaseIO<T> where T : class
     /// A task that represents the asynchronous operation.
     /// The task result contains the <typeparamref name="T" />, or <see langword="null"/>.
     /// </returns>
-    EitherAsync<Error, Option<T>> GetBySpecAsync<Spec>(Spec specification, CancellationToken cancellationToken = default) where Spec : ISingleResultSpecification, ISpecification<T>;
+    EitherAsync<Error, Option<T>> GetBySpecAsync<Spec>(Spec specification,
+        CancellationToken cancellationToken = default) where Spec : ISingleResultSpecification, ISpecification<T>;
 
     /// <summary>
     /// Finds an entity that matches the encapsulated query logic of the <paramref name="specification"/>.
@@ -45,7 +47,8 @@ public interface IReadRepositoryBaseIO<T> where T : class
     /// A task that represents the asynchronous operation.
     /// The task result contains the <typeparamref name="TResult" />.
     /// </returns>
-    EitherAsync<Error, Option<TResult>> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default);
+    EitherAsync<Error, Option<TResult>> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds all entities of <typeparamref name="T" /> from the database.
@@ -65,7 +68,8 @@ public interface IReadRepositoryBaseIO<T> where T : class
     /// A task that represents the asynchronous operation.
     /// The task result contains a <see cref="List{T}" /> that contains elements from the input sequence.
     /// </returns>
-    EitherAsync<Error, Seq<T>> ListAsync(ISpecification<T> specification, CancellationToken cancellationToken = default);
+    EitherAsync<Error, Seq<T>> ListAsync(ISpecification<T> specification,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds all entities of <typeparamref name="T" />, that matches the encapsulated query logic of the
@@ -80,7 +84,8 @@ public interface IReadRepositoryBaseIO<T> where T : class
     /// A task that represents the asynchronous operation.
     /// The task result contains a <see cref="List{TResult}" /> that contains elements from the input sequence.
     /// </returns>
-    EitherAsync<Error, Seq<TResult>> ListAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default);
+    EitherAsync<Error, Seq<TResult>> ListAsync<TResult>(ISpecification<T, TResult> specification,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a number that represents how many entities satisfy the encapsulated query logic

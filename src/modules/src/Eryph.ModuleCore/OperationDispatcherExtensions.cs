@@ -14,11 +14,11 @@ public static class OperationDispatcherExtensions
         object command)
     {
         return dispatcher.StartNew(
-            command, 
-            additionalData:new OperationDataRecord(tenantId, traceId),
-            additionalHeaders:new Dictionary<string, string>
+            command,
+            new OperationDataRecord(tenantId, traceId),
+            new Dictionary<string, string>
             {
-                {"trace_id", traceId}
+                { "trace_id", traceId },
             });
     }
 }

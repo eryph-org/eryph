@@ -38,14 +38,14 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                                 Name = "default",
                                 FirstIp = "10.249.248.10",
                                 NextIp = "10.249.248.12",
-                                LastIp = "10.249.248.19"
+                                LastIp = "10.249.248.19",
                             },
                             new NetworkProviderIpPool
                             {
                                 Name = "second-provider-pool",
                                 FirstIp = "10.249.248.20",
                                 NextIp = "10.249.248.22",
-                                LastIp = "10.249.248.29"
+                                LastIp = "10.249.248.29",
                             },
                         ],
                     },
@@ -61,7 +61,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                                 Name = "default",
                                 FirstIp = "10.249.249.10",
                                 NextIp = "10.249.249.12",
-                                LastIp = "10.249.249.19"
+                                LastIp = "10.249.249.19",
                             },
                         ],
                     },
@@ -86,7 +86,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                                 Name = "default",
                                 FirstIp = "10.249.250.10",
                                 NextIp = "10.249.250.12",
-                                LastIp = "10.249.250.19"
+                                LastIp = "10.249.250.19",
                             },
                         ],
                     },
@@ -97,7 +97,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 Name = "flat-provider",
                 Type = NetworkProviderType.Flat,
             },
-        ]
+        ],
     };
 
     [Theory]
@@ -111,7 +111,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         string providerPoolName,
         string expectedIpAddress)
     {
-        var networkConfig = new ProjectNetworksConfig()
+        var networkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -119,7 +119,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 {
                     Name = "test",
                     Address = "10.0.100.0/22",
-                    Provider = new ProviderConfig()
+                    Provider = new ProviderConfig
                     {
                         Name = providerName,
                         Subnet = providerSubnetName,
@@ -139,20 +139,19 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network => AssertOverlayNetwork(
-                    network,
-                    providerName,
-                    providerSubnetName,
-                    providerPoolName,
-                    expectedIpAddress));
+            networks.Should().SatisfyRespectively(network => AssertOverlayNetwork(
+                network,
+                providerName,
+                providerSubnetName,
+                providerPoolName,
+                expectedIpAddress));
         });
     }
 
     [Fact]
     public async Task UpdateNetwork_NewNetworkWithFlatProvider_UsesCorrectProvider()
     {
-        var networkConfig = new ProjectNetworksConfig()
+        var networkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -160,7 +159,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 {
                     Name = "test",
                     Address = "10.0.100.0/22",
-                    Provider = new ProviderConfig()
+                    Provider = new ProviderConfig
                     {
                         Name = "flat-provider",
                     },
@@ -178,20 +177,19 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network =>
-                {
-                    network.Name.Should().Be("test");
-                    network.Subnets.Should().BeEmpty();
-                    network.NetworkPorts.Should().BeEmpty();
-                });
+            networks.Should().SatisfyRespectively(network =>
+            {
+                network.Name.Should().Be("test");
+                network.Subnets.Should().BeEmpty();
+                network.NetworkPorts.Should().BeEmpty();
+            });
         });
     }
 
     [Fact]
     public async Task UpdateNetwork_IpRangeOfExistingPoolIsChanged_ExistingPoolIsUpdated()
     {
-        var networkConfig = new ProjectNetworksConfig()
+        var networkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -209,18 +207,17 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
             await stateStore.SaveChangesAsync();
         });
 
-        Guid ipPoolId = Guid.Empty;
+        var ipPoolId = Guid.Empty;
         await WithScope(async (_, stateStore) =>
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network => AssertOverlayNetwork(
-                    network,
-                    EryphConstants.DefaultProviderName,
-                    EryphConstants.DefaultSubnetName,
-                    EryphConstants.DefaultIpPoolName,
-                    "10.249.248.12"));
+            networks.Should().SatisfyRespectively(network => AssertOverlayNetwork(
+                network,
+                EryphConstants.DefaultProviderName,
+                EryphConstants.DefaultSubnetName,
+                EryphConstants.DefaultIpPoolName,
+                "10.249.248.12"));
 
             ipPoolId = networks.Should().ContainSingle()
                 .Which.Subnets.Should().ContainSingle()
@@ -228,7 +225,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 .Which.Id;
         });
 
-        var updatedNetworkConfig = new ProjectNetworksConfig()
+        var updatedNetworkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -236,14 +233,14 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 {
                     Name = "test",
                     Address = "10.0.100.0/22",
-                    Subnets = 
+                    Subnets =
                     [
-                        new NetworkSubnetConfig()
+                        new NetworkSubnetConfig
                         {
                             Name = EryphConstants.DefaultSubnetName,
-                            IpPools =  
+                            IpPools =
                             [
-                                new IpPoolConfig()
+                                new IpPoolConfig
                                 {
                                     Name = EryphConstants.DefaultIpPoolName,
                                     FirstIp = "10.0.100.2",
@@ -251,15 +248,16 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                                     LastIp = "10.0.100.100",
                                 },
                             ],
-                        }
-                    ]
+                        },
+                    ],
                 },
             ],
         };
 
         await WithScope(async (realizer, stateStore) =>
         {
-            await realizer.UpdateNetwork(EryphConstants.DefaultProjectId, updatedNetworkConfig, _networkProvidersConfig);
+            await realizer.UpdateNetwork(EryphConstants.DefaultProjectId, updatedNetworkConfig,
+                _networkProvidersConfig);
             await stateStore.SaveChangesAsync();
         });
 
@@ -267,36 +265,33 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network =>
+            networks.Should().SatisfyRespectively(network =>
+            {
+                network.Name.Should().Be("test");
+
+                network.Subnets.Should().SatisfyRespectively(subnet =>
                 {
-                    network.Name.Should().Be("test");
+                    subnet.Name.Should().Be("default");
+                    subnet.IpNetwork.Should().Be("10.0.100.0/22");
 
-                    network.Subnets.Should().SatisfyRespectively(
-                        subnet =>
-                        {
-                            subnet.Name.Should().Be("default");
-                            subnet.IpNetwork.Should().Be("10.0.100.0/22");
-
-                            subnet.IpPools.Should().SatisfyRespectively(
-                                pool =>
-                                {
-                                    pool.Id.Should().Be(ipPoolId);
-                                    pool.Name.Should().Be("default");
-                                    pool.IpNetwork.Should().Be("10.0.100.0/22");
-                                    pool.FirstIp.Should().Be("10.0.100.2");
-                                    pool.NextIp.Should().Be("10.0.100.10");
-                                    pool.LastIp.Should().Be("10.0.100.100");
-                                });
-                        });
+                    subnet.IpPools.Should().SatisfyRespectively(pool =>
+                    {
+                        pool.Id.Should().Be(ipPoolId);
+                        pool.Name.Should().Be("default");
+                        pool.IpNetwork.Should().Be("10.0.100.0/22");
+                        pool.FirstIp.Should().Be("10.0.100.2");
+                        pool.NextIp.Should().Be("10.0.100.10");
+                        pool.LastIp.Should().Be("10.0.100.100");
+                    });
                 });
+            });
         });
     }
 
     [Fact]
     public async Task UpdateNetwork_ChangeNetworkFromOverlayToFlat_RemovesOldOverlayConfiguration()
     {
-        var networkConfig = new ProjectNetworksConfig()
+        var networkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -318,16 +313,15 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network => AssertOverlayNetwork(
-                    network,
-                    EryphConstants.DefaultProviderName,
-                    EryphConstants.DefaultSubnetName,
-                    EryphConstants.DefaultIpPoolName,
-                    "10.249.248.12"));
+            networks.Should().SatisfyRespectively(network => AssertOverlayNetwork(
+                network,
+                EryphConstants.DefaultProviderName,
+                EryphConstants.DefaultSubnetName,
+                EryphConstants.DefaultIpPoolName,
+                "10.249.248.12"));
         });
 
-        var updatedNetworkConfig = new ProjectNetworksConfig()
+        var updatedNetworkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -335,7 +329,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 {
                     Name = "test",
                     Address = "10.0.100.0/22",
-                    Provider = new ProviderConfig()
+                    Provider = new ProviderConfig
                     {
                         Name = "flat-provider",
                     },
@@ -345,7 +339,8 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
 
         await WithScope(async (realizer, stateStore) =>
         {
-            await realizer.UpdateNetwork(EryphConstants.DefaultProjectId, updatedNetworkConfig, _networkProvidersConfig);
+            await realizer.UpdateNetwork(EryphConstants.DefaultProjectId, updatedNetworkConfig,
+                _networkProvidersConfig);
             await stateStore.SaveChangesAsync();
         });
 
@@ -353,13 +348,12 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network =>
-                {
-                    network.Name.Should().Be("test");
-                    network.Subnets.Should().BeEmpty();
-                    network.NetworkPorts.Should().BeEmpty();
-                });
+            networks.Should().SatisfyRespectively(network =>
+            {
+                network.Name.Should().Be("test");
+                network.Subnets.Should().BeEmpty();
+                network.NetworkPorts.Should().BeEmpty();
+            });
 
             var providerPorts = await stateStore.For<ProviderRouterPort>().ListAsync();
             providerPorts.Should().BeEmpty();
@@ -382,7 +376,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         string providerPoolName,
         string expectedIpAddress)
     {
-        var networkConfig = new ProjectNetworksConfig()
+        var networkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -390,7 +384,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 {
                     Name = "test",
                     Address = "10.0.100.0/22",
-                    Provider = new ProviderConfig()
+                    Provider = new ProviderConfig
                     {
                         Name = EryphConstants.DefaultProviderName,
                         Subnet = EryphConstants.DefaultSubnetName,
@@ -410,16 +404,15 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network => AssertOverlayNetwork(
-                    network,
-                    EryphConstants.DefaultProviderName,
-                    EryphConstants.DefaultSubnetName,
-                    EryphConstants.DefaultIpPoolName,
-                    "10.249.248.12"));
+            networks.Should().SatisfyRespectively(network => AssertOverlayNetwork(
+                network,
+                EryphConstants.DefaultProviderName,
+                EryphConstants.DefaultSubnetName,
+                EryphConstants.DefaultIpPoolName,
+                "10.249.248.12"));
         });
 
-        var updatedNetworkConfig = new ProjectNetworksConfig()
+        var updatedNetworkConfig = new ProjectNetworksConfig
         {
             Networks =
             [
@@ -427,7 +420,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 {
                     Name = "test",
                     Address = "10.0.100.0/22",
-                    Provider = new ProviderConfig()
+                    Provider = new ProviderConfig
                     {
                         Name = providerName,
                         Subnet = providerSubnetName,
@@ -439,7 +432,8 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
 
         await WithScope(async (realizer, stateStore) =>
         {
-            await realizer.UpdateNetwork(EryphConstants.DefaultProjectId, updatedNetworkConfig, _networkProvidersConfig);
+            await realizer.UpdateNetwork(EryphConstants.DefaultProjectId, updatedNetworkConfig,
+                _networkProvidersConfig);
             await stateStore.SaveChangesAsync();
         });
 
@@ -447,21 +441,19 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         {
             var networks = await stateStore.For<VirtualNetwork>().ListAsync(new GetAllNetworks());
 
-            networks.Should().SatisfyRespectively(
-                network => AssertOverlayNetwork(
-                    network,
-                    providerName,
-                    providerSubnetName,
-                    providerPoolName,
-                    expectedIpAddress));
+            networks.Should().SatisfyRespectively(network => AssertOverlayNetwork(
+                network,
+                providerName,
+                providerSubnetName,
+                providerPoolName,
+                expectedIpAddress));
 
             var providerPorts = await stateStore.For<ProviderRouterPort>().ListAsync();
-            providerPorts.Should().SatisfyRespectively(
-                port =>
-                {
-                    port.SubnetName.Should().Be(providerSubnetName);
-                    port.PoolName.Should().Be(providerPoolName);
-                });
+            providerPorts.Should().SatisfyRespectively(port =>
+            {
+                port.SubnetName.Should().Be(providerSubnetName);
+                port.PoolName.Should().Be(providerPoolName);
+            });
 
             var networkRouterPorts = await stateStore.For<NetworkRouterPort>().ListAsync();
             networkRouterPorts.Should().HaveCount(1);
@@ -473,7 +465,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         });
     }
 
-    private void AssertOverlayNetwork(
+    private static void AssertOverlayNetwork(
         VirtualNetwork network,
         string expectedProviderName,
         string expectedProviderSubnet,
@@ -482,41 +474,37 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
     {
         network.Name.Should().Be("test");
 
-        network.Subnets.Should().SatisfyRespectively(
-            subnet =>
-            {
-                subnet.Name.Should().Be("default");
-                subnet.IpNetwork.Should().Be("10.0.100.0/22");
+        network.Subnets.Should().SatisfyRespectively(subnet =>
+        {
+            subnet.Name.Should().Be("default");
+            subnet.IpNetwork.Should().Be("10.0.100.0/22");
 
-                subnet.IpPools.Should().SatisfyRespectively(
-                    pool =>
-                    {
-                        pool.Name.Should().Be("default");
-                        pool.IpNetwork.Should().Be("10.0.100.0/22");
-                        pool.FirstIp.Should().Be("10.0.100.2");
-                        pool.NextIp.Should().Be("10.0.100.2");
-                        pool.LastIp.Should().Be("10.0.103.254");
-                    });
+            subnet.IpPools.Should().SatisfyRespectively(pool =>
+            {
+                pool.Name.Should().Be("default");
+                pool.IpNetwork.Should().Be("10.0.100.0/22");
+                pool.FirstIp.Should().Be("10.0.100.2");
+                pool.NextIp.Should().Be("10.0.100.2");
+                pool.LastIp.Should().Be("10.0.103.254");
             });
+        });
 
         network.NetworkPorts.Should().HaveCount(2);
-        network.NetworkPorts.OfType<ProviderRouterPort>().Should().SatisfyRespectively(
-                providerPort =>
-                {
-                    providerPort.Name.Should().Be("provider");
-                    providerPort.ProviderName.Should().Be(expectedProviderName);
-                    providerPort.SubnetName.Should().Be(expectedProviderSubnet);
-                    providerPort.PoolName.Should().Be(expectedProviderPool);
-                    providerPort.IpAssignments.Should().SatisfyRespectively(
-                        ipAssignment => ipAssignment.IpAddress.Should().Be(expectedProviderIp));
-                });
-        network.NetworkPorts.OfType<NetworkRouterPort>().Should().SatisfyRespectively(
-            routerPort =>
-            {
-                routerPort.Name.Should().Be("default");
-                routerPort.IpAssignments.Should().SatisfyRespectively(
-                    ipAssignment => ipAssignment.IpAddress.Should().Be("10.0.100.1"));
-            });
+        network.NetworkPorts.OfType<ProviderRouterPort>().Should().SatisfyRespectively(providerPort =>
+        {
+            providerPort.Name.Should().Be("provider");
+            providerPort.ProviderName.Should().Be(expectedProviderName);
+            providerPort.SubnetName.Should().Be(expectedProviderSubnet);
+            providerPort.PoolName.Should().Be(expectedProviderPool);
+            providerPort.IpAssignments.Should()
+                .SatisfyRespectively(ipAssignment => ipAssignment.IpAddress.Should().Be(expectedProviderIp));
+        });
+        network.NetworkPorts.OfType<NetworkRouterPort>().Should().SatisfyRespectively(routerPort =>
+        {
+            routerPort.Name.Should().Be("default");
+            routerPort.IpAssignments.Should()
+                .SatisfyRespectively(ipAssignment => ipAssignment.IpAddress.Should().Be("10.0.100.1"));
+        });
     }
 
     private async Task WithScope(Func<INetworkConfigRealizer, IStateStore, Task> func)
@@ -541,7 +529,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         await SeedDefaultTenantAndProject();
 
         var configRealizer = new NetworkProvidersConfigRealizer(stateStore);
-        await configRealizer.RealizeConfigAsync(_networkProvidersConfig, default);
+        await configRealizer.RealizeConfigAsync(_networkProvidersConfig, CancellationToken.None);
     }
 
     private sealed class GetAllNetworks : Specification<VirtualNetwork>

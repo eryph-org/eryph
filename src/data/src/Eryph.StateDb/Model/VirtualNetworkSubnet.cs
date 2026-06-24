@@ -10,8 +10,8 @@ public class VirtualNetworkSubnet : Subnet
     public VirtualNetwork Network { get; set; } = null!;
 
     public int DhcpLeaseTime { get; set; }
-    
+
     public int MTU { get; set; }
-    
+
     public string? DnsServersV4 { get; set; }
 }

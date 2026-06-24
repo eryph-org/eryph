@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMNetworkAdapterAclAction : byte
 {
-    public enum VMNetworkAdapterAclAction : byte
-    {
-        Allow = 1,
-        Deny = 2,
-        Meter = 3
-    }
+    Allow = 1,
+    Deny = 2,
+    Meter = 3,
 }

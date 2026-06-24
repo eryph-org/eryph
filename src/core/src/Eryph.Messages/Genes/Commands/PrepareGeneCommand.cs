@@ -11,8 +11,7 @@ public class PrepareGeneCommand : IGenePoolAgentCommand, ICommandWithName
 
     public GeneHash Hash { get; set; }
 
-    [PrivateIdentifier]
-    public string AgentName { get; set; }
-
     public string GetCommandName() => $"Preparing gene {Id}";
+
+    [PrivateIdentifier] public string AgentName { get; set; }
 }

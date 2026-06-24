@@ -42,7 +42,8 @@ public static class SystemRequirementsChecker<RT> where RT : struct,
             .ToEff(Error.New("Could not query the install state of the feature 'Microsoft-Hyper-V'."))
         from powershellFeature in features
             .Find(f => f.Name == "Microsoft-Hyper-V-Management-PowerShell")
-            .ToEff(Error.New("Could not query the install state of the feature 'Microsoft-Hyper-V-Management-PowerShell'."))
+            .ToEff(Error.New(
+                "Could not query the install state of the feature 'Microsoft-Hyper-V-Management-PowerShell'."))
         select (platformFeature.IsInstalled, powershellFeature.IsInstalled);
 
     private static Schedule ComputeSchedule(bool isService) =>
@@ -54,5 +55,5 @@ public static class SystemRequirementsChecker<RT> where RT : struct,
             : Schedule.Never;
 
     private static Eff<RT, Unit> logInformation(string msg) =>
-        Logger<RT>.logInformation(nameof(SystemRequirementsChecker<RT>), msg);
+        Logger<RT>.logInformation(nameof(SystemRequirementsChecker<>), msg);
 }

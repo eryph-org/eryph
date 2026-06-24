@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ModuleCore.Logging;
@@ -25,7 +22,8 @@ internal class DatabaseResetHandler(
         {
             using (_ = logger.BeginWarmupProgressScope())
             {
-                logger.LogInformation("The state database is missing migrations. Going to reseed the state database...");
+                logger.LogInformation(
+                    "The state database is missing migrations. Going to reseed the state database...");
             }
 
             await database.EnsureDeletedAsync(cancellationToken);

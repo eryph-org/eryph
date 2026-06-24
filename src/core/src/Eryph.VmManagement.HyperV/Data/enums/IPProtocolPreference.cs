@@ -1,8 +1,7 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum IPProtocolPreference
 {
-    public enum IPProtocolPreference
-    {
-        IPv4,
-        IPv6
-    }
+    IPv4,
+    IPv6,
 }

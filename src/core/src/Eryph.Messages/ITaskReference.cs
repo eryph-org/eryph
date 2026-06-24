@@ -1,5 +1,4 @@
-﻿using System;
-using Eryph.Resources;
+﻿using Eryph.Resources;
 
 namespace Eryph.Messages;
 

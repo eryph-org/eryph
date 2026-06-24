@@ -12,11 +12,15 @@ using Rebus.Sagas;
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
-internal class GetGuestServicesStatusSaga(IWorkflow workflow,
+internal class GetGuestServicesStatusSaga(
+    IWorkflow workflow,
     ICatletDataService vmDataService) :
     OperationTaskWorkflowSaga<GetGuestServicesStatusCommand, EryphSagaData<GetGuestServicesStatusSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<GetGuestServicesStatusVMCommand>>
 {
+    public Task Handle(OperationTaskStatusEvent<GetGuestServicesStatusVMCommand> message) =>
+        FailOrRun(message, (GetGuestServicesStatusVMCommandResponse response) => Complete(response));
+
     protected override async Task Initiated(GetGuestServicesStatusCommand message)
     {
         var catlet = await vmDataService.Get(message.CatletId);
@@ -39,9 +43,6 @@ internal class GetGuestServicesStatusSaga(IWorkflow workflow,
             VmId = Data.Data.VmId,
         });
     }
-
-    public Task Handle(OperationTaskStatusEvent<GetGuestServicesStatusVMCommand> message) =>
-        FailOrRun(message, (GetGuestServicesStatusVMCommandResponse response) => Complete(response));
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<GetGuestServicesStatusSagaData>> config)
     {

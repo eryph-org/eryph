@@ -6,10 +6,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dbosoft.Rebus.Configuration;
 using Eryph.Messages.Components;
-using Rebus.Handlers;
-using Eryph.Rebus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Rebus.Handlers;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -36,8 +35,8 @@ public static class ComponentMtlsTransport
         // CA cert (trust anchor), the identity endpoint, and the one-time token. None of it can
         // arrive over the bus that the resulting certificate is needed to join.
         var enrollmentFilePath = mtls["enrollmentFile"]
-            ?? throw new InvalidOperationException(
-                $"componentMtls:enrollmentFile must be set to start the {componentType} process.");
+                                 ?? throw new InvalidOperationException(
+                                     $"componentMtls:enrollmentFile must be set to start the {componentType} process.");
         var enrollment = LoadEnrollmentFile(enrollmentFilePath);
 
         // Private key material is written here and must land in a predictable, ACL-able location —
@@ -100,8 +99,8 @@ public static class ComponentMtlsTransport
             identity,
             endpointResolver,
             options,
-            trustAnchorBundlePath: trustAnchorPath,
-            loggerFactory: loggerFactory);
+            trustAnchorPath,
+            loggerFactory);
 
         container.RegisterInstance<IRebusTransportConfigurer>(transport);
 
@@ -152,7 +151,7 @@ public static class ComponentMtlsTransport
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         options.Converters.Add(new JsonStringEnumConverter());
         var enrollment = JsonSerializer.Deserialize<ComponentEnrollmentFile>(File.ReadAllText(path), options)
-            ?? throw new InvalidOperationException($"The enrollment file '{path}' is empty or invalid.");
+                         ?? throw new InvalidOperationException($"The enrollment file '{path}' is empty or invalid.");
 
         // Validate the fields we depend on so a truncated/tampered file fails with an actionable message
         // here rather than as a cryptic CryptographicException (empty PEM) or a TLS error far downstream.

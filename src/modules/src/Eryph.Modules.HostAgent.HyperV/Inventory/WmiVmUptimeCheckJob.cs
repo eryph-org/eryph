@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Management;
-using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Events;
@@ -15,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Quartz;
 using Rebus.Bus;
 using SimpleInjector;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Inventory;
@@ -39,10 +34,7 @@ internal class WmiVmUptimeCheckJob(Container container) : IJob
                 .Run(SimpleAgentRuntime.New(_loggerFactory));
 
             var messages = result.ThrowIfFail();
-            foreach (var message in messages)
-            {
-                await _bus.SendWorkflowEvent(_workflowOptions, message);
-            }
+            foreach (var message in messages) await _bus.SendWorkflowEvent(_workflowOptions, message);
         }
         catch (Exception e)
         {

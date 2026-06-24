@@ -3,7 +3,6 @@ using System.Linq;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Resources.Machines;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
@@ -34,8 +33,8 @@ internal static class CloudInitNetworkData
     private static Seq<object> CreateSubnets(
         Option<MachineNetworkSettings> settings) =>
         settings.Filter(IsStaticV4).Match(
-            Some: s => s.AddressesV4.ToSeq().Map(address => CreateStaticSubnet(s, address)),
-            None: () => Seq1((object)new Dictionary<string, object> { ["type"] = "dhcp" }));
+            s => s.AddressesV4.ToSeq().Map(address => CreateStaticSubnet(s, address)),
+            () => Seq1((object)new Dictionary<string, object> { ["type"] = "dhcp" }));
 
     private static bool IsStaticV4(MachineNetworkSettings settings) =>
         !string.IsNullOrWhiteSpace(settings.GatewayV4)

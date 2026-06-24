@@ -68,7 +68,7 @@ public class CertificateGeneratorTests
 
         var built = chain.Build(leaf);
         built.Should().BeTrue(
-            because: string.Join(", ", chain.ChainStatus.Select(s => s.StatusInformation)));
+            string.Join(", ", chain.ChainStatus.Select(s => s.StatusInformation)));
     }
 
     [Fact]

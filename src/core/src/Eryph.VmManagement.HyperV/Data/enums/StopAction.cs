@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum StopAction
 {
-    public enum StopAction
-    {
-        TurnOff = 2,
-        Save = 3,
-        ShutDown = 4
-    }
+    TurnOff = 2,
+    Save = 3,
+    ShutDown = 4,
 }

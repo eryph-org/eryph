@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core;
+﻿using Eryph.Core;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
-using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
@@ -51,8 +46,8 @@ public class ProviderIpManagerTests(
             var result = await providerIpManager.ConfigureFloatingPortIps(
                 providerName, floatingPort);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+            result.Should().BeRight().Which.Should()
+                .SatisfyRespectively(ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
 
             await stateStore.SaveChangesAsync();
         });
@@ -60,12 +55,11 @@ public class ProviderIpManagerTests(
         await WithScope(async (_, _, stateStore) =>
         {
             var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
-            ipAssignments.Should().SatisfyRespectively(
-                ipAssignment =>
-                {
-                    ipAssignment.NetworkPortId.Should().Be(FloatingPortId);
-                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
-                });
+            ipAssignments.Should().SatisfyRespectively(ipAssignment =>
+            {
+                ipAssignment.NetworkPortId.Should().Be(FloatingPortId);
+                ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+            });
         });
     }
 
@@ -81,7 +75,7 @@ public class ProviderIpManagerTests(
         string poolName,
         string expectedIpAddress)
     {
-        var ipAssignmentId = Guid.Empty; 
+        var ipAssignmentId = Guid.Empty;
         await WithScope(async (_, ipPoolManager, stateStore) =>
         {
             var ipAssignmentResult = ipPoolManager.AcquireIp(
@@ -99,7 +93,7 @@ public class ProviderIpManagerTests(
                 ProviderName = providerName,
                 SubnetName = subnetName,
                 PoolName = poolName,
-                IpAssignments = [ipAssignment]
+                IpAssignments = [ipAssignment],
             };
             await stateStore.For<FloatingNetworkPort>().AddAsync(floatingPort);
             await stateStore.SaveChangesAsync();
@@ -114,8 +108,8 @@ public class ProviderIpManagerTests(
             var result = await providerIpManager.ConfigureFloatingPortIps(
                 providerName, floatingPort!);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+            result.Should().BeRight().Which.Should()
+                .SatisfyRespectively(ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
 
             await stateStore.SaveChangesAsync();
         });
@@ -123,13 +117,12 @@ public class ProviderIpManagerTests(
         await WithScope(async (_, _, stateStore) =>
         {
             var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
-            ipAssignments.Should().SatisfyRespectively(
-                ipAssignment =>
-                {
-                    ipAssignment.NetworkPortId.Should().Be(FloatingPortId);
-                    ipAssignment.Id.Should().Be(ipAssignmentId);
-                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
-                });
+            ipAssignments.Should().SatisfyRespectively(ipAssignment =>
+            {
+                ipAssignment.NetworkPortId.Should().Be(FloatingPortId);
+                ipAssignment.Id.Should().Be(ipAssignmentId);
+                ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+            });
         });
     }
 
@@ -161,7 +154,7 @@ public class ProviderIpManagerTests(
                 ProviderName = "default",
                 SubnetName = "default",
                 PoolName = "default",
-                IpAssignments = [ipAssignment]
+                IpAssignments = [ipAssignment],
             };
             await stateStore.For<FloatingNetworkPort>().AddAsync(floatingPort);
             await stateStore.SaveChangesAsync();
@@ -180,8 +173,8 @@ public class ProviderIpManagerTests(
             var result = await providerIpManager.ConfigureFloatingPortIps(
                 providerName, floatingPort);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+            result.Should().BeRight().Which.Should()
+                .SatisfyRespectively(ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
 
             await stateStore.SaveChangesAsync();
         });
@@ -189,14 +182,12 @@ public class ProviderIpManagerTests(
         await WithScope(async (_, _, stateStore) =>
         {
             var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
-            ipAssignments.Should().SatisfyRespectively(
-                ipAssignment =>
-                {
-                    ipAssignment.NetworkPortId.Should().Be(FloatingPortId);
-                    ipAssignment.Id.Should().NotBe(ipAssignmentId);
-                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
-
-                });
+            ipAssignments.Should().SatisfyRespectively(ipAssignment =>
+            {
+                ipAssignment.NetworkPortId.Should().Be(FloatingPortId);
+                ipAssignment.Id.Should().NotBe(ipAssignmentId);
+                ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+            });
         });
     }
 
@@ -230,7 +221,7 @@ public class ProviderIpManagerTests(
                 IpNetwork = "10.0.0.0/15",
                 IpPools =
                 [
-                    new IpPool()
+                    new IpPool
                     {
                         Id = Guid.NewGuid(),
                         Name = EryphConstants.DefaultIpPoolName,
@@ -239,7 +230,7 @@ public class ProviderIpManagerTests(
                         NextIp = "10.0.0.12",
                         LastIp = "10.0.0.19",
                     },
-                    new IpPool()
+                    new IpPool
                     {
                         Id = Guid.NewGuid(),
                         Name = "second-pool",
@@ -247,8 +238,8 @@ public class ProviderIpManagerTests(
                         FirstIp = "10.0.1.10",
                         NextIp = "10.0.1.12",
                         LastIp = "10.0.1.19",
-                    }
-                ]
+                    },
+                ],
             });
 
         await stateStore.For<ProviderSubnet>().AddAsync(
@@ -260,7 +251,7 @@ public class ProviderIpManagerTests(
                 IpNetwork = "10.1.0.0/16",
                 IpPools =
                 [
-                    new IpPool()
+                    new IpPool
                     {
                         Id = Guid.NewGuid(),
                         Name = EryphConstants.DefaultIpPoolName,
@@ -281,7 +272,7 @@ public class ProviderIpManagerTests(
                 IpNetwork = "10.10.0.0/16",
                 IpPools =
                 [
-                    new IpPool()
+                    new IpPool
                     {
                         Id = Guid.NewGuid(),
                         Name = EryphConstants.DefaultIpPoolName,

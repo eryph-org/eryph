@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ModuleCore;
-using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.StateDb.Workflows;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,8 +33,8 @@ public abstract class OperationRequestHandlerBase(
             httpContextAccessor.HttpContext?.TraceIdentifier ?? "",
             command);
 
-        var operationModel = ((StateDb.Workflows.Operation)operation).Model;
-        var mappedModel = mapper.Map<Operation>(operationModel);
+        var operationModel = ((Operation)operation).Model;
+        var mappedModel = mapper.Map<Model.V1.Operation>(operationModel);
         var operationUri = new Uri(endpointResolver.GetEndpoint("compute") + $"/v1/operations/{operationModel.Id}");
 
         return new AcceptedResult(operationUri, mappedModel);

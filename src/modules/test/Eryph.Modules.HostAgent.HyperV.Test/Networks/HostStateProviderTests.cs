@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using Dbosoft.OVN.Model;
 using Eryph.Core;
-using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Data.Core;
@@ -15,11 +14,11 @@ namespace Eryph.Modules.HostAgent.HyperV.Test.Networks;
 
 public class HostStateProviderTests
 {
-    private readonly Mock<IOVSControl> _ovsControlMock = new();
-    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
     private readonly Mock<IHostNetworkCommands<TestRuntime>> _hostNetworkCommandsMock = new();
-    private readonly Mock<ISyncClient> _syncClientMock = new();
+    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
+    private readonly Mock<IOVSControl> _ovsControlMock = new();
     private readonly TestRuntime _runtime;
+    private readonly Mock<ISyncClient> _syncClientMock = new();
 
     public HostStateProviderTests()
     {
@@ -102,9 +101,9 @@ public class HostStateProviderTests
             .Returns(SuccessAff(Seq1(new VMSwitchExtension
             {
                 Enabled = true,
-                Id = switchExtensionId, 
+                Id = switchExtensionId,
                 SwitchId = switchId,
-                SwitchName = EryphConstants.OverlaySwitchName
+                SwitchName = EryphConstants.OverlaySwitchName,
             })));
 
         _hostNetworkCommandsMock.Setup(x => x.GetSwitches())
@@ -179,7 +178,7 @@ public class HostStateProviderTests
                     ("_uuid", OVSValue<Guid>.New(brPifId)),
                     ("name", OVSValue<string>.New("br-pif")),
                     ("ports", OVSReference.New(Seq(brPifPort1Id, brPifPort2Id)))))
-                ));
+            ));
 
         _ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
             .Returns(Seq(
@@ -199,7 +198,7 @@ public class HostStateProviderTests
                     ("_uuid", OVSValue<Guid>.New(brPifPort2Id)),
                     ("name", OVSValue<string>.New("br-pif-bond")),
                     ("interfaces", OVSReference.New(Seq(brPifPort2Interface1Id, brPifPort2Interface2Id)))))
-                ));
+            ));
 
         _ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
             .Returns(Seq(
@@ -239,22 +238,20 @@ public class HostStateProviderTests
         var result = await getHostState().Run(_runtime);
 
         var hostState = result.Should().BeSuccess().Subject;
-        hostState.VMSwitches.Should().SatisfyRespectively(
-            vmSwitch =>
-            {
-                vmSwitch.Id.Should().Be(switchId);
-                vmSwitch.Name.Should().Be(EryphConstants.OverlaySwitchName);
-                vmSwitch.NetAdapterInterfaceGuid.Should().Equal(pif1Id, pif2Id);
-            });
-        
-        hostState.VMSwitchExtensions.Should().SatisfyRespectively(
-            vmSwitchExtension =>
-            {
-                vmSwitchExtension.Id.Should().Be(switchExtensionId);
-                vmSwitchExtension.Enabled.Should().BeTrue();
-                vmSwitchExtension.SwitchId.Should().Be(switchId);
-                vmSwitchExtension.SwitchName.Should().Be(EryphConstants.OverlaySwitchName);
-            });
+        hostState.VMSwitches.Should().SatisfyRespectively(vmSwitch =>
+        {
+            vmSwitch.Id.Should().Be(switchId);
+            vmSwitch.Name.Should().Be(EryphConstants.OverlaySwitchName);
+            vmSwitch.NetAdapterInterfaceGuid.Should().Equal(pif1Id, pif2Id);
+        });
+
+        hostState.VMSwitchExtensions.Should().SatisfyRespectively(vmSwitchExtension =>
+        {
+            vmSwitchExtension.Id.Should().Be(switchExtensionId);
+            vmSwitchExtension.Enabled.Should().BeTrue();
+            vmSwitchExtension.SwitchId.Should().Be(switchId);
+            vmSwitchExtension.SwitchName.Should().Be(EryphConstants.OverlaySwitchName);
+        });
 
         hostState.HostAdapters.Adapters.Should().HaveCount(3);
 
@@ -270,7 +267,8 @@ public class HostStateProviderTests
         pif1Info.ConfiguredName.Should().BeNone();
         pif2Info.IsPhysical.Should().BeTrue();
 
-        var otherAdapterInfo = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("other-adapter").WhoseValue;
+        var otherAdapterInfo = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("other-adapter")
+            .WhoseValue;
         otherAdapterInfo.InterfaceId.Should().Be(otherAdapterId);
         otherAdapterInfo.Name.Should().Be("other-adapter");
         pif1Info.ConfiguredName.Should().BeNone();
@@ -284,38 +282,37 @@ public class HostStateProviderTests
         });
 
         hostState.OvsBridges.Bridges.Should().HaveCount(2);
-        
+
         var brIntInfo = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-int").WhoseValue;
         brIntInfo.Name.Should().Be("br-int");
         brIntInfo.Ports.Should().HaveCount(2);
-        
+
         var brIntPort1Info = brIntInfo.Ports.ToDictionary().Should().ContainKey("br-int").WhoseValue;
         brIntPort1Info.Name.Should().Be("br-int");
         brIntPort1Info.BridgeName.Should().Be("br-int");
-        brIntPort1Info.Interfaces.Should().SatisfyRespectively(
-            i =>
-            {
-                i.Name.Should().Be("br-int");
-                i.Type.Should().Be("internal");
-                i.IsExternal.Should().BeFalse();
-                i.InterfaceId.Should().BeNone();
-                i.HostInterfaceId.Should().BeNone();
-                i.HostInterfaceConfiguredName.Should().BeNone();
-            });
+        brIntPort1Info.Interfaces.Should().SatisfyRespectively(i =>
+        {
+            i.Name.Should().Be("br-int");
+            i.Type.Should().Be("internal");
+            i.IsExternal.Should().BeFalse();
+            i.InterfaceId.Should().BeNone();
+            i.HostInterfaceId.Should().BeNone();
+            i.HostInterfaceConfiguredName.Should().BeNone();
+        });
 
-        var brIntPort2Info = brIntInfo.Ports.ToDictionary().Should().ContainKey("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0").WhoseValue;
+        var brIntPort2Info = brIntInfo.Ports.ToDictionary().Should()
+            .ContainKey("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0").WhoseValue;
         brIntPort2Info.Name.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
         brIntPort2Info.BridgeName.Should().Be("br-int");
-        brIntPort2Info.Interfaces.Should().SatisfyRespectively(
-            i =>
-            {
-                i.Name.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
-                i.Type.Should().Be("");
-                i.IsExternal.Should().BeTrue();
-                i.InterfaceId.Should().BeSome().Which.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
-                i.HostInterfaceId.Should().BeNone();
-                i.HostInterfaceConfiguredName.Should().BeNone();
-            });
+        brIntPort2Info.Interfaces.Should().SatisfyRespectively(i =>
+        {
+            i.Name.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
+            i.Type.Should().Be("");
+            i.IsExternal.Should().BeTrue();
+            i.InterfaceId.Should().BeSome().Which.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
+            i.HostInterfaceId.Should().BeNone();
+            i.HostInterfaceConfiguredName.Should().BeNone();
+        });
 
         var brPifInfo = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-pif").WhoseValue;
         brPifInfo.Name.Should().Be("br-pif");
@@ -324,16 +321,15 @@ public class HostStateProviderTests
         var brPifPort1Info = brPifInfo.Ports.ToDictionary().Should().ContainKey("br-pif").WhoseValue;
         brPifPort1Info.Name.Should().Be("br-pif");
         brPifPort1Info.BridgeName.Should().Be("br-pif");
-        brPifPort1Info.Interfaces.Should().SatisfyRespectively(
-            i =>
-            {
-                i.Name.Should().Be("br-pif");
-                i.Type.Should().Be("internal");
-                i.IsExternal.Should().BeFalse();
-                i.InterfaceId.Should().BeNone();
-                i.HostInterfaceId.Should().BeNone();
-                i.HostInterfaceConfiguredName.Should().BeNone();
-            });
+        brPifPort1Info.Interfaces.Should().SatisfyRespectively(i =>
+        {
+            i.Name.Should().Be("br-pif");
+            i.Type.Should().Be("internal");
+            i.IsExternal.Should().BeFalse();
+            i.InterfaceId.Should().BeNone();
+            i.HostInterfaceId.Should().BeNone();
+            i.HostInterfaceConfiguredName.Should().BeNone();
+        });
 
         var brPifPort2Info = brPifInfo.Ports.ToDictionary().Should().ContainKey("br-pif-bond").WhoseValue;
         brPifPort2Info.Name.Should().Be("br-pif-bond");

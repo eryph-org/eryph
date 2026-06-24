@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace Eryph.Resources.Machines;
 
@@ -19,7 +14,7 @@ public enum CatletStopMode
     /// This mode immediately stops the catlet comparable to pulling the power plug.
     /// </summary>
     Hard = 1,
-    
+
     /// <summary>
     /// This mode terminates the Hyper-V worker process of the catlet. This
     /// mode circumvents the normal logic of Hyper-V and should only be used

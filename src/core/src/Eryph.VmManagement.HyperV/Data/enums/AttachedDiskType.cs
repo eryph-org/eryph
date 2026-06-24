@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum AttachedDiskType
 {
-    public enum AttachedDiskType
-    {
-        None,
-        Virtual,
-        Physical
-    }
+    None,
+    Virtual,
+    Physical,
 }

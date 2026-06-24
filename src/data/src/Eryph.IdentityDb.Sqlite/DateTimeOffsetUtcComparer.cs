@@ -1,4 +1,3 @@
-using System;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Eryph.IdentityDb.Sqlite;

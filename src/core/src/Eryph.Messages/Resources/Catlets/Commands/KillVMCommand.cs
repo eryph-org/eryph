@@ -1,18 +1,13 @@
-﻿using Eryph.Resources;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
 [SendMessageTo(MessageRecipient.VMHostAgent)]
 public class KillVMCommand : IVMCommand, IHasResource
 {
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
     public Guid CatletId { get; set; }
 
     public Guid VmId { get; set; }
-
-    public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

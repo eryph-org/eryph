@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -10,7 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using Catlet = Eryph.StateDb.Model.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
@@ -23,16 +21,15 @@ public class GetConfig(
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlets/{id}/config")]
     [SwaggerOperation(
-        Summary = "Get a catlet configuration",
-        Description = "Get the configuration of a catlet",
-        OperationId = "Catlets_GetConfig",
-        Tags = ["Catlets"])
+            Summary = "Get a catlet configuration",
+            Description = "Get the configuration of a catlet",
+            OperationId = "Catlets_GetConfig",
+            Tags = ["Catlets"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(CatletConfiguration),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(CatletConfiguration), "application/json"),
     ]
     public override async Task<ActionResult<CatletConfiguration>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

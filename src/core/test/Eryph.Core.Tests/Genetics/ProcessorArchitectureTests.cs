@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.Genetics;
-using LanguageExt.Common;
+﻿using Eryph.Core.Genetics;
 
 namespace Eryph.Core.Tests.Genetics;
 
@@ -39,7 +33,7 @@ public class ProcessorArchitectureTests
     {
         var result = ProcessorArchitecture.NewValidation("x86");
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            error => error.Message.Should().Be("The processor architecture is invalid."));
+        result.Should().BeFail().Which.Should().SatisfyRespectively(error =>
+            error.Message.Should().Be("The processor architecture is invalid."));
     }
 }

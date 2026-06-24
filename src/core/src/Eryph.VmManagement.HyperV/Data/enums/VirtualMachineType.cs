@@ -1,8 +1,7 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VirtualMachineType
 {
-    public enum VirtualMachineType
-    {
-        RealizedVirtualMachine = 3,
-        PlannedVirtualMachine = 4
-    }
+    RealizedVirtualMachine = 3,
+    PlannedVirtualMachine = 4,
 }

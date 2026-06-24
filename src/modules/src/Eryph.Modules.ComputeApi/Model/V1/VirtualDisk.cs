@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Resources.Disks;
 
@@ -10,13 +9,13 @@ public class VirtualDisk
     public required string Id { get; set; }
 
     public required string Name { get; set; }
-        
+
     public required string Location { get; set; }
-        
+
     public required string DataStore { get; set; }
-        
+
     public required Project Project { get; set; }
-        
+
     public required string Environment { get; set; }
 
     /// <summary>

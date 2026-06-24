@@ -1,23 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Eryph.ModuleCore.Networks
+namespace Eryph.ModuleCore.Networks;
+
+public class InconsistentNetworkConfigException : Exception
 {
-    public class InconsistentNetworkConfigException : Exception
+    public InconsistentNetworkConfigException()
     {
-        public InconsistentNetworkConfigException()
-        {
-        }
+    }
 
-        public InconsistentNetworkConfigException(string message) : base(message)
-        {
-        }
+    public InconsistentNetworkConfigException(string message) : base(message)
+    {
+    }
 
-        public InconsistentNetworkConfigException(string message, Exception inner) : base(message, inner)
-        {
-        }
+    public InconsistentNetworkConfigException(string message, Exception inner) : base(message, inner)
+    {
     }
 }

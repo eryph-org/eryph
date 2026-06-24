@@ -1,85 +1,84 @@
-﻿using Ardalis.Specification;
-using System;
+﻿using System;
+using Ardalis.Specification;
 using Eryph.StateDb.Model;
 
-namespace Eryph.StateDb.Specifications
+namespace Eryph.StateDb.Specifications;
+
+public class CatletSpecs
 {
-    public class CatletSpecs
+    public sealed class GetByName : Specification<Catlet>, ISingleResultSpecification
     {
-        public sealed class GetByName : Specification<Catlet>, ISingleResultSpecification
+        public GetByName(string name, Guid tenantId, string projectName)
         {
-            public GetByName(string name, Guid tenantId, string projectName)
-            {
-                Query
-                    .Include(x => x.Project)
-                    .Where(x => x.Project.TenantId == tenantId && x.Project.Name == projectName.ToLowerInvariant())
-                    .Where(x => x.Name == name.ToLowerInvariant());
-            }
-
-            public GetByName(string name, Guid projectId)
-            {
-                Query
-                    .Where(x => x.ProjectId == projectId)
-                    .Where(x => x.Name == name.ToLowerInvariant());
-            }
+            Query
+                .Include(x => x.Project)
+                .Where(x => x.Project.TenantId == tenantId && x.Project.Name == projectName.ToLowerInvariant())
+                .Where(x => x.Name == name.ToLowerInvariant());
         }
 
-        public sealed class GetByVmId : Specification<Catlet>, ISingleResultSpecification
+        public GetByName(string name, Guid projectId)
         {
-            public GetByVmId(Guid vmId)
-            {
-                Query.Where(x => x.VmId == vmId)
-                    .Include(x => x.Project);
-            }
+            Query
+                .Where(x => x.ProjectId == projectId)
+                .Where(x => x.Name == name.ToLowerInvariant());
         }
+    }
 
-        public sealed class GetAllVmIds : Specification<Catlet, Guid>
+    public sealed class GetByVmId : Specification<Catlet>, ISingleResultSpecification
+    {
+        public GetByVmId(Guid vmId)
         {
-            public GetAllVmIds(string agent)
-            {
-                Query.Where(c => c.AgentName == agent);
-                Query.Select(c => c.VmId);
-            }
+            Query.Where(x => x.VmId == vmId)
+                .Include(x => x.Project);
         }
+    }
 
-        public sealed class GetById : Specification<Catlet>, ISingleResultSpecification
+    public sealed class GetAllVmIds : Specification<Catlet, Guid>
+    {
+        public GetAllVmIds(string agent)
         {
-            public GetById(Guid id)
-            {
-                Query.Where(x => x.Id == id)
-                    .Include(x => x.Project);
-            }
+            Query.Where(c => c.AgentName == agent);
+            Query.Select(c => c.VmId);
         }
+    }
 
-        public sealed class GetForConfig : Specification<Catlet>, ISingleResultSpecification
+    public sealed class GetById : Specification<Catlet>, ISingleResultSpecification
+    {
+        public GetById(Guid id)
         {
-            public GetForConfig(Guid catletId)
-            {
-                Query.Where(x => x.Id == catletId)
-                    .Include(x => x.Project)
-                    .Include(x => x.Drives)
-                    .ThenInclude(x => x.AttachedDisk)
-                    .ThenInclude(x => x!.Parent);
-            }
+            Query.Where(x => x.Id == id)
+                .Include(x => x.Project);
         }
+    }
 
-        public sealed class GetForDelete : Specification<Catlet>, ISingleResultSpecification
+    public sealed class GetForConfig : Specification<Catlet>, ISingleResultSpecification
+    {
+        public GetForConfig(Guid catletId)
         {
-            public GetForDelete(Guid catletId)
-            {
-                Query.Where(x => x.Id == catletId)
-                    .Include(x => x.Project)
-                    .Include(x => x.Drives)
-                    .ThenInclude(x => x.AttachedDisk);
-            }
+            Query.Where(x => x.Id == catletId)
+                .Include(x => x.Project)
+                .Include(x => x.Drives)
+                .ThenInclude(x => x.AttachedDisk)
+                .ThenInclude(x => x!.Parent);
         }
+    }
 
-        public sealed class GetBySpecificationId : Specification<Catlet>, ISingleResultSpecification
+    public sealed class GetForDelete : Specification<Catlet>, ISingleResultSpecification
+    {
+        public GetForDelete(Guid catletId)
         {
-            public GetBySpecificationId(Guid specificationId)
-            {
-                Query.Where(x => x.SpecificationId == specificationId);
-            }
+            Query.Where(x => x.Id == catletId)
+                .Include(x => x.Project)
+                .Include(x => x.Drives)
+                .ThenInclude(x => x.AttachedDisk);
+        }
+    }
+
+    public sealed class GetBySpecificationId : Specification<Catlet>, ISingleResultSpecification
+    {
+        public GetBySpecificationId(Guid specificationId)
+        {
+            Query.Where(x => x.SpecificationId == specificationId);
         }
     }
 }

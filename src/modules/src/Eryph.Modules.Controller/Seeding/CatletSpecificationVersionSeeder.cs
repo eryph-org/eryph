@@ -16,22 +16,15 @@ using JetBrains.Annotations;
 namespace Eryph.Modules.Controller.Seeding;
 
 [UsedImplicitly]
-internal class CatletSpecificationVersionSeeder : SeederBase
+internal class CatletSpecificationVersionSeeder(
+    ChangeTrackingConfig config,
+    IFileSystem fileSystem,
+    IStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository)
+    : SeederBase(fileSystem, config.CatletSpecificationVersionsConfigPath)
 {
-    private readonly IStateStoreRepository<CatletSpecificationVersion> _specificationVersionRepository;
-
-    public CatletSpecificationVersionSeeder(
-        ChangeTrackingConfig config,
-        IFileSystem fileSystem,
-        IStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository)
-        : base(fileSystem, config.CatletSpecificationVersionsConfigPath)
-    {
-        _specificationVersionRepository = specificationVersionRepository;
-    }
-
     protected override async Task SeedAsync(Guid entityId, string json, CancellationToken cancellationToken = default)
     {
-        bool exists = await _specificationVersionRepository.AnyAsync(
+        var exists = await specificationVersionRepository.AnyAsync(
             new CatletSpecificationVersionSpecs.GetByIdReadOnly(entityId),
             cancellationToken);
         if (exists)
@@ -64,11 +57,10 @@ internal class CatletSpecificationVersionSeeder : SeederBase
                             .ToDictionary()
                             .ToGenesList(entityId),
                     };
-                }).ToList()
-
+                }).ToList(),
         };
 
-        await _specificationVersionRepository.AddAsync(specificationVersion, cancellationToken);
-        await _specificationVersionRepository.SaveChangesAsync(cancellationToken);
+        await specificationVersionRepository.AddAsync(specificationVersion, cancellationToken);
+        await specificationVersionRepository.SaveChangesAsync(cancellationToken);
     }
 }

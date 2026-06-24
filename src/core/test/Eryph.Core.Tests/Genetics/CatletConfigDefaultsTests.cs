@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 
 namespace Eryph.Core.Tests.Genetics;
@@ -17,20 +12,19 @@ public class CatletConfigDefaultsTests
 
         var result = CatletConfigDefaults.ApplyDefaultNetwork(config);
 
-        result.Networks.Should().SatisfyRespectively(
-            n =>
-            {
-                n.Name.Should().Be(EryphConstants.DefaultNetworkName);
-                n.AdapterName.Should().BeNull();
-                n.SubnetV4.Should().BeNull();
-                n.SubnetV6.Should().BeNull();
-            });
+        result.Networks.Should().SatisfyRespectively(n =>
+        {
+            n.Name.Should().Be(EryphConstants.DefaultNetworkName);
+            n.AdapterName.Should().BeNull();
+            n.SubnetV4.Should().BeNull();
+            n.SubnetV6.Should().BeNull();
+        });
     }
 
     [Fact]
     public void ApplyDefaultNetwork_NetworkConfigured_KeepsExistingNetwork()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Networks =
             [
@@ -43,18 +37,17 @@ public class CatletConfigDefaultsTests
 
         var result = CatletConfigDefaults.ApplyDefaultNetwork(config);
 
-        result.Networks.Should().SatisfyRespectively(
-            network =>
-            {
-                network.Name.Should().Be("network1");
-                network.AdapterName.Should().BeNull();
-            });
+        result.Networks.Should().SatisfyRespectively(network =>
+        {
+            network.Name.Should().Be("network1");
+            network.AdapterName.Should().BeNull();
+        });
     }
 
     [Fact]
     public void ApplyDefaults_MissingData_AppliesDefaults()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Networks =
             [
@@ -86,7 +79,7 @@ public class CatletConfigDefaultsTests
     [Fact]
     public void ApplyDefaults_NoMissingData_KeepsExistingData()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Name = "test-catlet",
             Hostname = "TESTCATLET",

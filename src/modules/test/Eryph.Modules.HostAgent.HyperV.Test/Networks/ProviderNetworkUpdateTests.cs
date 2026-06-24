@@ -2,7 +2,6 @@
 using Dbosoft.OVN.Model;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement;
@@ -17,13 +16,12 @@ namespace Eryph.Modules.HostAgent.HyperV.Test.Networks;
 
 public class ProviderNetworkUpdateTests
 {
-    private readonly Mock<IOVSControl> _ovsControlMock = new();
-    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
-    private readonly Mock<IHostNetworkCommands<TestRuntime>> _hostNetworkCommandsMock = new();
-    private readonly Mock<ISyncClient> _syncClientMock = new();
-    private readonly TestRuntime _runtime;
-
     private static readonly Guid OverlaySwitchId = Guid.NewGuid();
+    private readonly Mock<IHostNetworkCommands<TestRuntime>> _hostNetworkCommandsMock = new();
+    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
+    private readonly Mock<IOVSControl> _ovsControlMock = new();
+    private readonly TestRuntime _runtime;
+    private readonly Mock<ISyncClient> _syncClientMock = new();
 
     public ProviderNetworkUpdateTests()
     {
@@ -75,7 +73,8 @@ public class ProviderNetworkUpdateTests
         pif1Info.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
         pif1Info.IsPhysical.Should().BeTrue();
 
-        var pif1OldInfo = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old").WhoseValue;
+        var pif1OldInfo = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old")
+            .WhoseValue;
         pif1OldInfo.InterfaceId.Should().Be(pif1Id);
         pif1OldInfo.Name.Should().Be("pif-1");
         pif1OldInfo.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
@@ -128,7 +127,8 @@ public class ProviderNetworkUpdateTests
         pif1Info.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
         pif1Info.IsPhysical.Should().BeTrue();
 
-        var pif1OldInfo = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old").WhoseValue;
+        var pif1OldInfo = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old")
+            .WhoseValue;
         pif1OldInfo.InterfaceId.Should().Be(pif1Id);
         pif1OldInfo.Name.Should().Be("pif-1");
         pif1OldInfo.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
@@ -231,8 +231,8 @@ public class ProviderNetworkUpdateTests
                             Name = "default",
                             Gateway = "10.249.248.1",
                             Network = "10.249.248.0/24",
-                        }
-                    ]
+                        },
+                    ],
                 },
             ],
         };
@@ -246,7 +246,7 @@ public class ProviderNetworkUpdateTests
             }),
         };
 
-        var result = await generateChanges(hostState, providersConfig,false).Run(_runtime);
+        var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
 
         result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
             operation => operation.Operation.Should().Be(NetworkChangeOperation.AddBridge),
@@ -276,8 +276,8 @@ public class ProviderNetworkUpdateTests
                             Name = "default",
                             Gateway = "10.249.248.1",
                             Network = "10.249.248.0/24",
-                        }
-                    ]
+                        },
+                    ],
                 },
             ],
         };
@@ -303,7 +303,7 @@ public class ProviderNetworkUpdateTests
             HostAdapters = new HostAdaptersInfo(HashMap(
                 ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true, OverlaySwitchId)),
                 ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false, OverlaySwitchId))
-                )),
+            )),
         };
 
         var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
@@ -344,8 +344,8 @@ public class ProviderNetworkUpdateTests
                             Name = "default",
                             Gateway = "10.249.248.1",
                             Network = "10.249.248.0/24",
-                        }
-                    ]
+                        },
+                    ],
                 },
             ],
         };
@@ -371,13 +371,13 @@ public class ProviderNetworkUpdateTests
             HostAdapters = new HostAdaptersInfo(HashMap(
                 ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true, OverlaySwitchId)),
                 ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false, OverlaySwitchId))
-                )),
+            )),
         };
 
         var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
 
-        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
-            operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(operation =>
+            operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
     }
 
     [Fact]
@@ -403,8 +403,8 @@ public class ProviderNetworkUpdateTests
                             Name = "default",
                             Gateway = "10.249.248.1",
                             Network = "10.249.248.0/24",
-                        }
-                    ]
+                        },
+                    ],
                 },
             ],
         };
@@ -525,15 +525,15 @@ public class ProviderNetworkUpdateTests
                     Name = "test-provider",
                     Type = NetworkProviderType.NatOverlay,
                     BridgeName = "br-test",
-                    Subnets = 
+                    Subnets =
                     [
                         new NetworkProviderSubnet
                         {
                             Name = "default",
                             Gateway = "10.0.1.1",
                             Network = eryphNetwork,
-                        }
-                    ]
+                        },
+                    ],
                 },
             ],
         };
@@ -549,7 +549,8 @@ public class ProviderNetworkUpdateTests
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
 
         result.Should().BeFail().Which.Message
-            .Should().Be($"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of the NAT 'other-nat' which is not managed by eryph.");
+            .Should().Be(
+                $"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of the NAT 'other-nat' which is not managed by eryph.");
     }
 
     [Theory]
@@ -574,8 +575,8 @@ public class ProviderNetworkUpdateTests
                             Name = "default",
                             Gateway = "10.0.1.1",
                             Network = eryphNetwork,
-                        }
-                    ]
+                        },
+                    ],
                 },
             ],
         };
@@ -585,7 +586,7 @@ public class ProviderNetworkUpdateTests
             Seq1(new VMSwitch
             {
                 Id = OverlaySwitchId,
-                Name = EryphConstants.OverlaySwitchName
+                Name = EryphConstants.OverlaySwitchName,
             }),
             new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
             Seq<NetNat>(),
@@ -595,11 +596,12 @@ public class ProviderNetworkUpdateTests
         var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
 
         result.Should().BeFail().Which.Message
-            .Should().Be($"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of a network route which is not managed by eryph.");
+            .Should().Be(
+                $"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of a network route which is not managed by eryph.");
     }
 
     private static HostState CreateStateWithOverlaySwitch() =>
-        new HostState(
+        new(
             Seq1(new VMSwitchExtension
             {
                 Id = Guid.NewGuid().ToString(),

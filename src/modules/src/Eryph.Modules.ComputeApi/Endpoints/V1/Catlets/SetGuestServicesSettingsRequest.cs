@@ -5,8 +5,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class SetGuestServicesSettingsRequest : SingleEntityRequest
 {
-    [FromBody]
-    public required GuestServicesSettingsBody Body { get; set; }
+    [FromBody] public required GuestServicesSettingsBody Body { get; set; }
 }
 
 public class GuestServicesSettingsBody

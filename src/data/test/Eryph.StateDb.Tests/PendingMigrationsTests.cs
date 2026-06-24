@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.StateDb.Design.Factories;
+﻿using Eryph.StateDb.Design.Factories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -19,8 +14,8 @@ public class PendingMigrationsTests
     {
         var factory = (IDesignTimeDbContextFactory<StateStoreContext>)
             Activator.CreateInstance(designTimeFactory)!;
-        
-        await using var dbContext = factory.CreateDbContext(Array.Empty<string>());
+
+        await using var dbContext = factory.CreateDbContext([]);
 
         dbContext.Database.HasPendingModelChanges().Should().BeFalse();
     }

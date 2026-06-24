@@ -2,5 +2,5 @@
 
 public class CatletOperationResult : OperationResult
 {
-    public required string CatletId { get; set; } 
+    public required string CatletId { get; set; }
 }

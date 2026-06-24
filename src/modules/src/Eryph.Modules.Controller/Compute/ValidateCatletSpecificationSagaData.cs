@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
-using System.Collections.Generic;
 
 namespace Eryph.Modules.Controller.Compute;
 

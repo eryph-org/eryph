@@ -1,5 +1,5 @@
-﻿using Eryph.Resources;
-using System;
+﻿using System;
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
@@ -7,6 +7,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 public class DestroyCatletCommand : IHasResource, ICommandWithName
 {
     public Guid CatletId { get; set; }
-    public Resource Resource => new(ResourceType.Catlet, CatletId);
     public string GetCommandName() => "Destroy Catlet";
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

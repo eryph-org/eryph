@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
@@ -36,7 +33,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         // the configured network adapters. Adapters which are not attached to
         // any network are converged as disconnected Hyper-V adapters.
         from adapterNames in (Context.Config.Networks.ToSeq().Map(n => n.AdapterName)
-                + Context.Config.NetworkAdapters.ToSeq().Map(a => a.Name))
+                              + Context.Config.NetworkAdapters.ToSeq().Map(a => a.Name))
             .Map(CatletNetworkAdapterName.NewEither)
             .Sequence()
             .Map(names => names.Distinct())
@@ -50,12 +47,12 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         Context.NetworkSettings.ToSeq()
             .Find(s => CatletNetworkAdapterName.NewOption(s.AdapterName) == adapterName)
             .Match(
-                Some: settings => PrepareConnectedAdapterConfig(adapterName, settings),
+                settings => PrepareConnectedAdapterConfig(adapterName, settings),
                 // An adapter is only converged as disconnected when it is not attached
                 // to any network. When it is attached to a network but has no network
                 // settings, the settings generation is incomplete. We fail instead of
                 // silently disconnecting the adapter.
-                None: () => IsAttachedToNetwork(adapterName)
+                () => IsAttachedToNetwork(adapterName)
                     ? Left<Error, PhysicalAdapterConfig>(Error.New(
                         $"Could not find the network settings for adapter '{adapterName}' which is attached to a network."))
                     : PrepareDisconnectedAdapterConfig(adapterName));
@@ -157,8 +154,8 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         let adapterName = CatletNetworkAdapterName.New(adapterConfig.AdapterName)
         let adapter = adapters.Find(a => CatletNetworkAdapterName.NewOption(a.Value.Name) == adapterName)
         from __ in adapter.Match(
-            Some: a => UpdateAdapter(adapterConfig, a),
-            None: () => AddAdapter(adapterConfig, vmInfo))
+            a => UpdateAdapter(adapterConfig, a),
+            () => AddAdapter(adapterConfig, vmInfo))
         select unit;
 
     private EitherAsync<Error, Unit> AddAdapter(
@@ -184,11 +181,11 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             // Sometimes, it takes a moment until we can actually read the OVS port name
             // from a newly created adapter. In the end, we need to access the
             // Msvm_EthernetPortAllocationSettingData for that adapter via WMI.
-            Some: portName =>
+            portName =>
                 from __ in WaitForPortName(createdAdapter.Value.Id).Run().ToEitherAsync()
                 from ___ in Context.PortManager.SetPortName(createdAdapter.Value.Id, portName)
                 select unit,
-            None: () => RightAsync<Error, Unit>(unit))
+            () => RightAsync<Error, Unit>(unit))
         from _3 in ConvergeSecuritySettings(createdAdapter, adapterConfig)
         select unit;
 
@@ -201,13 +198,13 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         // is attached again. While disconnected the adapter is on no switch, hence
         // the leftover name is inert.
         from _1 in adapterConfig.PortName.Match(
-            Some: portName =>
+            portName =>
                 from currentPortName in Context.PortManager.GetPortName(adapter.Value.Id)
                 from __ in currentPortName == portName
                     ? RightAsync<Error, Unit>(unit)
                     : Context.PortManager.SetPortName(adapter.Value.Id, portName)
                 select unit,
-            None: () => RightAsync<Error, Unit>(unit))
+            () => RightAsync<Error, Unit>(unit))
         from _2 in adapter.Value.MacAddress == adapterConfig.MacAddress
             ? RightAsync<Error, Unit>(unit)
             : UpdateMacAddress(adapter, adapterConfig.MacAddress)
@@ -219,13 +216,13 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         TypedPsObject<VMNetworkAdapter> adapter,
         PhysicalAdapterConfig adapterConfig) =>
         adapterConfig.SwitchName.Match(
-            Some: switchName =>
+            switchName =>
                 adapter.Value.Connected && adapter.Value.SwitchName == switchName
                     ? RightAsync<Error, Unit>(unit)
                     : ConnectAdapter(adapter, switchName, adapterConfig.NetworkName),
             // The adapter is not attached to any network. Disconnect it from
             // its virtual switch if necessary.
-            None: () => adapter.Value.Connected
+            () => adapter.Value.Connected
                 ? DisconnectAdapter(adapter)
                 : RightAsync<Error, Unit>(unit));
 

@@ -1,10 +1,8 @@
 ﻿using Dbosoft.Functional;
-using Eryph.Core;
 using LanguageExt;
 using LanguageExt.Common;
 using Spectre.Console;
 using Spectre.Console.Rendering;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.AnsiConsole.Sys;
@@ -17,8 +15,8 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
         {
             DefaultValue = defaultValue,
         }
-        from result in default(RT).AnsiConsoleEff.MapAsync(
-            async ac => await consolePrompt.ShowAsync(ac.AnsiConsole, cancelToken))
+        from result in default(RT).AnsiConsoleEff.MapAsync(async ac =>
+            await consolePrompt.ShowAsync(ac.AnsiConsole, cancelToken))
         select result;
 
     public static Aff<RT, T> prompt<T>(
@@ -28,18 +26,18 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
         from cancelToken in cancelToken<RT>()
         // The default value is ignored in case it does not pass validation.
         let validDefaultValue = from v in defaultValue
-                                from _ in validate(v).ToOption()
-                                select v
+            from _ in validate(v).ToOption()
+            select v
         let consolePrompt = new TextPrompt<string>(prompt)
             .Validate(v => validate(v).Match(
-                Succ: _ => ValidationResult.Success(),
-                Fail: errors => ValidationResult.Error(
+                _ => ValidationResult.Success(),
+                errors => ValidationResult.Error(
                     $"[red]{Markup.Escape(Error.Many(errors).Print())}[/]")))
         let consolePromptWithDefault = validDefaultValue.Match(
-            Some: consolePrompt.DefaultValue,
-            None: () => consolePrompt)
-        from result in default(RT).AnsiConsoleEff.MapAsync(
-            async ac => await consolePromptWithDefault.ShowAsync(ac.AnsiConsole, cancelToken))
+            consolePrompt.DefaultValue,
+            () => consolePrompt)
+        from result in default(RT).AnsiConsoleEff.MapAsync(async ac =>
+            await consolePromptWithDefault.ShowAsync(ac.AnsiConsole, cancelToken))
         // We validate again as the validate function also performs the parsing.
         // The validation should always be successful. Otherwise, the prompt would
         // not have succeeded.
@@ -62,8 +60,8 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
         let task = tcs.Task
         from __ in fork(
             from ct in cancelToken<RT>()
-            from _ in default(RT).AnsiConsoleEff.MapAsync(
-                async ac => await ac.AnsiConsole.Status().StartAsync(text, async _ =>
+            from _ in default(RT).AnsiConsoleEff.MapAsync(async ac => await ac.AnsiConsole.Status().StartAsync(text,
+                async _ =>
                 {
                     await task.WaitAsync(ct);
                     return unit;
@@ -84,7 +82,7 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
         {
             return await ansiConsole.AnsiConsole.Progress().StartAsync(async ctx =>
             {
-                var progressTask = ctx.AddTask(taskName, autoStart: true, maxValue: 1d);
+                var progressTask = ctx.AddTask(taskName, true, 1d);
 
                 Eff<Unit> ReportProgress(double value) => Eff(() =>
                 {
@@ -98,7 +96,7 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
         select result;
 
     public static Aff<RT, T> withSpinner<T>(
-        string text, 
+        string text,
         Aff<RT, T> aff) =>
         from ansiConsole in default(RT).AnsiConsoleEff
         from result in AffMaybe<RT, T>(async rt =>

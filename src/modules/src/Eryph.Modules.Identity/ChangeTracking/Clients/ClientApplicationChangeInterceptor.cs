@@ -8,15 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Identity.ChangeTracking.Clients;
 
-internal class ClientApplicationChangeInterceptor : ChangeInterceptorBase<ClientApplicationChange>
+internal class ClientApplicationChangeInterceptor(
+    IChangeTrackingQueue<ClientApplicationChange> queue,
+    ILogger logger)
+    : ChangeInterceptorBase<ClientApplicationChange>(queue, logger)
 {
-    public ClientApplicationChangeInterceptor(
-        IChangeTrackingQueue<ClientApplicationChange> queue,
-        ILogger logger)
-        : base(queue, logger)
-    {
-    }
-
     protected override Task<Seq<ClientApplicationChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)

@@ -1,39 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Model.V1;
-using Microsoft.AspNetCore.Mvc;
-using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using Gene = Eryph.StateDb.Model.Gene;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
 public class Get(
-    IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage> requestHandler,
-    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene> specBuilder)
-    : GetEntityEndpoint<SingleEntityRequest, GeneWithUsage, StateDb.Model.Gene>(requestHandler, specBuilder)
+    IGetRequestHandler<Gene, GeneWithUsage> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, Gene> specBuilder)
+    : GetEntityEndpoint<SingleEntityRequest, GeneWithUsage, Gene>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:genes:read")]
     [HttpGet("genes/{id}")]
     [SwaggerOperation(
-        Summary = "Get a gene",
-        Description = "Get a gene",
-        OperationId = "Genes_Get",
-        Tags = ["Genes"])
+            Summary = "Get a gene",
+            Description = "Get a gene",
+            OperationId = "Genes_Get",
+            Tags = ["Genes"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(GeneWithUsage),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(GeneWithUsage), "application/json"),
     ]
     public override async Task<ActionResult<GeneWithUsage>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

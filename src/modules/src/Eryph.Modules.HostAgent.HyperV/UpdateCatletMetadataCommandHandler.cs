@@ -6,20 +6,16 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Modules.HostAgent
-{
-    internal class UpdateCatletMetadataCommandHandler : 
-        CatletConfigCommandHandler<UpdateCatletMetadataCommand, Unit>
-    {
-        public UpdateCatletMetadataCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log) : base(engine, messaging, log)
-        {
-        }
+namespace Eryph.Modules.HostAgent;
 
-        protected override EitherAsync<Error, Unit> HandleCommand(
-            UpdateCatletMetadataCommand command) =>
-            from vmInfo in VmQueries.GetVmInfo(Engine, command.VmId)
-            from _1 in EnsureMetadata(vmInfo, command.CurrentMetadataId)
-            from _2 in SetMetadataId(vmInfo, command.NewMetadataId)
-            select Unit.Default;
-    }
+internal class UpdateCatletMetadataCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log)
+    :
+        CatletConfigCommandHandler<UpdateCatletMetadataCommand, Unit>(engine, messaging, log)
+{
+    protected override EitherAsync<Error, Unit> HandleCommand(
+        UpdateCatletMetadataCommand command) =>
+        from vmInfo in VmQueries.GetVmInfo(Engine, command.VmId)
+        from _1 in EnsureMetadata(vmInfo, command.CurrentMetadataId)
+        from _2 in SetMetadataId(vmInfo, command.NewMetadataId)
+        select Unit.Default;
 }

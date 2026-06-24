@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using Ardalis.Specification;
 using Eryph.Core;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 
 namespace Eryph.StateDb.Specifications;
 
-public static class ResourceSpecs<T> where T: Resource
+public static class ResourceSpecs<T> where T : Resource
 {
     public sealed class GetAll : Specification<T>
     {
@@ -19,7 +18,7 @@ public static class ResourceSpecs<T> where T: Resource
         {
             authContext.QueryResourceAccess(Query, sufficientRoles);
 
-            if (filteredProject!= null) 
+            if (filteredProject != null)
                 Query.Where(x => x.ProjectId == filteredProject.GetValueOrDefault());
 
             Query.OrderBy(x => x.Id);
@@ -42,7 +41,6 @@ public static class ResourceSpecs<T> where T: Resource
         {
             Query.Where(x => x.Id == id).Include(x => x.Project);
             customizeAction?.Invoke(Query);
-
         }
 
         public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles,
@@ -50,9 +48,8 @@ public static class ResourceSpecs<T> where T: Resource
         {
             Query.Where(x => x.Id == id);
             authContext.QueryResourceAccess(Query, sufficientRoles);
-                
-            customizeAction?.Invoke(Query);
 
+            customizeAction?.Invoke(Query);
         }
     }
 }

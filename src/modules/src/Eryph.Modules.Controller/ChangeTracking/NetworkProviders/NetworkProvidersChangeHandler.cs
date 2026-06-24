@@ -15,57 +15,42 @@ using LanguageExt;
 
 namespace Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 
-internal class NetworkProvidersChangeHandler
+internal class NetworkProvidersChangeHandler(
+    ChangeTrackingConfig config,
+    IFileSystem fileSystem,
+    INetworkProviderManager networkProviderManager,
+    IStateStore stateStore)
     : IChangeHandler<NetworkProvidersChange>
 {
-    private readonly ChangeTrackingConfig _config;
-    private readonly IFileSystem _fileSystem;
-    private readonly INetworkProviderManager _networkProviderManager;
-    private readonly IStateStore _stateStore;
-
-    public NetworkProvidersChangeHandler(
-        ChangeTrackingConfig config,
-        IFileSystem fileSystem,
-        INetworkProviderManager networkProviderManager,
-        IStateStore stateStore)
-    {
-        _config = config;
-        _fileSystem = fileSystem;
-        _networkProviderManager = networkProviderManager;
-        _stateStore = stateStore;
-    }
-
     public async Task HandleChangeAsync(
         NetworkProvidersChange change,
         CancellationToken cancellationToken = default)
     {
-        var portsConfigPath = Path.Combine(_config.NetworksConfigPath, "ports.json");
+        var portsConfigPath = Path.Combine(config.NetworksConfigPath, "ports.json");
 
         var providersConfig = await PrepareProvidersConfig(cancellationToken);
         var portsConfig = await PreparePortsConfig(cancellationToken);
 
-        await _networkProviderManager.SaveConfiguration(providersConfig);
-        await _fileSystem.File.WriteAllTextAsync(
+        await networkProviderManager.SaveConfiguration(providersConfig);
+        await fileSystem.File.WriteAllTextAsync(
             portsConfigPath, portsConfig, Encoding.UTF8, cancellationToken);
     }
 
     private async Task<NetworkProvidersConfiguration> PrepareProvidersConfig(
         CancellationToken cancellationToken)
     {
-        var providerSubnets = await _stateStore.For<ProviderSubnet>().ListAsync(
+        var providerSubnets = await stateStore.For<ProviderSubnet>().ListAsync(
             new ProviderSubnetSpecs.GetForChangeTracking(), cancellationToken);
 
-        var config = await _networkProviderManager.GetCurrentConfiguration()
+        var config = await networkProviderManager.GetCurrentConfiguration()
             .IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
         foreach (var subnet in providerSubnets)
         {
             var providerConfig = config.NetworkProviders
                 .FirstOrDefault(p => p.Name == subnet.ProviderName);
-            if (providerConfig is null)
-                continue;
 
-            var subnetConfig = providerConfig.Subnets
+            var subnetConfig = providerConfig?.Subnets
                 .FirstOrDefault(s => s.Name == subnet.Name);
             if (subnetConfig is null)
                 continue;
@@ -74,10 +59,8 @@ internal class NetworkProvidersChangeHandler
             {
                 var poolConfig = subnetConfig.IpPools
                     .FirstOrDefault(p => p.Name == ipPool.Name);
-                if (poolConfig is null)
-                    continue;
 
-                poolConfig.NextIp = ipPool.NextIp;
+                poolConfig?.NextIp = ipPool.NextIp;
             }
         }
 
@@ -87,12 +70,12 @@ internal class NetworkProvidersChangeHandler
     private async Task<string> PreparePortsConfig(
         CancellationToken cancellationToken)
     {
-        var floatingPorts = await _stateStore.For<FloatingNetworkPort>().ListAsync(
+        var floatingPorts = await stateStore.For<FloatingNetworkPort>().ListAsync(
             new FloatingNetworkPortSpecs.GetForChangeTracking(), cancellationToken);
 
-        var config = new FloatingNetworkPortsConfigModel()
+        var config = new FloatingNetworkPortsConfigModel
         {
-            FloatingPorts = floatingPorts.Map(p => new FloatingNetworkPortConfigModel()
+            FloatingPorts = floatingPorts.Map(p => new FloatingNetworkPortConfigModel
             {
                 Name = p.Name,
                 MacAddress = p.MacAddress,
@@ -101,13 +84,13 @@ internal class NetworkProvidersChangeHandler
                 PoolName = p.PoolName,
                 IpAssignments = p.IpAssignments.Map(a =>
                     a is IpPoolAssignment pa
-                        ? new IpAssignmentConfigModel()
+                        ? new IpAssignmentConfigModel
                         {
                             IpAddress = pa.IpAddress,
                             SubnetName = pa.Subnet!.Name,
                             PoolName = pa.Pool.Name,
                         }
-                        : new IpAssignmentConfigModel()
+                        : new IpAssignmentConfigModel
                         {
                             IpAddress = a.IpAddress,
                             SubnetName = a.Subnet!.Name,

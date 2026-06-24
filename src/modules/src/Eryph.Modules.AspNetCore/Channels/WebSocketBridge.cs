@@ -102,7 +102,6 @@ public static class WebSocketBridge
                     // (RFC 6455); otherwise the closing side waits until the socket is disposed. The
                     // stream side is torn down via the linked token in the finally.
                     if (source.State == WebSocketState.CloseReceived)
-                    {
                         try
                         {
                             await source.CloseOutputAsync(
@@ -114,7 +113,6 @@ public static class WebSocketBridge
                         {
                             // Peer already gone; ignore.
                         }
-                    }
 
                     break;
                 }
@@ -172,18 +170,16 @@ public static class WebSocketBridge
                 {
                     // The hvsocket reached end-of-stream; signal a clean close to the WebSocket peer.
                     if (destination.State == WebSocketState.Open)
-                    {
                         try
                         {
                             await destination.CloseOutputAsync(
-                                WebSocketCloseStatus.NormalClosure, null, CancellationToken.None)
+                                    WebSocketCloseStatus.NormalClosure, null, CancellationToken.None)
                                 .ConfigureAwait(false);
                         }
                         catch (WebSocketException)
                         {
                             // Destination already gone; ignore.
                         }
-                    }
 
                     break;
                 }
@@ -196,7 +192,7 @@ public static class WebSocketBridge
                     await destination.SendAsync(
                         new ArraySegment<byte>(buffer, 0, read),
                         WebSocketMessageType.Binary,
-                        endOfMessage: true,
+                        true,
                         token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
@@ -250,7 +246,6 @@ public static class WebSocketBridge
                     // Acknowledge the close to the peer that sent it so its close handshake completes
                     // (RFC 6455); otherwise the closing side waits until the socket is disposed.
                     if (source.State == WebSocketState.CloseReceived)
-                    {
                         try
                         {
                             await source.CloseOutputAsync(
@@ -262,11 +257,9 @@ public static class WebSocketBridge
                         {
                             // Source already gone; ignore.
                         }
-                    }
 
                     // Mirror the close to the destination so the far side sees a clean shutdown.
                     if (destination.State == WebSocketState.Open)
-                    {
                         try
                         {
                             await destination.CloseOutputAsync(
@@ -278,7 +271,6 @@ public static class WebSocketBridge
                         {
                             // Destination already gone; ignore.
                         }
-                    }
 
                     break;
                 }

@@ -28,7 +28,7 @@ internal static class ZeroLogging
         var consoleTemplate = new ExpressionTemplate(
             "WARMUP [{@t:HH:mm:ss} {@l:u3}] {@m}\n{@x}{InnerError}",
             theme: null);
-        
+
         return CreateLoggerBaseConfig(configuration)
             .WriteTo.Logger(c => c
                 .MinimumLevel.Information()
@@ -64,7 +64,7 @@ internal static class ZeroLogging
             .Enrich.With<ErrorEnricher>()
             .WriteTo.Logger(c => c
                 .MinimumLevel.Error()
-                .WriteTo.EventLog(source: "eryph-zero", logName: "Application"))
+                .WriteTo.EventLog("eryph-zero", "Application"))
             .WriteTo.Logger(c => c
                 .WriteTo.File(
                     fileTemplate,

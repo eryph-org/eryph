@@ -17,7 +17,7 @@ public class ApiResultFactory(
 
         var problemDetails = problemDetailsFactory.CreateProblemDetails(
             httpContext,
-            statusCode: statusCode,
+            statusCode,
             detail: detail);
 
         return new ObjectResult(problemDetails)

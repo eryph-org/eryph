@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Functional.Validations;
@@ -22,7 +19,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
@@ -54,10 +50,10 @@ public class Create(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("virtualdisks")]
     [SwaggerOperation(
-        Summary = "Create a virtual disk",
-        Description = "Create a virtual disk",
-        OperationId = "VirtualDisks_Create",
-        Tags = ["Virtual Disks"])
+            Summary = "Create a virtual disk",
+            Description = "Create a virtual disk",
+            OperationId = "VirtualDisks_Create",
+            Tags = ["Virtual Disks"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewVirtualDiskRequest request,
@@ -93,7 +89,8 @@ public class Create(
         if (diskExists)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: $"A disk with the name '{request.Name}' already exists in the specified storage location. Disk names must be unique within a storage location.");
+                detail:
+                $"A disk with the name '{request.Name}' already exists in the specified storage location. Disk names must be unique within a storage location.");
 
         return await base.HandleAsync(request, cancellationToken);
     }

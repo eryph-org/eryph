@@ -16,7 +16,7 @@ internal static class HashAlgorithmExtensions
         return SHA256.Create();
     }
 
-    public static  HashAlgorithm CreateAlgorithm(this GenePartHash genePartHash)
+    public static HashAlgorithm CreateAlgorithm(this GenePartHash genePartHash)
     {
         if (genePartHash.Algorithm is not "sha1")
             throw new ArgumentException(
@@ -26,33 +26,36 @@ internal static class HashAlgorithmExtensions
         return SHA1.Create();
     }
 
-    public static GeneHash ToGeneHash(this HashAlgorithm hashAlgorithm)
+    extension(HashAlgorithm hashAlgorithm)
     {
-        if (hashAlgorithm is not SHA256 sha256)
-            throw new ArgumentException(
-                $"The algorithm {hashAlgorithm.GetType().Name} is not supported.",
-                nameof(hashAlgorithm));
+        public GeneHash ToGeneHash()
+        {
+            if (hashAlgorithm is not SHA256 sha256)
+                throw new ArgumentException(
+                    $"The algorithm {hashAlgorithm.GetType().Name} is not supported.",
+                    nameof(hashAlgorithm));
 
-        if (sha256.Hash is null)
-            throw new ArgumentException(
-                "The hash of the gene has not been computed.",
-                nameof(hashAlgorithm));
+            if (sha256.Hash is null)
+                throw new ArgumentException(
+                    "The hash of the gene has not been computed.",
+                    nameof(hashAlgorithm));
 
-        return new GeneHash($"sha256:{Convert.ToHexString(sha256.Hash).ToLowerInvariant()}");
-    }
+            return new GeneHash($"sha256:{Convert.ToHexString(sha256.Hash).ToLowerInvariant()}");
+        }
 
-    public static GenePartHash ToGenePartHash(this HashAlgorithm hashAlgorithm)
-    {
-        if (hashAlgorithm is not SHA1 sha1)
-            throw new ArgumentException(
-                $"The algorithm {hashAlgorithm.GetType().Name} is not supported.",
-                nameof(hashAlgorithm));
+        public GenePartHash ToGenePartHash()
+        {
+            if (hashAlgorithm is not SHA1 sha1)
+                throw new ArgumentException(
+                    $"The algorithm {hashAlgorithm.GetType().Name} is not supported.",
+                    nameof(hashAlgorithm));
 
-        if (sha1.Hash is null)
-            throw new ArgumentException(
-                "The hash of the gene part has not been computed.",
-                nameof(hashAlgorithm));
+            if (sha1.Hash is null)
+                throw new ArgumentException(
+                    "The hash of the gene part has not been computed.",
+                    nameof(hashAlgorithm));
 
-        return new GenePartHash($"sha1:{Convert.ToHexString(sha1.Hash).ToLowerInvariant()}");
+            return new GenePartHash($"sha1:{Convert.ToHexString(sha1.Hash).ToLowerInvariant()}");
+        }
     }
 }

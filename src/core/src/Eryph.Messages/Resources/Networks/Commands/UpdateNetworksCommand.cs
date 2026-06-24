@@ -1,11 +1,10 @@
 ﻿using System;
 
-namespace Eryph.Messages.Resources.Networks.Commands
+namespace Eryph.Messages.Resources.Networks.Commands;
+
+[SendMessageTo(MessageRecipient.Controllers)]
+public class UpdateNetworksCommand : IHasCorrelationId
 {
-    [SendMessageTo(MessageRecipient.Controllers)]
-    public class UpdateNetworksCommand : IHasCorrelationId
-    {
-        public Guid[] Projects { get; set; }
-        public Guid CorrelationId { get; set; }
-    }
+    public Guid[] Projects { get; set; }
+    public Guid CorrelationId { get; set; }
 }

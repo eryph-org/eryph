@@ -6,13 +6,12 @@ namespace Eryph.Core;
 
 public interface INetworkProviderManager
 {
+    NetworkProviderDefaults Defaults { get; }
     EitherAsync<Error, string> GetCurrentConfigurationYaml();
 
     EitherAsync<Error, NetworkProvidersConfiguration> GetCurrentConfiguration();
-    
-    EitherAsync<Error, Unit> SaveConfigurationYaml(string config);
-    
-    EitherAsync<Error, Unit> SaveConfiguration(NetworkProvidersConfiguration config);
 
-    NetworkProviderDefaults Defaults { get; }
+    EitherAsync<Error, Unit> SaveConfigurationYaml(string config);
+
+    EitherAsync<Error, Unit> SaveConfiguration(NetworkProvidersConfiguration config);
 }

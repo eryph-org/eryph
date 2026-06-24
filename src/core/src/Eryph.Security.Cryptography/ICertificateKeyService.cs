@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Security.Cryptography;
 
 namespace Eryph.Security.Cryptography;
 
@@ -14,6 +9,6 @@ public interface ICertificateKeyService
     RSA GeneratePersistedRsaKey(string keyName, int keyLength);
 
     RSA? GetPersistedRsaKey(string keyName);
-    
+
     void DeletePersistedKey(string keyName);
 }

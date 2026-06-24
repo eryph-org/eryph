@@ -6,7 +6,6 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;

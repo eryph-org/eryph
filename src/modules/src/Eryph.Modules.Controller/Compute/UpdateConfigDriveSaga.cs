@@ -18,6 +18,11 @@ internal class UpdateConfigDriveSaga(
     OperationTaskWorkflowSaga<UpdateConfigDriveCommand, UpdateConfigDriveSagaData>(workflow),
     IHandleMessages<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>
 {
+    public Task Handle(OperationTaskStatusEvent<UpdateCatletConfigDriveCommand> message)
+    {
+        return FailOrRun(message, Complete);
+    }
+
     protected override async Task Initiated(UpdateConfigDriveCommand message)
     {
         var catlet = await vmDataService.Get(message.CatletId);
@@ -30,13 +35,15 @@ internal class UpdateConfigDriveSaga(
         var metadata = await metadataService.GetMetadata(catlet.MetadataId);
         if (metadata is null)
         {
-            await Fail($"Catlet config drive cannot be updated because the metadata for catlet '{catlet.Name}' ({catlet.Id}) does not exist.");
+            await Fail(
+                $"Catlet config drive cannot be updated because the metadata for catlet '{catlet.Name}' ({catlet.Id}) does not exist.");
             return;
         }
 
         if (metadata.IsDeprecated || metadata.Metadata is null)
         {
-            await Fail($"Catlet config drive cannot be updated because the catlet '{catlet.Name}' ({catlet.Id}) has been created with an old version of eryph.");
+            await Fail(
+                $"Catlet config drive cannot be updated because the catlet '{catlet.Name}' ({catlet.Id}) has been created with an old version of eryph.");
             return;
         }
 
@@ -51,14 +58,10 @@ internal class UpdateConfigDriveSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<UpdateCatletConfigDriveCommand> message)
-    {
-        return FailOrRun(message, Complete);
-    }
-
     protected override void CorrelateMessages(ICorrelationConfig<UpdateConfigDriveSagaData> config)
     {
         base.CorrelateMessages(config);
-        config.Correlate<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>(m => m.InitiatingTaskId,
+            m => m.SagaTaskId);
     }
 }

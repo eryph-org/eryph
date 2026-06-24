@@ -1,8 +1,7 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum GroupType
 {
-    public enum GroupType
-    {
-        VMCollectionType,
-        ManagementCollectionType
-    }
+    VMCollectionType,
+    ManagementCollectionType,
 }

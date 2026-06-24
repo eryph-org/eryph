@@ -9,8 +9,6 @@ using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
-using static LanguageExt.Prelude;
-
 namespace Eryph.Modules.GenePool.Genetics;
 
 internal class GeneticsRequestWatcherService(
@@ -59,13 +57,14 @@ internal class GeneticsRequestWatcherService(
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var geneProvider = scope.GetInstance<IGeneProvider>();
         await geneRequestRegistry.ReportProgress(geneId, geneHash, $"Processing {geneId} ({geneHash})", 0);
-        
+
         var result = await geneProvider.ProvideGene(
-            geneId,
-            geneHash,
-            async (message, progress) => await geneRequestRegistry.ReportProgress(geneId, geneHash, message, progress))
+                geneId,
+                geneHash,
+                async (message, progress) =>
+                    await geneRequestRegistry.ReportProgress(geneId, geneHash, message, progress))
             .RunWithCancel(cancellationToken);
-        
+
         await geneRequestRegistry.CompleteRequest(geneId, geneHash, result);
     }
 }

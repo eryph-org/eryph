@@ -88,5 +88,8 @@ public static class ComponentBrokerProvisioning
     }
 
     private sealed record Settings(
-        string ManagementUrl, string User, string Password, RabbitMqBrokerManagementOptions Options);
+        string ManagementUrl,
+        string User,
+        string Password,
+        RabbitMqBrokerManagementOptions Options);
 }

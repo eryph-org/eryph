@@ -26,39 +26,10 @@ namespace Eryph.Modules.Controller.Compute;
 public class ValidateCatletDeploymentSaga(
     IBus bus,
     IWorkflow workflow)
-    : OperationTaskWorkflowSaga<ValidateCatletDeploymentCommand, EryphSagaData<ValidateCatletDeploymentSagaData>>(workflow),
+    : OperationTaskWorkflowSaga<ValidateCatletDeploymentCommand, EryphSagaData<ValidateCatletDeploymentSagaData>>(
+            workflow),
         IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>
 {
-    protected override async Task Initiated(
-        ValidateCatletDeploymentCommand message)
-    {
-        Data.Data.AgentName = message.AgentName;
-        Data.Data.Config = message.Config;
-        Data.Data.State = ValidateCatletDeploymentSagaState.Initiated;
-        Data.Data.ResolvedGenes = message.ResolvedGenes;
-
-        Data.Data.PendingGenes = message.ResolvedGenes
-            .ToHashMap()
-            .Filter(kvp => kvp.Key.GeneType is GeneType.Volume)
-            .ToDictionary();
-
-        if (Data.Data.PendingGenes.Count == 0)
-        {
-            await Complete();
-            return;
-        }
-
-        foreach (var pendingGene in Data.Data.PendingGenes)
-        {
-            await StartNewTask(new PrepareGeneCommand
-            {
-                AgentName = Data.Data.AgentName,
-                Id = pendingGene.Key,
-                Hash = pendingGene.Value,
-            });
-        }
-    }
-
     public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
     {
         if (Data.Data.State >= ValidateCatletDeploymentSagaState.GenesPrepared)
@@ -86,7 +57,36 @@ public class ValidateCatletDeploymentSaga(
         });
     }
 
-    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<ValidateCatletDeploymentSagaData>> config)
+    protected override async Task Initiated(
+        ValidateCatletDeploymentCommand message)
+    {
+        Data.Data.AgentName = message.AgentName;
+        Data.Data.Config = message.Config;
+        Data.Data.State = ValidateCatletDeploymentSagaState.Initiated;
+        Data.Data.ResolvedGenes = message.ResolvedGenes;
+
+        Data.Data.PendingGenes = message.ResolvedGenes
+            .ToHashMap()
+            .Filter(kvp => kvp.Key.GeneType is GeneType.Volume)
+            .ToDictionary();
+
+        if (Data.Data.PendingGenes.Count == 0)
+        {
+            await Complete();
+            return;
+        }
+
+        foreach (var pendingGene in Data.Data.PendingGenes)
+            await StartNewTask(new PrepareGeneCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Id = pendingGene.Key,
+                Hash = pendingGene.Value,
+            });
+    }
+
+    protected override void CorrelateMessages(
+        ICorrelationConfig<EryphSagaData<ValidateCatletDeploymentSagaData>> config)
     {
         base.CorrelateMessages(config);
 

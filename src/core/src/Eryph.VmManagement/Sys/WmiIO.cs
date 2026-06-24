@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Management;
 using System.Runtime.Versioning;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Sys;
 
@@ -35,8 +29,8 @@ public readonly struct LiveWmiIO : WmiIO
         using var searcher = new ManagementObjectSearcher(
             new ManagementScope(scope),
             new ObjectQuery($"SELECT {string.Join(", ", properties)} "
-                + $"FROM {className}"
-                + whereClause.Map(c => $" WHERE {c}").IfNone("")));
+                            + $"FROM {className}"
+                            + whereClause.Map(c => $" WHERE {c}").IfNone("")));
         using var collection = searcher.Get();
         var managementObjects = collection.Cast<ManagementBaseObject>().ToSeq();
         try
@@ -50,10 +44,7 @@ public readonly struct LiveWmiIO : WmiIO
             // does only work correctly when being invoked directly.
             // The method is defined with the new keyword and will not be invoked
             // via the IDisposable interface (e.g. with a using statement).
-            foreach (var managementObject in managementObjects)
-            {
-                managementObject.Dispose();
-            }
+            foreach (var managementObject in managementObjects) managementObject.Dispose();
         }
     }
 

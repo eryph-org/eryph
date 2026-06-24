@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
-using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Inventory;
@@ -64,7 +62,7 @@ public class VirtualMachineInventory(
             Security = securityData,
         };
 
-    private EitherAsync<Error, VirtualMachineNetworkAdapterData> GetNetworkAdapterData(
+    private static EitherAsync<Error, VirtualMachineNetworkAdapterData> GetNetworkAdapterData(
         TypedPsObject<VMNetworkAdapter> adapter) =>
         from macAddress in Optional(adapter.Value.MacAddress)
             // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.
@@ -122,7 +120,7 @@ public class VirtualMachineInventory(
         select new VirtualMachineFirmwareData
         {
             SecureBoot = firmwareInfo.SecureBoot == OnOffState.On,
-            SecureBootTemplate = firmwareInfo.SecureBootTemplate
+            SecureBootTemplate = firmwareInfo.SecureBootTemplate,
         };
 
     private EitherAsync<Error, VirtualMachineSecurityData> GetSecurityData(
@@ -181,7 +179,7 @@ public class VirtualMachineInventory(
                 ControllerNumber = hd.ControllerNumber,
                 ControllerType = hd.ControllerType,
                 Frozen = storageSetting?.Frozen ?? true,
-                Type = storageSetting?.Type
+                Type = storageSetting?.Type,
             };
 
             if (storageSetting?.DiskSettings != null)

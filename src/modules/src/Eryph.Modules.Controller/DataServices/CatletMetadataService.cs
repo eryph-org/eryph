@@ -44,7 +44,7 @@ internal class CatletMetadataService(
         var metadata = await repository.GetByIdAsync(id, cancellationToken);
         if (metadata is null)
             throw new InvalidOperationException($"The catlet metadata {id} does not exist.");
-        
+
         metadata.SecretDataHidden = true;
         await repository.UpdateAsync(metadata, cancellationToken);
     }

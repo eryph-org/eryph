@@ -20,11 +20,10 @@ namespace Eryph.ModuleCore.Components;
 /// its caller so it does not leak a handler/socket.
 /// </remarks>
 public sealed class RabbitMqBrokerProvisioner(
-    HttpClient httpClient, RabbitMqBrokerManagementOptions options)
+    HttpClient httpClient,
+    RabbitMqBrokerManagementOptions options)
     : IComponentBrokerProvisioner, IDisposable
 {
-    public void Dispose() => httpClient.Dispose();
-
     public async Task EnsureComponentAsync(Guid componentId, CancellationToken cancellationToken = default)
     {
         var user = ComponentBrokerIdentity.UserName(componentId);
@@ -64,6 +63,8 @@ public sealed class RabbitMqBrokerProvisioner(
             return;
         response.EnsureSuccessStatusCode();
     }
+
+    public void Dispose() => httpClient.Dispose();
 
     // The user name is the component-id URN (contains ':'); it must be percent-encoded into the path.
     private static string UserPath(string user) => "api/users/" + Uri.EscapeDataString(user);

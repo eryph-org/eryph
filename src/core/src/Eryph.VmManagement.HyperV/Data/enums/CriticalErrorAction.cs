@@ -1,8 +1,7 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum CriticalErrorAction
 {
-    public enum CriticalErrorAction
-    {
-        None,
-        Pause
-    }
+    None,
+    Pause,
 }

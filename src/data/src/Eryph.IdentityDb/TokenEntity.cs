@@ -3,6 +3,4 @@ using OpenIddict.EntityFrameworkCore.Models;
 
 namespace Eryph.IdentityDb;
 
-public class TokenEntity : OpenIddictEntityFrameworkCoreToken<string, ApplicationEntity, AuthorizationEntity>
-{
-}
+public class TokenEntity : OpenIddictEntityFrameworkCoreToken<string, ApplicationEntity, AuthorizationEntity>;

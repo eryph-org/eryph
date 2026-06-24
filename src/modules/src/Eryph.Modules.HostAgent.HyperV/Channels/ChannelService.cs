@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-
 using Eryph.GuestServices.Core;
 using Eryph.GuestServices.Sockets;
 using Eryph.Modules.AspNetCore.Channels;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.HostAgent.Channels;
 
@@ -28,9 +27,9 @@ public class ChannelService : IChannelService, IAgentChannelRecipient, IDisposab
     // round-trip (operation dispatch over the bus → saga → agent → result → client poll → connect),
     // which on the split runtime crosses RabbitMQ, so it is generous rather than seconds-tight.
     private static readonly TimeSpan TokenLifetime = TimeSpan.FromSeconds(120);
+    private readonly IChannelEndpointProvider _endpointProvider;
 
     private readonly IGuestDataWriter _guestDataWriter;
-    private readonly IChannelEndpointProvider _endpointProvider;
     private readonly ILogger<ChannelService> _logger;
     private readonly ConcurrentDictionary<string, PendingChannel> _pending = new(StringComparer.Ordinal);
     private readonly Timer _sweepTimer;
@@ -89,6 +88,8 @@ public class ChannelService : IChannelService, IAgentChannelRecipient, IDisposab
         return stream;
     }
 
+    public void Dispose() => _sweepTimer.Dispose();
+
     // Dials the guest's EGS service (always the well-known service id; vsock port 5002). The returned
     // Socket is already connected; the NetworkStream owns it, so disposing the stream (the caller's
     // responsibility) closes the hvsocket. Virtual so the token-consumption path can be exercised
@@ -96,12 +97,12 @@ public class ChannelService : IChannelService, IAgentChannelRecipient, IDisposab
     protected virtual async Task<Stream> ConnectGuestAsync(Guid vmId, CancellationToken cancellationToken)
     {
         var socket = await SocketFactory.CreateClientSocket(vmId, Constants.ServiceId).ConfigureAwait(false);
-        return new NetworkStream(socket, ownsSocket: true);
+        return new NetworkStream(socket, true);
     }
 
     private bool TryConsumeToken(string token, out Guid vmId)
     {
-        vmId = default;
+        vmId = Guid.Empty;
         if (string.IsNullOrEmpty(token) || !_pending.TryRemove(token, out var pending))
             return false;
 
@@ -127,13 +128,9 @@ public class ChannelService : IChannelService, IAgentChannelRecipient, IDisposab
     {
         var now = DateTimeOffset.UtcNow;
         foreach (var (token, pending) in _pending)
-        {
             if (pending.ExpiresAt <= now)
                 _pending.TryRemove(token, out _);
-        }
     }
-
-    public void Dispose() => _sweepTimer.Dispose();
 
     private sealed record PendingChannel(Guid VmId, DateTimeOffset ExpiresAt);
 }

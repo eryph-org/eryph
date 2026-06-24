@@ -16,13 +16,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Project = Eryph.StateDb.Model.Project;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
 public class Create(
     ICreateEntityRequestHandler<CatletSpecification> operationHandler,
     IReadonlyStateStoreRepository<CatletSpecification> repository,
-    IReadonlyStateStoreRepository<StateDb.Model.Project> projectRepository,
+    IReadonlyStateStoreRepository<Project> projectRepository,
     IUserRightsProvider userRightsProvider)
     : NewOperationRequestEndpoint<NewCatletSpecificationRequest, CatletSpecification>(operationHandler)
 {
@@ -45,11 +46,11 @@ public class Create(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlet_specifications")]
     [SwaggerOperation(
-        Summary = "Create a new catlet specification",
-        Description = "Create a new catlet specification",
-        OperationId = "CatletSpecifications_Create",
-        Tags = ["Catlet Specifications"])
-]
+            Summary = "Create a new catlet specification",
+            Description = "Create a new catlet specification",
+            OperationId = "CatletSpecifications_Create",
+            Tags = ["Catlet Specifications"]),
+    ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewCatletSpecificationRequest request,
         CancellationToken cancellationToken = default)
@@ -58,7 +59,7 @@ public class Create(
             request.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail: "The catlet configuration is invalid.",
+                "The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(NewCatletSpecificationRequest.Configuration)));
 
@@ -67,7 +68,7 @@ public class Create(
         var project = await projectRepository.GetByIdAsync(request.ProjectId, cancellationToken);
         if (project is null)
             return ValidationProblem(
-                detail: "The project does not exist.",
+                "The project does not exist.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(NewCatletSpecificationRequest.ProjectId)));
 
@@ -87,7 +88,8 @@ public class Create(
         if (existingSpecification != null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: $"A catlet specification with the name '{specificationName}' already exists in the project '{project.Name}'. Specification names must be unique within a project.");
+                detail:
+                $"A catlet specification with the name '{specificationName}' already exists in the project '{project.Name}'. Specification names must be unique within a project.");
 
         return await base.HandleAsync(request, cancellationToken);
     }

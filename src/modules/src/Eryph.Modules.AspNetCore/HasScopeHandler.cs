@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Eryph.Modules.AspNetCore;
@@ -15,7 +14,7 @@ public class HasScopeHandler : AuthorizationHandler<HasScopeRequirement>
         // If user does not have the scope claim, get out of here
         if (scopeClaim is null)
             return Task.CompletedTask;
-    
+
         var scopes = scopeClaim.Value.Split(' ');
         if (scopes.Exists(requirement.Scopes.Contains))
             context.Succeed(requirement);

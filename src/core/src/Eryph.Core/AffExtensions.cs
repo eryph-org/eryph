@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core;

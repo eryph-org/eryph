@@ -8,7 +8,7 @@ public interface IListEntitySpecBuilder<T>
     ISpecification<T> GetEntitiesSpec();
 }
 
-public interface IListEntitySpecBuilder<in TRequest,T>
+public interface IListEntitySpecBuilder<in TRequest, T>
     where TRequest : IListRequest
 {
     ISpecification<T> GetEntitiesSpec(TRequest request);

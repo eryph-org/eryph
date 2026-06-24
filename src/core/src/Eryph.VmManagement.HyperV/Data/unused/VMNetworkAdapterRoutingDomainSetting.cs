@@ -1,14 +1,13 @@
 ﻿using System;
 
-namespace Eryph.VmManagement.Data
+namespace Eryph.VmManagement.Data.unused;
+
+public sealed class VMNetworkAdapterRoutingDomainSetting
 {
-    public sealed class VMNetworkAdapterRoutingDomainSetting
-    {
-        public Guid RoutingDomainID { get; private set; }
+    public Guid RoutingDomainID { get; private set; }
 
-        public string RoutingDomainName { get; private set; }
-        public int[] IsolationID { get; private set; }
+    public string RoutingDomainName { get; private set; }
+    public int[] IsolationID { get; private set; }
 
-        public string[] IsolationName { get; private set; }
-    }
+    public string[] IsolationName { get; private set; }
 }

@@ -4,90 +4,80 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Eryph.Runtime.Zero.Configuration
+namespace Eryph.Runtime.Zero.Configuration;
+
+internal class ConfigIO(string basePath)
 {
-    internal class ConfigIO
+    public async Task<T?> ReadConfigFile<T>(string id)
     {
-        private readonly string _basePath;
+        var filePath = Path.Combine(basePath, CoerceValidFileName(id) + ".json");
+        if (!File.Exists(filePath))
+            return default;
 
-        public ConfigIO(string basePath)
+        var json = await File.ReadAllTextAsync(filePath);
+        return JsonSerializer.Deserialize<T>(json);
+    }
+
+    public Task SaveConfigFile<T>(T data, string id)
+    {
+        var json = JsonSerializer.Serialize(data);
+        var filePath = Path.Combine(basePath, CoerceValidFileName(id) + ".json");
+        return SaveFileOperation(json, filePath);
+    }
+
+    private static async Task SaveFileOperation(string content, string path)
+    {
+        var tempPathExtension = Path.GetExtension(path);
+        var filePathTemp = Path.ChangeExtension(path, $"{tempPathExtension}.new");
+
+        try
         {
-            _basePath = basePath;
+            await File.WriteAllTextAsync(filePathTemp, content).ConfigureAwait(false);
+            File.Copy(filePathTemp, path, true);
+        }
+        finally
+        {
+            if (File.Exists(filePathTemp))
+                File.Delete(filePathTemp);
+        }
+    }
+
+    /// <summary>
+    ///     Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
+    /// </summary>
+    /// <remarks>
+    ///     http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
+    /// </remarks>
+    public static string CoerceValidFileName(string filename)
+    {
+        var invalidChars = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+        var invalidReStr = $@"[{invalidChars}]+";
+
+        var reservedWords = new[]
+        {
+            "CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4",
+            "COM5", "COM6", "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4",
+            "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        };
+
+        var sanitizedNamePart =
+            Regex.Replace(filename, invalidReStr, "_", RegexOptions.None, TimeSpan.FromSeconds(2));
+        for (var index = 0; index < reservedWords.Length; index++)
+        {
+            var reservedWord = reservedWords[index];
+            var reservedWordPattern = $"^{reservedWord}(\\.|$)";
+
+            sanitizedNamePart = Regex.Replace(sanitizedNamePart, reservedWordPattern, $"_RW{index}_$1",
+                RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2));
         }
 
-        public async Task<T?> ReadConfigFile<T>(string id)
-        {
-            var filePath = Path.Combine(_basePath, CoerceValidFileName(id) + ".json");
-            if (!File.Exists(filePath))
-                return default;
+        return sanitizedNamePart;
+    }
 
-            var json = await File.ReadAllTextAsync(filePath);
-            return JsonSerializer.Deserialize<T>(json);
-
-        }
-
-        public Task SaveConfigFile<T>(T data, string id)
-        {
-            var json = JsonSerializer.Serialize(data);
-            var filePath = Path.Combine(_basePath, CoerceValidFileName(id) + ".json");
-            return SaveFileOperation(json, filePath);
-        }
-
-        private static async Task SaveFileOperation(string content, string path)
-        {
-            var tempPathExtension = Path.GetExtension(path);
-            var filePathTemp = Path.ChangeExtension(path, $"{tempPathExtension}.new");
-
-            try
-            {
-                await File.WriteAllTextAsync(filePathTemp, content).ConfigureAwait(false);
-                File.Copy(filePathTemp, path, true);
-            }
-            finally
-            {
-                if (File.Exists(filePathTemp))
-                    File.Delete(filePathTemp);
-            }
-        }
-
-        /// <summary>
-        ///     Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
-        /// </summary>
-        /// <remarks>
-        ///     http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
-        /// </remarks>
-        public static string CoerceValidFileName(string filename)
-        {
-            var invalidChars = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
-            var invalidReStr = $@"[{invalidChars}]+";
-
-            var reservedWords = new[]
-            {
-                "CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4",
-                "COM5", "COM6", "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4",
-                "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
-            };
-
-            var sanitizedNamePart = Regex.Replace(filename, invalidReStr, "_", RegexOptions.None, TimeSpan.FromSeconds(2));
-            for (var index = 0; index < reservedWords.Length; index++)
-            {
-                var reservedWord = reservedWords[index];
-                var reservedWordPattern = $"^{reservedWord}(\\.|$)";
-
-                sanitizedNamePart = Regex.Replace(sanitizedNamePart, reservedWordPattern, $"_RW{index}_$1",
-                    RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2));
-            }
-
-            return sanitizedNamePart;
-        }
-
-        public void DeleteConfigFile(string id)
-        {
-            var filePath = Path.Combine(_basePath, CoerceValidFileName(id) + ".json");
-            if (File.Exists(filePath))
-                File.Delete(filePath);
-        }
-
-
+    public void DeleteConfigFile(string id)
+    {
+        var filePath = Path.Combine(basePath, CoerceValidFileName(id) + ".json");
+        if (File.Exists(filePath))
+            File.Delete(filePath);
     }
 }

@@ -1,5 +1,5 @@
-﻿using Dbosoft.Functional;
-using Dbosoft.Functional.Validations;
+﻿using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.CatletManagement;
@@ -19,7 +19,6 @@ using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System.Threading.Tasks;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -32,35 +31,10 @@ namespace Eryph.Modules.Controller.Compute;
 internal class BuildCatletSpecificationSaga(
     IBus bus,
     IWorkflow workflow)
-    : OperationTaskWorkflowSaga<BuildCatletSpecificationCommand, EryphSagaData<BuildCatletSpecificationSagaData>>(workflow),
+    : OperationTaskWorkflowSaga<BuildCatletSpecificationCommand, EryphSagaData<BuildCatletSpecificationSagaData>>(
+            workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationGenePoolCommand>>
 {
-    protected override async Task Initiated(BuildCatletSpecificationCommand message)
-    {
-        Data.Data.State = BuildCatletSpecificationSagaState.Initiated;
-        Data.Data.ContentType = message.ContentType;
-        Data.Data.Configuration = message.Configuration;
-        Data.Data.Architecture = message.Architecture;
-        Data.Data.AgentName = message.AgentName;
-
-        var parsedConfig = ParseCatletSpecificationConfig(
-            Data.Data.ContentType, Data.Data.Configuration);
-        if (parsedConfig.IsLeft)
-        {
-            await Fail(Error.Many(parsedConfig.LeftToSeq()).Print());
-            return;
-        }
-
-        Data.Data.ParsedConfig = parsedConfig.ValueUnsafe();
-
-        await StartNewTask(new BuildCatletSpecificationGenePoolCommand()
-        {
-            AgentName = Data.Data.AgentName,
-            CatletConfig = Data.Data.ParsedConfig,
-            CatletArchitecture = Data.Data.Architecture,
-        });
-    }
-
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationGenePoolCommand> message)
     {
         if (Data.Data.State >= BuildCatletSpecificationSagaState.ConfigBuilt)
@@ -89,6 +63,32 @@ internal class BuildCatletSpecificationSaga(
         });
     }
 
+    protected override async Task Initiated(BuildCatletSpecificationCommand message)
+    {
+        Data.Data.State = BuildCatletSpecificationSagaState.Initiated;
+        Data.Data.ContentType = message.ContentType;
+        Data.Data.Configuration = message.Configuration;
+        Data.Data.Architecture = message.Architecture;
+        Data.Data.AgentName = message.AgentName;
+
+        var parsedConfig = ParseCatletSpecificationConfig(
+            Data.Data.ContentType, Data.Data.Configuration);
+        if (parsedConfig.IsLeft)
+        {
+            await Fail(Error.Many(parsedConfig.LeftToSeq()).Print());
+            return;
+        }
+
+        Data.Data.ParsedConfig = parsedConfig.ValueUnsafe();
+
+        await StartNewTask(new BuildCatletSpecificationGenePoolCommand
+        {
+            AgentName = Data.Data.AgentName,
+            CatletConfig = Data.Data.ParsedConfig,
+            CatletArchitecture = Data.Data.Architecture,
+        });
+    }
+
     protected override void CorrelateMessages(
         ICorrelationConfig<EryphSagaData<BuildCatletSpecificationSagaData>> config)
     {
@@ -107,7 +107,7 @@ internal class BuildCatletSpecificationSaga(
                 .ToEither(ex => Error.New("The catlet configuration is invalid.", Error.New(ex))),
             "application/yaml" => Try(() => CatletConfigYamlSerializer.Deserialize(content))
                 .ToEither(ex => Error.New("The catlet configuration is invalid.", Error.New(ex))),
-            _ => Error.New($"The content type '{contentType}' is not supported.")
+            _ => Error.New($"The content type '{contentType}' is not supported."),
         }
         let validations = CatletConfigValidations.ValidateCatletConfig(parsedConfig)
                           | CatletSpecificationConfigValidator.Validate(parsedConfig)

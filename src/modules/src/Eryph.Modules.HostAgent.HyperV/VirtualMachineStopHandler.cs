@@ -10,7 +10,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Handlers;
 using SimpleInjector;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;

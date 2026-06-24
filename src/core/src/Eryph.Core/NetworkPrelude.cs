@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core;

@@ -6,6 +6,6 @@ public class FakeTypeMapping : ITypedPsObjectMapping
 {
     public T Map<T>(PSObject psObject)
     {
-        return (T) psObject.BaseObject;
+        return (T)psObject.BaseObject;
     }
 }

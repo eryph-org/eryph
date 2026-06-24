@@ -9,7 +9,8 @@ public sealed class CatletMetadataContent
 {
     public Architecture Architecture { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> PinnedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> PinnedGenes { get; set; } =
+        new Dictionary<UniqueGeneIdentifier, GeneHash>();
 
     public string ContentType { get; set; }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Threading;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core.Network;
@@ -10,7 +9,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 using Spectre.Console;
-
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
 
@@ -23,18 +21,18 @@ public static class ProviderNetworkUpdateInConsole<RT>
     HasOVSControl<RT>,
     HasAgentSyncClient<RT>,
     HasHostNetworkCommands<RT>,
-    HasNetworkProviderManager<RT>, 
+    HasNetworkProviderManager<RT>,
     HasLogger<RT>
 {
     public static Aff<RT, Unit> checkHostInterfacesWithProgress() =>
         from _ in AnsiConsole<RT>.withProgress(
             "Checking status of host interfaces...",
-                HostStateProvider<RT>.checkHostInterfaces)
+            HostStateProvider<RT>.checkHostInterfaces)
         select unit;
 
     public static Aff<RT, HostState> getHostStateWithProgress() =>
         from hostState in AnsiConsole<RT>.withProgress(
-            "Analyzing host network settings...", 
+            "Analyzing host network settings...",
             HostStateProvider<RT>.getHostState)
         select hostState;
 
@@ -44,8 +42,8 @@ public static class ProviderNetworkUpdateInConsole<RT>
         bool nonInteractive,
         Func<Aff<RT, HostState>> getHostState) =>
         currentConfigChanges.Operations.Match(
-            Empty: () => SuccessAff((true, hostState)),
-            Seq: _ => syncExistingCurrentConfigChanges(hostState, currentConfigChanges, nonInteractive, getHostState));
+            () => SuccessAff((true, hostState)),
+            _ => syncExistingCurrentConfigChanges(hostState, currentConfigChanges, nonInteractive, getHostState));
 
     private static Aff<RT, (bool isValid, HostState HostState)> syncExistingCurrentConfigChanges(
         HostState hostState,
@@ -56,17 +54,17 @@ public static class ProviderNetworkUpdateInConsole<RT>
             new Rows([
                 new Text("The currently active configuration is not fully applied on host."),
                 new Text("Following changes have to be applied:", new Style(Color.Yellow)),
-                ..currentConfigChanges.Operations.Map(op => new Padder(new Text(op.Text), new Padding(2, 0, 0, 0)))
+                ..currentConfigChanges.Operations.Map(op => new Padder(new Text(op.Text), new Padding(2, 0, 0, 0))),
             ]),
             new Padding(0, 1)))
         from syncChanges in nonInteractive
             ? from _2 in AnsiConsole<RT>.writeLine("Non interactive mode - changes will be applied.")
-              select true
+            select true
             : from _3 in AnsiConsole<RT>.write(new Rows(
-                  new Text("You can ignore these changes and proceed with validating the new config."),
-                  new Text("However, it is recommended to create a valid current state first. "
-                           + "With a valid current state a rollback is more likely to succeed in case the new config cannot be applied.")))
-              from promptResult in AnsiConsole<RT>.prompt(
+                new Text("You can ignore these changes and proceed with validating the new config."),
+                new Text("However, it is recommended to create a valid current state first. "
+                         + "With a valid current state a rollback is more likely to succeed in case the new config cannot be applied.")))
+            from promptResult in AnsiConsole<RT>.prompt(
                 "Apply (a), Ignore (i) or Cancel (c):",
                 v => from _ in guard(v is "a" or "i" or "c", Error.New("Please select a valid option."))
                         .ToValidation()
@@ -102,12 +100,12 @@ public static class ProviderNetworkUpdateInConsole<RT>
                 select messages)
             select messages)
         from _ in messages.ToSeq().Match(
-            Empty: () => unitEff,
-            Seq: ms =>
+            () => unitEff,
+            ms =>
                 from _1 in AnsiConsole<RT>.write(new Rows([
                     new Text("Active network settings are incompatible with new configuration:"),
-                    ..ms.Map(m => new Padder(new Text(m), new Padding(2, 0, 0, 0)))
-                    ]))
+                    ..ms.Map(m => new Padder(new Text(m), new Padding(2, 0, 0, 0))),
+                ]))
                 from _5 in FailEff<Unit>(Error.New(
                     "Incompatible network settings detected. You have to remove these settings before applying the new configuration."))
                 select unit)
@@ -129,13 +127,13 @@ public static class ProviderNetworkUpdateInConsole<RT>
             .Map(np => np.Name)
         from _2 in providersWithDisabledSpoofing
             .Match(
-                Empty: () => unitEff,
-                Seq: names => AnsiConsole<RT>.write(new Padder(
+                () => unitEff,
+                names => AnsiConsole<RT>.write(new Padder(
                     new Rows([
                         new Text("MAC address spoofing will be disabled for the following providers:"),
                         ..names.Map(n => new Padder(new Text(n), new Padding(2, 0, 0, 0))),
                         new Text("MAC address spoofing will not be automatically disabled for existing catlets."),
-                        new Text("Please update any affected catlets manually.")
+                        new Text("Please update any affected catlets manually."),
                     ]),
                     new Padding(0, 1))))
         select unit;
@@ -153,17 +151,17 @@ public static class ProviderNetworkUpdateInConsole<RT>
             .Map(np => np.Name)
         from _2 in providersWithRemovedDisableDhcpGuard
             .Match(
-                Empty: () => unitEff,
-                Seq: names => AnsiConsole<RT>.write(new Padder(
+                () => unitEff,
+                names => AnsiConsole<RT>.write(new Padder(
                     new Rows([
                         new Text("The DHCP guard can no longer be disabled for the following providers:"),
                         ..names.Map(n => new Padder(new Text(n), new Padding(2, 0, 0, 0))),
                         new Text("The DHCP guard will not be automatically re-enabled for existing catlets."),
-                        new Text("Please update any affected catlets manually.")
+                        new Text("Please update any affected catlets manually."),
                     ]),
                     new Padding(0, 1))))
         select unit;
-    
+
     private static Eff<RT, Unit> validateRouterGuardImpact(
         NetworkProvidersConfiguration newConfig,
         NetworkProvidersConfiguration currentConfig,
@@ -177,13 +175,13 @@ public static class ProviderNetworkUpdateInConsole<RT>
             .Map(np => np.Name)
         from _2 in providersWithRemovedDisableRouterGuard
             .Match(
-                Empty: () => unitEff,
-                Seq: names => AnsiConsole<RT>.write(new Padder(
+                () => unitEff,
+                names => AnsiConsole<RT>.write(new Padder(
                     new Rows([
                         new Text("The router guard can no longer be disabled for the following providers:"),
                         ..names.Map(n => new Padder(new Text(n), new Padding(2, 0, 0, 0))),
                         new Text("The router guard will not be automatically re-enabled for existing catlets."),
-                        new Text("Please update any affected catlets manually.")
+                        new Text("Please update any affected catlets manually."),
                     ]),
                     new Padding(0, 1))))
         select unit;
@@ -194,10 +192,10 @@ public static class ProviderNetworkUpdateInConsole<RT>
         bool nonInteractive,
         Option<NetworkProvidersConfiguration> rollbackConfig) =>
         newConfigChanges.Operations.Match(
-            Empty: () =>
+            () =>
                 AnsiConsole<RT>.writeLine(
                     "The network configuration does not require any changes to the host network."),
-            Seq: _ => applyExistingChangesInConsole(newConfigChanges, getHostState, nonInteractive, rollbackConfig));
+            _ => applyExistingChangesInConsole(newConfigChanges, getHostState, nonInteractive, rollbackConfig));
 
     private static Aff<RT, Unit> applyExistingChangesInConsole(
         NetworkChanges<RT> newConfigChanges,
@@ -207,22 +205,23 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _1 in AnsiConsole<RT>.write(new Padder(
             new Rows([
                 new Text("The following changes have to be applied to the host network configuration:"),
-                ..newConfigChanges.Operations.Map(op => new Padder(new Text(op.Text), new Padding(2, 0, 0, 0)))
+                ..newConfigChanges.Operations.Map(op => new Padder(new Text(op.Text), new Padding(2, 0, 0, 0))),
             ]),
             new Padding(0, 1)))
         from _2 in nonInteractive
             ? from _3 in AnsiConsole<RT>.writeLine("Non interactive mode - changes will be applied.")
-              select unit
+            select unit
             : from _4 in AnsiConsole<RT>.write(new Rows(
-                new Text("Network connectivity may be interrupted while applying these changes.", new Style(Color.Yellow)),
+                new Text("Network connectivity may be interrupted while applying these changes.",
+                    new Style(Color.Yellow)),
                 new Text("In the event of an error, a rollback is attempted.")))
-              from promptResult in AnsiConsole<RT>.prompt(
+            from promptResult in AnsiConsole<RT>.prompt(
                 "Apply (a) or Cancel (c):",
                 v => from _ in guard(v is "a" or "c", Error.New("Please select a valid option."))
                         .ToValidation()
                     select v)
-              from _5 in guardnot(promptResult == "c", Errors.Cancelled)
-              select unit
+            from _5 in guardnot(promptResult == "c", Errors.Cancelled)
+            select unit
         from _6 in executeChangesWithRollback(newConfigChanges, rollbackConfig, getHostState)
         select unit;
 
@@ -255,7 +254,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
     private static Aff<RT, Unit> executeChangeOperation(
         NetworkChangeOperation<RT> operation,
         ProviderNetworkUpdateState<RT> updateState) =>
-        from _1 in AnsiConsole<RT>.write(new Padder(new Text($"{operation.Text}..."), new Padding(2, 0 ,0 ,0)))
+        from _1 in AnsiConsole<RT>.write(new Padder(new Text($"{operation.Text}..."), new Padding(2, 0, 0, 0)))
         from _2 in operation.Change()
         from _3 in updateState.AddExecutedOperation(operation)
         select unit;
@@ -280,12 +279,12 @@ public static class ProviderNetworkUpdateInConsole<RT>
             .Filter(op => (op.CanRollBack?.Invoke(executedOpCodes)).GetValueOrDefault())
             .Filter(op => op.Rollback is not null)
         from _2 in revertibleOperations.Match(
-                       Empty: () => unitAff,
-                       Seq: rollbackOperations)
+                       () => unitAff,
+                       rollbackOperations)
                    | @catch(e => AnsiConsole<RT>.write(Renderable(e)))
         from _3 in rollbackConfiguration.Match(
-                       Some: c => rollbackToConfig(c, getHostState),
-                       None: () => unitAff)
+                       c => rollbackToConfig(c, getHostState),
+                       () => unitAff)
                    | @catch(e => AnsiConsole<RT>.write(Renderable(e)))
         from _4 in !executedOperations.IsEmpty && rollbackConfiguration.IsNone
             ? AnsiConsole<RT>.write(new Rows(
@@ -302,8 +301,8 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from hostState in getHostState()
         from pendingChanges in ProviderNetworkUpdate<RT>.generateChanges(hostState, config, true)
         from _2 in pendingChanges.Operations.Match(
-                Empty: () => AnsiConsole<RT>.writeLine("Previous configuration seems to be fully applied."),
-                Seq: _ => executeRollbackChanges(pendingChanges))
+                () => AnsiConsole<RT>.writeLine("Previous configuration seems to be fully applied."),
+                _ => executeRollbackChanges(pendingChanges))
             .MapFail(e => Error.New("Failed to rollback operations.", e))
         select unit;
 

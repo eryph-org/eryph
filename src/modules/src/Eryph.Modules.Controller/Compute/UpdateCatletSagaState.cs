@@ -4,5 +4,5 @@ public enum UpdateCatletSagaState
 {
     Initiated = 0,
     DeploymentValidated = 10,
-    Deployed = 20
+    Deployed = 20,
 }

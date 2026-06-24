@@ -9,7 +9,6 @@ using Eryph.Messages;
 using Eryph.Messages.Resources;
 using Eryph.StateDb.Model;
 using Microsoft.Extensions.Logging;
-
 using ErrorData = Dbosoft.Rebus.Operations.ErrorData;
 using OperationStatus = Eryph.StateDb.Model.OperationStatus;
 
@@ -29,8 +28,8 @@ public class OperationManager(
 
     public override async ValueTask<IOperation> GetOrCreateAsync(
         Guid operationId, object command, DateTimeOffset timestamp,
-        object? additionalData, 
-        IDictionary<string,string>? additionalHeaders)
+        object? additionalData,
+        IDictionary<string, string>? additionalHeaders)
     {
         log.LogTrace("Entering GetOrCreateAsync for operation {operationId}", operationId);
 
@@ -42,16 +41,16 @@ public class OperationManager(
         if (res != null) return new Operation(res);
 
         var (resources, projects) = await OperationsHelper.GetCommandProjectsAndResources(command, db);
-        
+
         res = new OperationModel
         {
             Id = operationId,
             Status = OperationStatus.Queued,
             TenantId = dataRecord.TenantId,
-            StatusMessage = Dbosoft.Rebus.Operations.OperationStatus.Queued.ToString(),
+            StatusMessage = nameof(Dbosoft.Rebus.Operations.OperationStatus.Queued),
             Resources = resources,
             Projects = projects,
-            LastUpdated = timestamp
+            LastUpdated = timestamp,
         };
         log.LogTrace("created operation: {@operation}", res);
 
@@ -80,7 +79,8 @@ public class OperationManager(
                 message = stringElement.GetString();
                 break;
             default:
-                log.LogDebug("Invalid operation task progress event: data has to be a json object or a string. Id : '{operationId}/{taskId}'",
+                log.LogDebug(
+                    "Invalid operation task progress event: data has to be a json object or a string. Id : '{operationId}/{taskId}'",
                     operation.Id, task.Id);
                 break;
         }
@@ -92,7 +92,7 @@ public class OperationManager(
                 OperationId = operation.Id,
                 TaskId = task.Id,
                 Message = message,
-                Timestamp = DateTimeOffset.UtcNow // event may be delayed, don't use timestamp from message
+                Timestamp = DateTimeOffset.UtcNow, // event may be delayed, don't use timestamp from message
             };
         log.LogTrace("Adding progress entry: {@progressEntry}", opLogEntry);
 
@@ -107,7 +107,7 @@ public class OperationManager(
             Id = Guid.NewGuid(),
             TaskId = task.Id,
             OperationId = operation.Id,
-            Progress = progress
+            Progress = progress,
         };
 
         await db.TaskProgress.AddAsync(progressEntry).ConfigureAwait(false);
@@ -125,14 +125,17 @@ public class OperationManager(
 
         if (op.Model.LastUpdated > timestamp)
         {
-            log.LogWarning("Operation {operationId} has been updated already after change timestamp. Skipping status change.", operation.Id);
+            log.LogWarning(
+                "Operation {operationId} has been updated already after change timestamp. Skipping status change.",
+                operation.Id);
             return false;
         }
 
-        if (op.Status is Dbosoft.Rebus.Operations.OperationStatus.Completed 
+        if (op.Status is Dbosoft.Rebus.Operations.OperationStatus.Completed
             or Dbosoft.Rebus.Operations.OperationStatus.Failed)
         {
-            log.LogWarning("Operation: {operationId}: has already been completed or failed. Skipping status change. Status: {status}",
+            log.LogWarning(
+                "Operation: {operationId}: has already been completed or failed. Skipping status change. Status: {status}",
                 op.Id, op.Status);
             return false;
         }
@@ -143,23 +146,23 @@ public class OperationManager(
             Dbosoft.Rebus.Operations.OperationStatus.Running => OperationStatus.Running,
             Dbosoft.Rebus.Operations.OperationStatus.Failed => OperationStatus.Failed,
             Dbosoft.Rebus.Operations.OperationStatus.Completed => OperationStatus.Completed,
-            _ => throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, null),
         };
 
         op.Model.StatusMessage = additionalData switch
         {
             ErrorData errorData => errorData.ErrorMessage,
             string errorMessage => errorMessage,
-            _ => op.Model.Status.ToString()
+            _ => op.Model.Status.ToString(),
         };
 
         var resultData = additionalData switch
         {
             ErrorData errorData => errorData.AdditionalData,
-            string _ => null,
-            ProjectReference _ => null,
-            ResourceReference _ => null,
-            _ => additionalData
+            string => null,
+            ProjectReference => null,
+            ResourceReference => null,
+            _ => additionalData,
         };
 
         op.Model.ResultData = resultData != null
@@ -167,28 +170,29 @@ public class OperationManager(
             : null;
         op.Model.ResultType = resultData?.GetType().AssemblyQualifiedName;
 
-        // make sure that just created projects are added to the operation
-        if (additionalData is ProjectReference projectReference)
-        { 
-            await db.Entry(op.Model).Collection(x => x.Projects).LoadAsync();
-            if (op.Model.Projects.All(x => x.ProjectId != projectReference.ProjectId))
-            {
-                op.Model.Projects.Add(new OperationProjectModel
-                {
-                    ProjectId = projectReference.ProjectId,
-                });
-            }
-        }
-        else if (additionalData is ResourceReference resourceReference)
+        switch (additionalData)
         {
-            await db.Entry(op.Model).Collection(x => x.Resources).LoadAsync();
-            if (op.Model.Resources.All(x => x.ResourceId != resourceReference.Resource.Id))
+            // make sure that just created projects are added to the operation
+            case ProjectReference projectReference:
             {
-                op.Model.Resources.Add(new OperationResourceModel
-                {
-                    ResourceId = resourceReference.Resource.Id,
-                    ResourceType = resourceReference.Resource.Type
-                });
+                await db.Entry(op.Model).Collection(x => x.Projects).LoadAsync();
+                if (op.Model.Projects.All(x => x.ProjectId != projectReference.ProjectId))
+                    op.Model.Projects.Add(new OperationProjectModel
+                    {
+                        ProjectId = projectReference.ProjectId,
+                    });
+                break;
+            }
+            case ResourceReference resourceReference:
+            {
+                await db.Entry(op.Model).Collection(x => x.Resources).LoadAsync();
+                if (op.Model.Resources.All(x => x.ResourceId != resourceReference.Resource.Id))
+                    op.Model.Resources.Add(new OperationResourceModel
+                    {
+                        ResourceId = resourceReference.Resource.Id,
+                        ResourceType = resourceReference.Resource.Type,
+                    });
+                break;
             }
         }
 

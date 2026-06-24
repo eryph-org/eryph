@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dbosoft.OVN.Windows;
+﻿using Dbosoft.OVN.Windows;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
@@ -11,6 +6,7 @@ using Eryph.Core.Network;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
@@ -18,35 +14,34 @@ using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeNetworkAdaptersTests
 {
-    private readonly ConvergeFixture _fixture;
-    private readonly TypedPsObject<VirtualMachineInfo> _vmInfo;
     private readonly TypedPsObject<VMNetworkAdapter> _existingAdapter;
+    private readonly ConvergeFixture _fixture;
     private readonly Mock<IHyperVOvsPortManager> _portManagerMock = new();
+    private readonly TypedPsObject<VirtualMachineInfo> _vmInfo;
 
     public ConvergeNetworkAdaptersTests()
     {
-        _fixture = new()
+        _fixture = new ConvergeFixture
         {
             PortManager = _portManagerMock.Object,
-            HostInfo = new()
+            HostInfo = new VMHostMachineData
             {
-                NetworkProviderConfiguration = new()
+                NetworkProviderConfiguration = new NetworkProvidersConfiguration
                 {
-                    NetworkProviders = 
+                    NetworkProviders =
                     [
-                        new NetworkProvider()
+                        new NetworkProvider
                         {
                             Name = "default",
                             Type = NetworkProviderType.NatOverlay,
                         },
-                        new NetworkProvider()
+                        new NetworkProvider
                         {
                             Name = "flat",
                             Type = NetworkProviderType.Flat,
@@ -57,7 +52,7 @@ public class ConvergeNetworkAdaptersTests
             },
         };
         _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo());
-        _existingAdapter = _fixture.Engine.ToPsObject(new VMNetworkAdapter()
+        _existingAdapter = _fixture.Engine.ToPsObject(new VMNetworkAdapter
         {
             Id = "eth0Id",
             Name = "eth0",
@@ -79,10 +74,7 @@ public class ConvergeNetworkAdaptersTests
                 return Seq1(_fixture.Engine.ConvertPsObject(_existingAdapter));
             }
 
-            if (command.ToString().StartsWith("Get-VM"))
-            {
-                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
-            }
+            if (command.ToString().StartsWith("Get-VM")) return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
 
             return Error.New($"Unexpected command: {command}.");
         };
@@ -147,10 +139,7 @@ public class ConvergeNetworkAdaptersTests
                 return Seq1(_fixture.Engine.ConvertPsObject(_existingAdapter));
             }
 
-            if (command.ToString().StartsWith("Get-VM"))
-            {
-                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
-            }
+            if (command.ToString().StartsWith("Get-VM")) return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
 
             if (command.ToString().StartsWith("Add-VMNetworkAdapter"))
             {
@@ -195,7 +184,7 @@ public class ConvergeNetworkAdaptersTests
 
         var convergeTask = new ConvergeNetworkAdapters(_fixture.Context);
         var result = await convergeTask.Converge(_vmInfo);
-        
+
         result.Should().BeRight();
         adapterAdded.Should().BeTrue();
         adapterSettingsUpdated.Should().BeTrue();
@@ -263,7 +252,7 @@ public class ConvergeNetworkAdaptersTests
                 return unit;
             }
 
-            return Error.New ($"Unexpected command {command}");
+            return Error.New($"Unexpected command {command}");
         };
 
         _portManagerMock.Setup(m => m.SetPortName("eth0Id", "port1"))
@@ -322,14 +311,9 @@ public class ConvergeNetworkAdaptersTests
         _fixture.Engine.GetObjectCallback = (_, command) =>
         {
             if (command.ToString().StartsWith("Get-VMNetworkAdapter"))
-            {
                 return Seq1(_fixture.Engine.ConvertPsObject(_existingAdapter));
-            }
 
-            if (command.ToString().StartsWith("Get-VM"))
-            {
-                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
-            }
+            if (command.ToString().StartsWith("Get-VM")) return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
 
             if (command.ToString().StartsWith("Add-VMNetworkAdapter"))
             {
@@ -404,14 +388,9 @@ public class ConvergeNetworkAdaptersTests
         _fixture.Engine.GetObjectCallback = (_, command) =>
         {
             if (command.ToString().StartsWith("Get-VMNetworkAdapter"))
-            {
                 return Seq1(_fixture.Engine.ConvertPsObject(_existingAdapter));
-            }
 
-            if (command.ToString().StartsWith("Get-VM"))
-            {
-                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
-            }
+            if (command.ToString().StartsWith("Get-VM")) return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
 
             if (command.ToString().StartsWith("Add-VMNetworkAdapter"))
             {
@@ -504,14 +483,9 @@ public class ConvergeNetworkAdaptersTests
         _fixture.Engine.GetObjectCallback = (_, command) =>
         {
             if (command.ToString().StartsWith("Get-VMNetworkAdapter"))
-            {
                 return Seq1(_fixture.Engine.ConvertPsObject(connectedAdapter));
-            }
 
-            if (command.ToString().StartsWith("Get-VM"))
-            {
-                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
-            }
+            if (command.ToString().StartsWith("Get-VM")) return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
 
             return Error.New($"Unexpected command: {command}.");
         };
@@ -585,14 +559,9 @@ public class ConvergeNetworkAdaptersTests
         _fixture.Engine.GetObjectCallback = (_, command) =>
         {
             if (command.ToString().StartsWith("Get-VMNetworkAdapter"))
-            {
                 return Seq1(_fixture.Engine.ConvertPsObject(disconnectedAdapter));
-            }
 
-            if (command.ToString().StartsWith("Get-VM"))
-            {
-                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
-            }
+            if (command.ToString().StartsWith("Get-VM")) return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
 
             return Error.New($"Unexpected command: {command}.");
         };
@@ -655,7 +624,7 @@ public class ConvergeNetworkAdaptersTests
     [Fact]
     public async Task Converge_AdapterNotConfigured_RemovesAdapter()
     {
-        bool adapterRemoved = false;
+        var adapterRemoved = false;
 
         _fixture.Engine.RunCallback = command =>
         {

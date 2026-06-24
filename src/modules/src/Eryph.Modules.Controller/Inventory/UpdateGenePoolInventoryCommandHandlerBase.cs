@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Eryph.GenePool;
 using Eryph.StateDb;
@@ -18,10 +16,7 @@ internal abstract class UpdateGenePoolInventoryCommandHandlerBase(
         DateTimeOffset timestamp,
         IReadOnlyList<GeneData> genes)
     {
-        foreach (var geneData in genes)
-        {
-            await AddOrUpdateGene(agentName, timestamp, geneData);
-        }
+        foreach (var geneData in genes) await AddOrUpdateGene(agentName, timestamp, geneData);
     }
 
     private async Task AddOrUpdateGene(

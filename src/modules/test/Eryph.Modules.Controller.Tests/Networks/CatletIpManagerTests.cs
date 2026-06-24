@@ -31,13 +31,13 @@ public sealed class CatletIpManagerTests(
         string? poolName,
         string expectedIpAddress)
     {
-        var networkConfig = new CatletNetworkConfig()
+        var networkConfig = new CatletNetworkConfig
         {
             SubnetV4 = subnetName != null || poolName != null
                 ? new CatletSubnetConfig
                 {
                     Name = subnetName,
-                    IpPool = poolName
+                    IpPool = poolName,
                 }
                 : null,
         };
@@ -61,8 +61,8 @@ public sealed class CatletIpManagerTests(
             var result = await ipManager.ConfigurePortIps(
                 network!, catletPort, networkConfig);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+            result.Should().BeRight().Which.Should()
+                .SatisfyRespectively(ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
 
             await stateStore.SaveChangesAsync();
         });
@@ -70,12 +70,11 @@ public sealed class CatletIpManagerTests(
         await WithScope(async (_, _, stateStore) =>
         {
             var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
-            ipAssignments.Should().SatisfyRespectively(
-                ipAssignment =>
-                {
-                    ipAssignment.NetworkPortId.Should().Be(CatletPortId);
-                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
-                });
+            ipAssignments.Should().SatisfyRespectively(ipAssignment =>
+            {
+                ipAssignment.NetworkPortId.Should().Be(CatletPortId);
+                ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+            });
         });
     }
 
@@ -112,13 +111,13 @@ public sealed class CatletIpManagerTests(
             await stateStore.SaveChangesAsync();
         });
 
-        var networkConfig = new CatletNetworkConfig()
+        var networkConfig = new CatletNetworkConfig
         {
             SubnetV4 = subnetName != null || poolName != null
                 ? new CatletSubnetConfig
                 {
                     Name = subnetName,
-                    IpPool = poolName
+                    IpPool = poolName,
                 }
                 : null,
         };
@@ -135,8 +134,8 @@ public sealed class CatletIpManagerTests(
             var result = await catletIpManager.ConfigurePortIps(
                 network!, catletPort!, networkConfig);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+            result.Should().BeRight().Which.Should()
+                .SatisfyRespectively(ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
 
             await stateStore.SaveChangesAsync();
         });
@@ -144,13 +143,12 @@ public sealed class CatletIpManagerTests(
         await WithScope(async (_, _, stateStore) =>
         {
             var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
-            ipAssignments.Should().SatisfyRespectively(
-                ipAssignment =>
-                {
-                    ipAssignment.NetworkPortId.Should().Be(CatletPortId);
-                    ipAssignment.Id.Should().Be(ipAssignmentId);
-                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
-                });
+            ipAssignments.Should().SatisfyRespectively(ipAssignment =>
+            {
+                ipAssignment.NetworkPortId.Should().Be(CatletPortId);
+                ipAssignment.Id.Should().Be(ipAssignmentId);
+                ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+            });
         });
     }
 
@@ -185,13 +183,13 @@ public sealed class CatletIpManagerTests(
             await stateStore.SaveChangesAsync();
         });
 
-        var networkConfig = new CatletNetworkConfig()
+        var networkConfig = new CatletNetworkConfig
         {
             SubnetV4 = subnetName != null || poolName != null
                 ? new CatletSubnetConfig
                 {
                     Name = subnetName,
-                    IpPool = poolName
+                    IpPool = poolName,
                 }
                 : null,
         };
@@ -209,8 +207,8 @@ public sealed class CatletIpManagerTests(
             var result = await catletIpManager.ConfigurePortIps(
                 network!, catletPort!, networkConfig);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+            result.Should().BeRight().Which.Should()
+                .SatisfyRespectively(ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
 
             await stateStore.SaveChangesAsync();
         });
@@ -218,13 +216,12 @@ public sealed class CatletIpManagerTests(
         await WithScope(async (_, _, stateStore) =>
         {
             var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
-            ipAssignments.Should().SatisfyRespectively(
-                ipAssignment =>
-                {
-                    ipAssignment.NetworkPortId.Should().Be(CatletPortId);
-                    ipAssignment.Id.Should().NotBe(ipAssignmentId);
-                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
-                });
+            ipAssignments.Should().SatisfyRespectively(ipAssignment =>
+            {
+                ipAssignment.NetworkPortId.Should().Be(CatletPortId);
+                ipAssignment.Id.Should().NotBe(ipAssignmentId);
+                ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+            });
         });
     }
 
@@ -271,7 +268,7 @@ public sealed class CatletIpManagerTests(
                         IpNetwork = "10.0.0.0/15",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -280,7 +277,7 @@ public sealed class CatletIpManagerTests(
                                 NextIp = "10.0.0.12",
                                 LastIp = "10.0.0.19",
                             },
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = "second-pool",
@@ -288,7 +285,7 @@ public sealed class CatletIpManagerTests(
                                 FirstIp = "10.0.1.10",
                                 NextIp = "10.0.1.12",
                                 LastIp = "10.0.1.19",
-                            }
+                            },
                         ],
                     },
                     new VirtualNetworkSubnet
@@ -298,7 +295,7 @@ public sealed class CatletIpManagerTests(
                         IpNetwork = "10.1.0.0/16",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -306,7 +303,7 @@ public sealed class CatletIpManagerTests(
                                 FirstIp = "10.1.0.10",
                                 NextIp = "10.1.0.12",
                                 LastIp = "10.1.0.19",
-                            }
+                            },
                         ],
                     },
                 ],

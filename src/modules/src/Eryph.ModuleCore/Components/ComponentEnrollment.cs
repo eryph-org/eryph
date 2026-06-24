@@ -32,7 +32,8 @@ public static class ComponentEnrollment
             .GetAwaiter().GetResult();
 
         var clientCertificatePfxPath = store.GetClientCertificatePfxPath()
-            ?? throw new InvalidOperationException("Enrollment did not produce a usable client certificate.");
+                                       ?? throw new InvalidOperationException(
+                                           "Enrollment did not produce a usable client certificate.");
 
         // The deployment root CA must be installed into the host trust store (a provisioning step)
         // so the broker's server certificate validates; the transport presents the client cert file.

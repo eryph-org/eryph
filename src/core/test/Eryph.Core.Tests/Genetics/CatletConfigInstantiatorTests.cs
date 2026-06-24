@@ -17,17 +17,16 @@ public class CatletConfigInstantiatorTests
             NetworkAdapters =
             [
                 new CatletNetworkAdapterConfig(),
-            ]
+            ],
         };
-        
+
         var result = CatletConfigInstantiator.Instantiate(config, "test-location");
 
         result.ConfigType.Should().Be(CatletConfigType.Instance);
         result.Location.Should().Be("test-location");
-        result.Drives.Should().SatisfyRespectively(
-            drive => drive.Location.Should().Be("test-location"));
-        result.NetworkAdapters.Should().SatisfyRespectively(
-            networkAdapter => networkAdapter.MacAddress.Should().StartWith("d2:ab:"));
+        result.Drives.Should().SatisfyRespectively(drive => drive.Location.Should().Be("test-location"));
+        result.NetworkAdapters.Should()
+            .SatisfyRespectively(networkAdapter => networkAdapter.MacAddress.Should().StartWith("d2:ab:"));
     }
 
     [Fact]
@@ -41,25 +40,24 @@ public class CatletConfigInstantiatorTests
                 new CatletDriveConfig
                 {
                     Location = "custom-drive-location",
-                }
+                },
             ],
             NetworkAdapters =
             [
                 new CatletNetworkAdapterConfig
                 {
                     MacAddress = "02:04:06:08:0a:0c",
-                }
-            ]
+                },
+            ],
         };
 
         var result = CatletConfigInstantiator.Instantiate(config, "test-location");
 
         result.ConfigType.Should().Be(CatletConfigType.Instance);
         result.Location.Should().Be("custom-vm-location");
-        result.Drives.Should().SatisfyRespectively(
-            drive => drive.Location.Should().Be("custom-drive-location"));
-        result.NetworkAdapters.Should().SatisfyRespectively(
-            networkAdapter => networkAdapter.MacAddress.Should().Be("02:04:06:08:0a:0c"));
+        result.Drives.Should().SatisfyRespectively(drive => drive.Location.Should().Be("custom-drive-location"));
+        result.NetworkAdapters.Should()
+            .SatisfyRespectively(networkAdapter => networkAdapter.MacAddress.Should().Be("02:04:06:08:0a:0c"));
     }
 
     [Fact]
@@ -83,7 +81,7 @@ public class CatletConfigInstantiatorTests
                     MacAddress = "02:04:06:08:0a:0c",
                 },
                 new CatletNetworkAdapterConfig(),
-            ]
+            ],
         };
 
         var result = CatletConfigInstantiator.Instantiate(config, "test-location");

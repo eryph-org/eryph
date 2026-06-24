@@ -5,7 +5,6 @@ using Eryph.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
@@ -29,7 +28,8 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
         let isDynamicMemoryExplicitlyDisabled = CatletCapabilities
             .IsDynamicMemoryExplicitlyDisabled(capabilities)
         let useDynamicMemory = !isDynamicMemoryExplicitlyDisabled
-            && (isDynamicMemoryEnabled || configuredMemory.Minimum.IsSome || configuredMemory.Maximum.IsSome)
+                               && (isDynamicMemoryEnabled || configuredMemory.Minimum.IsSome ||
+                                   configuredMemory.Maximum.IsSome)
         // When startup, minimum and maximum are not all configured, we ensure
         // that the missing value are consistent with the configured ones.
         let minMemory = configuredMemory.Minimum
@@ -51,39 +51,39 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
         let changedMinMemory = useDynamicMemory
             ? minMemory.Filter(b => b != vmInfo.Value.MemoryMinimum)
             : None
-        let changedMaxMemory = useDynamicMemory 
+        let changedMaxMemory = useDynamicMemory
             ? maxMemory.Filter(b => b != vmInfo.Value.MemoryMaximum)
             : None
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMMemory")
             .AddParameter("VM", vmInfo.PsObject)
         let command2 = changedUseDynamicMemory.Match(
-            Some: d => command.AddParameter("DynamicMemoryEnabled", d),
-            None: () => command) 
+            d => command.AddParameter("DynamicMemoryEnabled", d),
+            () => command)
         let command3 = changedStartupMemory.Match(
-            Some: b => command2.AddParameter("StartupBytes", b),
-            None: () => command2)
+            b => command2.AddParameter("StartupBytes", b),
+            () => command2)
         let command4 = changedMinMemory.Match(
-            Some: b => command3.AddParameter("MinimumBytes", b),
-            None: () => command3)
+            b => command3.AddParameter("MinimumBytes", b),
+            () => command3)
         let command5 = changedMaxMemory.Match(
-            Some: b => command4.AddParameter("MaximumBytes", b),
-            None: () => command4)
+            b => command4.AddParameter("MaximumBytes", b),
+            () => command4)
         let message = "Updating catlet memory settings: "
-            + string.Join("; ", Seq(
-                    changedStartupMemory.Map(b => $"Startup memory {ToMiB(b)} MiB"),
-                    changedUseDynamicMemory.Map(d => $"Dynamic memory {(d ? "enabled" : "disabled")}"),
-                    changedMinMemory.Map(b => $"Minimum memory {ToMiB(b)} MiB"),
-                    changedMaxMemory.Map(b => $"Maximum memory {ToMiB(b)} MiB"))
-                .Somes())
-            + "."
+                      + string.Join("; ", Seq(
+                              changedStartupMemory.Map(b => $"Startup memory {ToMiB(b)} MiB"),
+                              changedUseDynamicMemory.Map(d => $"Dynamic memory {(d ? "enabled" : "disabled")}"),
+                              changedMinMemory.Map(b => $"Minimum memory {ToMiB(b)} MiB"),
+                              changedMaxMemory.Map(b => $"Maximum memory {ToMiB(b)} MiB"))
+                          .Somes())
+                      + "."
         from result in changedUseDynamicMemory.IsSome
                        || changedStartupMemory.IsSome
                        || changedMinMemory.IsSome
                        || changedMaxMemory.IsSome
             ? from _ in TryAsync(() => reportProgress(message).ToUnit()).ToEither()
-              from __ in powershellEngine.RunAsync(command5)
-              select unit
+            from __ in powershellEngine.RunAsync(command5)
+            select unit
             : RightAsync<Error, Unit>(unit)
         select unit;
 
@@ -105,17 +105,19 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
             from startup in startupMemory
             from min in minimumMemory
             where startup < min
-            select Error.New($"Startup memory ({ToMiB(startup)} MiB) cannot be less than minimum memory ({ToMiB(min)} MiB).")
-        from __ in minimumError.Match<Either<Error, Unit>>(Some: e => e, None: unit)
+            select Error.New(
+                $"Startup memory ({ToMiB(startup)} MiB) cannot be less than minimum memory ({ToMiB(min)} MiB).")
+        from __ in minimumError.Match<Either<Error, Unit>>(e => e, unit)
         let maximumError =
             from startup in startupMemory
             from max in maximumMemory
             where startup > max
-            select Error.New($"Startup memory ({ToMiB(startup)} MiB) cannot be more than maximum memory ({ToMiB(max)} MiB).")
-        from ___ in maximumError.Match<Either<Error, Unit>>(Some: e => e, None: unit)
+            select Error.New(
+                $"Startup memory ({ToMiB(startup)} MiB) cannot be more than maximum memory ({ToMiB(max)} MiB).")
+        from ___ in maximumError.Match<Either<Error, Unit>>(e => e, unit)
         select (startupMemory, minimumMemory, maximumMemory);
-    
-    private static long ToBytes (int megaBytes) => megaBytes * 1024L * 1024;
+
+    private static long ToBytes(int megaBytes) => megaBytes * 1024L * 1024;
 
     private static decimal ToMiB(long bytes) => bytes / (1024m * 1024L);
 }

@@ -12,67 +12,69 @@ public class StorageNamesTests
     {
         private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
         {
-            Defaults = new()
+            Defaults = new VmHostAgentDefaultsConfiguration
             {
                 Volumes = @"x:\default\test\volumes\eryph",
                 Vms = @"x:\default\test\vms\eryph",
             },
-            Datastores = new[]
-            {
-                new VmHostAgentDataStoreConfiguration()
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "cluster",
-                    Path = @"x:\cluster\test"
+                    Path = @"x:\cluster\test",
                 },
-                new VmHostAgentDataStoreConfiguration()
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "scratch",
-                    Path = @"x:\scratch\test"
-                }
-            },
-            Environments = new[]
-            {
-                new VmHostAgentEnvironmentConfiguration()
+                    Path = @"x:\scratch\test",
+                },
+            ],
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "prod",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Volumes = @"x:\prod\test\volumes",
                         Vms = @"x:\prod\test\vms",
                     },
-                    Datastores = new[]
-                    {
-                        new VmHostAgentDataStoreConfiguration()
+                    Datastores =
+                    [
+                        new VmHostAgentDataStoreConfiguration
                         {
                             Name = "cluster",
-                            Path = @"x:\prod\cluster\test"
+                            Path = @"x:\prod\cluster\test",
                         },
-                    }
+                    ],
                 },
-                new VmHostAgentEnvironmentConfiguration()
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "qa",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Volumes = @"x:\qa\test\volumes",
                         Vms = @"x:\qa\test\vms",
                     },
-                    Datastores = new[]
-                    {
-                        new VmHostAgentDataStoreConfiguration()
+                    Datastores =
+                    [
+                        new VmHostAgentDataStoreConfiguration
                         {
                             Name = "cluster",
-                            Path = @"x:\qa\cluster\test"
+                            Path = @"x:\qa\cluster\test",
                         },
-                    }
-                }
-            },
+                    ],
+                },
+            ],
         };
 
         [Theory]
         [InlineData(@"x:\default\test\vms\eryph\a6rkklnznsow", "default", "default", "default", "a6rkklnznsow")]
-        [InlineData(@"x:\default\test\vms\eryph\a6rkklnznsow\test.file", "default", "default", "default", "a6rkklnznsow")]
-        [InlineData(@"x:\default\test\vms\eryph\p_testproject\a6rkklnznsow", "default", "default", "testproject", "a6rkklnznsow")]
+        [InlineData(@"x:\default\test\vms\eryph\a6rkklnznsow\test.file", "default", "default", "default",
+            "a6rkklnznsow")]
+        [InlineData(@"x:\default\test\vms\eryph\p_testproject\a6rkklnznsow", "default", "default", "testproject",
+            "a6rkklnznsow")]
         [InlineData(@"x:\scratch\test\a6rkklnznsow", "default", "scratch", "default", "a6rkklnznsow")]
         [InlineData(@"x:\scratch\test\p_testproject\a6rkklnznsow", "default", "scratch", "testproject", "a6rkklnznsow")]
         [InlineData(@"x:\qa\test\vms\a6rkklnznsow", "qa", "default", "default", "a6rkklnznsow")]
@@ -115,17 +117,25 @@ public class StorageNamesTests
         }
 
         [Theory]
-        [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow", "default", "default", "default",false, "a6rkklnznsow")]
-        [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow\test.file", "default", "default", "default", false, "a6rkklnznsow")]
-        [InlineData(@"x:\default\test\volumes\eryph\p_testproject\a6rkklnznsow", "default", "default", "testproject", false, "a6rkklnznsow")]
+        [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow", "default", "default", "default", false,
+            "a6rkklnznsow")]
+        [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow\test.file", "default", "default", "default", false,
+            "a6rkklnznsow")]
+        [InlineData(@"x:\default\test\volumes\eryph\p_testproject\a6rkklnznsow", "default", "default", "testproject",
+            false, "a6rkklnznsow")]
         [InlineData(@"x:\scratch\test\a6rkklnznsow", "default", "scratch", "default", false, "a6rkklnznsow")]
-        [InlineData(@"x:\scratch\test\p_testproject\a6rkklnznsow", "default", "scratch", "testproject", false, "a6rkklnznsow")]
-        [InlineData(@"x:\qa\test\volumes\a6rkklnznsow", "qa", "default", "default",false, "a6rkklnznsow")]
-        [InlineData(@"x:\qa\test\volumes\p_testproject\a6rkklnznsow", "qa", "default", "testproject", false, "a6rkklnznsow")]
-        [InlineData(@"x:\qa\test\volumes\p_21A549A0-683B-4686-9DD8-40B7D938E495\a6rkklnznsow", "qa", "default", "{21A549A0-683B-4686-9DD8-40B7D938E495}",true, "a6rkklnznsow")]
+        [InlineData(@"x:\scratch\test\p_testproject\a6rkklnznsow", "default", "scratch", "testproject", false,
+            "a6rkklnznsow")]
+        [InlineData(@"x:\qa\test\volumes\a6rkklnznsow", "qa", "default", "default", false, "a6rkklnznsow")]
+        [InlineData(@"x:\qa\test\volumes\p_testproject\a6rkklnznsow", "qa", "default", "testproject", false,
+            "a6rkklnznsow")]
+        [InlineData(@"x:\qa\test\volumes\p_21A549A0-683B-4686-9DD8-40B7D938E495\a6rkklnznsow", "qa", "default",
+            "{21A549A0-683B-4686-9DD8-40B7D938E495}", true, "a6rkklnznsow")]
         [InlineData(@"x:\qa\cluster\test\a6rkklnznsow", "qa", "cluster", "default", false, "a6rkklnznsow")]
-        [InlineData(@"x:\qa\cluster\test\p_testproject\a6rkklnznsow", "qa", "cluster", "testproject", false, "a6rkklnznsow")]
-        [InlineData(@"x:\QA\Cluster\test\p_TestProject\a6rkklnznsow", "qa", "cluster", "testproject", false, "a6rkklnznsow")]
+        [InlineData(@"x:\qa\cluster\test\p_testproject\a6rkklnznsow", "qa", "cluster", "testproject", false,
+            "a6rkklnznsow")]
+        [InlineData(@"x:\QA\Cluster\test\p_TestProject\a6rkklnznsow", "qa", "cluster", "testproject", false,
+            "a6rkklnznsow")]
         public void FromVhdPath_ValidPath_ReturnsStorageNames(
             string path,
             string expectedEnvironment,
@@ -139,7 +149,7 @@ public class StorageNamesTests
             names.EnvironmentName.Should().BeSome().Which.Should().Be(expectedEnvironment);
             names.DataStoreName.Should().BeSome().Which.Should().Be(expectedDataStore);
 
-            if(projectIsGuid)
+            if (projectIsGuid)
                 names.ProjectId.Should().BeSome().Which.Should().Be(Guid.Parse(expectedProject));
             else
                 names.ProjectName.Should().BeSome().Which.Should().Be(expectedProject);
@@ -183,7 +193,7 @@ public class StorageNamesTests
             string projectName,
             string expectedPath)
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = environmentName,
                 DataStoreName = dataStoreName,
@@ -198,7 +208,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVmStorageBasePath_EnvironmentIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "missing-environment",
                 DataStoreName = "default",
@@ -213,7 +223,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVmStorageBasePath_DataStoreIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "default",
                 DataStoreName = "missing-datastore",
@@ -242,7 +252,7 @@ public class StorageNamesTests
             string projectName,
             string expectedPath)
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = environmentName,
                 DataStoreName = dataStoreName,
@@ -257,7 +267,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVolumeStorageBasePath_EnvironmentIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "missing-environment",
                 DataStoreName = "default",
@@ -272,7 +282,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVolumeStorageBasePath_DataStoreIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "default",
                 DataStoreName = "missing-datastore",
@@ -289,7 +299,7 @@ public class StorageNamesTests
     {
         private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
         {
-            Defaults = new()
+            Defaults = new VmHostAgentDefaultsConfiguration
             {
                 Volumes = @"x:\default\test\volumes\eryph",
                 Vms = @"x:\default\test\vms\eryph",
@@ -345,7 +355,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVmStorageBasePath_StorageNamesAreValid_ReturnsPath()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "default",
                 DataStoreName = "default",
@@ -360,7 +370,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVmStorageBasePath_EnvironmentIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "missing-environment",
                 DataStoreName = "default",
@@ -375,7 +385,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVmStorageBasePath_DataStoreIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "default",
                 DataStoreName = "missing-datastore",
@@ -390,7 +400,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVolumeStorageBasePath_StorageNamesAreValid_ReturnsPath()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "default",
                 DataStoreName = "default",
@@ -405,7 +415,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVolumeStorageBasePath_EnvironmentIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "missing-environment",
                 DataStoreName = "default",
@@ -420,7 +430,7 @@ public class StorageNamesTests
         [Fact]
         public async Task ResolveVolumeStorageBasePath_DataStoreIsNotConfigured_ReturnsError()
         {
-            var storageNames = new StorageNames()
+            var storageNames = new StorageNames
             {
                 EnvironmentName = "default",
                 DataStoreName = "missing-datastore",

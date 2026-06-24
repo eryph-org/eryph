@@ -26,19 +26,18 @@ public class RuntimeEnv<RT>(
             TestTimeSpec.RunningFromNow(),
             MemorySystemEnvironment.InitFromSystem())
     {
-
     }
 
     public CancellationTokenSource Source { get; } = source;
 
     public Encoding Encoding { get; } = encoding;
-    
+
     public MemoryConsole Console { get; } = console;
-    
+
     public MemoryFS FileSystem { get; } = fileSystem;
-    
+
     public TestTimeSpec TimeSpec { get; } = timeSpec ?? TestTimeSpec.RunningFromNow();
-    
+
     public MemorySystemEnvironment SysEnv { get; } = sysEnv;
 
     public ILoggerFactory LoggerFactory { get; init; } = new NullLoggerFactory();

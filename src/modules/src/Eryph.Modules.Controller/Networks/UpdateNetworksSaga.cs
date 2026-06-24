@@ -11,69 +11,57 @@ using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
-namespace Eryph.Modules.Controller.Networks
-{
-    [UsedImplicitly]
-    internal class UpdateNetworksSaga : OperationTaskWorkflowSaga<UpdateNetworksCommand, UpdateNetworksSagaData>,
+namespace Eryph.Modules.Controller.Networks;
+
+[UsedImplicitly]
+internal class UpdateNetworksSaga(IWorkflow workflow, IBus bus)
+    : OperationTaskWorkflowSaga<UpdateNetworksCommand, UpdateNetworksSagaData>(workflow),
         IHandleMessages<OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand>>
 
+{
+    public Task Handle(OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand> message)
     {
-        private readonly IBus _bus;
-
-        public UpdateNetworksSaga(IWorkflow workflow, IBus bus) : base(workflow)
-        {
-            _bus = bus;
-        }
-
-        protected override void CorrelateMessages(ICorrelationConfig<UpdateNetworksSagaData> config)
-        {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-
-        }
-
-        protected override async Task Initiated(UpdateNetworksCommand message)
-        {
-            Data.ProjectIds = message.Projects;
-
-            foreach (var project in message.Projects)
+        return FailOrRun<UpdateProjectNetworkPlanCommand, UpdateProjectNetworkPlanResponse>(message,
+            async response =>
             {
-                await StartNewTask(
-                    new UpdateProjectNetworkPlanCommand
-                    {
-                        ProjectId = project
-                    });
-            }
+                Data.ProjectsCompleted ??= [];
+                Data.UpdatedAddresses ??= [];
+                // ignore if already received
+                if (Data.ProjectsCompleted.Contains(response.ProjectId))
+                    return;
 
-        }
-
-        public Task Handle(OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand> message)
-        {
-            return FailOrRun<UpdateProjectNetworkPlanCommand, UpdateProjectNetworkPlanResponse>(message,
-                async response =>
+                Data.ProjectsCompleted.Add(response.ProjectId);
+                Data.UpdatedAddresses.AddRange(response.UpdatedAddresses);
+                if (Data.ProjectsCompleted.Count == Data.ProjectIds?.Length)
                 {
-                    Data.ProjectsCompleted ??= new List<Guid>();
-                    Data.UpdatedAddresses ??= new List<NetworkNeighborRecord>();
-                    // ignore if already received
-                    if (Data.ProjectsCompleted.Contains(response.ProjectId))
-                        return;
+                    await bus.Advanced.Topics.Publish(
+                        $"broadcast_{QueueNames.VMHostAgent}",
+                        new NetworkNeighborsUpdateRequestedEvent
+                        {
+                            UpdatedAddresses = Data.UpdatedAddresses
+                                .ToArray(),
+                        });
+                    await Complete();
+                }
+            });
+    }
 
-                    Data.ProjectsCompleted.Add(response.ProjectId);
-                    Data.UpdatedAddresses.AddRange(response.UpdatedAddresses);
-                    if (Data.ProjectsCompleted.Count == Data.ProjectIds?.Length)
-                    {
-                        await _bus.Advanced.Topics.Publish(
-                            $"broadcast_{QueueNames.VMHostAgent}",
-                            new NetworkNeighborsUpdateRequestedEvent
-                            {
-                                UpdatedAddresses = Data.UpdatedAddresses
-                                    .ToArray()
-                            });
-                        await Complete();
-                    }
-                       
+    protected override void CorrelateMessages(ICorrelationConfig<UpdateNetworksSagaData> config)
+    {
+        base.CorrelateMessages(config);
+        config.Correlate<OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand>>(m => m.InitiatingTaskId,
+            d => d.SagaTaskId);
+    }
+
+    protected override async Task Initiated(UpdateNetworksCommand message)
+    {
+        Data.ProjectIds = message.Projects;
+
+        foreach (var project in message.Projects)
+            await StartNewTask(
+                new UpdateProjectNetworkPlanCommand
+                {
+                    ProjectId = project,
                 });
-        }
     }
 }

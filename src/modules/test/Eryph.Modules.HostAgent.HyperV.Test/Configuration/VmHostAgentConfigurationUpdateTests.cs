@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Eryph.Core;
 using Eryph.Modules.HostAgent.Configuration;
 using LanguageExt.Sys.Traits;
 using Moq;
@@ -10,12 +11,10 @@ using static VmHostAgentConfigurationUpdate<VmHostAgentConfigurationTests.TestRu
 
 public class VmHostAgentConfigurationUpdateTests
 {
-    private readonly RT _runtime;
+    private const string ConfigPath = @"Z:\configs\config.yml";
 
     private readonly Mock<DirectoryIO> _directoryMock = new();
     private readonly Mock<FileIO> _fileMock = new();
-
-    private const string ConfigPath = @"Z:\configs\config.yml";
 
     private readonly HostSettings _hostSettings = new()
     {
@@ -23,9 +22,11 @@ public class VmHostAgentConfigurationUpdateTests
         DefaultVirtualHardDiskPath = @"Y:\defaults\disks\",
     };
 
+    private readonly RT _runtime;
+
     public VmHostAgentConfigurationUpdateTests()
     {
-        _runtime = new(new(
+        _runtime = new RT(new VmHostAgentConfigurationTests.TestRuntimeEnv(
             new CancellationTokenSource(),
             _directoryMock.Object,
             _fileMock.Object));
@@ -35,7 +36,7 @@ public class VmHostAgentConfigurationUpdateTests
     public async Task UpdateConfig_MalformedConfig_ReturnsFail()
     {
         var result = await updateConfig("not a config", ConfigPath, _hostSettings).Run(_runtime);
-        
+
         result.Should().BeFail()
             .Which.Message.Should().Be("The configuration is malformed.");
     }
@@ -59,11 +60,11 @@ public class VmHostAgentConfigurationUpdateTests
     [Fact]
     public async Task UpdateConfig_ValidConfig_UpdatesConfig()
     {
-        string yaml = """
-                      defaults:
-                        vms:
-                        volumes:
-                      """;
+        var yaml = """
+                   defaults:
+                     vms:
+                     volumes:
+                   """;
 
         var result = await updateConfig(yaml, ConfigPath, _hostSettings).Run(_runtime);
 
@@ -79,7 +80,7 @@ public class VmHostAgentConfigurationUpdateTests
                       watch_file_system: true
                     datastores: 
                     environments: 
-                    
+
                     """,
                     EqualityComparer<string>.Default),
                 Encoding.UTF8,

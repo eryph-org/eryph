@@ -22,14 +22,14 @@ public class DeployCatletCommand : IHasCorrelationId, ICommandWithName
 
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; }
 
-    public Guid CorrelationId { get; set; }
-
     public Guid? CatletId { get; set; }
-
-    public string GetCommandName() =>
-        CatletId.HasValue ? $"Deploy catlet {CatletId.Value}" : "Deploy new catlet"; 
 
     public Guid? SpecificationId { get; set; }
 
     public Guid? SpecificationVersionId { get; set; }
+
+    public string GetCommandName() =>
+        CatletId.HasValue ? $"Deploy catlet {CatletId.Value}" : "Deploy new catlet";
+
+    public Guid CorrelationId { get; set; }
 }

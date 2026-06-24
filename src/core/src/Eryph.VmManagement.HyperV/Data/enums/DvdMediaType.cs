@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum DvdMediaType
 {
-    public enum DvdMediaType
-    {
-        None,
-        ISO,
-        PassThrough
-    }
+    None,
+    ISO,
+    PassThrough,
 }

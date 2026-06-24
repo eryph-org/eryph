@@ -34,6 +34,22 @@ internal sealed class ComponentEnrollmentHostedService(
         return Task.CompletedTask;
     }
 
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await _stopping.CancelAsync();
+        if (_loop is not null)
+            try
+            {
+                await _loop;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+        // The loop has finished; dispose the CTS so its wait handle is not leaked.
+        _stopping.Dispose();
+    }
+
     private async Task RunAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -71,18 +87,5 @@ internal sealed class ComponentEnrollmentHostedService(
                 break;
             }
         }
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await _stopping.CancelAsync();
-        if (_loop is not null)
-        {
-            try { await _loop; }
-            catch (OperationCanceledException) { }
-        }
-
-        // The loop has finished; dispose the CTS so its wait handle is not leaked.
-        _stopping.Dispose();
     }
 }

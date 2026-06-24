@@ -4,5 +4,5 @@ public enum BridgeVlanMode
 {
     Access,
     NativeUntagged,
-    NativeTagged
+    NativeTagged,
 }

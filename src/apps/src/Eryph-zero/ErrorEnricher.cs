@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Dbosoft.Functional;
-using Eryph.Core;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Serilog.Core;
@@ -26,10 +21,8 @@ public class ErrorEnricher : ILogEventEnricher
         ArgumentNullException.ThrowIfNull(propertyFactory);
 
         if (logEvent.Exception is ErrorException { Inner.IsSome: true } eex)
-        {
             logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty(
                 "InnerError",
                 eex.Inner.ValueUnsafe().ToError().Print()));
-        }
     }
 }

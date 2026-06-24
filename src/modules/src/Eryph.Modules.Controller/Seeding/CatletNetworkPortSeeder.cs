@@ -15,19 +15,12 @@ using LanguageExt;
 
 namespace Eryph.Modules.Controller.Seeding;
 
-internal class CatletNetworkPortSeeder : SeederBase
+internal class CatletNetworkPortSeeder(
+    ChangeTrackingConfig config,
+    IFileSystem fileSystem,
+    IStateStore stateStore)
+    : SeederBase(fileSystem, config.ProjectNetworkPortsConfigPath)
 {
-    private readonly IStateStore _stateStore;
-
-    public CatletNetworkPortSeeder(
-        ChangeTrackingConfig config,
-        IFileSystem fileSystem,
-        IStateStore stateStore)
-        : base(fileSystem, config.ProjectNetworkPortsConfigPath)
-    {
-        _stateStore = stateStore;
-    }
-
     protected override async Task SeedAsync(
         Guid entityId,
         string json,
@@ -37,38 +30,35 @@ internal class CatletNetworkPortSeeder : SeederBase
         if (config is null)
             throw new SeederException($"The network port configuration for project {entityId} is invalid");
 
-        foreach (var portConfig in config.CatletNetworkPorts)
-        {
-            await SeedPort(entityId, portConfig, cancellationToken);
-        }
+        foreach (var portConfig in config.CatletNetworkPorts) await SeedPort(entityId, portConfig, cancellationToken);
 
-        await _stateStore.SaveChangesAsync(cancellationToken);
+        await stateStore.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedPort(
-        Guid projectId, 
+        Guid projectId,
         CatletNetworkPortConfigModel portConfig,
         CancellationToken cancellationToken)
     {
-        var network = await _stateStore.For<VirtualNetwork>().GetBySpecAsync(
+        var network = await stateStore.For<VirtualNetwork>().GetBySpecAsync(
             new VirtualNetworkSpecs.GetByName(projectId, portConfig.VirtualNetworkName, portConfig.EnvironmentName),
             cancellationToken);
         if (network is null)
             throw new SeederException(
                 $"Cannot seed port {portConfig.Name} because network {portConfig.VirtualNetworkName} does not exist in environment {portConfig.EnvironmentName}");
 
-        var exists = await _stateStore.For<CatletNetworkPort>().AnyAsync(
+        var exists = await stateStore.For<CatletNetworkPort>().AnyAsync(
             new CatletNetworkPortSpecs.GetByName(network.Id, portConfig.Name),
             cancellationToken);
         if (exists)
             return;
 
-        await _stateStore.LoadCollectionAsync(network, n => n.Subnets, cancellationToken);
+        await stateStore.LoadCollectionAsync(network, n => n.Subnets, cancellationToken);
 
         FloatingNetworkPort? floatingPort = null;
         if (portConfig.FloatingNetworkPort is not null)
         {
-            floatingPort = await _stateStore.For<FloatingNetworkPort>().GetBySpecAsync(
+            floatingPort = await stateStore.For<FloatingNetworkPort>().GetBySpecAsync(
                 new FloatingNetworkPortSpecs.GetByName(
                     portConfig.FloatingNetworkPort.ProviderName,
                     portConfig.FloatingNetworkPort.SubnetName,
@@ -84,7 +74,7 @@ internal class CatletNetworkPortSeeder : SeederBase
             .Map(ac => ResolveIpAssignment(network.Subnets, ac, cancellationToken))
             .SequenceSerial();
 
-        var port = new CatletNetworkPort()
+        var port = new CatletNetworkPort
         {
             Name = portConfig.Name,
             MacAddress = portConfig.MacAddress,
@@ -92,10 +82,10 @@ internal class CatletNetworkPortSeeder : SeederBase
             Network = network,
             CatletMetadataId = portConfig.CatletMetadataId,
             AddressName = portConfig.AddressName,
-            IpAssignments = assignments.ToList(),
+            IpAssignments = assignments.OfType<IpAssignment>().ToList(),
         };
 
-        await _stateStore.For<CatletNetworkPort>().AddAsync(port, cancellationToken);
+        await stateStore.For<CatletNetworkPort>().AddAsync(port, cancellationToken);
     }
 
     private async Task<IpAssignment?> ResolveIpAssignment(
@@ -111,11 +101,15 @@ internal class CatletNetworkPortSeeder : SeederBase
         IpAssignment assignment;
         if (config.PoolName is not null)
         {
-            await _stateStore.LoadCollectionAsync(subnet, s => s.IpPools, stoppingToken);
+            await stateStore.LoadCollectionAsync(subnet, s => s.IpPools, stoppingToken);
             var pool = subnet.IpPools.FirstOrDefault(p => p.Name == config.PoolName);
             if (pool is null)
                 throw new SeederException(
                     $"Cannot seed IP assignment {config.IpAddress} because IP pool {config.PoolName} does not exist in subnet {config.SubnetName}");
+
+            if (pool.FirstIp is null)
+                throw new SeederException(
+                    $"Cannot seed IP assignment {config.IpAddress} because IP pool {pool.Name} has no first IP.");
 
             var startIp = IPAddress.Parse(pool.FirstIp);
             var assignedIp = IPAddress.Parse(config.IpAddress);

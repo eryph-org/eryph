@@ -7,10 +7,10 @@ namespace Eryph.Messages.Resources.Networks.Commands;
 public class CreateNetworksCommand : IHasCorrelationId, IHasProjectId
 {
     public ProjectNetworksConfig Config { get; set; }
-        
-    public Guid CorrelationId { get; set; }
-        
+
     public Guid TenantId { get; set; }
+
+    public Guid CorrelationId { get; set; }
 
     public Guid ProjectId { get; set; }
 }

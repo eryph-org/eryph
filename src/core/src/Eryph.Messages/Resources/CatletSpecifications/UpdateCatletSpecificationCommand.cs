@@ -19,7 +19,7 @@ public class UpdateCatletSpecificationCommand : IHasCorrelationId, IHasResource
 
     [MaybeNull] public string Comment { get; set; }
 
-    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
-
     public Guid CorrelationId { get; set; }
+
+    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
 }

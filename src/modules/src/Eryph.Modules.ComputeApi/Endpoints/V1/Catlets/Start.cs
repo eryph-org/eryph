@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -23,17 +22,17 @@ public class Start(
     {
         return new StartCatletCommand
         {
-            CatletId = model.Id
+            CatletId = model.Id,
         };
     }
 
     [Authorize(Policy = "compute:catlets:control")]
     [HttpPut("catlets/{id}/start")]
     [SwaggerOperation(
-        Summary = "Start a catlet",
-        Description = "Start a catlet",
-        OperationId = "Catlets_Start",
-        Tags = ["Catlets"])
+            Summary = "Start a catlet",
+            Description = "Start a catlet",
+            OperationId = "Catlets_Start",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

@@ -10,5 +10,4 @@ public interface IVMHostMachineDataService
     Task<Option<CatletFarm>> GetVMHost(Guid id);
     Task<CatletFarm> AddNewVMHost(CatletFarm vmHostMachine);
     Task<Option<CatletFarm>> GetVMHostByAgentName(string agentName);
-
 }

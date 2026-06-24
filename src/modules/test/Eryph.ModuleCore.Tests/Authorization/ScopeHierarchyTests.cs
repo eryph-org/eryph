@@ -119,7 +119,7 @@ public class ScopeHierarchyTests
         var assignedScopes = new[]
         {
             EryphConstants.Authorization.Scopes.CatletsWrite,
-            EryphConstants.Authorization.Scopes.GenesRead
+            EryphConstants.Authorization.Scopes.GenesRead,
         };
 
         // Act

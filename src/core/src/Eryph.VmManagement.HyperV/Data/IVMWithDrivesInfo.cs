@@ -1,10 +1,9 @@
 ﻿using Eryph.VmManagement.Data.Core;
 
-namespace Eryph.VmManagement.Data
+namespace Eryph.VmManagement.Data;
+
+public interface IVMWithDrivesInfo
 {
-    public interface IVMWithDrivesInfo
-    {
-        VirtualMachineDeviceInfo[] DVDDrives { get; }
-        VirtualMachineDeviceInfo[] HardDrives { get; }
-    }
+    VirtualMachineDeviceInfo[] DVDDrives { get; }
+    VirtualMachineDeviceInfo[] HardDrives { get; }
 }

@@ -12,13 +12,13 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Catlets;
 
 public abstract class CatletTestBase : InMemoryStateDbTestBase
 {
-    protected readonly WebModuleFactory<ComputeApiModule> Factory;
+    protected const string OtherProjectName = "other";
 
     protected static readonly Guid CatletId = Guid.NewGuid();
     protected static readonly Guid CatletMetadataId = Guid.NewGuid();
     protected static readonly Guid OtherClientId = Guid.NewGuid();
     protected static readonly Guid OtherProjectId = Guid.NewGuid();
-    protected const string OtherProjectName = "other";
+    protected readonly WebModuleFactory<ComputeApiModule> Factory;
 
     protected CatletTestBase(ITestOutputHelper outputHelper)
         : base(outputHelper)

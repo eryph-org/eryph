@@ -13,6 +13,5 @@ public class CreateCatletVMCommand : IHostAgentCommand
 
     public Guid MetadataId { get; set; }
 
-    [PrivateIdentifier]
-    public string AgentName { get; set; }
+    [PrivateIdentifier] public string AgentName { get; set; }
 }

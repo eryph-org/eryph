@@ -1,5 +1,5 @@
-﻿using Eryph.Resources;
-using System;
+﻿using System;
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
@@ -8,7 +8,7 @@ public class DestroyVirtualDiskCommand : IHasResource, ICommandWithName
 {
     public Guid DiskId { get; set; }
 
-    public Resource Resource => new(ResourceType.VirtualDisk, DiskId);
-
     public string GetCommandName() => "Destroy Virtual Disk";
+
+    public Resource Resource => new(ResourceType.VirtualDisk, DiskId);
 }

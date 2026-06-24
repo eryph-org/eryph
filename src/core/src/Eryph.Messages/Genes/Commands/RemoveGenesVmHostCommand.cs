@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources;
@@ -14,6 +10,5 @@ public class RemoveGenesVmHostCommand : IGenePoolAgentCommand
 {
     public IReadOnlyList<UniqueGeneIdentifier> Genes { get; set; }
 
-    [PrivateIdentifier]
-    public string AgentName { get; set; }
+    [PrivateIdentifier] public string AgentName { get; set; }
 }

@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Messages.Components;
-using LanguageExt;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Components;
@@ -24,8 +23,8 @@ internal sealed class NetworkProvidersConfigSource(
     public Task<string> BuildPayloadAsync(CancellationToken cancellationToken) =>
         networkProviderManager.GetCurrentConfigurationYaml()
             .Match(
-                Right: yaml => yaml,
-                Left: error =>
+                yaml => yaml,
+                error =>
                 {
                     // Never distribute an empty/partial network config — that would wipe an
                     // agent's networking. Fail the round instead; agents keep their current

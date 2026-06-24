@@ -1,15 +1,11 @@
-﻿using IdGen;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
+using IdGen;
 
 namespace Eryph.Modules.Controller;
 
 internal class StorageIdentifierGenerator(
-    IIdGenerator<long> idGenerator) 
+    IIdGenerator<long> idGenerator)
     : IStorageIdentifierGenerator
 {
     private const string Digits = "0123456789abcdefghijklmnopqrstuvwxyz";

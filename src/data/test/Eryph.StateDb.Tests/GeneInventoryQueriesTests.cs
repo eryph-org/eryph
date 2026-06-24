@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
@@ -143,7 +138,7 @@ public abstract class GeneInventoryQueriesTests(
                     GeneSet = "acme/acme-fodder/1.0",
                     Name = "used-food",
                     Architecture = "any",
-                }
+                },
             ],
         });
 
@@ -169,7 +164,7 @@ public abstract class GeneInventoryQueriesTests(
                     GeneSet = "acme/acme-fodder/1.0",
                     Name = "used-food",
                     Architecture = "hyperv/any",
-                }
+                },
             ],
         });
 

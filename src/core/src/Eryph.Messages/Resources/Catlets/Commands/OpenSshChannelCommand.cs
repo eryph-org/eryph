@@ -12,6 +12,6 @@ public class OpenSshChannelCommand : IHasResource, ICommandWithName
     // External-pool KVP values authorizing the operator's key, built by the
     // endpoint. Empty for the pre-injected-key flow (no write).
     public Dictionary<string, string> AccessKeyValues { get; set; } = new();
-    public Resource Resource => new(ResourceType.Catlet, CatletId);
     public string GetCommandName() => "Opening SSH channel";
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

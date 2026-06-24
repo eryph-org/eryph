@@ -11,7 +11,6 @@ using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging.Abstractions;
 using Spectre.Console;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
@@ -61,7 +60,8 @@ public readonly struct SimpleConsoleRuntime :
 
     public Encoding Encoding => Encoding.UTF8;
 
-    public Eff<SimpleConsoleRuntime, EnvironmentIO> EnvironmentEff => SuccessEff(LanguageExt.Sys.Live.EnvironmentIO.Default);
+    public Eff<SimpleConsoleRuntime, EnvironmentIO> EnvironmentEff =>
+        SuccessEff(LanguageExt.Sys.Live.EnvironmentIO.Default);
 
     public Eff<SimpleConsoleRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
 

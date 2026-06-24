@@ -12,7 +12,7 @@ public class VirtualDisk : Disk
     }
 
     public string? StorageIdentifier { get; set; }
-    
+
     public Guid DiskIdentifier { get; set; }
 
     public bool Frozen { get; set; }
@@ -36,11 +36,11 @@ public class VirtualDisk : Disk
     public VirtualDiskStatus Status { get; set; }
 
     public string? Path { get; set; }
-        
+
     public string? FileName { get; set; }
 
     public long? SizeBytes { get; set; }
-    
+
     public long? UsedSizeBytes { get; set; }
 
     public ICollection<VirtualDisk> Children { get; set; } = null!;
@@ -48,7 +48,7 @@ public class VirtualDisk : Disk
     public ICollection<CatletDrive> AttachedDrives { get; set; } = null!;
 
     public Guid? ParentId { get; set; }
-    
+
     public VirtualDisk? Parent { get; set; }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class VirtualDisk : Disk
     public string? ParentPath { get; set; }
 
     public DateTimeOffset LastSeen { get; set; }
-    
+
     public string? LastSeenAgent { get; set; }
 
     /// <summary>

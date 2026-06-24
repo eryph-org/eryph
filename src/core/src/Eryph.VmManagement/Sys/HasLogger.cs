@@ -8,6 +8,4 @@ public interface HasLogger<RT>
 {
     Eff<RT, ILogger> Logger(string category);
     Eff<RT, ILogger<T>> Logger<T>();
-
-
 }

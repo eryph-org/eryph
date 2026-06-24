@@ -26,6 +26,7 @@ public enum MsvmComputerSystemEnabledState : ushort
     // included in the documentation.
     Paused = 32768,
     Suspended = 32769,
+
     // There are two Starting values defined in different places
     // of the documentation.
     Starting2 = 32770,

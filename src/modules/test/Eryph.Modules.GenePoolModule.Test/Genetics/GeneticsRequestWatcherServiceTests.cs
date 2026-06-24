@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
@@ -13,9 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
-
 using static LanguageExt.Prelude;
-
 using GenesetTagManifestData = Eryph.GenePool.Model.GenesetTagManifestData;
 
 namespace Eryph.Modules.GenePoolModule.Test.Genetics;
@@ -48,7 +43,7 @@ public class GeneticsRequestWatcherServiceTests
     [Fact]
     public async Task Requests_for_different_genes_are_processed_concurrently()
     {
-        using var container = CreateContainer();
+        await using var container = CreateContainer();
         var provider = new BlockingGeneProvider();
         provider.RegisterGene(Gene1);
         provider.RegisterGene(Gene2);
@@ -103,10 +98,10 @@ public class GeneticsRequestWatcherServiceTests
                 Hash = geneHash,
                 AgentName = "test",
             },
-            operationId: Guid.NewGuid(),
-            initiatingTaskId: Guid.NewGuid(),
-            taskId: Guid.NewGuid(),
-            created: DateTimeOffset.UtcNow);
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow);
 
     /// <summary>
     /// A fake gene provider whose downloads block until <see cref="ReleaseAll"/>
@@ -115,22 +110,12 @@ public class GeneticsRequestWatcherServiceTests
     /// </summary>
     private sealed class BlockingGeneProvider : IGeneProvider
     {
-        private readonly ConcurrentDictionary<string, TaskCompletionSource> _started = new();
         private readonly TaskCompletionSource _release = new();
+        private readonly ConcurrentDictionary<string, TaskCompletionSource> _started = new();
         private int _current;
         private int _maxConcurrency;
 
         public int MaxConcurrency => Volatile.Read(ref _maxConcurrency);
-
-        public void RegisterGene(UniqueGeneIdentifier geneId) =>
-            _started[geneId.Value] = new TaskCompletionSource();
-
-        public Task Started(UniqueGeneIdentifier geneId) => Gate(geneId).Task;
-
-        private TaskCompletionSource Gate(UniqueGeneIdentifier geneId) =>
-            _started.GetOrAdd(geneId.Value, _ => new TaskCompletionSource());
-
-        public void ReleaseAll() => _release.TrySetResult();
 
         public Aff<CancelRt, PrepareGeneResponse> ProvideGene(
             UniqueGeneIdentifier uniqueGeneId,
@@ -153,16 +138,6 @@ public class GeneticsRequestWatcherServiceTests
                 return new PrepareGeneResponse { RequestedGene = uniqueGeneId };
             });
 
-        private void UpdateMax(int current)
-        {
-            int observed;
-            while (current > (observed = Volatile.Read(ref _maxConcurrency)))
-            {
-                if (Interlocked.CompareExchange(ref _maxConcurrency, current, observed) == observed)
-                    return;
-            }
-        }
-
         public Aff<CancelRt, string> GetGeneContent(
             UniqueGeneIdentifier uniqueGeneId,
             GeneHash geneHash) =>
@@ -171,5 +146,23 @@ public class GeneticsRequestWatcherServiceTests
         public Aff<CancelRt, GenesetTagManifestData> GetGeneSetManifest(
             GeneSetIdentifier geneSetId) =>
             throw new NotSupportedException();
+
+        public void RegisterGene(UniqueGeneIdentifier geneId) =>
+            _started[geneId.Value] = new TaskCompletionSource();
+
+        public Task Started(UniqueGeneIdentifier geneId) => Gate(geneId).Task;
+
+        private TaskCompletionSource Gate(UniqueGeneIdentifier geneId) =>
+            _started.GetOrAdd(geneId.Value, _ => new TaskCompletionSource());
+
+        public void ReleaseAll() => _release.TrySetResult();
+
+        private void UpdateMax(int current)
+        {
+            int observed;
+            while (current > (observed = Volatile.Read(ref _maxConcurrency)))
+                if (Interlocked.CompareExchange(ref _maxConcurrency, current, observed) == observed)
+                    return;
+        }
     }
 }

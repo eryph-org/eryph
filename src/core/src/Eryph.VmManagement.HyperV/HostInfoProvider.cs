@@ -11,13 +11,13 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.VmManagement;
 
 public class HostInfoProvider(
-    ILogger log, 
+    ILogger log,
     INetworkProviderManager networkProviderManager)
     : IHostInfoProvider
 {
-    [CanBeNull] private VMHostMachineData _cachedData = null;
     private readonly HostInventory _hostInventory = new(log, networkProviderManager);
     private readonly SemaphoreSlim _lock = new(1, 1);
+    [CanBeNull] private VMHostMachineData _cachedData;
 
     public EitherAsync<Error, VMHostMachineData> GetHostInfoAsync(bool refresh = false)
     {
@@ -27,7 +27,6 @@ public class HostInfoProvider(
             try
             {
                 if (_cachedData == null || refresh)
-                {
                     return await _hostInventory.InventorizeHost().MapAsync(r =>
                     {
                         _cachedData = r;
@@ -35,8 +34,6 @@ public class HostInfoProvider(
 
                         return r;
                     });
-
-                }
 
                 return _cachedData;
             }

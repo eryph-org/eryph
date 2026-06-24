@@ -22,10 +22,10 @@ public class Delete(
     [Authorize(Policy = "compute:projects:write")]
     [HttpDelete("projects/{id}")]
     [SwaggerOperation(
-        Summary = "Delete a project",
-        Description = "Delete a project",
-        OperationId = "Projects_Delete",
-        Tags = ["Projects"])
+            Summary = "Delete a project",
+            Description = "Delete a project",
+            OperationId = "Projects_Delete",
+            Tags = ["Projects"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
@@ -39,7 +39,7 @@ public class Delete(
         return new DestroyProjectCommand
         {
             CorrelationId = Guid.NewGuid(),
-            ProjectId = Guid.Parse(request.Id)
+            ProjectId = Guid.Parse(request.Id),
         };
     }
 }

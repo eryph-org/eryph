@@ -1,10 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum CheckpointType
 {
-    public enum CheckpointType
-    {
-        Disabled = 2,
-        Production = 3,
-        ProductionOnly = 4,
-        Standard = 5
-    }
+    Disabled = 2,
+    Production = 3,
+    ProductionOnly = 4,
+    Standard = 5,
 }

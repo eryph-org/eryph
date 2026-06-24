@@ -12,30 +12,35 @@ namespace Eryph.StateDb.Workflows;
 
 public static class OperationsHelper
 {
-    public static async Task<(List<OperationResourceModel> Resources, List<OperationProjectModel> Projects)> GetCommandProjectsAndResources(object command, StateStoreContext db)
+    public static async Task<(List<OperationResourceModel> Resources, List<OperationProjectModel> Projects)>
+        GetCommandProjectsAndResources(object command, StateStoreContext db)
     {
         var projects = new List<Guid>();
 
-        if (command is IHasProjectId hasProjectId)
-            projects.Add(hasProjectId.ProjectId);
-
-        if (command is IHasProjectName hasProjectName)
+        switch (command)
         {
-            var project = await db.Projects.FirstOrDefaultAsync(x =>
-                x.TenantId == hasProjectName.TenantId && x.Name == hasProjectName.ProjectName);
+            case IHasProjectId hasProjectId:
+                projects.Add(hasProjectId.ProjectId);
+                break;
+            case IHasProjectName hasProjectName:
+            {
+                var project = await db.Projects.FirstOrDefaultAsync(x =>
+                    x.TenantId == hasProjectName.TenantId && x.Name == hasProjectName.ProjectName);
 
-            if(project != null)
-                projects.Add(project.Id);
+                if (project != null)
+                    projects.Add(project.Id);
+                break;
+            }
         }
 
         var resources = command switch
         {
             IHasResources { Resources: not null } resourcesCommand => resourcesCommand.Resources,
-            IHasResource resourceCommand when resourceCommand.Resource.Id != Guid.Empty => new[] { resourceCommand.Resource },
-            _ => Array.Empty<Resource>()
+            IHasResource resourceCommand when resourceCommand.Resource.Id != Guid.Empty => [resourceCommand.Resource],
+            _ => [],
         };
 
-        resources = resources.Where(x=>x.Id!= Guid.Empty).Distinct().ToArray();
+        resources = resources.Where(x => x.Id != Guid.Empty).Distinct().ToArray();
 
         var resourceIds = resources.Select(x => x.Id);
         var projectsOfResources = await db.Resources
@@ -50,6 +55,5 @@ public static class OperationsHelper
                 { ResourceId = x.Id, ResourceType = x.Type })
             .ToList(), projects.Select(p => new OperationProjectModel { ProjectId = p })
             .ToList());
-
     }
 }

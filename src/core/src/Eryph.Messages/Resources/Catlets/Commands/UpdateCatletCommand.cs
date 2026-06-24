@@ -9,9 +9,9 @@ public class UpdateCatletCommand : IHasCorrelationId, IHasResource
 {
     public CatletConfig Config { get; set; }
 
-    public Guid CorrelationId { get; set; }
-
     public Guid CatletId { get; set; }
+
+    public Guid CorrelationId { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

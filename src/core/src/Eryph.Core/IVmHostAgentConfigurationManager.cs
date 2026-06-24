@@ -1,17 +1,10 @@
-﻿using Eryph.Core.Network;
-using LanguageExt.Common;
+﻿using Eryph.Core.VmAgent;
 using LanguageExt;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.VmAgent;
+using LanguageExt.Common;
 
-namespace Eryph.Core
+namespace Eryph.Core;
+
+public interface IVmHostAgentConfigurationManager
 {
-    public interface IVmHostAgentConfigurationManager
-    {
-        EitherAsync<Error, VmHostAgentConfiguration> GetCurrentConfiguration(HostSettings hostSettings);
-    }
+    EitherAsync<Error, VmHostAgentConfiguration> GetCurrentConfiguration(HostSettings hostSettings);
 }

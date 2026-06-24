@@ -5,14 +5,9 @@ using OperationTaskStatus = Dbosoft.Rebus.Operations.OperationTaskStatus;
 
 namespace Eryph.StateDb.Workflows;
 
-internal class OperationTask : IOperationTask
+internal class OperationTask(OperationTaskModel model) : IOperationTask
 {
-    public OperationTask(OperationTaskModel model)
-    {
-        Model = model;
-    }
-
-    public OperationTaskModel Model { get; }
+    public OperationTaskModel Model { get; } = model;
 
     public Guid Id => Model.Id;
     public Guid OperationId => Model.Operation.Id;
@@ -24,11 +19,11 @@ internal class OperationTask : IOperationTask
         {
             return Model.Status switch
             {
-                Eryph.StateDb.Model.OperationTaskStatus.Queued => OperationTaskStatus.Queued,
-                Eryph.StateDb.Model.OperationTaskStatus.Running => OperationTaskStatus.Running,
-                Eryph.StateDb.Model.OperationTaskStatus.Failed => OperationTaskStatus.Failed,
-                Eryph.StateDb.Model.OperationTaskStatus.Completed => OperationTaskStatus.Completed,
-                _ => throw new ArgumentOutOfRangeException()
+                StateDb.Model.OperationTaskStatus.Queued => OperationTaskStatus.Queued,
+                StateDb.Model.OperationTaskStatus.Running => OperationTaskStatus.Running,
+                StateDb.Model.OperationTaskStatus.Failed => OperationTaskStatus.Failed,
+                StateDb.Model.OperationTaskStatus.Completed => OperationTaskStatus.Completed,
+                _ => throw new ArgumentOutOfRangeException(),
             };
         }
     }

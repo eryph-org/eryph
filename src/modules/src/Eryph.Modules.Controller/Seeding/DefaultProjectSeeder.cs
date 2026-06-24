@@ -14,14 +14,14 @@ namespace Eryph.Modules.Controller.Seeding;
 [UsedImplicitly]
 internal class DefaultProjectSeeder : IConfigSeeder<ControllerModule>
 {
+    private readonly IDefaultNetworkConfigRealizer _defaultNetworkConfigRealizer;
     private readonly ILogger _logger;
     private readonly IStateStore _stateStore;
-    private readonly IDefaultNetworkConfigRealizer _defaultNetworkConfigRealizer;
 
     public DefaultProjectSeeder(
         ILogger logger,
         INetworkProviderManager networkProviderManager,
-        IStateStore stateStore, 
+        IStateStore stateStore,
         IDefaultNetworkConfigRealizer defaultNetworkConfigRealizer)
     {
         _logger = logger;
@@ -39,13 +39,14 @@ internal class DefaultProjectSeeder : IConfigSeeder<ControllerModule>
 
         if (project == null)
         {
-            _logger.LogInformation("Default project '{projectId}' not found in state db. Creating project record.", EryphConstants.DefaultProjectId);
+            _logger.LogInformation("Default project '{projectId}' not found in state db. Creating project record.",
+                EryphConstants.DefaultProjectId);
 
             project = new Project
             {
                 Id = EryphConstants.DefaultProjectId,
                 Name = "default",
-                TenantId = tenantId
+                TenantId = tenantId,
             };
             await _stateStore.For<Project>().AddAsync(project, stoppingToken);
         }

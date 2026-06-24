@@ -5,38 +5,19 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using JetBrains.Annotations;
-using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
-internal class StartCatletSaga(IWorkflow workflow,
+internal class StartCatletSaga(
+    IWorkflow workflow,
     ICatletDataService vmDataService) :
     OperationTaskWorkflowSaga<StartCatletCommand, EryphSagaData<StartCatletSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<StartCatletVMCommand>>,
     IHandleMessages<OperationTaskStatusEvent<UpdateCatletStateCommand>>
 {
-    protected override async Task Initiated(StartCatletCommand message)
-    {
-        Data.Data.CatletId = message.CatletId;
-        var catlet = await vmDataService.Get(message.CatletId);
-        if (catlet is null)
-        {
-            await Fail($"The catlet {message.CatletId} does not exist.");
-            return;
-        }
-
-        Data.Data.VmId = catlet.VmId;
-        
-        await StartNewTask(new StartCatletVMCommand
-        {
-            CatletId = message.CatletId,
-            VmId = Data.Data.VmId,
-        });
-    }
-
     public Task Handle(OperationTaskStatusEvent<StartCatletVMCommand> message) =>
         FailOrRun(message, async (CatletStateResponse response) =>
         {
@@ -52,6 +33,25 @@ internal class StartCatletSaga(IWorkflow workflow,
 
     public Task Handle(OperationTaskStatusEvent<UpdateCatletStateCommand> message) =>
         FailOrRun(message, Complete);
+
+    protected override async Task Initiated(StartCatletCommand message)
+    {
+        Data.Data.CatletId = message.CatletId;
+        var catlet = await vmDataService.Get(message.CatletId);
+        if (catlet is null)
+        {
+            await Fail($"The catlet {message.CatletId} does not exist.");
+            return;
+        }
+
+        Data.Data.VmId = catlet.VmId;
+
+        await StartNewTask(new StartCatletVMCommand
+        {
+            CatletId = message.CatletId,
+            VmId = Data.Data.VmId,
+        });
+    }
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<StartCatletSagaData>> config)
     {

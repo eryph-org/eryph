@@ -9,34 +9,27 @@ using Rebus.Bus;
 
 namespace Eryph.ModuleCore;
 
-public class OperationDispatcher : DefaultOperationDispatcher
+public class OperationDispatcher(
+    IBus bus,
+    WorkflowOptions options,
+    ILogger<OperationDispatcher> logger,
+    IOperationManager operationManager)
+    : DefaultOperationDispatcher(bus, options, logger, operationManager)
 {
-    private readonly IOperationManager _operationManager;
-
-    public OperationDispatcher(
-        IBus bus,
-        WorkflowOptions options,
-        ILogger<OperationDispatcher> logger,
-        IOperationManager operationManager)
-        : base(bus, options, logger, operationManager)
-    {
-        _operationManager = operationManager;
-    }
+    private readonly IOperationManager _operationManager = operationManager;
 
     protected override async ValueTask<(IOperation, object)> CreateOperation(
-        object command, 
+        object command,
         DateTimeOffset timestamp,
         object? additionalData,
-        IDictionary<string,string>? additionalHeaders)
+        IDictionary<string, string>? additionalHeaders)
     {
         var operationId = Guid.NewGuid();
 
         if (command is IHasCorrelationId correlatedCommand)
-        {
             operationId = correlatedCommand.CorrelationId == Guid.Empty
                 ? operationId
                 : correlatedCommand.CorrelationId;
-        }
 
         var operation = await _operationManager.GetOrCreateAsync(
             operationId, command, timestamp, additionalData, additionalHeaders);

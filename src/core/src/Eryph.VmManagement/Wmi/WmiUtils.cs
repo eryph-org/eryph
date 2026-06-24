@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Runtime.Versioning;
-using System.Text;
-using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Wmi;
@@ -91,11 +87,11 @@ public static class WmiUtils
                     .MapFail(_ => Error.New($"The value '{value}' is not valid for {typeof(T).Name}.")),
                 { } v when Enum.IsDefined(typeof(T), v) => Eff(() => (T)Enum.ToObject(typeof(T), v))
                     .MapFail(_ => Error.New($"The value '{value}' is not valid for {typeof(T).Name}.")),
-                _ => FailEff<T>(Error.New($"The value '{value}' is not valid for {typeof(T).Name}."))
+                _ => FailEff<T>(Error.New($"The value '{value}' is not valid for {typeof(T).Name}.")),
             },
             false => value is T
                 ? Eff(() => (T)value)
-                : FailEff<T>(Error.New($"The value '{value}' is not of type {typeof(T).Name}."))
+                : FailEff<T>(Error.New($"The value '{value}' is not of type {typeof(T).Name}.")),
         }
         from convertedValue in result
             .MapFail(e => Error.New($"The value '{value}' of property '{propertyName}' is invalid.", e))

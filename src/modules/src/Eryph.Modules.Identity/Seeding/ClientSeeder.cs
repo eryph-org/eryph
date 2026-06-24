@@ -34,7 +34,6 @@ internal class ClientSeeder(
             return;
 
         foreach (var file in fileSystem.Directory.EnumerateFiles(config.ClientsConfigPath, "*.json"))
-        {
             try
             {
                 var content = await fileSystem.File.ReadAllTextAsync(file, Encoding.UTF8, stoppingToken);
@@ -46,13 +45,12 @@ internal class ClientSeeder(
                 if (existing is not null)
                     continue;
 
-                await clientService.Add(model.ToDescriptor(), hashedSecret: true, stoppingToken);
+                await clientService.Add(model.ToDescriptor(), true, stoppingToken);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
                     $"Failed to seed identity client from file '{file}'.", ex);
             }
-        }
     }
 }

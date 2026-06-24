@@ -10,11 +10,9 @@ public class ImportCatletVMCommand : IHostAgentCommand
     public CatletConfig Config { get; set; }
     public Guid NewMachineId { get; set; }
 
-    [PrivateIdentifier]
-    public string AgentName { get; set; }
-
-    [PrivateIdentifier]
-    public string Path { get; set; }
+    [PrivateIdentifier] public string Path { get; set; }
 
     public long StorageId { get; set; }
+
+    [PrivateIdentifier] public string AgentName { get; set; }
 }

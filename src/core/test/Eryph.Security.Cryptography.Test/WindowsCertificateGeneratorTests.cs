@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using FluentAssertions;
@@ -33,8 +31,10 @@ public class WindowsCertificateGeneratorTests
         certificate.HasPrivateKey.Should().BeTrue();
         certificate.Subject.Should().Be("CN=test");
         certificate.Issuer.Should().Be("CN=test");
-        certificate.NotBefore.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddDays(-1), TimeSpan.FromMinutes(10));
-        certificate.NotAfter.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddDays(10), TimeSpan.FromMinutes(10));
+        certificate.NotBefore.ToUniversalTime().Should()
+            .BeCloseTo(DateTime.UtcNow.AddDays(-1), TimeSpan.FromMinutes(10));
+        certificate.NotAfter.ToUniversalTime().Should()
+            .BeCloseTo(DateTime.UtcNow.AddDays(10), TimeSpan.FromMinutes(10));
         certificate.SerialNumber.Should().NotBeEmpty();
 
         certificate.Extensions.Should().SatisfyRespectively(

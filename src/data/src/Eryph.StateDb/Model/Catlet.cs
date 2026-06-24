@@ -80,6 +80,6 @@ public class Catlet : Resource
     /// does not exist.
     /// </remarks>
     public Guid? SpecificationId { get; set; }
-    
+
     public Guid? SpecificationVersionId { get; set; }
 }

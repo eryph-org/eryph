@@ -52,21 +52,12 @@ internal class UpdateVMHostInventoryCommandHandler(
             return;
 
         var knownVmIds = await _vmDataService.GetAllVmIds(message.HostInventory.Name);
-        foreach (var vmId in knownVmIds)
-        {
-            await _lockManager.AcquireVmLock(vmId);
-        }
+        foreach (var vmId in knownVmIds) await _lockManager.AcquireVmLock(vmId);
 
         var diskIdentifiers = CollectDiskIdentifiers(message.DiskInventory.ToSeq());
-        foreach (var diskIdentifier in diskIdentifiers)
-        {
-            await _lockManager.AcquireVhdLock(diskIdentifier);
-        }
+        foreach (var diskIdentifier in diskIdentifiers) await _lockManager.AcquireVhdLock(diskIdentifier);
 
-        foreach (var diskInfo in message.DiskInventory)
-        {
-            await AddOrUpdateDisk(vmHost.Name, message.Timestamp, diskInfo);
-        }
+        foreach (var diskInfo in message.DiskInventory) await AddOrUpdateDisk(vmHost.Name, message.Timestamp, diskInfo);
 
         await UpdateVms(message.Timestamp, message.VMInventory, vmHost);
 

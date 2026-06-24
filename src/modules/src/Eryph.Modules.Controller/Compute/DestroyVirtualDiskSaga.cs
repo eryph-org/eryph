@@ -38,7 +38,7 @@ internal class DestroyVirtualDiskSaga(
             await Complete(new DestroyResourcesResponse
             {
                 DetachedResources = [],
-                DestroyedResources = [ new Resource(ResourceType.VirtualDisk, Data.DiskId) ],
+                DestroyedResources = [new Resource(ResourceType.VirtualDisk, Data.DiskId)],
             });
         });
     }
@@ -46,7 +46,8 @@ internal class DestroyVirtualDiskSaga(
     protected override void CorrelateMessages(ICorrelationConfig<DestroyVirtualDiskSagaData> config)
     {
         base.CorrelateMessages(config);
-        config.Correlate<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>(m => m.InitiatingTaskId,
+            d => d.SagaTaskId);
     }
 
     protected override async Task Initiated(DestroyVirtualDiskCommand message)
@@ -59,7 +60,7 @@ internal class DestroyVirtualDiskSaga(
             await Complete(new DestroyResourcesResponse
             {
                 DetachedResources = [],
-                DestroyedResources = [ new Resource(ResourceType.VirtualDisk, Data.DiskId) ],
+                DestroyedResources = [new Resource(ResourceType.VirtualDisk, Data.DiskId)],
             });
             return;
         }
@@ -79,7 +80,7 @@ internal class DestroyVirtualDiskSaga(
             });
             return;
         }
-        
+
         var agentName = agentLocator.FindAgentForDataStore(virtualDisk.DataStore, virtualDisk.Environment);
 
         await StartNewTask(new RemoveVirtualDiskCommand
@@ -87,7 +88,7 @@ internal class DestroyVirtualDiskSaga(
             DiskId = Data.DiskId,
             Path = virtualDisk.Path,
             FileName = virtualDisk.FileName,
-            AgentName = agentName
+            AgentName = agentName,
         });
     }
 }

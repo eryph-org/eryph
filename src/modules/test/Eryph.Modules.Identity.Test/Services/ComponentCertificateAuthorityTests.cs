@@ -54,7 +54,7 @@ public class ComponentCertificateAuthorityTests
         finally
         {
             if (Directory.Exists(dir))
-                Directory.Delete(dir, recursive: true);
+                Directory.Delete(dir, true);
         }
     }
 
@@ -129,7 +129,8 @@ public class ComponentCertificateAuthorityTests
         subject.AddOrganizationalUnitName("component-ca");
         subject.AddCommonName("eryph-component-root-ca");
         using var futureKey = RSA.Create(2048);
-        var request = new CertificateRequest(subject.Build(), futureKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest(subject.Build(), futureKey, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
         using var notYetValid = request.CreateSelfSigned(
             DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(3650));

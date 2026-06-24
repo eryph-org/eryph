@@ -25,17 +25,6 @@ public class EnrollmentTokenRedeemerTests
     private static ComponentCertificateAuthority CreateCa() =>
         new(new InMemoryCertificateStore(), new CertificateGenerator(), new InMemoryKeyService());
 
-    // A shared in-memory database root makes separate contexts (modelling separate requests) see the
-    // same redeemed-token rows, exactly as they would against a real database.
-    private sealed class Store
-    {
-        private readonly InMemoryDatabaseRoot _root = new();
-        private readonly string _name = "redeemer-" + Guid.NewGuid().ToString("N");
-
-        public IdentityDbContext NewContext() =>
-            new(new DbContextOptionsBuilder<IdentityDbContext>().UseInMemoryDatabase(_name, _root).Options);
-    }
-
     private static EnrollmentTokenRedeemer Redeemer(ComponentCertificateAuthority ca, IdentityDbContext context) =>
         new(ca, new IdentityDbRepository<RedeemedEnrollmentToken>(context));
 
@@ -71,7 +60,8 @@ public class EnrollmentTokenRedeemerTests
         var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, Host, DateTimeOffset.UtcNow.AddMinutes(5));
 
         // Two separate contexts over the shared store model two requests.
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi, Host)).IsValid.Should().BeTrue();
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi, Host)).IsValid.Should()
+            .BeTrue();
         (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi, Host)).IsValid
             .Should().BeFalse("a one-time token cannot be redeemed twice");
     }
@@ -81,9 +71,11 @@ public class EnrollmentTokenRedeemerTests
     {
         var ca = CreateCa();
         var store = new Store();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddSeconds(-5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host,
+            DateTimeOffset.UtcNow.AddSeconds(-5));
 
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid.Should().BeFalse();
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid.Should()
+            .BeFalse();
     }
 
     [Fact]
@@ -97,7 +89,8 @@ public class EnrollmentTokenRedeemerTests
         (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.ComputeApi, Host)).IsValid
             .Should().BeFalse("the token is bound to Controller");
         // ...wrong host likewise...
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, "other.eryph.local")).IsValid
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, "other.eryph.local"))
+            .IsValid
             .Should().BeFalse("the token is bound to a different host");
         // ...so the intended host can still redeem it.
         (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid
@@ -112,11 +105,15 @@ public class EnrollmentTokenRedeemerTests
         var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
         var parts = token.Split('.');
 
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(parts[0] + "." + Flip(parts[1]), ComponentType.Controller, Host))
+        (await Redeemer(ca, store.NewContext())
+                .RedeemAsync(parts[0] + "." + Flip(parts[1]), ComponentType.Controller, Host))
             .IsValid.Should().BeFalse();
-        var foreign = EnrollmentTokenCodec.Issue(CreateCa(), ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(foreign, ComponentType.Controller, Host)).IsValid.Should().BeFalse();
-        (await Redeemer(ca, store.NewContext()).RedeemAsync("a.b.c", ComponentType.Controller, Host)).IsValid.Should().BeFalse();
+        var foreign = EnrollmentTokenCodec.Issue(CreateCa(), ComponentType.Controller, Host,
+            DateTimeOffset.UtcNow.AddMinutes(5));
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(foreign, ComponentType.Controller, Host)).IsValid.Should()
+            .BeFalse();
+        (await Redeemer(ca, store.NewContext()).RedeemAsync("a.b.c", ComponentType.Controller, Host)).IsValid.Should()
+            .BeFalse();
     }
 
     [Fact]
@@ -137,7 +134,8 @@ public class EnrollmentTokenRedeemerTests
         }
 
         var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
-        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid.Should().BeTrue();
+        (await Redeemer(ca, store.NewContext()).RedeemAsync(token, ComponentType.Controller, Host)).IsValid.Should()
+            .BeTrue();
 
         await using var check = store.NewContext();
         check.RedeemedEnrollmentTokens.Any(t => t.Jti == "stale").Should().BeFalse("expired rows are pruned");
@@ -150,7 +148,7 @@ public class EnrollmentTokenRedeemerTests
     {
         var repo = new Mock<IIdentityDbRepository<RedeemedEnrollmentToken>>();
         repo.Setup(r => r.ListAsync(It.IsAny<ISpecification<RedeemedEnrollmentToken>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<RedeemedEnrollmentToken>());
+            .ReturnsAsync([]);
         repo.Setup(r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((RedeemedEnrollmentToken?)null);
         repo.Setup(r => r.AddAsync(It.IsAny<RedeemedEnrollmentToken>(), It.IsAny<CancellationToken>()))
@@ -202,10 +200,22 @@ public class EnrollmentTokenRedeemerTests
 
         var act = () => new EnrollmentTokenRedeemer(ca, repo.Object).RedeemAsync(token, ComponentType.Controller, Host);
 
-        (await act.Should().ThrowAsync<DbUpdateException>("the original update error must not be masked by the recheck failure"))
+        (await act.Should()
+                .ThrowAsync<DbUpdateException>("the original update error must not be masked by the recheck failure"))
             .WithMessage("original insert failure");
     }
 
     private static string Flip(string segment) =>
         (segment[0] == 'A' ? 'B' : 'A') + segment[1..];
+
+    // A shared in-memory database root makes separate contexts (modelling separate requests) see the
+    // same redeemed-token rows, exactly as they would against a real database.
+    private sealed class Store
+    {
+        private readonly string _name = "redeemer-" + Guid.NewGuid().ToString("N");
+        private readonly InMemoryDatabaseRoot _root = new();
+
+        public IdentityDbContext NewContext() =>
+            new(new DbContextOptionsBuilder<IdentityDbContext>().UseInMemoryDatabase(_name, _root).Options);
+    }
 }

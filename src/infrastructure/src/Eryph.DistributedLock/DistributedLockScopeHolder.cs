@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using Medallion.Threading;
 
 namespace Eryph.DistributedLock;
@@ -21,6 +15,11 @@ public sealed class DistributedLockScopeHolder(
     : IDistributedLockScopeHolder
 {
     /// <summary>
+    /// Contains the names of the locks which have been acquired.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, string> _lockNames = new();
+
+    /// <summary>
     /// Contains the handles of the locks which have been acquired.
     /// </summary>
     /// <remarks>
@@ -29,10 +28,6 @@ public sealed class DistributedLockScopeHolder(
     /// </remarks>
     private readonly ConcurrentStack<IDistributedSynchronizationHandle> _locks = new();
 
-    /// <summary>
-    /// Contains the names of the locks which have been acquired.
-    /// </summary>
-    private readonly ConcurrentDictionary<string, string> _lockNames = new();
     private readonly SemaphoreSlim _semaphore = new(1);
     private int _disposed;
 
@@ -63,10 +58,7 @@ public sealed class DistributedLockScopeHolder(
         if (Interlocked.Exchange(ref _disposed, 1) == 1)
             return;
 
-        while (_locks.TryPop(out var syncHandle))
-        {
-            syncHandle.Dispose();
-        }
+        while (_locks.TryPop(out var syncHandle)) syncHandle.Dispose();
 
         _semaphore.Dispose();
     }
@@ -76,10 +68,7 @@ public sealed class DistributedLockScopeHolder(
         if (Interlocked.Exchange(ref _disposed, 1) == 1)
             return;
 
-        while (_locks.TryPop(out var syncHandle))
-        {
-            await syncHandle.DisposeAsync();
-        }
+        while (_locks.TryPop(out var syncHandle)) await syncHandle.DisposeAsync();
 
         _semaphore.Dispose();
     }

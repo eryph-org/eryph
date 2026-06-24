@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN;
+using Dbosoft.OVN.OSCommands.OVN;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Components;
@@ -20,7 +20,6 @@ using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -36,6 +35,48 @@ internal class NetworkSyncService(
         from _ in SyncNetworks(providerConfig).Run().ToEitherAsync()
         from _2 in PublishNetworkProvidersConfigChange().ToAsync()
         select Unit.Default;
+
+    public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders)
+    {
+        async Task<string[]> ValidateChangesAsync()
+        {
+            await using var scope = AsyncScopedLifestyle.BeginScope(container);
+            var validationService = scope.GetInstance<INetworkConfigValidator>();
+            var stateStore = scope.GetInstance<IStateStore>();
+
+            var projects = await stateStore.Read<Project>().ListAsync(new ProjectSpecs.GetAll());
+
+            var changeMessages = new List<string>();
+
+
+            foreach (var project in projects)
+            {
+                var tenantMsg = project.TenantId != EryphConstants.DefaultTenantId
+                    ? $"tenant '{project.TenantId}', "
+                    : "";
+
+                var networks = await stateStore.For<VirtualNetwork>()
+                    .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(project.Id));
+
+                var projectConfig = networks.ToNetworksConfig(project.Name);
+                projectConfig = validationService.NormalizeConfig(projectConfig);
+
+                var messages = validationService.ValidateConfig(projectConfig, networkProviders)
+                    .Select(msg => $"{tenantMsg}project '{project.Name}' - {msg}").ToArray();
+
+                changeMessages.AddRange(messages);
+
+                if (messages.Length != 0) continue;
+                await foreach (var message in validationService.ValidateChanges(project.Id, projectConfig,
+                                   networkProviders))
+                    changeMessages.Add($"{tenantMsg}project '{project.Name}': '{message}'");
+            }
+
+            return changeMessages.ToArray();
+        }
+
+        return TryAsync(ValidateChangesAsync).ToEither();
+    }
 
     // After (re)realizing the network configuration, re-evaluate the distributed
     // NetworkProviders domain and push it to registered agents so a config change
@@ -74,8 +115,8 @@ internal class NetworkSyncService(
         // raising an error to ensure that as much as possible of the networking
         // keeps working.
         from _ in applyResult.Error.Append(updateResult.ToSeq()).Match(
-            Empty: () => unitAff,
-            Seq: errors => FailAff<Unit>(
+            () => unitAff,
+            errors => FailAff<Unit>(
                 Error.New("Failed to apply network plans for projects.", Error.Many(errors))))
         select unit;
 
@@ -107,7 +148,7 @@ internal class NetworkSyncService(
             scope =>
                 from _ in unitAff
                 let configRealizer = scope.GetInstance<INetworkProvidersConfigRealizer>()
-                from __ in Aff(async () => await configRealizer.RealizeConfigAsync(providerConfig, default).ToUnit())
+                from __ in Aff(async () => await configRealizer.RealizeConfigAsync(providerConfig, CancellationToken.None).ToUnit())
                 select unit);
 
     private Aff<Unit> RealizeProjectNetworks(
@@ -125,8 +166,8 @@ internal class NetworkSyncService(
                 .IfFail(e => Error.New($"Failed to save network changes for project {p.Name}({p.Id}).", e)))
             .SequenceSerial()
         from _ in errors.Somes().Match(
-            Empty: () => unitAff,
-            Seq: errors => FailAff<Unit>(Error.New("Failed to save network changes for projects.", Error.Many(errors))))
+            () => unitAff,
+            errors => FailAff<Unit>(Error.New("Failed to save network changes for projects.", Error.Many(errors))))
         select unit;
 
     private Aff<Unit> RealizeProjectNetworks(
@@ -147,7 +188,7 @@ internal class NetworkSyncService(
                 // removed when the network provider configuration was updated.
                 from _3 in networks.SelectMany(n => n.NetworkPorts, (n, p) => (Provider: n.NetworkProvider, Port: p))
                     .Map(t => from fp in Optional(t.Port.FloatingPort)
-                              select (t.Provider, Port:  fp))
+                        select (t.Provider, Port: fp))
                     .Somes()
                     .Map(t => ipManager.ConfigureFloatingPortIps(t.Provider, t.Port).ToAff(e => e))
                     .SequenceSerial()
@@ -195,7 +236,7 @@ internal class NetworkSyncService(
                     .Map(port => new NetworkNeighborRecord
                     {
                         IpAddress = port.ExternalIP,
-                        MacAddress = port.ExternalMAC
+                        MacAddress = port.ExternalMAC,
                     }).ToSeq()
                 select updatedNetworkNeighbors);
 
@@ -209,54 +250,8 @@ internal class NetworkSyncService(
                         $"broadcast_{QueueNames.VMHostAgent}",
                         new NetworkNeighborsUpdateRequestedEvent
                         {
-                            UpdatedAddresses = neighbors.ToArray()
+                            UpdatedAddresses = neighbors.ToArray(),
                         })
                     .ToUnit())
                 select unit);
-
-    public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders)
-    {
-        async Task<string[]> ValidateChangesAsync()
-        {
-            await using var scope = AsyncScopedLifestyle.BeginScope(container);
-            var validationService = scope.GetInstance<INetworkConfigValidator>();
-            var stateStore = scope.GetInstance<IStateStore>();
-
-            var projects = await stateStore.Read<Project>().ListAsync(new ProjectSpecs.GetAll());
-
-            var changeMessages = new List<string>();
-
-
-            foreach (var project in projects)
-            {
-                var tenantMsg = project.TenantId != EryphConstants.DefaultTenantId
-                    ? $"tenant '{project.TenantId}', "
-                    : "";
-
-                var networks = await stateStore.For<VirtualNetwork>()
-                    .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(project.Id));
-
-                var projectConfig = networks.ToNetworksConfig(project.Name);
-                projectConfig = validationService.NormalizeConfig(projectConfig);
-
-                var messages = validationService.ValidateConfig(projectConfig, networkProviders)
-                    .Select(msg => $"{tenantMsg}project '{project.Name}' - {msg}").ToArray();
-
-                changeMessages.AddRange(messages);
-
-                if (messages.Length != 0) continue;
-                await foreach (var message in validationService.ValidateChanges(project.Id, projectConfig,
-                                   networkProviders))
-                {
-                    changeMessages.Add($"{tenantMsg}project '{project.Name}': '{message}'");
-                }
-
-            }
-
-            return changeMessages.ToArray();
-
-        }
-
-        return TryAsync(ValidateChangesAsync).ToEither();
-    }
 }

@@ -19,7 +19,7 @@ public class PowershellErrorTests
             "test target type");
 
         var exception = (Exception)error;
-        
+
         var pee = exception.Should().BeOfType<PowershellErrorException>().Subject;
         pee.Message.Should().Be("test message");
         pee.Code.Should().Be(42);

@@ -19,7 +19,7 @@ internal class GetRequestHandler<TEntity, TResponse>(
         CancellationToken cancellationToken)
     {
         var specification = specificationFunc();
-        if(specification is null)
+        if (specification is null)
             return new NotFoundResult();
 
         var result = await repository.GetBySpecAsync(specification, cancellationToken);
@@ -28,7 +28,7 @@ internal class GetRequestHandler<TEntity, TResponse>(
 
         var authContext = userRightsProvider.GetAuthContext();
         var mappedResult = mapper.Map<TResponse>(result, o => o.SetAuthContext(authContext));
-            
+
         return new JsonResult(mappedResult);
     }
 }

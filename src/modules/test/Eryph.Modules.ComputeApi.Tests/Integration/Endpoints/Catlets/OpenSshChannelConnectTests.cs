@@ -1,6 +1,5 @@
 using System;
 using System.Net;
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
@@ -66,7 +65,8 @@ public class OpenSshChannelConnectTests : InMemoryStateDbTestBase
         var wsClient = _factory.Server.CreateWebSocketClient();
         wsClient.ConfigureRequest = request => request.Headers["Authorization"] = authorization.ToString();
 
-        var uri = new Uri(_factory.Server.BaseAddress, $"v1/catlets/{CatletId}/guest-services/ssh-channel/connect?token=the-token");
+        var uri = new Uri(_factory.Server.BaseAddress,
+            $"v1/catlets/{CatletId}/guest-services/ssh-channel/connect?token=the-token");
         using var webSocket = await wsClient.ConnectAsync(uri, CancellationToken.None);
 
         // The forwarder closes the socket once it has been handed the connection; receiving that close

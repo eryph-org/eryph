@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using Eryph.Core;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Authorization;
@@ -13,14 +11,18 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.Rebus;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
-
+using Catlet = Eryph.StateDb.Model.Catlet;
+using CatletSpecification = Eryph.StateDb.Model.CatletSpecification;
+using Gene = Eryph.StateDb.Model.Gene;
 using IEndpointResolver = Eryph.ModuleCore.IEndpointResolver;
+using VirtualDisk = Eryph.StateDb.Model.VirtualDisk;
 
 namespace Eryph.Modules.ComputeApi;
 
@@ -31,7 +33,7 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
     public override string Path => endpointResolver.GetEndpoint("compute").ToString();
 
     public override string ApiName => "Compute Api";
-        
+
     public override string AudienceName => EryphConstants.Authorization.Audiences.ComputeApi;
 
     public override void AddSimpleInjector(SimpleInjectorAddOptions options)
@@ -66,21 +68,23 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
         // IAgentChannelForwarder (the SSH channel data plane) is supplied by the host, like the bus
         // transport and state store — see each host's HostComputeApiModuleExtensions.
 
-        container.Register<IGetRequestHandler<StateDb.Model.Catlet, CatletConfiguration>,
+        container.Register<IGetRequestHandler<Catlet, CatletConfiguration>,
             GetCatletConfigurationHandler>();
-        container.Register<IGetRequestHandler<StateDb.Model.Catlet, Catlet>,
+        container.Register<IGetRequestHandler<Catlet, Model.V1.Catlet>,
             GetCatletHandler>();
-        container.Register<IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet>,
+        container.Register<IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, Model.V1.Catlet, Catlet>,
             ListCatletHandler>();
-        container.Register<IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage>, GetGeneHandler>();
-        container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
+        container.Register<IGetRequestHandler<Gene, GeneWithUsage>, GetGeneHandler>();
+        container.Register<IGetRequestHandler<Project, VirtualNetworkConfiguration>,
             GetVirtualNetworksConfigurationHandler>();
-        container.Register<IEntityOperationRequestHandler<StateDb.Model.VirtualDisk>,
+        container.Register<IEntityOperationRequestHandler<VirtualDisk>,
             DeleteVirtualDiskHandler>();
-        container.Register<IGetRequestHandler<StateDb.Model.CatletSpecification, CatletSpecification>,
+        container.Register<IGetRequestHandler<CatletSpecification, Model.V1.CatletSpecification>,
             GetCatletSpecificationHandler>();
-        container.Register<IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, CatletSpecification, StateDb.Model.CatletSpecification>,
-            ListCatletSpecificationHandler>();
+        container
+            .Register<IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, Model.V1.CatletSpecification,
+                    CatletSpecification>,
+                ListCatletSpecificationHandler>();
 
         base.ConfigureContainer(serviceProvider, container);
     }
@@ -88,10 +92,7 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
     public static void ConfigureScopes(AuthorizationOptions options, string authority)
     {
         // Create policies for each scope using hierarchy-aware scope resolution
-        foreach (var scope in ScopeDefinitions.ComputeApiScopes)
-        {
-            CreateScopePolicy(options, authority, scope);
-        }
+        foreach (var scope in ScopeDefinitions.ComputeApiScopes) CreateScopePolicy(options, authority, scope);
     }
 
     private static void CreateScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
@@ -102,7 +103,7 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
 
         // Get all scopes that can satisfy this requirement (including higher-level scopes)
         var allowedScopes = ScopeHierarchy.GetGrantingScopes(requiredScope);
-        
+
         options.AddPolicy(requiredScope,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,

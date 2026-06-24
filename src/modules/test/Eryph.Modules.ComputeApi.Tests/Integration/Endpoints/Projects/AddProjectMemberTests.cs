@@ -38,7 +38,7 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
         await stateStore.For<Tenant>().AddAsync(
             new Tenant
             {
-                Id = otherTenantId
+                Id = otherTenantId,
             });
 
         var projectRepo = stateStore.For<Project>();
@@ -66,7 +66,7 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
         await projectRepo.AddAsync(project);
         var identityId = UserId.ToString().ToLowerInvariant();
         await stateStore.For<ProjectRoleAssignment>().AddAsync(
-            new ProjectRoleAssignment()
+            new ProjectRoleAssignment
             {
                 Id = Guid.NewGuid(),
                 Project = project,
@@ -76,11 +76,16 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
     }
 
     [Theory]
-    [InlineData("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}", true, "compute:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}", false, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("{D35830C0-3D25-406A-AE49-4E0E3B296D77}", false, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}", true, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}", true, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", false)]
+    [InlineData("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}", true, "compute:write",
+        "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}", false, "compute:projects:read",
+        "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{D35830C0-3D25-406A-AE49-4E0E3B296D77}", false, "compute:projects:write",
+        "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}", true, "compute:projects:write",
+        "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}", true, "compute:projects:write",
+        "{C1813384-8ECB-4F17-B846-821EE515D19B}", false)]
     public async Task Can_Add_ProjectMember_when_authorized(
         string projectIdString, bool isAuthorized, string scope, string tenantId, bool isSuperAdmin)
     {
@@ -89,26 +94,25 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(Guid.Parse(tenantId), UserId, scope, isSuperAdmin)
             .PostAsJsonAsync($"v1/projects/{projectId}/members",
-                new NewProjectMemberBody()
+                new NewProjectMemberBody
                 {
                     RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = memberId,
                 },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         var messages = _factory.GetPendingRebusMessages<AddProjectMemberCommand>();
         if (isAuthorized)
         {
             response.StatusCode.Should().Be(HttpStatusCode.Accepted);
-            messages.Should().SatisfyRespectively(
-                m =>
-                {
-                    m.TenantId.Should().Be(Guid.Parse(tenantId));
-                    m.ProjectId.Should().Be(projectId);
-                    m.MemberId.Should().Be(memberId);
-                    m.RoleId.Should().Be(EryphConstants.BuildInRoles.Reader);
-                });
+            messages.Should().SatisfyRespectively(m =>
+            {
+                m.TenantId.Should().Be(Guid.Parse(tenantId));
+                m.ProjectId.Should().Be(projectId);
+                m.MemberId.Should().Be(memberId);
+                m.RoleId.Should().Be(EryphConstants.BuildInRoles.Reader);
+            });
         }
         else
         {
@@ -124,13 +128,13 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, UserId, "compute:write", true)
             .PostAsJsonAsync($"v1/projects/{projectId}/members",
-                new NewProjectMemberBody()
+                new NewProjectMemberBody
                 {
                     RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
-                    MemberId = "system-client"
+                    MemberId = "system-client",
                 },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.Should().HaveStatusCode(HttpStatusCode.BadRequest);
 
@@ -145,13 +149,13 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, UserId, "compute:write", true)
             .PostAsJsonAsync($"v1/projects/{projectId}/members",
-                new NewProjectMemberBody()
+                new NewProjectMemberBody
                 {
                     RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = UserId.ToString(),
                 },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);

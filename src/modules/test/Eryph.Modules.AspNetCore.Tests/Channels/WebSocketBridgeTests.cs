@@ -1,12 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.Channels;
 using FluentAssertions;
 
@@ -73,14 +67,22 @@ public class WebSocketBridgeTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        await WebSocketBridge.PumpAsync(webSocket, stream, cts.Token).WaitAsync(Timeout);
+        await WebSocketBridge.PumpAsync(webSocket, stream, cts.Token).WaitAsync(Timeout, cts.Token);
     }
 
     private sealed class ScriptedWebSocket : WebSocket
     {
+        private readonly Lock _gate = new();
         private readonly Channel<ReceiveStep> _incoming = Channel.CreateUnbounded<ReceiveStep>();
-        private readonly List<byte[]> _sent = new();
-        private readonly object _gate = new();
+        private readonly List<byte[]> _sent = [];
+
+        public WebSocketCloseStatus? CloseOutputStatus { get; private set; }
+
+        public override WebSocketState State => WebSocketState.Open;
+
+        public override WebSocketCloseStatus? CloseStatus => null;
+        public override string? CloseStatusDescription => null;
+        public override string? SubProtocol => null;
 
         public void QueueReceive(byte[] data) => _incoming.Writer.TryWrite(ReceiveStep.ForData(data));
 
@@ -89,12 +91,10 @@ public class WebSocketBridgeTests
         public byte[] SentBytes()
         {
             lock (_gate)
+            {
                 return _sent.SelectMany(x => x).ToArray();
+            }
         }
-
-        public WebSocketCloseStatus? CloseOutputStatus { get; private set; }
-
-        public override WebSocketState State { get; } = WebSocketState.Open;
 
         public override async Task<WebSocketReceiveResult> ReceiveAsync(
             ArraySegment<byte> buffer, CancellationToken cancellationToken)
@@ -113,7 +113,10 @@ public class WebSocketBridgeTests
             CancellationToken cancellationToken)
         {
             lock (_gate)
+            {
                 _sent.Add(buffer.ToArray());
+            }
+
             return Task.CompletedTask;
         }
 
@@ -124,14 +127,17 @@ public class WebSocketBridgeTests
             return Task.CompletedTask;
         }
 
-        public override WebSocketCloseStatus? CloseStatus => null;
-        public override string? CloseStatusDescription => null;
-        public override string? SubProtocol => null;
-        public override void Abort() { }
+        public override void Abort()
+        {
+        }
+
         public override Task CloseAsync(
             WebSocketCloseStatus closeStatus, string? statusDescription, CancellationToken cancellationToken) =>
             Task.CompletedTask;
-        public override void Dispose() { }
+
+        public override void Dispose()
+        {
+        }
 
         private readonly record struct ReceiveStep(bool IsClose, byte[]? Data)
         {
@@ -145,19 +151,32 @@ public class WebSocketBridgeTests
         private readonly Channel<byte[]?> _reads = Channel.CreateUnbounded<byte[]?>();
         private readonly MemoryStream _written = new();
 
-        public void QueueRead(byte[] data) => _reads.Writer.TryWrite(data);
-
-        // A null chunk signals end-of-stream (ReadAsync returns 0).
-        public void QueueEndOfStream() => _reads.Writer.TryWrite(null);
-
         public byte[] Written
         {
             get
             {
                 lock (_written)
+                {
                     return _written.ToArray();
+                }
             }
         }
+
+        public override bool CanRead => true;
+        public override bool CanWrite => true;
+        public override bool CanSeek => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public void QueueRead(byte[] data) => _reads.Writer.TryWrite(data);
+
+        // A null chunk signals end-of-stream (ReadAsync returns 0).
+        public void QueueEndOfStream() => _reads.Writer.TryWrite(null);
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
         {
@@ -172,22 +191,19 @@ public class WebSocketBridgeTests
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
         {
             lock (_written)
+            {
                 _written.Write(buffer.Span);
+            }
+
             return ValueTask.CompletedTask;
         }
 
         public override Task FlushAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public override bool CanRead => true;
-        public override bool CanWrite => true;
-        public override bool CanSeek => false;
-        public override long Length => throw new NotSupportedException();
-        public override long Position
+        public override void Flush()
         {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
         }
-        public override void Flush() { }
+
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();

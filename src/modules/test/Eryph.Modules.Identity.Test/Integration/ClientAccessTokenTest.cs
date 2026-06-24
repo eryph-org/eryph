@@ -1,28 +1,26 @@
+using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Modules.Identity.Services;
 using FluentAssertions;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using OpenIddict.Abstractions;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Xunit;
 using Xunit.Abstractions;
-using System.Net.Http.Headers;
-using System.Security.Cryptography;
-using Dbosoft.Hosuto.Modules.Testing;
-using OpenIddict.Abstractions;
 
 namespace Eryph.Modules.Identity.Test.Integration;
 
@@ -74,7 +72,7 @@ public class ClientAccessTokenTest(
         // assertion audience (and the plain JWT type). A client that still sends the legacy
         // format must be rejected, confirming the server enforces the issuer audience.
         var act = () => GetClientAccessToken(
-            TestClientData.KeyFileString1, TestClientData.CertificateString1, legacyFormat: true);
+            TestClientData.KeyFileString1, TestClientData.CertificateString1, true);
 
         (await act.Should().ThrowAsync<HttpRequestException>())
             .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -96,7 +94,7 @@ public class ClientAccessTokenTest(
 
         // Each role must be its own claim (a single comma-joined claim would not parse as a GUID
         // in UserInfoProvider and the client would lose all its roles).
-        roleClaims.Should().BeEquivalentTo([roleA.ToString(), roleB.ToString()]);
+        roleClaims.Should().BeEquivalentTo(roleA.ToString(), roleB.ToString());
     }
 
     [Fact]
@@ -105,7 +103,7 @@ public class ClientAccessTokenTest(
         // A confidential client provisioned without a certificate has no registered key, so a
         // client_assertion cannot be validated and must be rejected. This is the native-validation
         // equivalent of the explicit certificate-presence gate the 4.x workaround enforced.
-        var act = () => GetClientAccessToken(TestClientData.KeyFileString1, certString: null);
+        var act = () => GetClientAccessToken(TestClientData.KeyFileString1, null);
 
         (await act.Should().ThrowAsync<HttpRequestException>())
             .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -128,19 +126,19 @@ public class ClientAccessTokenTest(
                 {
                     var container = ctx.Services.GetRequiredService<Container>();
                     using var scope = AsyncScopedLifestyle.BeginScope(container);
-                    
+
                     var scopeManager = scope.GetInstance<IOpenIddictScopeManager>();
                     scopeManager.CreateAsync(new OpenIddictScopeDescriptor
                     {
                         Name = "test_scope",
-                        Resources = { "test_audience" }
+                        Resources = { "test_audience" },
                     }).GetAwaiter().GetResult();
 
                     var clientDescriptor = new ClientApplicationDescriptor
                     {
                         ClientId = "test-client",
                         Certificate = certString,
-                        Scopes = { "test_scope" }
+                        Scopes = { "test_scope" },
                     };
                     if (roles is not null)
                         clientDescriptor.AppRoles.UnionWith(roles);
@@ -151,7 +149,7 @@ public class ClientAccessTokenTest(
                 });
             })
             .CreateDefaultClient();
-            
+
         return await RequestAccessTokenWithKey(httpClient, "test-client", rsaParameters, ["test_scope"], legacyFormat);
     }
 
@@ -174,8 +172,8 @@ public class ClientAccessTokenTest(
 
         // legacyFormat reproduces a pre-OpenIddict-7 client: token-endpoint audience + plain JWT type.
         var assertion = legacyFormat
-            ? CreateClientAssertion(clientId, tokenEndpoint!, rsaParameters, tokenType: null)
-            : CreateClientAssertion(clientId, issuer!, rsaParameters, tokenType: "client-authentication+jwt");
+            ? CreateClientAssertion(clientId, tokenEndpoint!, rsaParameters, null)
+            : CreateClientAssertion(clientId, issuer!, rsaParameters, "client-authentication+jwt");
 
         var properties = new Dictionary<string, string>
         {
@@ -204,9 +202,9 @@ public class ClientAccessTokenTest(
     {
         var tokenHandler = new JwtSecurityTokenHandler { TokenLifetimeInMinutes = 5 };
         var securityToken = tokenHandler.CreateJwtSecurityToken(
-            issuer: clientId,
-            audience: audience,
-            subject: new ClaimsIdentity(
+            clientId,
+            audience,
+            new ClaimsIdentity(
             [
                 new Claim("sub", clientId),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
@@ -235,7 +233,7 @@ public class ClientAccessTokenTest(
                         ClientId = "test-client",
                         Certificate = TestClientData.CertificateString1,
                         ClientSecret = clientSharedKey,
-                        Scopes = { "compute_api" }
+                        Scopes = { "compute_api" },
                     }, false, CancellationToken.None).GetAwaiter().GetResult();
                 });
             })
@@ -251,12 +249,14 @@ public class ClientAccessTokenTest(
         };
 
         var authenticationString = $"test-client:{usedSharedKey}";
-        var base64EncodedAuthenticationString = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes(authenticationString));
+        var base64EncodedAuthenticationString = Convert.ToBase64String(Encoding.ASCII.GetBytes(authenticationString));
         var request = new HttpRequestMessage(HttpMethod.Post, audience)
         {
             Content = new FormUrlEncodedContent(properties),
-            Headers = { Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString)
-            }
+            Headers =
+            {
+                Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString),
+            },
         };
 
         var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead)

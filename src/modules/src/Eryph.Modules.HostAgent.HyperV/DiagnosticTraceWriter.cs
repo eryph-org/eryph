@@ -10,31 +10,30 @@ using Newtonsoft.Json.Serialization;
 
 namespace Eryph.Modules.HostAgent;
 
-internal class DiagnosticTraceWriter : ITraceWriter
+internal class DiagnosticTraceWriter(ILogger log) : ITraceWriter
 {
-    private readonly ILogger _log;
-
-    public DiagnosticTraceWriter(ILogger log)
-    {
-        _log = log;
-    }
-
-    static readonly JsonSerializer Serializer = new JsonSerializer
+    private static readonly JsonSerializer Serializer = new()
     {
         ContractResolver =
-            new PrivacyContractResolver() { NamingStrategy = new CamelCaseNamingStrategy() },
+            new PrivacyContractResolver { NamingStrategy = new CamelCaseNamingStrategy() },
         NullValueHandling = NullValueHandling.Ignore,
         TypeNameHandling = TypeNameHandling.All,
         MaxDepth = 12,
         PreserveReferencesHandling = PreserveReferencesHandling.All,
     };
 
-private async void AsyncTraceWriter(Guid traceContext, DateTimeOffset started, DateTimeOffset stopped,
-        TraceRecord[] recordsRecords)
-{
-    try
-        {
 
+    public void WriteTrace(Guid traceContext, DateTimeOffset started, DateTimeOffset stopped,
+        TraceRecord[] recordsRecords)
+    {
+        AsyncTraceWriter(traceContext, started, stopped, recordsRecords);
+    }
+
+    private async void AsyncTraceWriter(Guid traceContext, DateTimeOffset started, DateTimeOffset stopped,
+        TraceRecord[] recordsRecords)
+    {
+        try
+        {
             var token = JToken.FromObject(recordsRecords, Serializer);
 
             //to exclude PI from diag data later you can use this code:
@@ -80,24 +79,13 @@ private async void AsyncTraceWriter(Guid traceContext, DateTimeOffset started, D
 
             await using var sw = new StreamWriter(path, Encoding.UTF8,
                 new FileStreamOptions { Access = FileAccess.Write, Mode = FileMode.CreateNew });
-            using var jsonWriter = new JsonTextWriter(sw);
+            await using var jsonWriter = new JsonTextWriter(sw);
             Serializer.Serialize(jsonWriter, data);
             sw.Close();
-
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Failed to write trace record to local store.");
+            log.LogError(ex, "Failed to write trace record to local store.");
         }
     }
-
-
-    public void WriteTrace(Guid traceContext, DateTimeOffset started, DateTimeOffset stopped,
-        TraceRecord[] recordsRecords)
-    {
-        AsyncTraceWriter(traceContext, started, stopped, recordsRecords);
-    }
-
- 
-
-    }
+}

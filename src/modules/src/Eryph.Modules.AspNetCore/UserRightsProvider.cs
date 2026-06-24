@@ -13,21 +13,15 @@ using Resource = Eryph.StateDb.Model.Resource;
 
 namespace Eryph.Modules.AspNetCore;
 
-public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
+public class UserRightsProvider(IHttpContextAccessor contextAccessor, IStateStore stateStore)
+    : UserInfoProvider(contextAccessor), IUserRightsProvider
 {
-    private readonly IStateStore _stateStore;
-    public UserRightsProvider(IHttpContextAccessor contextAccessor, IStateStore stateStore): base(contextAccessor)
-    {
-        _stateStore = stateStore;
-    }
-
-
     public async Task<bool> HasResourceAccess(Guid resourceId, AccessRight requiredAccess)
     {
-        var resource = await _stateStore.For<Resource>().GetBySpecAsync(new ResourceSpecs<Resource>.GetById(resourceId,
+        var resource = await stateStore.For<Resource>().GetBySpecAsync(new ResourceSpecs<Resource>.GetById(resourceId,
             q => q.Include(x => x.Project).ThenInclude(x => x.ProjectRoles)));
-        
-        if(resource == null) return false;
+
+        if (resource == null) return false;
 
         return await HasResourceAccess(resource, requiredAccess);
     }
@@ -35,19 +29,18 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
     public async Task<bool> HasResourceAccess(Resource resource, AccessRight requiredAccess)
     {
         if (resource.Project == null)
-            await _stateStore.LoadPropertyAsync(resource, x => x.Project);
+            await stateStore.LoadPropertyAsync(resource, x => x.Project);
 
         if (resource.Project == null)
             return false;
 
         return await HasProjectAccess(resource.Project, requiredAccess);
-
     }
 
     public async Task<bool> HasProjectAccess(string projectName, AccessRight requiredAccess)
     {
         var tenantId = GetUserTenantId();
-        var project = await _stateStore.For<Project>().GetBySpecAsync(
+        var project = await stateStore.For<Project>().GetBySpecAsync(
             new ProjectSpecs.GetByName(tenantId, projectName));
         if (project == null) return false;
         return await HasProjectAccess(project, requiredAccess);
@@ -55,10 +48,10 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
 
     public async Task<bool> HasProjectAccess(Guid projectId, AccessRight requiredAccess)
     {
-        var project = await _stateStore.For<Project>().GetByIdAsync(projectId);
-        
-        if(project == null) return false;
-        
+        var project = await stateStore.For<Project>().GetByIdAsync(projectId);
+
+        if (project == null) return false;
+
         return await HasProjectAccess(project, requiredAccess);
     }
 
@@ -70,13 +63,13 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
 
         if (authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
             return true;
-        
+
         var sufficientRoles = GetProjectRoles(requiredAccess);
 
-        var userRoleAssignments = await _stateStore.For<ProjectRoleAssignment>()
+        var userRoleAssignments = await stateStore.For<ProjectRoleAssignment>()
             .ListAsync(
                 new ProjectRoleAssignmentSpecs.GetByProject(project.Id, authContext.Identities));
-        
+
         return userRoleAssignments.Any(x => sufficientRoles.Contains(x.RoleId));
     }
 
@@ -86,12 +79,10 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
         if (authContext.TenantId != EryphConstants.DefaultTenantId)
             return Task.FromResult(false);
 
-        if (authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
-            return Task.FromResult(true);
-
-        // All members of the default tenant have read access but only
-        // super admins have write or admin access.
-        return Task.FromResult(requiredAccess == AccessRight.Read);
+        return authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole) ? Task.FromResult(true) :
+            // All members of the default tenant have read access but only
+            // super admins have write or admin access.
+            Task.FromResult(requiredAccess == AccessRight.Read);
     }
 
     public IEnumerable<Guid> GetResourceRoles<TResource>(AccessRight accessRight) where TResource : Resource
@@ -102,9 +93,9 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
             var type when type == typeof(CatletSpecification) => ResourceType.CatletSpecification,
             var type when type == typeof(VirtualDisk) => ResourceType.VirtualDisk,
             var type when type == typeof(VirtualNetwork) => ResourceType.VirtualNetwork,
-            _ => throw new ArgumentOutOfRangeException(nameof(TResource), typeof(TResource), null)
+            _ => throw new ArgumentOutOfRangeException(nameof(TResource), typeof(TResource), null),
         };
-        
+
         return GetResourceRoles(resourceType, accessRight);
     }
 
@@ -126,28 +117,27 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
             AccessRight.Read => new[]
             {
                 EryphConstants.BuildInRoles.Reader, EryphConstants.BuildInRoles.Contributor,
-                EryphConstants.BuildInRoles.Owner
+                EryphConstants.BuildInRoles.Owner,
             },
             AccessRight.Write => new[]
             {
-                EryphConstants.BuildInRoles.Contributor, 
-                EryphConstants.BuildInRoles.Owner
+                EryphConstants.BuildInRoles.Contributor,
+                EryphConstants.BuildInRoles.Owner,
             },
             AccessRight.Admin => new[]
             {
-                EryphConstants.BuildInRoles.Owner
+                EryphConstants.BuildInRoles.Owner,
             },
-            _ => throw new ArgumentOutOfRangeException(nameof(accessRight), accessRight, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(accessRight), accessRight, null),
         };
     }
 
-    public IEnumerable<Guid> GetResourceRoles(ResourceType resourceType, 
+    public IEnumerable<Guid> GetResourceRoles(ResourceType resourceType,
         AccessRight accessRight)
     {
         // Resource type specific roles are currently not implemented
         // The roles are only maintained on the project level
 
         return GetProjectRoles(accessRight);
-
     }
 }

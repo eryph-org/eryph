@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.StateDb;
@@ -36,19 +30,19 @@ public static class StateStoreGeneExtensions
             .Map(Architecture.NewEither)
             .Sequence()
         select from validGeneSetId in geneSetId
-               from validGeneName in geneName
-               from validArchitecture in architecture
-               let geneId = new GeneIdentifier(validGeneSetId, validGeneName)
-               select new UniqueGeneIdentifier(geneType, geneId, validArchitecture);
+            from validGeneName in geneName
+            from validArchitecture in architecture
+            let geneId = new GeneIdentifier(validGeneSetId, validGeneName)
+            select new UniqueGeneIdentifier(geneType, geneId, validArchitecture);
 
     public static UniqueGeneIdentifier ToUniqueGeneId(this Gene dbGene) =>
-        ParseUniqueGeneId(dbGene)
+        dbGene.ParseUniqueGeneId()
             .IfLeft(e => e.ToException().Rethrow<UniqueGeneIdentifier>());
 
     public static Option<UniqueGeneIdentifier> ToUniqueGeneId(
         this VirtualDisk disk,
         GeneType geneType) =>
-        ParseUniqueGeneId(disk, geneType)
+        disk.ParseUniqueGeneId(geneType)
             .IfLeft(e => e.ToException().Rethrow<UniqueGeneIdentifier>());
 
     public static string ToUniqueGeneIndex(this UniqueGeneIdentifier geneId) =>

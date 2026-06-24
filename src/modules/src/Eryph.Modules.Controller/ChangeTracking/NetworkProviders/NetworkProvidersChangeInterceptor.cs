@@ -9,16 +9,11 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 
-internal class NetworkProvidersChangeInterceptor
-    : ChangeInterceptorBase<NetworkProvidersChange>
+internal class NetworkProvidersChangeInterceptor(
+    IChangeTrackingQueue<NetworkProvidersChange> queue,
+    ILogger logger)
+    : ChangeInterceptorBase<NetworkProvidersChange>(queue, logger)
 {
-    public NetworkProvidersChangeInterceptor(
-        IChangeTrackingQueue<NetworkProvidersChange> queue, 
-        ILogger logger)
-        : base(queue, logger)
-    {
-    }
-
     protected override async Task<Seq<NetworkProvidersChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
@@ -61,7 +56,7 @@ internal class NetworkProvidersChangeInterceptor
             .Concat(portProviders)
             .Distinct()
             .Match(
-                Empty: () => Empty,
+                () => Empty,
                 More: p => Seq1(new NetworkProvidersChange(p.Strict())));
     }
 }

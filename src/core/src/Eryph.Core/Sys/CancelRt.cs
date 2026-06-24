@@ -13,18 +13,16 @@ namespace Eryph.Core.Sys;
 /// </remarks>
 public readonly struct CancelRt : HasCancel<CancelRt>
 {
-    private readonly CancellationTokenSource _cts;
-
     private CancelRt(CancellationTokenSource cts)
     {
-        _cts = cts;
+        CancellationTokenSource = cts;
     }
 
     public static CancelRt New(CancellationTokenSource cancellationTokenSource) => new(cancellationTokenSource);
 
     public CancelRt LocalCancel => new(new CancellationTokenSource());
 
-    public CancellationToken CancellationToken => _cts.Token;
+    public CancellationToken CancellationToken => CancellationTokenSource.Token;
 
-    public CancellationTokenSource CancellationTokenSource => _cts;
+    public CancellationTokenSource CancellationTokenSource { get; }
 }

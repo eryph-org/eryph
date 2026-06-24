@@ -1,22 +1,19 @@
-﻿using Eryph.Modules.HostAgent.Networks.Powershell;
-using Eryph.Modules.HostAgent.Networks;
-using Eryph.VmManagement;
-using LanguageExt.Sys.Traits;
-using LanguageExt;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Threading;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core.Sys;
+using Eryph.Modules.HostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks.Powershell;
+using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
+using LanguageExt;
+using LanguageExt.Sys.Traits;
+using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
 
-internal readonly struct DriverCommandsRuntime :
+internal readonly struct DriverCommandsRuntime(DriverCommandsRuntimeEnv env) :
     HasAnsiConsole<DriverCommandsRuntime>,
     HasDirectory<DriverCommandsRuntime>,
     HasDism<DriverCommandsRuntime>,
@@ -28,14 +25,9 @@ internal readonly struct DriverCommandsRuntime :
     HasRegistry<DriverCommandsRuntime>,
     HasWmi<DriverCommandsRuntime>
 {
-    public DriverCommandsRuntime(DriverCommandsRuntimeEnv env)
-    {
-        Env = env;
-    }
+    public DriverCommandsRuntimeEnv Env { get; } = env;
 
-    public DriverCommandsRuntimeEnv Env { get; }
-
-    public DriverCommandsRuntime LocalCancel => new(new(
+    public DriverCommandsRuntime LocalCancel => new(new DriverCommandsRuntimeEnv(
         new CancellationTokenSource(),
         Env.LoggerFactory,
         Env.PowershellEngine));
@@ -75,23 +67,17 @@ internal readonly struct DriverCommandsRuntime :
     public Eff<DriverCommandsRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
 }
 
-internal class DriverCommandsRuntimeEnv
+internal class DriverCommandsRuntimeEnv(
+    CancellationTokenSource cancellationTokenSource,
+    ILoggerFactory loggerFactory,
+    IPowershellEngine powershellEngine)
 {
-    public DriverCommandsRuntimeEnv(
-        CancellationTokenSource cancellationTokenSource,
-        ILoggerFactory loggerFactory,
-        IPowershellEngine powershellEngine)
-    {
-        CancellationTokenSource = cancellationTokenSource;
-        LoggerFactory = loggerFactory;
-        PowershellEngine = powershellEngine;
-    }
+    public CancellationTokenSource CancellationTokenSource { get; } = cancellationTokenSource;
 
-    public CancellationTokenSource CancellationTokenSource { get; }
+    public IHostNetworkCommands<DriverCommandsRuntime> HostNetworkCommands { get; } =
+        new HostNetworkCommands<DriverCommandsRuntime>();
 
-    public IHostNetworkCommands<DriverCommandsRuntime> HostNetworkCommands { get; } = new HostNetworkCommands<DriverCommandsRuntime>();
+    public ILoggerFactory LoggerFactory { get; } = loggerFactory;
 
-    public ILoggerFactory LoggerFactory { get; }
-
-    public IPowershellEngine PowershellEngine { get; }
+    public IPowershellEngine PowershellEngine { get; } = powershellEngine;
 }

@@ -34,15 +34,19 @@ internal static class SecureFile
                 stream.Write(contents);
             }
 
-            File.Move(tempPath, path, overwrite: true);
+            File.Move(tempPath, path, true);
         }
         finally
         {
             if (File.Exists(tempPath))
-            {
-                try { File.Delete(tempPath); }
-                catch { /* best effort — a successful Move already removed it */ }
-            }
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch
+                {
+                    /* best effort — a successful Move already removed it */
+                }
         }
     }
 }

@@ -13,5 +13,4 @@ public interface IAgentControlService
 
     public void Register(object recipient, Func<AgentControlEvent, CancellationToken, Task<bool>> handlerFunc);
     public void UnRegister(object recipient);
-
 }

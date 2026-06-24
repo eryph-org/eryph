@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
 
@@ -21,9 +20,6 @@ public class Client : IAllowedScopesHolder
     [MaxLength(254)]
     public required string Name { get; set; }
 
-    /// <inheritdoc/>
-    public required IReadOnlyList<string> AllowedScopes { get; set; }
-
     /// <summary>
     /// The roles of the client,
     /// </summary>
@@ -33,4 +29,7 @@ public class Client : IAllowedScopesHolder
     /// The ID of the tenant to which the client belongs.
     /// </summary>
     public required string TenantId { get; set; }
+
+    /// <inheritdoc/>
+    public required IReadOnlyList<string> AllowedScopes { get; set; }
 }

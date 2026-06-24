@@ -12,5 +12,5 @@ public class ConfigSnapshotCommand
 {
     public Guid ComponentId { get; set; }
 
-    public List<ConfigBundle> Bundles { get; set; } = new();
+    public List<ConfigBundle> Bundles { get; set; } = [];
 }

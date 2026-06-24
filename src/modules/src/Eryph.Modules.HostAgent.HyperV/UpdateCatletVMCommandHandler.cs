@@ -41,7 +41,8 @@ internal class UpdateCatletVMCommandHandler(
         from _ in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(command.Config)
             .ToEither()
-            .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
+            .MapLeft(issues =>
+                Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
             .ToAsync()
         from vmInfoConsistent in EnsureNameConsistent(vmInfo, substitutedConfig, Engine).WriteTrace()
         from vmInfoConverged in VirtualMachine.Converge(
@@ -50,7 +51,8 @@ internal class UpdateCatletVMCommandHandler(
                 plannedStorageSettings, command.ResolvedGenes.ToSeq(), loggerFactory)
             .WriteTrace()
         let timestamp = DateTimeOffset.UtcNow
-        from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, hostInfoProvider).WriteTrace()
+        from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, hostInfoProvider)
+            .WriteTrace()
         select new ConvergeCatletResult
         {
             VmId = vmInfoConverged.Value.Id,

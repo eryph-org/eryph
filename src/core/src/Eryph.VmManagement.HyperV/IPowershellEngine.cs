@@ -8,6 +8,8 @@ namespace Eryph.VmManagement;
 
 public interface IPowershellEngine
 {
+    ITypedPsObjectMapping ObjectMapping { get; }
+
     EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
@@ -31,6 +33,4 @@ public interface IPowershellEngine
         Func<int, Task> reportProgress = null,
         bool withoutLock = false,
         CancellationToken cancellationToken = default);
-    
-    ITypedPsObjectMapping ObjectMapping { get; }
 }

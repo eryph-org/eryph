@@ -13,7 +13,7 @@ public class ValidateCatletSpecificationCommand : ICommandWithName, IHasCorrelat
 
     public ISet<Architecture> Architectures { get; set; }
 
-    public Guid CorrelationId { get; set; }
-
     public string GetCommandName() => "Validate catlet specification";
+
+    public Guid CorrelationId { get; set; }
 }

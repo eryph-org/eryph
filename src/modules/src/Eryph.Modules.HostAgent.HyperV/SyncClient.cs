@@ -1,14 +1,10 @@
-﻿using System;
-using System.IO.Pipes;
+﻿using System.IO.Pipes;
 using System.Security.Principal;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 using Eryph.Core.Network;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
@@ -33,7 +29,7 @@ public class SyncClient : ISyncClient
         from result in response.ToAff(Error.New("Validation result expected"))
         select result;
 
-    private Aff<Option<TResponse>> SendSyncCommandInternal<TResponse>(
+    private static Aff<Option<TResponse>> SendSyncCommandInternal<TResponse>(
         string command,
         object? data,
         CancellationToken cancellationToken) =>
@@ -52,7 +48,7 @@ public class SyncClient : ISyncClient
                 CommandName = command,
                 Data = data is not null
                     ? JsonSerializer.SerializeToElement(data)
-                    : null
+                    : null,
             };
 
             await stream.WriteCommand(commandObject, cancellationToken);
@@ -66,9 +62,10 @@ public class SyncClient : ISyncClient
         from _2 in guardnot(response.Response == "INVALID",
             Error.New($"The host agent command '{command}' is invalid."))
         from _3 in guardnot(response.Response == "FAILED",
-            Error.New($"The host agent command '{command}' failed. Error: '{(notEmpty(response.Error) ? response.Error : "unknown")}'."))
+            Error.New(
+                $"The host agent command '{command}' failed. Error: '{(notEmpty(response.Error) ? response.Error : "unknown")}'."))
         from _4 in guardnot(response.Response == "PERMISSION_DENIED",
-            Error.New($"No permission to access the sync service. Make sure you are elevated."))
+            Error.New("No permission to access the sync service. Make sure you are elevated."))
         from responseData in Optional(response.Data)
             .Map(d => Eff(() => d.Deserialize<TResponse>())
                 .MapFail(e => Error.New("The data of the sync service response is invalid.", e)))

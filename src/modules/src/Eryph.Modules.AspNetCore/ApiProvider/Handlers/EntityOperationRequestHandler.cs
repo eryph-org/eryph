@@ -11,7 +11,6 @@ using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Rebus.TransactionScopes;
-
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -44,7 +43,7 @@ public class EntityOperationRequestHandler<TEntity>(
     {
         using var ta = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled);
         ta.EnlistRebus();
- 
+
         var spec = specificationFunc();
         var model = spec != null ? await repository.GetBySpecAsync(spec, cancellationToken) : null;
 
@@ -52,22 +51,23 @@ public class EntityOperationRequestHandler<TEntity>(
         {
             case null:
                 return new NotFoundResult();
-            case Gene _ when !(await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin)):
+            case Gene when !await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin):
                 return Problem(
-                    statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have super admin access.");
-            case Resource resource when !(await _userRightsProvider.HasResourceAccess(resource.Id, accessRight)):
+                    StatusCodes.Status403Forbidden,
+                    "You do not have super admin access.");
+            case Resource resource when !await _userRightsProvider.HasResourceAccess(resource.Id, accessRight):
                 return Problem(
-                    statusCode: StatusCodes.Status403Forbidden,
-                    detail: $"You do not have {(accessRight == AccessRight.Read ? "read" : "write")} access to the project.");
-            case Project project when !(await _userRightsProvider.HasProjectAccess(project.Id, AccessRight.Admin)):
+                    StatusCodes.Status403Forbidden,
+                    $"You do not have {(accessRight == AccessRight.Read ? "read" : "write")} access to the project.");
+            case Project project when !await _userRightsProvider.HasProjectAccess(project.Id, AccessRight.Admin):
                 return Problem(
-                    statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have admin access to the project.");
-            case ProjectRoleAssignment roleAssignment when !(await _userRightsProvider.HasProjectAccess(roleAssignment.ProjectId, AccessRight.Admin)):
+                    StatusCodes.Status403Forbidden,
+                    "You do not have admin access to the project.");
+            case ProjectRoleAssignment roleAssignment
+                when !await _userRightsProvider.HasProjectAccess(roleAssignment.ProjectId, AccessRight.Admin):
                 return Problem(
-                    statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have admin access to the project.");
+                    StatusCodes.Status403Forbidden,
+                    "You do not have admin access to the project.");
         }
 
         var validationResult = await ValidateRequest(model, cancellationToken);

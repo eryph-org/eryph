@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using CatletStatus = Eryph.StateDb.Model.CatletStatus;
 

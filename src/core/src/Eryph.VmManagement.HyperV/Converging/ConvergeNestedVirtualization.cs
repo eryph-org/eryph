@@ -1,13 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
@@ -36,7 +34,8 @@ public class ConvergeNestedVirtualization(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         bool exposeVirtualizationExtensions) =>
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
-                Error.New("Cannot change virtualization settings if the catlet is not stopped. Stop the catlet and retry."))
+                Error.New(
+                    "Cannot change virtualization settings if the catlet is not stopped. Stop the catlet and retry."))
             .ToEitherAsync()
         from _2 in Context.ReportProgressAsync(exposeVirtualizationExtensions
             ? "Enabling nested virtualization."

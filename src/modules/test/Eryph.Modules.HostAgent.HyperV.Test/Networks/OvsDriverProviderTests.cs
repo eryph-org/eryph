@@ -21,7 +21,10 @@ using static OvsDriverProvider<OvsDriverProviderTests.TestRuntime>;
 
 public class OvsDriverProviderTests
 {
-    private readonly RT _runtime;
+    private const string OvnRunDir = @"Z:\ovnrundir";
+    private const string OvnDataDir = @"Z:\ovndatadir";
+
+    private static readonly Guid SwitchId = Guid.NewGuid();
 
     private readonly Mock<DirectoryIO> _directoryMock = new();
     private readonly Mock<DismIO> _dismMock = new();
@@ -30,15 +33,11 @@ public class OvsDriverProviderTests
     private readonly Mock<IPowershellEngine> _powershellEngineMock = new();
     private readonly Mock<ProcessRunnerIO> _processRunnerIOMock = new();
     private readonly Mock<RegistryIO> _registryIOMock = new();
-
-    private const string OvnRunDir = @"Z:\ovnrundir";
-    private const string OvnDataDir = @"Z:\ovndatadir";
-
-    private static readonly Guid SwitchId = Guid.NewGuid();
+    private readonly RT _runtime;
 
     public OvsDriverProviderTests()
     {
-        _runtime = new(new(
+        _runtime = new RT(new TestRuntimeEnv(
             new CancellationTokenSource(),
             _directoryMock.Object,
             _dismMock.Object,
@@ -136,17 +135,17 @@ public class OvsDriverProviderTests
         ArrangeDriverPackage(packageVersion, false);
         ArrangeOvnDataDirExists(true);
 
-        Guid otherSwitchId = Guid.NewGuid();
+        var otherSwitchId = Guid.NewGuid();
 
         _hostNetworkCommandsMock.Setup(m => m.GetSwitchExtensions())
             .Returns(SuccessAff<RT, Seq<VMSwitchExtension>>(Seq(
-                new VMSwitchExtension()
+                new VMSwitchExtension
                 {
                     Enabled = true,
                     SwitchId = SwitchId,
                     SwitchName = EryphConstants.OverlaySwitchName,
                 },
-                new VMSwitchExtension() { Enabled = false, SwitchId = otherSwitchId })))
+                new VMSwitchExtension { Enabled = false, SwitchId = otherSwitchId })))
             .Verifiable();
 
         _hostNetworkCommandsMock.Setup(m => m.DisableSwitchExtension(SwitchId))
@@ -161,8 +160,8 @@ public class OvsDriverProviderTests
         _processRunnerIOMock.SetupSequence(m => m.RunProcess(
                 "sc.exe", "query type=driver", "", false))
             .ReturnsAsync(new ProcessRunnerResult(
-                exitCode: 0, output: "lorem\nSERVICE_NAME: DBO_OVSE\nipsum"))
-            .ReturnsAsync(new ProcessRunnerResult(exitCode: 0, output: "lorem\nipsum"));
+                0, "lorem\nSERVICE_NAME: DBO_OVSE\nipsum"))
+            .ReturnsAsync(new ProcessRunnerResult(0, "lorem\nipsum"));
 
         _processRunnerIOMock.Setup(m => m.RunProcess(
                 "pnputil.exe", "/delete-driver oem100.inf /force", "", false))
@@ -213,7 +212,7 @@ public class OvsDriverProviderTests
 
         _processRunnerIOMock.SetupSequence(m => m.RunProcess(
                 "sc.exe", "query type=driver", "", false))
-            .ReturnsAsync(new ProcessRunnerResult(exitCode: 0, output: "lorem\nipsum"));
+            .ReturnsAsync(new ProcessRunnerResult(0, "lorem\nipsum"));
 
         _processRunnerIOMock.Setup(m => m.RunProcess(
                 "pnputil.exe", It.IsAny<string>(), "", false))
@@ -281,10 +280,7 @@ public class OvsDriverProviderTests
     private void ArrangeOvnDataDirExists(bool exists)
     {
         _directoryMock.Setup(m => m.Exists(OvnDataDir)).Returns(exists);
-        if (exists)
-        {
-            _directoryMock.Setup(m => m.Delete(OvnDataDir, true)).Verifiable();
-        }
+        if (exists) _directoryMock.Setup(m => m.Delete(OvnDataDir, true)).Verifiable();
     }
 
     private void VerifyOvnDataNotDropped()
@@ -295,21 +291,21 @@ public class OvsDriverProviderTests
     private void ArrangeInstalledDriver(string version)
     {
         _hostNetworkCommandsMock.Setup(m => m.GetInstalledSwitchExtension())
-            .Returns(SuccessAff(Optional(new VMSystemSwitchExtension(){ Version = version})));
+            .Returns(SuccessAff(Optional(new VMSystemSwitchExtension { Version = version })));
 
         _dismMock.Setup(m => m.GetInstalledDriverPackages())
             .ReturnsAsync(Seq(
-                new DismDriverInfo()
+                new DismDriverInfo
                 {
                     OriginalFileName = @"Z:\driver\100\dbo_ovse.inf",
                     Driver = "oem100.inf",
                 },
-                new DismDriverInfo()
+                new DismDriverInfo
                 {
                     OriginalFileName = @"Z:\driver\101\dbo_ovse.inf",
                     Driver = "oem101.inf",
                 },
-                new DismDriverInfo()
+                new DismDriverInfo
                 {
                     OriginalFileName = @"Z:\driver\102\acme_corp.inf",
                     Driver = "oem102.inf",
@@ -327,19 +323,19 @@ public class OvsDriverProviderTests
         _fileMock.Setup(m => m.ReadAllBytes(Path.Combine(@"Z:\ovnrundir", "driver", "dbo_ovse.inf"),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Encoding.ASCII.GetBytes($"""
-                DriverVer = 4/2/2020,{version}
-                """));
+                                                   DriverVer = 4/2/2020,{version}
+                                                   """));
 
         var isGetSignatureCommand = (PsCommandBuilder builder) =>
         {
             var chain = builder.ToChain();
             return chain.Length >= 2
-               && chain[0] is PsCommandBuilder.CommandPart { Command: "Get-AuthenticodeSignature" }
-               && chain[1] is PsCommandBuilder.ParameterPart
-               {
-                   Parameter: "FilePath",
-                   Value: @"Z:\ovnrundir\driver\dbo_ovse.cat",
-               };
+                   && chain[0] is PsCommandBuilder.CommandPart { Command: "Get-AuthenticodeSignature" }
+                   && chain[1] is PsCommandBuilder.ParameterPart
+                   {
+                       Parameter: "FilePath",
+                       Value: @"Z:\ovnrundir\driver\dbo_ovse.cat",
+                   };
         };
 
         _powershellEngineMock.Setup(m => m.GetObjectValuesAsync<string?>(
@@ -395,7 +391,8 @@ public class OvsDriverProviderTests
         public Eff<RT, IHostNetworkCommands<RT>> HostNetworkCommands =>
             Eff<RT, IHostNetworkCommands<RT>>(rt => rt.Env.HostNetworkCommands);
 
-        public Eff<RT, ILogger> Logger(string category) => Eff<RT, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
+        public Eff<RT, ILogger> Logger(string category) =>
+            Eff<RT, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
 
         public Eff<RT, ILogger<T>> Logger<T>() => Eff<RT, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
 

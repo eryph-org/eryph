@@ -21,6 +21,48 @@ internal class StopCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<KillVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletStateCommand>>
 {
+    public Task Handle(OperationTaskStatusEvent<KillVMCommand> message) =>
+        FailOrRun(message, async (CatletStateResponse response) =>
+        {
+            await StartNewTask(new UpdateCatletStateCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VmId = Data.Data.VmId,
+                Status = response.Status,
+                UpTime = response.UpTime,
+                Timestamp = response.Timestamp,
+            });
+        });
+
+    public Task Handle(OperationTaskStatusEvent<ShutdownVMCommand> message) =>
+        FailOrRun(message, async (CatletStateResponse response) =>
+        {
+            await StartNewTask(new UpdateCatletStateCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VmId = Data.Data.VmId,
+                Status = response.Status,
+                UpTime = response.UpTime,
+                Timestamp = response.Timestamp,
+            });
+        });
+
+    public Task Handle(OperationTaskStatusEvent<StopVMCommand> message) =>
+        FailOrRun(message, async (CatletStateResponse response) =>
+        {
+            await StartNewTask(new UpdateCatletStateCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VmId = Data.Data.VmId,
+                Status = response.Status,
+                UpTime = response.UpTime,
+                Timestamp = response.Timestamp,
+            });
+        });
+
+    public Task Handle(OperationTaskStatusEvent<UpdateCatletStateCommand> message) =>
+        FailOrRun(message, Complete);
+
     protected override async Task Initiated(StopCatletCommand message)
     {
         Data.Data.CatletId = message.CatletId;
@@ -30,6 +72,7 @@ internal class StopCatletSaga(
             await Fail($"The catlet {message.CatletId} does not exist.");
             return;
         }
+
         Data.Data.VmId = catlet.VmId;
 
         switch (message.Mode)
@@ -60,48 +103,6 @@ internal class StopCatletSaga(
                 return;
         }
     }
-
-    public Task Handle(OperationTaskStatusEvent<StopVMCommand> message) =>
-        FailOrRun(message, async (CatletStateResponse response) =>
-        {
-            await StartNewTask(new UpdateCatletStateCommand
-            {
-                CatletId = Data.Data.CatletId,
-                VmId = Data.Data.VmId,
-                Status = response.Status,
-                UpTime = response.UpTime,
-                Timestamp = response.Timestamp,
-            });
-        });
-
-    public Task Handle(OperationTaskStatusEvent<ShutdownVMCommand> message) =>
-        FailOrRun(message, async (CatletStateResponse response) =>
-        {
-            await StartNewTask(new UpdateCatletStateCommand
-            {
-                CatletId = Data.Data.CatletId,
-                VmId = Data.Data.VmId,
-                Status = response.Status,
-                UpTime = response.UpTime,
-                Timestamp = response.Timestamp,
-            });
-        });
-
-    public Task Handle(OperationTaskStatusEvent<KillVMCommand> message) =>
-        FailOrRun(message, async (CatletStateResponse response) =>
-        {
-            await StartNewTask(new UpdateCatletStateCommand
-            {
-                CatletId = Data.Data.CatletId,
-                VmId = Data.Data.VmId,
-                Status = response.Status,
-                UpTime = response.UpTime,
-                Timestamp = response.Timestamp,
-            });
-        });
-
-    public Task Handle(OperationTaskStatusEvent<UpdateCatletStateCommand> message) =>
-        FailOrRun(message, Complete);
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<StopCatletSagaData>> config)
     {

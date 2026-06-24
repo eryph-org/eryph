@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
@@ -10,10 +8,8 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
 using Catlet = Eryph.Modules.ComputeApi.Model.V1.Catlet;
 
@@ -47,7 +43,7 @@ internal class GetCatletHandler(
 
         var catletPortsWithCatlet = catletPorts
             .Map(p => (Catlet: catlet, Port: p));
-            
+
         mappedResult.Networks = mapper.Map<IReadOnlyList<CatletNetwork>>(
             catletPortsWithCatlet, o => o.SetAuthContext(authContext));
         return new JsonResult(mappedResult);

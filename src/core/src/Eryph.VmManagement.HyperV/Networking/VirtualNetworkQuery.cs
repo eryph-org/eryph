@@ -7,7 +7,6 @@ using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static Eryph.Core.NetworkPrelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 using static LanguageExt.Prelude;
@@ -83,7 +82,7 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
             DefaultGateways = defaultGateways,
             DnsServers = dnsServers,
             DhcpEnabled = dhcpEnabled,
-            Subnets = subnets.ToArray()
+            Subnets = subnets.ToArray(),
         };
 
     private static Eff<Seq<string>> convertSubnets(

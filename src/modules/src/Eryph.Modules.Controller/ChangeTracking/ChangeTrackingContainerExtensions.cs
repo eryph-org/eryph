@@ -14,7 +14,7 @@ public static class ChangeTrackingContainerExtensions
 {
     public static void AddChangeTracking(this SimpleInjectorAddOptions options)
     {
-        RegisterChangeTracking(options.Container);
+        options.Container.RegisterChangeTracking();
 
         options.AddHostedService<ChangeTrackingBackgroundService<VirtualNetworkChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<NetworkProvidersChange>>();
@@ -43,7 +43,7 @@ public static class ChangeTrackingContainerExtensions
 
         container.Collection.Register(
             typeof(IDbTransactionInterceptor),
-            new []{ controllerAssembly },
+            new[] { controllerAssembly },
             Lifestyle.Scoped);
     }
 }

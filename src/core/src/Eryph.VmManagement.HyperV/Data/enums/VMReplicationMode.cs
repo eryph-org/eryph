@@ -1,11 +1,10 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMReplicationMode
 {
-    public enum VMReplicationMode
-    {
-        None,
-        Primary,
-        Replica,
-        TestReplica,
-        ExtendedReplica
-    }
+    None,
+    Primary,
+    Replica,
+    TestReplica,
+    ExtendedReplica,
 }

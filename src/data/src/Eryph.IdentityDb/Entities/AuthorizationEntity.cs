@@ -2,6 +2,4 @@
 
 namespace Eryph.IdentityDb.Entities;
 
-public class AuthorizationEntity : OpenIddictEntityFrameworkCoreAuthorization<string, ApplicationEntity, TokenEntity>
-{
-}
+public class AuthorizationEntity : OpenIddictEntityFrameworkCoreAuthorization<string, ApplicationEntity, TokenEntity>;

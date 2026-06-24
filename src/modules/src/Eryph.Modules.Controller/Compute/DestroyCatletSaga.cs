@@ -15,7 +15,6 @@ using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -30,25 +29,18 @@ internal class DestroyCatletSaga(
     IHandleMessages<OperationTaskStatusEvent<RemoveCatletVMCommand>>,
     IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
 {
-    protected override async Task Initiated(DestroyCatletCommand message)
-    {
-        Data.Data.MachineId = message.Resource.Id;
-        Data.Data.DestroyedResources = [new Resource(ResourceType.Catlet, message.Resource.Id)];
-        var catlet = await vmDataService.Get(Data.Data.MachineId);
-        if (catlet is null)
+    public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message) =>
+        FailOrRun(message, async (DestroyResourcesResponse response) =>
         {
-            await Complete();
-            return;
-        }
+            Data.Data.DestroyedResources = Data.Data.DestroyedResources
+                .Append(response.DestroyedResources)
+                .ToList();
+            Data.Data.DetachedResources = Data.Data.DetachedResources
+                .Append(response.DetachedResources)
+                .ToList();
 
-        Data.Data.VmId = catlet.VmId;
-
-        await StartNewTask(new RemoveCatletVMCommand
-        {
-            CatletId = Data.Data.MachineId,
-            VmId = catlet.VmId
+            await CompleteWithResponse();
         });
-    }
 
     public Task Handle(OperationTaskStatusEvent<RemoveCatletVMCommand> message) =>
         FailOrRun(message, async () =>
@@ -86,18 +78,25 @@ internal class DestroyCatletSaga(
             });
         });
 
-    public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message) =>
-        FailOrRun(message, async (DestroyResourcesResponse response) =>
+    protected override async Task Initiated(DestroyCatletCommand message)
+    {
+        Data.Data.MachineId = message.Resource.Id;
+        Data.Data.DestroyedResources = [new Resource(ResourceType.Catlet, message.Resource.Id)];
+        var catlet = await vmDataService.Get(Data.Data.MachineId);
+        if (catlet is null)
         {
-            Data.Data.DestroyedResources = Data.Data.DestroyedResources
-                .Append(response.DestroyedResources)
-                .ToList();
-            Data.Data.DetachedResources = Data.Data.DetachedResources
-                .Append(response.DetachedResources)
-                .ToList();
+            await Complete();
+            return;
+        }
 
-            await CompleteWithResponse();
+        Data.Data.VmId = catlet.VmId;
+
+        await StartNewTask(new RemoveCatletVMCommand
+        {
+            CatletId = Data.Data.MachineId,
+            VmId = catlet.VmId,
         });
+    }
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<DestroyCatletSagaData>> config)
     {
@@ -108,7 +107,7 @@ internal class DestroyCatletSaga(
 
     private async Task CompleteWithResponse()
     {
-        await Complete(new DestroyResourcesResponse()
+        await Complete(new DestroyResourcesResponse
         {
             DestroyedResources = Data.Data.DestroyedResources.ToArray(),
             DetachedResources = Data.Data.DetachedResources.ToArray(),

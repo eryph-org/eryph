@@ -3,9 +3,7 @@
 namespace Eryph.AnsiConsole.JsonLines;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(JsonLineInfo), typeDiscriminator: "info")]
-[JsonDerivedType(typeof(JsonLineResult), typeDiscriminator: "result")]
-[JsonDerivedType(typeof(JsonLineError), typeDiscriminator: "error")]
-internal abstract class JsonLineOutput
-{
-}
+[JsonDerivedType(typeof(JsonLineInfo), "info")]
+[JsonDerivedType(typeof(JsonLineResult), "result")]
+[JsonDerivedType(typeof(JsonLineError), "error")]
+internal abstract class JsonLineOutput;

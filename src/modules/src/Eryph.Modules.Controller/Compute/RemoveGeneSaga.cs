@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Disks;
@@ -34,50 +28,15 @@ internal class RemoveGeneSaga(
         IHandleMessages<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CheckDisksExistsCommand>>
 {
-    protected override async Task Initiated(RemoveGeneCommand message)
-    {
-        var dbGene = await geneRepository.GetBySpecAsync(
-            new GeneSpecs.GetById(message.Id));
-        if (dbGene is null)
-        {
-            await Fail($"The gene {message.Id} was not found.");
-            return;
-        }
-
-        Data.Data.AgentName = dbGene.LastSeenAgent;
-
-        var geneId = dbGene.ParseUniqueGeneId();
-        if (geneId.IsLeft)
-        {
-            await Fail(Error.Many(geneId.LeftToSeq()).Print());
-            return;
-        }
-
-        Data.Data.GeneId = geneId.ValueUnsafe();
-
-        var isUnused = await geneInventoryQueries.IsUnusedGene(dbGene.Id);
-        if (!isUnused)
-        {
-            await Fail($"The gene {geneId.ValueUnsafe()} is in use.");
-            return;
-        }
-
-        await StartNewTask(new RemoveGenesVmHostCommand
-        {
-            AgentName = dbGene.LastSeenAgent,
-            Genes = [Data.Data.GeneId],
-        });
-    }
+    public Task Handle(OperationTaskStatusEvent<CheckDisksExistsCommand> message) =>
+        FailOrRun(message, Complete);
 
     public Task Handle(OperationTaskStatusEvent<RemoveGenesVmHostCommand> message) =>
         FailOrRun(message, async () =>
         {
             var dbGene = await geneRepository.GetBySpecAsync(
                 new GeneSpecs.GetByUniqueGeneId(Data.Data.AgentName, Data.Data.GeneId));
-            if (dbGene is not null)
-            {
-                await geneRepository.DeleteAsync(dbGene);
-            }
+            if (dbGene is not null) await geneRepository.DeleteAsync(dbGene);
 
             if (Data.Data.GeneId.GeneType != GeneType.Volume)
             {
@@ -114,13 +73,45 @@ internal class RemoveGeneSaga(
                         DiskIdentifier = disk.DiskIdentifier,
                         Gene = disk.ToUniqueGeneId(GeneType.Volume)
                             .IfNoneUnsafe((UniqueGeneIdentifier?)null),
-                    }
-                ]
+                    },
+                ],
             });
         });
 
-    public Task Handle(OperationTaskStatusEvent<CheckDisksExistsCommand> message) =>
-        FailOrRun(message, Complete);
+    protected override async Task Initiated(RemoveGeneCommand message)
+    {
+        var dbGene = await geneRepository.GetBySpecAsync(
+            new GeneSpecs.GetById(message.Id));
+        if (dbGene is null)
+        {
+            await Fail($"The gene {message.Id} was not found.");
+            return;
+        }
+
+        Data.Data.AgentName = dbGene.LastSeenAgent;
+
+        var geneId = dbGene.ParseUniqueGeneId();
+        if (geneId.IsLeft)
+        {
+            await Fail(Error.Many(geneId.LeftToSeq()).Print());
+            return;
+        }
+
+        Data.Data.GeneId = geneId.ValueUnsafe();
+
+        var isUnused = await geneInventoryQueries.IsUnusedGene(dbGene.Id);
+        if (!isUnused)
+        {
+            await Fail($"The gene {geneId.ValueUnsafe()} is in use.");
+            return;
+        }
+
+        await StartNewTask(new RemoveGenesVmHostCommand
+        {
+            AgentName = dbGene.LastSeenAgent,
+            Genes = [Data.Data.GeneId],
+        });
+    }
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<RemoveGeneSagaData>> config)
     {

@@ -4,10 +4,10 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
@@ -34,7 +34,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
     public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeTpmState(vmInfo).ToEither();
-    
+
     private EitherAsync<Error, Unit> ConvergeTpmState(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -47,7 +47,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             ? RightAsync<Error, Unit>(unit)
             : ConfigureTpm(vmInfo, expectedTpmState)
         select unit;
-    
+
     private EitherAsync<Error, VMSecurityInfo> GetVmSecurityInfo(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -67,7 +67,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .ToEitherAsync()
         from _2 in enableTpm ? EnableTpm(vmInfo) : DisableTpm(vmInfo)
         select unit;
-    
+
     private EitherAsync<Error, Unit> EnableTpm(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in EnsureKeyProtector(vmInfo)
@@ -125,7 +125,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from existingGuardians in Context.Engine.GetObjectsAsync<CimHgsGuardian>(command)
         from guardian in existingGuardians
             .Find(g => g.Value.Name == EryphConstants.HgsGuardianName)
-            .Match(Some: g => g, None: CreateHgsGuardian)
+            .Match(g => g, CreateHgsGuardian)
         select guardian;
 
     private EitherAsync<Error, TypedPsObject<CimHgsGuardian>> CreateHgsGuardian() =>
@@ -147,7 +147,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddParameter("VM", vmInfo.PsObject)
         from __ in Context.Engine.RunAsync(command)
         select unit;
-    
+
     private static bool IsEnabled(CatletCapabilityConfig capabilityConfig) =>
         capabilityConfig.Details.ToSeq()
             .All(d => !string.Equals(d, EryphConstants.CapabilityDetails.Disabled, StringComparison.OrdinalIgnoreCase));

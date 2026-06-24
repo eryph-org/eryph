@@ -20,9 +20,9 @@ public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
 
     public IReadOnlyDictionary<string, string> Variables { get; set; }
 
+    public string GetCommandName() => $"Deploy catlet specification {Name}";
+
     public Guid CorrelationId { get; set; }
 
     public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
-
-    public string GetCommandName() => $"Deploy catlet specification {Name}";
 }

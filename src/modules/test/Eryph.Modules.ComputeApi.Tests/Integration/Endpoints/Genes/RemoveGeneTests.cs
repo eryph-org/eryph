@@ -6,8 +6,8 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.AspNetCore.TestBase;
-using Eryph.StateDb.Model;
 using Eryph.StateDb;
+using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
@@ -17,8 +17,8 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
 public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
-    private readonly WebModuleFactory<ComputeApiModule> _factory;
     private static readonly Guid GeneId = Guid.NewGuid();
+    private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public RemoveGeneTests(
         ITestOutputHelper outputHelper,
@@ -70,10 +70,6 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
         response.Should().HaveStatusCode(HttpStatusCode.Accepted);
 
         var messages = _factory.GetPendingRebusMessages<RemoveGeneCommand>();
-        messages.Should().SatisfyRespectively(
-            m =>
-            {
-                m.Id.Should().Be(GeneId);
-            });
+        messages.Should().SatisfyRespectively(m => { m.Id.Should().Be(GeneId); });
     }
 }

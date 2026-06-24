@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Json;
@@ -72,14 +68,15 @@ public class OperationResultValueResolver(
                 Shell = statusResponse.Shell,
                 ShellArgs = statusResponse.ShellArgs,
             },
-            ValidateCatletSpecificationCommandResponse validateSpecificationResponse => new CatletSpecificationOperationResult
-            {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(
-                    validateSpecificationResponse.BuiltConfig),
-                Genes = validateSpecificationResponse.ResolvedGenes.ToDictionary(
-                    k => k.Key.ToString(),
-                    v => v.Value.ToString()),
-            },
+            ValidateCatletSpecificationCommandResponse validateSpecificationResponse => new
+                CatletSpecificationOperationResult
+                {
+                    Configuration = CatletConfigJsonSerializer.SerializeToElement(
+                        validateSpecificationResponse.BuiltConfig),
+                    Genes = validateSpecificationResponse.ResolvedGenes.ToDictionary(
+                        k => k.Key.ToString(),
+                        v => v.Value.ToString()),
+                },
             _ => null,
         };
     }

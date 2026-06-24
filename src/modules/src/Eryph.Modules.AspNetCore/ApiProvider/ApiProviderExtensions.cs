@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Asp.Versioning.ApiExplorer;
 using Dbosoft.Hosuto.Modules;
 using Eryph.Modules.AspNetCore.ApiProvider.Swagger;
@@ -38,11 +35,8 @@ public static class ApiProviderExtensions
             jsonInputFormatter.SupportedMediaTypes.Clear();
             jsonInputFormatter.SupportedMediaTypes.Add("application/json");
         });
-        
-        mvcBuilder.AddJsonOptions(options =>
-        {
-            options.JsonSerializerOptions.AddEryphApiSettings();
-        });
+
+        mvcBuilder.AddJsonOptions(options => { options.JsonSerializerOptions.AddEryphApiSettings(); });
 
         services.AddProblemDetails(problemDetailsOptions =>
         {
@@ -82,11 +76,11 @@ public static class ApiProviderExtensions
                 options.IncludeXmlComments(xmlPath);
 
             options.EnableAnnotations(
-                enableAnnotationsForInheritance: true,
+                true,
                 // Prevent oneOf from being used as it is not supported by AutoRest
-                enableAnnotationsForPolymorphism: false);
+                false);
             options.SupportNonNullableReferenceTypes();
-            
+
             // AutoRest only supports allOf inheritance
             options.UseAllOfForInheritance();
 
@@ -126,10 +120,7 @@ public static class ApiProviderExtensions
         app.UseAuthentication();
         app.UseAuthorization();
 
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllers();
-        });
+        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
 
         app.UseSwagger(c =>
         {
@@ -141,17 +132,15 @@ public static class ApiProviderExtensions
                 ];
             });
         });
-        
+
         app.UseSwaggerUI(options =>
         {
             options.DisplayOperationId();
 
             // Build a swagger endpoint for each discovered API version
             foreach (var description in provider.ApiVersionDescriptions)
-            {
                 options.SwaggerEndpoint($"{module.Path}/swagger/{description.GroupName}/swagger.json",
                     description.GroupName.ToUpperInvariant());
-            }
         });
 
         return app;

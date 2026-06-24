@@ -29,32 +29,32 @@ public static class ScopeHierarchy
             EryphConstants.Authorization.Scopes.GenesWrite,
             EryphConstants.Authorization.Scopes.GenesRead,
             EryphConstants.Authorization.Scopes.ProjectsWrite,
-            EryphConstants.Authorization.Scopes.ProjectsRead
+            EryphConstants.Authorization.Scopes.ProjectsRead,
         ],
         [EryphConstants.Authorization.Scopes.ComputeRead] =
         [
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.GenesRead,
-            EryphConstants.Authorization.Scopes.ProjectsRead
+            EryphConstants.Authorization.Scopes.ProjectsRead,
         ],
         [EryphConstants.Authorization.Scopes.CatletsWrite] =
         [
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
-            EryphConstants.Authorization.Scopes.CatletsRemoteAccess
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
         ],
         [EryphConstants.Authorization.Scopes.CatletsControl] =
         [
             EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsRemoteAccess
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
         ],
         [EryphConstants.Authorization.Scopes.GenesWrite] =
         [
-            EryphConstants.Authorization.Scopes.GenesRead
+            EryphConstants.Authorization.Scopes.GenesRead,
         ],
         [EryphConstants.Authorization.Scopes.ProjectsWrite] =
         [
-            EryphConstants.Authorization.Scopes.ProjectsRead
+            EryphConstants.Authorization.Scopes.ProjectsRead,
         ],
 
         // Identity API hierarchies
@@ -62,15 +62,15 @@ public static class ScopeHierarchy
         [
             EryphConstants.Authorization.Scopes.IdentityRead,
             EryphConstants.Authorization.Scopes.IdentityClientsWrite,
-            EryphConstants.Authorization.Scopes.IdentityClientsRead
+            EryphConstants.Authorization.Scopes.IdentityClientsRead,
         ],
         [EryphConstants.Authorization.Scopes.IdentityRead] =
         [
-            EryphConstants.Authorization.Scopes.IdentityClientsRead
+            EryphConstants.Authorization.Scopes.IdentityClientsRead,
         ],
         [EryphConstants.Authorization.Scopes.IdentityClientsWrite] =
         [
-            EryphConstants.Authorization.Scopes.IdentityClientsRead
+            EryphConstants.Authorization.Scopes.IdentityClientsRead,
         ],
     };
 
@@ -115,12 +115,8 @@ public static class ScopeHierarchy
 
         // Find all scopes in the hierarchy that grant the given scope
         foreach (var (parentScope, impliedScopes) in ScopeHierarchyList)
-        {
             if (impliedScopes.Contains(scope) && !grantingScopes.Contains(parentScope))
-            {
                 grantingScopes.Add(parentScope);
-            }
-        }
 
         return grantingScopes.ToArray();
     }

@@ -21,47 +21,51 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
 
-public class OVNChassisService : IHostedService
+public class OVNChassisService(
+    ISystemEnvironment systemEnvironment,
+    ILogger<OVNChassisService> logger,
+    IAgentControlService controlService,
+    IOVSService<OVNChassisNode> ovnChassisNode,
+    IOVSService<OVSDbNode> ovsDbNode,
+    IOVSService<OVSSwitchNode> ovsVSwitchNode,
+    IServiceProvider serviceProvider)
+    : IHostedService
 {
-    private readonly ISystemEnvironment _systemEnvironment;
-    private readonly IAgentControlService _controlService;
-    private readonly IOVSService<OVNChassisNode> _ovnChassisNode;
-    private readonly IOVSService<OVSDbNode> _ovsDbNode;
-    private readonly IOVSService<OVSSwitchNode> _ovsVSwitchNode;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger _logger;
+    private readonly ILogger _logger = logger;
 
-    public OVNChassisService(
-        ISystemEnvironment systemEnvironment,
-        ILogger<OVNChassisService> logger,
-        IAgentControlService controlService,
-        IOVSService<OVNChassisNode> ovnChassisNode,
-        IOVSService<OVSDbNode> ovsDbNode,
-        IOVSService<OVSSwitchNode> ovsVSwitchNode,
-        IServiceProvider serviceProvider)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _systemEnvironment = systemEnvironment;
-        _controlService = controlService;
-        _ovnChassisNode = ovnChassisNode;
-        _ovsDbNode = ovsDbNode;
-        _ovsVSwitchNode = ovsVSwitchNode;
-        _serviceProvider = serviceProvider;
-        _logger = logger;
+        controlService.Register(this, OnControlEvent);
+        await ovsDbNode.StartAsync(cancellationToken);
+
+        StartOnOwnThread();
+        await UpdateNetworkProviders();
+        await ApplyChassisPlan(cancellationToken);
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        controlService.UnRegister(this);
+
+        await Task.WhenAll(
+            StopWitchCatch(ovnChassisNode, true, "Failed to stop OVN chassis node.", cancellationToken),
+            DisconnectWitchCatch(ovsVSwitchNode, "Failed to stop vswitch node."),
+            DisconnectWitchCatch(ovsDbNode, "Failed to stop chassis db node.")
+        );
     }
 
     private async Task<bool> OnControlEvent(AgentControlEvent e, CancellationToken cancellationToken)
     {
-
         switch (e.Service)
         {
             case AgentService.OVNController:
                 switch (e.RequestedOperation)
                 {
                     case AgentServiceOperation.Stop:
-                        await _ovnChassisNode.StopAsync(true,cancellationToken);
+                        await ovnChassisNode.StopAsync(true, cancellationToken);
                         return true;
                     case AgentServiceOperation.Start:
-                        await _ovnChassisNode.StartAsync(cancellationToken);
+                        await ovnChassisNode.StartAsync(cancellationToken);
                         return true;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -70,10 +74,10 @@ public class OVNChassisService : IHostedService
                 switch (e.RequestedOperation)
                 {
                     case AgentServiceOperation.Stop:
-                        await _ovsVSwitchNode.StopAsync(true,cancellationToken);
+                        await ovsVSwitchNode.StopAsync(true, cancellationToken);
                         return true;
                     case AgentServiceOperation.Start:
-                        await _ovsVSwitchNode.StartAsync(cancellationToken);
+                        await ovsVSwitchNode.StartAsync(cancellationToken);
                         return true;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -82,10 +86,10 @@ public class OVNChassisService : IHostedService
                 switch (e.RequestedOperation)
                 {
                     case AgentServiceOperation.Stop:
-                        await _ovsDbNode.StopAsync(true, cancellationToken);
+                        await ovsDbNode.StopAsync(true, cancellationToken);
                         return true;
                     case AgentServiceOperation.Start:
-                        await _ovsDbNode.StartAsync(cancellationToken);
+                        await ovsDbNode.StartAsync(cancellationToken);
                         return true;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -93,17 +97,6 @@ public class OVNChassisService : IHostedService
         }
 
         return false;
-    }
-
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        _controlService.Register(this, OnControlEvent);
-        await _ovsDbNode.StartAsync(cancellationToken);
-
-        StartOnOwnThread();
-        await UpdateNetworkProviders();
-        await ApplyChassisPlan(cancellationToken);
-
     }
 
     private void StartOnOwnThread()
@@ -114,7 +107,7 @@ public class OVNChassisService : IHostedService
             {
                 try
                 {
-                    var extensionEnabled = await _systemEnvironment
+                    var extensionEnabled = await systemEnvironment
                         .GetOvsExtensionManager()
                         .IsExtensionEnabled();
 
@@ -125,10 +118,9 @@ public class OVNChassisService : IHostedService
                     }
 
                     var cancelSource = new CancellationTokenSource(30000);
-                    await _ovsVSwitchNode.StartAsync(cancelSource.Token);
+                    await ovsVSwitchNode.StartAsync(cancelSource.Token);
                     cancelSource = new CancellationTokenSource(30000);
-                    await _ovnChassisNode.StartAsync(cancelSource.Token);
-
+                    await ovnChassisNode.StartAsync(cancelSource.Token);
                 }
                 catch (Exception ex)
                 {
@@ -138,23 +130,6 @@ public class OVNChassisService : IHostedService
                 break;
             }
         }, TaskCreationOptions.LongRunning);
-
-
-
-
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        _controlService.UnRegister(this);
-
-        await Task.WhenAll(
-            StopWitchCatch(_ovnChassisNode, true, "Failed to stop OVN chassis node.", cancellationToken),
-            DisconnectWitchCatch(_ovsVSwitchNode, "Failed to stop vswitch node."),
-            DisconnectWitchCatch(_ovsDbNode, "Failed to stop chassis db node.")
-
-        );
-
     }
 
     private async Task StopWitchCatch<TNode>(IOVSService<TNode> service, bool ensureNodeStopped, string errorMessage
@@ -170,7 +145,8 @@ public class OVNChassisService : IHostedService
         }
     }
 
-    private async Task DisconnectWitchCatch<TNode>(IOVSService<TNode> service, string errorMessage) where TNode : IOVSNode
+    private async Task DisconnectWitchCatch<TNode>(IOVSService<TNode> service, string errorMessage)
+        where TNode : IOVSNode
     {
         try
         {
@@ -191,12 +167,12 @@ public class OVNChassisService : IHostedService
         // via the matching ha_chassis_group on the controller side.
         try
         {
-            await using var scope = AsyncScopedLifestyle.BeginScope(_serviceProvider as Container);
+            await using var scope = AsyncScopedLifestyle.BeginScope(serviceProvider as Container);
             var providerManager = scope.GetInstance<INetworkProviderManager>();
             var configResult = await providerManager.GetCurrentConfiguration().ToEither();
             var config = configResult.Match(
-                Right: c => c,
-                Left: e =>
+                c => c,
+                e =>
                 {
                     _logger.LogWarning(
                         "Failed to load network provider configuration for OVN chassis plan: {Error}",
@@ -205,8 +181,8 @@ public class OVNChassisService : IHostedService
                 });
             if (config is null) return;
 
-            var ovsTool = new OVSControlTool(_systemEnvironment, LocalConnections.Switch);
-            var realizer = new ChassisPlanRealizer(_systemEnvironment, ovsTool);
+            var ovsTool = new OVSControlTool(systemEnvironment, LocalConnections.Switch);
+            var realizer = new ChassisPlanRealizer(systemEnvironment, ovsTool);
             var plan = BuildChassisPlan(config);
 
             var result = await realizer.ApplyChassisPlan(plan, cancellationToken).ToEither();
@@ -231,34 +207,32 @@ public class OVNChassisService : IHostedService
 
     private async Task UpdateNetworkProviders()
     {
-        var runtime = AgentRuntime.New(_serviceProvider);
+        var runtime = AgentRuntime.New(serviceProvider);
 
-        await using var scope = AsyncScopedLifestyle.BeginScope(_serviceProvider as Container);
+        await using var scope = AsyncScopedLifestyle.BeginScope(serviceProvider as Container);
 
         try
         {
             await (from currentConfig in getCurrentConfiguration()
-                   from hostState in HostStateProvider<AgentRuntime>.getHostState()
-                   from currentConfigChanges in generateChanges(hostState, currentConfig, true)
-                   from _1 in canBeAutoApplied(currentConfigChanges)
-                       ? executeChangesWithRollback(currentConfigChanges)
-                       : VmManagement.Sys.Logger<AgentRuntime>.logWarning<OVNChassisService>(
-                           "Network provider configuration is not fully applied to host." +
-                           "\nSome of the required changes cannot be executed automatically." +
-                           "\nRun command 'eryph-zero networks sync' in a elevated command prompt " +
-                           "to apply changes." +
-                           "\nChanges: {changes} ", currentConfigChanges.Operations.Select(x => x.Text))
-                   from _2 in HostStateProvider<AgentRuntime>.checkHostInterfaces()
-                   select unit)
-
+                    from hostState in HostStateProvider<AgentRuntime>.getHostState()
+                    from currentConfigChanges in generateChanges(hostState, currentConfig, true)
+                    from _1 in canBeAutoApplied(currentConfigChanges)
+                        ? executeChangesWithRollback(currentConfigChanges)
+                        : VmManagement.Sys.Logger<AgentRuntime>.logWarning<OVNChassisService>(
+                            "Network provider configuration is not fully applied to host." +
+                            "\nSome of the required changes cannot be executed automatically." +
+                            "\nRun command 'eryph-zero networks sync' in a elevated command prompt " +
+                            "to apply changes." +
+                            "\nChanges: {changes} ", currentConfigChanges.Operations.Select(x => x.Text))
+                    from _2 in HostStateProvider<AgentRuntime>.checkHostInterfaces()
+                    select unit)
                 .RunUnit(runtime);
-
         }
         catch (Exception ex)
         {
-            _logger.LogCritical(ex, "Automatic configuration of network provider(s) failed. The networking might not work. "
-                                    + "Please run 'eryph-zero networks sync' to resolve the issues.");
+            _logger.LogCritical(ex,
+                "Automatic configuration of network provider(s) failed. The networking might not work. "
+                + "Please run 'eryph-zero networks sync' to resolve the issues.");
         }
-
     }
 }

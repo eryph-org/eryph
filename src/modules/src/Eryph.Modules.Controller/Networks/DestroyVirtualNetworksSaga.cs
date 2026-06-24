@@ -15,81 +15,70 @@ using Rebus.Handlers;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
 
-namespace Eryph.Modules.Controller.Networks
-{
-    [UsedImplicitly]
-    internal class DestroyVirtualNetworksSaga : OperationTaskWorkflowSaga<DestroyVirtualNetworksCommand, DestroyVirtualNetworksSagaData>,
+namespace Eryph.Modules.Controller.Networks;
+
+[UsedImplicitly]
+internal class DestroyVirtualNetworksSaga(IWorkflow workflow, IStateStoreRepository<VirtualNetwork> networkRepository)
+    :
+        OperationTaskWorkflowSaga<DestroyVirtualNetworksCommand, DestroyVirtualNetworksSagaData>(workflow),
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>
 
+{
+    public Task Handle(OperationTaskStatusEvent<UpdateNetworksCommand> message)
     {
-        private readonly IStateStoreRepository<VirtualNetwork> _networkRepository;
-
-
-        public DestroyVirtualNetworksSaga(IWorkflow workflow, IStateStoreRepository<VirtualNetwork> networkRepository) : base(workflow)
+        return FailOrRun(message, () =>
         {
-            _networkRepository = networkRepository;
-        }
-
-        protected override void CorrelateMessages(ICorrelationConfig<DestroyVirtualNetworksSagaData> config)
-        {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<UpdateNetworksCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-
-        }
-
-
-        protected override async Task Initiated(DestroyVirtualNetworksCommand message)
-        {
-            
-            var destroyedNetworks = new List<Guid>();
-            var toDestroy = new List<VirtualNetwork>();
-            foreach (var id in message.NetworkIds)
+            return Complete(new DestroyResourcesResponse
             {
-                var networkEntity = await _networkRepository.GetByIdAsync(id);
-                if (networkEntity == null)
-                {
-                    destroyedNetworks.Add(id);
-                    continue;
-                }
-                toDestroy.Add(networkEntity);
+                DetachedResources = [],
+                DestroyedResources = (Data.DestroyedNetworks ?? [])
+                    .Select(x => new Resource(ResourceType.VirtualNetwork, x)).ToArray(),
+            });
+        });
+    }
 
+    protected override void CorrelateMessages(ICorrelationConfig<DestroyVirtualNetworksSagaData> config)
+    {
+        base.CorrelateMessages(config);
+        config.Correlate<OperationTaskStatusEvent<UpdateNetworksCommand>>(m => m.InitiatingTaskId,
+            d => d.SagaTaskId);
+    }
+
+
+    protected override async Task Initiated(DestroyVirtualNetworksCommand message)
+    {
+        var destroyedNetworks = new List<Guid>();
+        var toDestroy = new List<VirtualNetwork>();
+        foreach (var id in message.NetworkIds)
+        {
+            var networkEntity = await networkRepository.GetByIdAsync(id);
+            if (networkEntity == null)
+            {
+                destroyedNetworks.Add(id);
+                continue;
             }
 
-            if (toDestroy.Count == 0)
-            {
-                await Complete(new DestroyResourcesResponse
-                {
-                    DetachedResources = [],
-                    DestroyedResources = destroyedNetworks
-                        .Select(x => new Resource(ResourceType.VirtualNetwork, x)).ToArray()
-                });
-                return;
-            }
-
-            await _networkRepository.DeleteRangeAsync(toDestroy);
-            destroyedNetworks.AddRange(toDestroy.Select(x => x.Id));
-            Data.DestroyedNetworks = destroyedNetworks.ToArray();
-
-            await StartNewTask(new UpdateNetworksCommand
-            {
-                Projects = toDestroy.Select(x => x.ProjectId).Distinct().ToArray()
-            });
-
+            toDestroy.Add(networkEntity);
         }
 
-
-        public Task Handle(OperationTaskStatusEvent<UpdateNetworksCommand> message)
+        if (toDestroy.Count == 0)
         {
-            return FailOrRun(message, () =>
+            await Complete(new DestroyResourcesResponse
             {
-                return Complete(new DestroyResourcesResponse
-                {
-                    DetachedResources = [],
-                    DestroyedResources = (Data.DestroyedNetworks ?? Array.Empty<Guid>())
-                        .Select(x => new Resource(ResourceType.VirtualNetwork, x)).ToArray()
-                });
+                DetachedResources = [],
+                DestroyedResources = destroyedNetworks
+                    .Select(x => new Resource(ResourceType.VirtualNetwork, x)).ToArray(),
             });
-
+            return;
         }
+
+        await networkRepository.DeleteRangeAsync(toDestroy);
+        destroyedNetworks.AddRange(toDestroy.Select(x => x.Id));
+        Data.DestroyedNetworks = destroyedNetworks.ToArray();
+
+        await StartNewTask(new UpdateNetworksCommand
+        {
+            Projects = toDestroy.Select(x => x.ProjectId).Distinct().ToArray(),
+        });
     }
 }

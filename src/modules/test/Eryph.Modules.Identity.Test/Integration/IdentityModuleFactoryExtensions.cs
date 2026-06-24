@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Hosuto.Modules.Testing;
 using Dbosoft.Rebus.Configuration;
 using Eryph.IdentityDb;
 using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Services;
-using Eryph.Rebus;
+using Eryph.Modules.Identity.Test.Services;
 using Eryph.Security.Cryptography;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
@@ -27,74 +23,73 @@ namespace Eryph.Modules.Identity.Test.Integration;
 
 public static class IdentityModuleFactoryExtensions
 {
-    public static WebModuleFactory<IdentityModule> WithIdentityHost(
-        this WebModuleFactory<IdentityModule> factory,
-        TokenCertificateFixture tokenCertificates) =>
-        factory.WithModuleHostBuilder(hostBuilder =>
-        {
-            var container = new Container();
-            container.Options.AllowOverridingRegistrations = true;
-            hostBuilder.UseSimpleInjector(container);
-
-            var endpoints = new Dictionary<string, string>
-            {
-                {"identity", "https://localhost/identity/"},
-                {"compute", "https://localhost/compute/"},
-            };
-
-            container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
-
-            container.RegisterSingleton<ICertificateKeyService, TestCertificateKeyService>();
-            container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
-            // The component CA (resolved by the enrollment endpoint) needs a certificate store.
-            container.RegisterSingleton<ICertificateStoreService, Services.InMemoryCertificateStore>();
-            container.RegisterInstance<ITokenCertificateManager>(
-                new TestTokenCertificateManager(tokenCertificates));
-
-            // The identity module now runs a bus + registers as a component, so the test host
-            // must supply an in-memory transport the module's ConfigureRebus can resolve
-            // (mirrors the compute-API test harness).
-            hostBuilder.ConfigureAppConfiguration((_, cfg) =>
-                cfg.AddInMemoryCollection(new Dictionary<string, string>
-                {
-                    { "bus:type", "inmemory" },
-                    { "databus:type", "inmemory" },
-                    { "store:type", "inmemory" },
-                }));
-            container.RegisterInstance(new InMemNetwork());
-            hostBuilder.ConfigureFrameworkServices((_, services) =>
-            {
-                services.AddTransient<IConfigureContainerFilter<IdentityModule>, InMemoryBusFilter>();
-                services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, InMemoryBusFilter>();
-            });
-        }).WithWebHostBuilder(webBuilder =>
-        {
-            webBuilder.ConfigureTestServices(services =>
-            {
-                services.AddOpenIddict(openIdDict =>
-                {
-                    openIdDict.AddServer(options =>
-                    {
-                        options.UseAspNetCore().DisableTransportSecurityRequirement();
-                    });
-                });
-
-                services.AddAuthentication(FakeJwtBearerDefaults.AuthenticationScheme).AddFakeJwtBearer();
-                services.AddAuthorization(opts => IdentityModule.ConfigureIdentityScopes(opts, "fake"));
-            });
-        });
-
-    public static WebModuleFactory<IdentityModule> WithXunitLogging(
-        this WebModuleFactory<IdentityModule> factory,
-        ITestOutputHelper testOutputHelper)
+    extension(WebModuleFactory<IdentityModule> factory)
     {
-        return factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
+        public WebModuleFactory<IdentityModule> WithIdentityHost(TokenCertificateFixture tokenCertificates) =>
+            factory.WithModuleHostBuilder(hostBuilder =>
             {
-                services.AddLogging(loggingBuilder => loggingBuilder.AddXUnit(testOutputHelper));
+                var container = new Container();
+                container.Options.AllowOverridingRegistrations = true;
+                hostBuilder.UseSimpleInjector(container);
+
+                var endpoints = new Dictionary<string, string>
+                {
+                    { "identity", "https://localhost/identity/" },
+                    { "compute", "https://localhost/compute/" },
+                };
+
+                container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
+
+                container.RegisterSingleton<ICertificateKeyService, TestCertificateKeyService>();
+                container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
+                // The component CA (resolved by the enrollment endpoint) needs a certificate store.
+                container.RegisterSingleton<ICertificateStoreService, InMemoryCertificateStore>();
+                container.RegisterInstance<ITokenCertificateManager>(
+                    new TestTokenCertificateManager(tokenCertificates));
+
+                // The identity module now runs a bus + registers as a component, so the test host
+                // must supply an in-memory transport the module's ConfigureRebus can resolve
+                // (mirrors the compute-API test harness).
+                hostBuilder.ConfigureAppConfiguration((_, cfg) =>
+                    cfg.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { "bus:type", "inmemory" },
+                        { "databus:type", "inmemory" },
+                        { "store:type", "inmemory" },
+                    }));
+                container.RegisterInstance(new InMemNetwork());
+                hostBuilder.ConfigureFrameworkServices((_, services) =>
+                {
+                    services.AddTransient<IConfigureContainerFilter<IdentityModule>, InMemoryBusFilter>();
+                    services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, InMemoryBusFilter>();
+                });
+            }).WithWebHostBuilder(webBuilder =>
+            {
+                webBuilder.ConfigureTestServices(services =>
+                {
+                    services.AddOpenIddict(openIdDict =>
+                    {
+                        openIdDict.AddServer(options =>
+                        {
+                            options.UseAspNetCore().DisableTransportSecurityRequirement();
+                        });
+                    });
+
+                    services.AddAuthentication(FakeJwtBearerDefaults.AuthenticationScheme).AddFakeJwtBearer();
+                    services.AddAuthorization(opts => IdentityModule.ConfigureIdentityScopes(opts, "fake"));
+                });
             });
-        });
+
+        public WebModuleFactory<IdentityModule> WithXunitLogging(ITestOutputHelper testOutputHelper)
+        {
+            return factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.AddLogging(loggingBuilder => loggingBuilder.AddXUnit(testOutputHelper));
+                });
+            });
+        }
     }
 
     /// <summary>

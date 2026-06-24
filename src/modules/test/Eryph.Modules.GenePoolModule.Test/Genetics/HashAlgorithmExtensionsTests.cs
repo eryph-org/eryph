@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using Eryph.Core.Genetics;
 using Eryph.Modules.GenePool.Genetics;
 
@@ -19,7 +15,7 @@ public class HashAlgorithmExtensionsTests
     public void CreateAlgorithm_GeneHash_ReturnsFreshSha256()
     {
         var geneHash = GeneHash.New($"sha256:{Sha256Hash}");
-        
+
         using var sha256 = geneHash.CreateAlgorithm();
 
         sha256.Should().BeAssignableTo<SHA256>();
@@ -54,14 +50,14 @@ public class HashAlgorithmExtensionsTests
     {
         using var sha256 = SHA256.Create();
         WriteText(sha256, PlainText);
-        
+
         var geneHash = sha256.ToGeneHash();
-        
+
         geneHash.Algorithm.Should().Be("sha256");
         geneHash.Hash.Should().Be(Sha256Hash);
     }
 
-    private void WriteText(HashAlgorithm hashAlgorithm, string text)
+    private static void WriteText(HashAlgorithm hashAlgorithm, string text)
     {
         // Use a CryptoStream as we need a HashAlgorithm in a
         // finalized state for the tests. Methods like ComputeHash

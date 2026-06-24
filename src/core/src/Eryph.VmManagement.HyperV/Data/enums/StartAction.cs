@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum StartAction
 {
-    public enum StartAction
-    {
-        Nothing = 2,
-        StartIfRunning = 3,
-        Start = 4
-    }
+    Nothing = 2,
+    StartIfRunning = 3,
+    Start = 4,
 }

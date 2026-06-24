@@ -1,15 +1,9 @@
 ﻿using System;
 
-namespace Eryph.Messages
-{
-    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-    public class SendMessageToAttribute : Attribute
-    {
-        public SendMessageToAttribute(MessageRecipient owner)
-        {
-            Recipient = owner;
-        }
+namespace Eryph.Messages;
 
-        public MessageRecipient Recipient { get; }
-    }
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public class SendMessageToAttribute(MessageRecipient owner) : Attribute
+{
+    public MessageRecipient Recipient { get; } = owner;
 }

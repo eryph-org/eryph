@@ -14,7 +14,7 @@ public interface IGeneProvider
     Aff<CancelRt, string> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash);
-    
+
     Aff<CancelRt, GenesetTagManifestData> GetGeneSetManifest(
         GeneSetIdentifier geneSetId);
 

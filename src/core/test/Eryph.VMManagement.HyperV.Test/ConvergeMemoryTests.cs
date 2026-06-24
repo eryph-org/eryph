@@ -1,29 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeMemoryTests
 {
-    private readonly ConvergeFixture _fixture = new();
     private readonly ConvergeMemory _convergeTask;
+    private readonly ConvergeFixture _fixture = new();
     private AssertCommand? _executedCommand;
 
     public ConvergeMemoryTests()
     {
-        _convergeTask = new(_fixture.Context);
+        _convergeTask = new ConvergeMemory(_fixture.Context);
         _fixture.Engine.RunCallback = cmd =>
         {
             _executedCommand = cmd;
@@ -56,7 +50,7 @@ public class ConvergeMemoryTests
     [Fact]
     public async Task Converge_MinimumMemoryIsConfigured_EnablesDynamicMemory()
     {
-        _fixture.Config.Memory = new CatletMemoryConfig()
+        _fixture.Config.Memory = new CatletMemoryConfig
         {
             Minimum = 1024,
             Startup = 2048,
@@ -83,7 +77,7 @@ public class ConvergeMemoryTests
     [Fact]
     public async Task Converge_MaximumMemoryIsConfigured_EnablesDynamicMemory()
     {
-        _fixture.Config.Memory = new CatletMemoryConfig()
+        _fixture.Config.Memory = new CatletMemoryConfig
         {
             Maximum = 4096,
             Startup = 2048,
@@ -115,10 +109,10 @@ public class ConvergeMemoryTests
             new CatletCapabilityConfig
             {
                 Name = EryphConstants.Capabilities.DynamicMemory,
-                Details = [EryphConstants.CapabilityDetails.Disabled]
+                Details = [EryphConstants.CapabilityDetails.Disabled],
             },
         ];
-        _fixture.Config.Memory = new CatletMemoryConfig()
+        _fixture.Config.Memory = new CatletMemoryConfig
         {
             Startup = 2048,
             Minimum = 512,
@@ -215,7 +209,7 @@ public class ConvergeMemoryTests
         {
             Startup = 2048,
             Minimum = 1024,
-            Maximum = 4096
+            Maximum = 4096,
         };
         var vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
@@ -243,7 +237,7 @@ public class ConvergeMemoryTests
             DynamicMemoryEnabled = false,
             MemoryStartup = 2048 * 1024L * 1024,
             MemoryMinimum = 512 * 1024L * 1024,
-            MemoryMaximum = 1 * 1024L * 1024 *1024 * 1024,
+            MemoryMaximum = 1 * 1024L * 1024 * 1024 * 1024,
         });
 
         var result = await _convergeTask.Converge(vmInfo);

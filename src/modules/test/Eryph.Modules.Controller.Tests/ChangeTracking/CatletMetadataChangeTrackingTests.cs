@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Configuration.Model;
 using Eryph.Core.Genetics;
@@ -54,7 +50,7 @@ public abstract class CatletMetadataChangeTrackingTests(
         var newMetadataId = Guid.NewGuid();
         var newCatletId = Guid.NewGuid();
         var newVmId = Guid.NewGuid();
-        var newMetadataContent = new CatletMetadataContent()
+        var newMetadataContent = new CatletMetadataContent
         {
             Architecture = Architecture.New("hyperv/amd64"),
             Config = new CatletConfig
@@ -65,7 +61,7 @@ public abstract class CatletMetadataChangeTrackingTests(
 
         await WithHostScope(async stateStore =>
         {
-            var dbMetadata = new CatletMetadata()
+            var dbMetadata = new CatletMetadata
             {
                 Id = newMetadataId,
                 CatletId = newCatletId,
@@ -89,7 +85,7 @@ public abstract class CatletMetadataChangeTrackingTests(
     [Fact]
     public async Task Metadata_update_is_detected()
     {
-        var newVmId = Guid.NewGuid();
+        Guid.NewGuid();
         await WithHostScope(async stateStore =>
         {
             var dbMetadata = await stateStore.For<CatletMetadata>().GetByIdAsync(MetadataId);
@@ -105,7 +101,7 @@ public abstract class CatletMetadataChangeTrackingTests(
     [Fact]
     public async Task Metadata_content_update_is_detected()
     {
-        var newVmId = Guid.NewGuid();
+        Guid.NewGuid();
         await WithHostScope(async stateStore =>
         {
             var dbMetadata = await stateStore.For<CatletMetadata>().GetByIdAsync(MetadataId);
@@ -116,7 +112,7 @@ public abstract class CatletMetadataChangeTrackingTests(
 
         var metadata = await ReadMetadata(MetadataId);
         var metadataContent = CatletMetadataContentJsonSerializer.Deserialize(metadata.Metadata!.Value);
-        
+
         _expectedMetadataContent.Architecture = new Architecture("any");
 
         metadataContent.Should().BeEquivalentTo(_expectedMetadataContent);
@@ -150,7 +146,7 @@ public abstract class CatletMetadataChangeTrackingTests(
     {
         await SeedDefaultTenantAndProject();
 
-        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata()
+        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
         {
             Id = MetadataId,
             CatletId = CatletId,

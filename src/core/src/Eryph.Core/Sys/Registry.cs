@@ -1,5 +1,4 @@
 ﻿using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Sys;
@@ -15,5 +14,5 @@ public static class Registry<RT> where RT : struct, HasRegistry<RT>
         string keyName,
         Option<string> valueName,
         object value) =>
-        default(RT).RegistryEff.Map(r => r.WriteValue(keyName, valueName.IfNoneUnsafe((string) null), value));
+        default(RT).RegistryEff.Map(r => r.WriteValue(keyName, valueName.IfNoneUnsafe((string)null), value));
 }

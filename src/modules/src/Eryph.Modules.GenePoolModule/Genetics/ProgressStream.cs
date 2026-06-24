@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -12,8 +11,8 @@ public class ProgressStream(
     TimeSpan reportingInterval,
     Func<long, CancellationToken, Task> reportProgress) : Stream
 {
-    private long _bytesWritten;
     private readonly Stopwatch _stopwatch = new();
+    private long _bytesWritten;
 
     public override bool CanRead => false;
 

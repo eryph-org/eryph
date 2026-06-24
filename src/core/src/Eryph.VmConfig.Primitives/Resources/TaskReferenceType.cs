@@ -6,5 +6,5 @@ namespace Eryph.Resources;
 public enum TaskReferenceType
 {
     Project,
-    ProjectMember
+    ProjectMember,
 }

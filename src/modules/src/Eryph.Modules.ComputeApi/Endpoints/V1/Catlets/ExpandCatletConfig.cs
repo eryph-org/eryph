@@ -47,14 +47,14 @@ public class ExpandCatletConfig(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlets/{id}/config/expand")]
     [SwaggerOperation(
-        Summary = "Expand catlet config",
-        Description = "Expand the supplied config in the context of an existing catlet. "
-            + "Deprecated: existing catlet state is no longer factored into the expansion; "
-            + "the supplied config is expanded as if for a new catlet. "
-            + "Retained for compatibility with Eryph.ComputeClient v0.12 / v0.13 "
-            + "(`Test-Catlet -Id`). New clients should use POST /catlets/config/expand.",
-        OperationId = "Catlets_ExpandConfig",
-        Tags = ["Catlets"])
+            Summary = "Expand catlet config",
+            Description = "Expand the supplied config in the context of an existing catlet. "
+                          + "Deprecated: existing catlet state is no longer factored into the expansion; "
+                          + "the supplied config is expanded as if for a new catlet. "
+                          + "Retained for compatibility with Eryph.ComputeClient v0.12 / v0.13 "
+                          + "(`Test-Catlet -Id`). New clients should use POST /catlets/config/expand.",
+            OperationId = "Catlets_ExpandConfig",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] ExpandCatletConfigRequest request,
@@ -64,7 +64,7 @@ public class ExpandCatletConfig(
             request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail: "The catlet configuration is invalid.",
+                "The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(ExpandCatletConfigRequestBody.Configuration)));
 

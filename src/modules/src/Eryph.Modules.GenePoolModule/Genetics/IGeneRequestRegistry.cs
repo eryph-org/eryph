@@ -13,14 +13,14 @@ public interface IGeneRequestRegistry
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
         Fin<PrepareGeneResponse> result);
-    
+
     Task<(UniqueGeneIdentifier Id, GeneHash Hash)> DequeueGeneRequest(
         CancellationToken cancellationToken);
-    
+
     Task EnqueueGeneRequest(
         OperationTask<PrepareGeneCommand> task,
         CancellationToken cancellationToken);
-    
+
     Task ReportProgress(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,

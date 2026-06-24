@@ -12,7 +12,7 @@ public class CreateCatletCommand : IHasCorrelationId, ICommandWithName
 
     public CatletConfig Config { get; set; }
 
-    public Guid CorrelationId { get; set; }
-
     public string GetCommandName() => $"Create catlet {Name}";
+
+    public Guid CorrelationId { get; set; }
 }

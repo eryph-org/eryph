@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using LanguageExt;
+﻿using LanguageExt;
 using LanguageExt.Common;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -23,12 +18,12 @@ public static class Prelude
         ManyErrors me => me.Errors.Fold(grid, addToGrid),
         Exceptional ee => addRow(grid, ee.ToException().GetRenderable()),
         _ => addRow(grid, new Text(error.Message))
-                .Apply(g => error.Inner.Match(
-                    Some: ie => addRow(g, addToGrid(createGrid(), ie)),
-                    None: () => g)),
+            .Apply(g => error.Inner.Match(
+                ie => addRow(g, addToGrid(createGrid(), ie)),
+                () => g)),
     };
 
     private static Grid createGrid() => new Grid()
-        .AddColumn(new GridColumn() { Width = 2 })
+        .AddColumn(new GridColumn { Width = 2 })
         .AddColumn();
 }

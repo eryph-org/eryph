@@ -7,7 +7,6 @@ using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Moq;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Test;
@@ -36,7 +35,7 @@ public class CatletSpecificationBuilderTests
     {
         var config = new CatletConfig
         {
-            Networks = 
+            Networks =
             [
                 new CatletNetworkConfig
                 {
@@ -68,35 +67,35 @@ public class CatletSpecificationBuilderTests
                 new CatletDriveConfig
                 {
                     Source = "gene:acme/acme-images:first-image",
-                }
+                },
             ],
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools:test-fodder",
-                }
+                },
             ],
         };
 
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/starter-1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os-starter",
                 Parent = "acme/acme-os/latest",
                 Fodder =
                 [
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Source = "gene:acme/acme-tools:other-test-fodder",
-                    }
-                ]
+                    },
+                ],
             });
 
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os-base",
             });
@@ -111,7 +110,8 @@ public class CatletSpecificationBuilderTests
         _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
 
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
         var result = either.Should().BeRight().Subject;
 
         var resolvedGeneSets = result.ResolvedGeneSets.ToDictionary();
@@ -158,35 +158,35 @@ public class CatletSpecificationBuilderTests
                 new CatletDriveConfig
                 {
                     Source = "gene:acme/acme-images/1.0:first-image",
-                }
+                },
             ],
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
-                }
+                },
             ],
         };
 
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/starter-1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os-starter",
                 Parent = "acme/acme-os/1.0",
                 Fodder =
                 [
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Source = "gene:acme/acme-tools/1.0:other-test-fodder",
-                    }
-                ]
+                    },
+                ],
             });
 
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os-base",
             });
@@ -197,7 +197,8 @@ public class CatletSpecificationBuilderTests
         _genepoolReaderMock.SetupGeneSet("acme/acme-tools/1.0", None);
 
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
         var result = either.Should().BeRight().Subject;
 
         var resolvedGeneSets = result.ResolvedGeneSets.ToDictionary();
@@ -239,7 +240,7 @@ public class CatletSpecificationBuilderTests
     {
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os",
                 Drives =
@@ -247,7 +248,7 @@ public class CatletSpecificationBuilderTests
                     new CatletDriveConfig
                     {
                         Name = "sda",
-                    }
+                    },
                 ],
             });
 
@@ -256,23 +257,23 @@ public class CatletSpecificationBuilderTests
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/latest", "acme/acme-os/1.0");
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/1.0", None);
 
-        
+
         var config = new CatletConfig
         {
             Name = "catlet",
             Parent = parentId,
         };
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         either.Should().BeRight().Which.ResolvedCatlets.ToDictionary()
             .Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0")).WhoseValue.Drives
-            .Should().SatisfyRespectively(
-                drive =>
-                {
-                    drive.Name.Should().Be("sda");
-                    drive.Source.Should().Be("gene:acme/acme-os/1.0:sda");
-                });
+            .Should().SatisfyRespectively(drive =>
+            {
+                drive.Name.Should().Be("sda");
+                drive.Source.Should().Be("gene:acme/acme-os/1.0:sda");
+            });
     }
 
     /// <summary>
@@ -285,7 +286,7 @@ public class CatletSpecificationBuilderTests
     {
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os",
                 Drives =
@@ -293,7 +294,7 @@ public class CatletSpecificationBuilderTests
                     new CatletDriveConfig
                     {
                         Name = "sda",
-                    }
+                    },
                 ],
             });
 
@@ -307,16 +308,16 @@ public class CatletSpecificationBuilderTests
             Parent = parentId,
         };
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         either.Should().BeRight().Which.ResolvedCatlets.ToDictionary()
             .Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0")).WhoseValue.Drives
-            .Should().SatisfyRespectively(
-                drive =>
-                {
-                    drive.Name.Should().Be("sda");
-                    drive.Source.Should().BeNull();
-                });
+            .Should().SatisfyRespectively(drive =>
+            {
+                drive.Name.Should().Be("sda");
+                drive.Source.Should().BeNull();
+            });
     }
 
     [Theory]
@@ -326,22 +327,21 @@ public class CatletSpecificationBuilderTests
     {
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os",
                 Fodder =
                 [
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Name = "parent-fodder",
                         Content = "parent fodder content",
-                    }
-                ]
+                    },
+                ],
             });
 
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/latest", "acme/acme-os/1.0");
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/1.0", None);
-
 
 
         var config = new CatletConfig
@@ -351,12 +351,12 @@ public class CatletSpecificationBuilderTests
         };
 
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         either.Should().BeRight().Which.ResolvedCatlets.ToDictionary()
             .Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0")).WhoseValue.Fodder
-            .Should().SatisfyRespectively(
-                fodder => fodder.Source.Should().Be("gene:acme/acme-os/1.0:catlet"));
+            .Should().SatisfyRespectively(fodder => fodder.Source.Should().Be("gene:acme/acme-os/1.0:catlet"));
     }
 
     [Fact]
@@ -369,12 +369,13 @@ public class CatletSpecificationBuilderTests
                 new CatletDriveConfig
                 {
                     Source = @"Z:\test\test.vhdx",
-                }
+                },
             ],
         };
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
-        
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+
         var result = either.Should().BeRight().Subject;
         result.ResolvedCatlets.Should().BeEmpty();
         result.ResolvedGeneSets.Should().BeEmpty();
@@ -390,7 +391,7 @@ public class CatletSpecificationBuilderTests
 
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/starter-1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os-starter",
                 Parent = "acme/acme-os/1.0",
@@ -399,7 +400,8 @@ public class CatletSpecificationBuilderTests
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/starter-1.0", None);
 
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve genes in the ancestor catlet -> acme/acme-os/starter-1.0.");
@@ -417,12 +419,13 @@ public class CatletSpecificationBuilderTests
                 new CatletDriveConfig
                 {
                     Source = "gene:acme/acme-images/1.0:first-image",
-                }
+                },
             ],
         };
 
-        
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve genes in the catlet config.");
@@ -437,15 +440,16 @@ public class CatletSpecificationBuilderTests
         {
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
-                }
+                },
             ],
         };
 
-        
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve genes in the catlet config.");
@@ -463,7 +467,7 @@ public class CatletSpecificationBuilderTests
 
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/first-1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os-first-1.0",
                 Parent = "acme/acme-os/second",
@@ -471,19 +475,20 @@ public class CatletSpecificationBuilderTests
 
         _genepoolReaderMock.SetupCatletGene(
             "acme/acme-os/second-1.0",
-            new CatletConfig()
+            new CatletConfig
             {
                 Name = "acme-os-second-1.0",
                 Parent = "acme/acme-os/first",
             });
 
-        
+
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/first", "acme/acme-os/first-1.0");
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/first-1.0", None);
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/second", "acme/acme-os/second-1.0");
         _genepoolReaderMock.SetupGeneSet("acme/acme-os/second-1.0", None);
 
-        var either = await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
+        var either =
+            await CatletSpecificationBuilder.ResolveConfig(config, _genepoolReaderMock.Object, CancellationToken.None);
 
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be(

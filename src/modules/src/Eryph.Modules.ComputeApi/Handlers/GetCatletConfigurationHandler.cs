@@ -1,18 +1,17 @@
-﻿using Ardalis.Specification;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Ardalis.Specification;
 using Eryph.CatletManagement;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
-using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Catlet = Eryph.StateDb.Model.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
@@ -30,7 +29,7 @@ internal class GetCatletConfigurationHandler(
             return new NotFoundResult();
 
         var repo = stateStore.Read<Catlet>();
-        var catletIdResult= await repo.GetBySpecAsync(catletSpec, cancellationToken);
+        var catletIdResult = await repo.GetBySpecAsync(catletSpec, cancellationToken);
 
         if (catletIdResult == null)
             return new NotFoundResult();
@@ -48,16 +47,18 @@ internal class GetCatletConfigurationHandler(
 
         var metadata = await stateStore.Read<CatletMetadata>().GetByIdAsync(
             catlet.MetadataId, cancellationToken);
-        if (metadata is null)
-            throw new InvalidOperationException(
-                $"The metadata for catlet {catletIdResult.Id} is missing.");
-
-        // Only deprecated (v0.4) catlets may have incomplete metadata. For modern
-        // catlets a null Metadata is state corruption and must surface as an error
-        // rather than silently produce a partial config.
-        if (!metadata.IsDeprecated && metadata.Metadata is null)
-            throw new InvalidOperationException(
-                $"The metadata for catlet {catletIdResult.Id} is incomplete.");
+        switch (metadata)
+        {
+            case null:
+                throw new InvalidOperationException(
+                    $"The metadata for catlet {catletIdResult.Id} is missing.");
+            // Only deprecated (v0.4) catlets may have incomplete metadata. For modern
+            // catlets a null Metadata is state corruption and must surface as an error
+            // rather than silently produce a partial config.
+            case { IsDeprecated: false, Metadata: null }:
+                throw new InvalidOperationException(
+                    $"The metadata for catlet {catletIdResult.Id} is incomplete.");
+        }
 
         // Deprecated catlets carry only partial metadata salvaged from v0.4 records
         // (typically just Parent and Architecture). Variables and fodder were never

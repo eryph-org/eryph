@@ -1,12 +1,9 @@
-﻿using Eryph.Resources;
-using System;
+﻿using System;
 
-namespace Eryph.Messages.Resources.Catlets
+namespace Eryph.Messages.Resources.Catlets;
+
+public interface IVMCommand
 {
-    public interface IVMCommand
-    {
-        Guid CatletId { get; set; }
-        Guid VmId { get; set; }
-
-    }
+    Guid CatletId { get; set; }
+    Guid VmId { get; set; }
 }

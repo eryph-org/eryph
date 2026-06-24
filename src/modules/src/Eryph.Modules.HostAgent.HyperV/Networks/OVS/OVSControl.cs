@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿using System.Threading;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Model;
 using Dbosoft.OVN.OSCommands.OVS;
@@ -108,9 +105,11 @@ public class OVSControl(
         CancellationToken cancellationToken) =>
         from _1 in RightAsync<Error, Unit>(unit)
         let command = $"--may-exist add-bond \"{bridgeName}\" \"{portName}\""
-            + $" {string.Join(" ", interfaceUpdates.Map(i => $"\"{i.Name}\""))}"
-            + $" bond_mode={bondMode}"
-            + string.Join("", interfaceUpdates.Map(i => $" -- set interface \"{i.Name}\" external_ids:host-iface-id={i.InterfaceId} external_ids:host-iface-conf-name={i.ConfiguredName}"))
+                      + $" {string.Join(" ", interfaceUpdates.Map(i => $"\"{i.Name}\""))}"
+                      + $" bond_mode={bondMode}"
+                      + string.Join("",
+                          interfaceUpdates.Map(i =>
+                              $" -- set interface \"{i.Name}\" external_ids:host-iface-id={i.InterfaceId} external_ids:host-iface-conf-name={i.ConfiguredName}"))
         from _2 in RunCommandWithResponse(command, cancellationToken)
         select unit;
 

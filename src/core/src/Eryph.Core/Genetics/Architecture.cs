@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -19,11 +14,11 @@ public class Architecture : EryphName<Architecture>
             string.Equals(value, "any", StringComparison.OrdinalIgnoreCase)
                 ? (Hypervisor.New("any"), ProcessorArchitecture.New("any"))
                 : from nonEmptyValue in Validations<Architecture>.ValidateNotEmpty(value)
-                  let parts = nonEmptyValue.Split('/')
-                  from _ in guard(parts.Length == 2, Error.New("The architecture is invalid."))
-                  from hypervisor in Hypervisor.NewValidation(parts[0])
-                  from processorArchitecture in ProcessorArchitecture.NewValidation(parts[1])
-                  select (hypervisor, processorArchitecture));
+                let parts = nonEmptyValue.Split('/')
+                from _ in guard(parts.Length == 2, Error.New("The architecture is invalid."))
+                from hypervisor in Hypervisor.NewValidation(parts[0])
+                from processorArchitecture in ProcessorArchitecture.NewValidation(parts[1])
+                select (hypervisor, processorArchitecture));
     }
 
     public Architecture(

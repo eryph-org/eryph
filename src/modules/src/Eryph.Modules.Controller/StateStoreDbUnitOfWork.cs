@@ -21,7 +21,7 @@ public sealed class StateStoreDbUnitOfWork(
     public async Task Commit()
     {
         await dbContext.SaveChangesAsync();
-        if(_dbTransaction is not null)
+        if (_dbTransaction is not null)
             await _dbTransaction.CommitAsync();
     }
 
@@ -33,7 +33,7 @@ public sealed class StateStoreDbUnitOfWork(
 
     public async ValueTask DisposeAsync()
     {
-        if(_dbTransaction is not null)
+        if (_dbTransaction is not null)
             await _dbTransaction.DisposeAsync();
     }
 

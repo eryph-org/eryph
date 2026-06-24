@@ -40,15 +40,10 @@ internal class UpdateDiskInventoryCommandHandler(
             return;
 
         var diskIdentifiers = CollectDiskIdentifiers(message.Inventory.ToSeq());
-        foreach (var diskIdentifier in diskIdentifiers)
-        {
-            await _lockManager.AcquireVhdLock(diskIdentifier);
-        }
+        foreach (var diskIdentifier in diskIdentifiers) await _lockManager.AcquireVhdLock(diskIdentifier);
 
         foreach (var diskInfo in message.Inventory)
-        {
             await AddOrUpdateDisk(message.AgentName, message.Timestamp, diskInfo);
-        }
 
         await CheckDisks(message.Timestamp, message.AgentName);
     }

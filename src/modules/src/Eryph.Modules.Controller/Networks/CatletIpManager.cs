@@ -1,8 +1,5 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.StateDb;
@@ -10,7 +7,6 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -42,7 +38,7 @@ public class CatletIpManager(
             .SequenceSerial()
         from newAssignment in validPoolAssignments.IsEmpty
             ? from assignment in CreateAssignment(network, port, subnetName, ipPoolName)
-              select Some(assignment)
+            select Some(assignment)
             : RightAsync<Error, Option<IpPoolAssignment>>(None)
         select validPoolAssignments.Append(newAssignment).Append(validDirectAssignments)
             .Map(a => IPAddress.Parse(a.IpAddress!))
@@ -66,8 +62,8 @@ public class CatletIpManager(
         VirtualNetwork network,
         string configuredSubnet) =>
         assignment.Subnet is VirtualNetworkSubnet subnet
-            && subnet.NetworkId == network.Id
-            && subnet.Name == configuredSubnet;
+        && subnet.NetworkId == network.Id
+        && subnet.Name == configuredSubnet;
 
     private static bool IsValidPoolAssignment(
         IpPoolAssignment assignment,
@@ -75,5 +71,5 @@ public class CatletIpManager(
         string configuredSubnet,
         string configuredPool) =>
         IsValidAssignment(assignment, network, configuredSubnet)
-            && assignment.Pool.Name == configuredPool;
+        && assignment.Pool.Name == configuredPool;
 }

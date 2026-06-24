@@ -4,7 +4,6 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
@@ -30,13 +29,16 @@ public static class CatletUpdateValidator
         CatletConfig updateConfig,
         CatletConfig currentConfig,
         string path = "") =>
-        ValidateProperty(updateConfig, c => c.ConfigType, ValidateConfigType, path, required: true)
+        ValidateProperty(updateConfig, c => c.ConfigType, ValidateConfigType, path, true)
         | ValidatePropertyValue<CatletConfig, ProjectName>(updateConfig, c => c.Project, currentConfig.Project, path)
-        | ValidatePropertyValue<CatletConfig, EnvironmentName>(updateConfig, c => c.Environment, currentConfig.Environment, path)
+        | ValidatePropertyValue<CatletConfig, EnvironmentName>(updateConfig, c => c.Environment,
+            currentConfig.Environment, path)
         | ValidatePropertyValue<CatletConfig, DataStoreName>(updateConfig, c => c.Store, currentConfig.Store, path)
-        | ValidatePropertyValue<CatletConfig, StorageIdentifier>(updateConfig, c => c.Location, currentConfig.Location, path)
-        | ValidatePropertyValue<CatletConfig, GeneSetIdentifier>(updateConfig, c => c.Parent, currentConfig.Parent, path)
-        | ValidateProperty(updateConfig, c => c.Hostname, v => ValidateHostname(v, currentConfig.Hostname), path, required: true)
+        | ValidatePropertyValue<CatletConfig, StorageIdentifier>(updateConfig, c => c.Location, currentConfig.Location,
+            path)
+        | ValidatePropertyValue<CatletConfig, GeneSetIdentifier>(updateConfig, c => c.Parent, currentConfig.Parent,
+            path)
+        | ValidateProperty(updateConfig, c => c.Hostname, v => ValidateHostname(v, currentConfig.Hostname), path, true)
         | ValidateDrives(updateConfig, currentConfig, path)
         | ValidateProperty(updateConfig, c => c.Fodder,
             _ => Fail<Error, Unit>(Error.New("Fodder is not supported when updating an existing catlet.")),
@@ -58,12 +60,13 @@ public static class CatletUpdateValidator
         from originalGeneDrives in originalConfig.Drives.ToSeq()
             .Filter(d => Optional(d.Source).Map(s => s.StartsWith("gene:")).IfNone(false))
             .Map(d => from n in CatletDriveName.NewValidation(d.Name)
-                      select (n, d))
+                select (n, d))
             .Sequence()
             .Map(s => s.ToHashMap())
-            .MapFail(e => new ValidationIssue(path, $"BUG! The original config contains an invalid drive name: {e.Message}."))
+            .MapFail(e =>
+                new ValidationIssue(path, $"BUG! The original config contains an invalid drive name: {e.Message}."))
         from _2 in ValidateList(updateConfig, c => c.Drives,
-            (d,p) => ValidateDrive(d, originalGeneDrives, p),
+            (d, p) => ValidateDrive(d, originalGeneDrives, p),
             path)
         from _3 in ValidateNoMissingDrives(
             updateConfig.Drives.ToSeq(),
@@ -75,11 +78,11 @@ public static class CatletUpdateValidator
         CatletDriveConfig updateConfig,
         HashMap<CatletDriveName, CatletDriveConfig> originalGeneDrives,
         string path = "") =>
-        from _1 in ValidateProperty(updateConfig, d => d.Name, CatletDriveName.NewValidation, path, required: true)
+        from _1 in ValidateProperty(updateConfig, d => d.Name, CatletDriveName.NewValidation, path, true)
         let name = CatletDriveName.New(updateConfig.Name)
         from _2 in originalGeneDrives.Find(name).Match(
-            Some: originalConfig => ValidateDrive(updateConfig, originalConfig, path),
-            None: () => ValidateDrive(updateConfig, path))
+            originalConfig => ValidateDrive(updateConfig, originalConfig, path),
+            () => ValidateDrive(updateConfig, path))
         select unit;
 
     private static Validation<ValidationIssue, Unit> ValidateDrive(
@@ -95,9 +98,12 @@ public static class CatletUpdateValidator
                         "The drive type of a gene pool drive cannot be changed when updating an existing catlet."))
                 .ToValidation(),
             path)
-        | ValidatePropertyValue<CatletDriveConfig, DataStoreName>(updateConfig, d => d.Store, originalConfig.Store, path)
-        | ValidatePropertyValue<CatletDriveConfig, StorageIdentifier>(updateConfig, d => d.Location, originalConfig.Location, path)
-        | ValidatePropertyValue<CatletDriveConfig, GeneIdentifier>(updateConfig, d => d.Source, originalConfig.Source, path);
+        | ValidatePropertyValue<CatletDriveConfig, DataStoreName>(updateConfig, d => d.Store, originalConfig.Store,
+            path)
+        | ValidatePropertyValue<CatletDriveConfig, StorageIdentifier>(updateConfig, d => d.Location,
+            originalConfig.Location, path)
+        | ValidatePropertyValue<CatletDriveConfig, GeneIdentifier>(updateConfig, d => d.Source, originalConfig.Source,
+            path);
 
     private static Validation<ValidationIssue, Unit> ValidateDrive(
         CatletDriveConfig updateConfig,
@@ -112,8 +118,7 @@ public static class CatletUpdateValidator
             path);
 
     private static Validation<ValidationIssue, Unit> ValidateNoMissingDrives(
-        Seq<CatletDriveConfig> updateDrives,
-        LanguageExt.HashSet<CatletDriveName> originalGeneDrives,
+        Seq<CatletDriveConfig> updateDrives, LanguageExt.HashSet<CatletDriveName> originalGeneDrives,
         string path = "") =>
         from updateDriveNames in updateDrives
             .Map(d => CatletDriveName.NewValidation(d.Name))
@@ -133,11 +138,12 @@ public static class CatletUpdateValidator
         string path = "")
         where TValue : EryphName<TValue> =>
         Optional(expectedValue).Filter(notEmpty).Match(
-            Some: ev => ValidateProperty(toValidate, getProperty,
-                v => ValidateValue<TValue>(v, ev), path, required: true),
-            None: () => ValidateProperty(toValidate, getProperty,
-                _ => Fail<Error, Unit>(Error.New("The value cannot be changed when updating an existing catlet.")), path));
-    
+            ev => ValidateProperty(toValidate, getProperty,
+                v => ValidateValue<TValue>(v, ev), path, true),
+            () => ValidateProperty(toValidate, getProperty,
+                _ => Fail<Error, Unit>(Error.New("The value cannot be changed when updating an existing catlet.")),
+                path));
+
     private static Validation<Error, string> ValidateValue<TValue>(
         string actualValue,
         string expectedValue)

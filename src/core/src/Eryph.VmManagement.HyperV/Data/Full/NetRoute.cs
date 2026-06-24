@@ -3,7 +3,7 @@
 public class NetRoute
 {
     public string DestinationPrefix { get; init; }
-    
+
     public string NextHop { get; init; }
 
     public string InterfaceAlias { get; init; }

@@ -12,7 +12,6 @@ using Eryph.Modules.Controller.Components;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -124,9 +123,9 @@ internal class OvnNorthboundConnectionProvider(
         var store = container.GetRegistration(typeof(IComponentCertificateStore))?.GetInstance()
             as IComponentCertificateStore;
         var pem = store?.ReadClientCertificatePem()
-            ?? throw new InvalidOperationException(
-                "The controller is not enrolled, so it cannot present a client certificate to the remote "
-                + "OVN northbound database. Enable componentMtls on the controller.");
+                  ?? throw new InvalidOperationException(
+                      "The controller is not enrolled, so it cannot present a client certificate to the remote "
+                      + "OVN northbound database. Enable componentMtls on the controller.");
 
         // ovn-nbctl reads the client key/certificate/CA from files resolved under the OVN data root, so
         // materialise the controller's enrolled PEMs there. Refreshed on every resolve so a renewed
@@ -142,11 +141,11 @@ internal class OvnNorthboundConnectionProvider(
         // key (the cert and CA share the directory). Resolve the directory with the SAME adminOnly value
         // used to create the files: if the flag selects a different base path, resolving with the wrong
         // value would secure (and verify) a different directory than the one the key lands in.
-        var clientCertDirectory = Path.GetDirectoryName(fileSystem.ResolveOvsFilePath(keyFile, true))!;
+        var clientCertDirectory = Path.GetDirectoryName(fileSystem.ResolveOvsFilePath(keyFile))!;
         SecureDirectory.EnsureOwnerOnly(clientCertDirectory);
-        fileSystem.EnsurePathForFileExists(keyFile, adminOnly: true);
-        fileSystem.EnsurePathForFileExists(certFile, adminOnly: true);
-        fileSystem.EnsurePathForFileExists(caFile, adminOnly: true);
+        fileSystem.EnsurePathForFileExists(keyFile, true);
+        fileSystem.EnsurePathForFileExists(certFile, true);
+        fileSystem.EnsurePathForFileExists(caFile, true);
         await fileSystem.WriteFileAsync(keyFile, pem.PrivateKeyPem);
         await fileSystem.WriteFileAsync(certFile, pem.CertificatePem);
         await fileSystem.WriteFileAsync(caFile, pem.CaBundlePem);

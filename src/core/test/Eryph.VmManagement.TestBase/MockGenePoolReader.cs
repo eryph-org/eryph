@@ -10,7 +10,6 @@ using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 using Moq;
-
 using static LanguageExt.Prelude;
 using GeneType = Eryph.Core.Genetics.GeneType;
 
@@ -26,9 +25,9 @@ namespace Eryph.VmManagement.TestBase;
 /// </remarks>
 public class MockGenePoolReader : Mock<IGenePoolReader>
 {
+    private HashMap<(UniqueGeneIdentifier, GeneHash), string> _geneContents = Empty;
     private HashMap<GeneSetIdentifier, Option<GeneSetIdentifier>> _geneSets = Empty;
     private HashMap<GeneSetIdentifier, HashMap<UniqueGeneIdentifier, GeneHash>> _genes = Empty;
-    private HashMap<(UniqueGeneIdentifier, GeneHash), string> _geneContents = Empty;
 
     public MockGenePoolReader()
     {
@@ -40,7 +39,8 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
             .Returns((GeneSetIdentifier id, CancellationToken _) => _genes.Find(id)
                 .ToEitherAsync(Error.New($"MOCK: The gene set {id} does not exist.")));
 
-        Setup(m => m.GetGeneContent(It.IsAny<UniqueGeneIdentifier>(), It.IsAny<GeneHash>(), It.IsAny<CancellationToken>()))
+        Setup(m => m.GetGeneContent(It.IsAny<UniqueGeneIdentifier>(), It.IsAny<GeneHash>(),
+                It.IsAny<CancellationToken>()))
             .Returns((UniqueGeneIdentifier id, GeneHash hash, CancellationToken _) => _geneContents.Find((id, hash))
                 .ToEitherAsync(Error.New($"MOCK: The gene {id} ({hash}) does not exist.")));
     }
@@ -70,8 +70,8 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
         _geneContents = _geneContents.Add((uniqueGeneId, hash), json);
         _genes = _genes.AddOrUpdate(
             validGeneSetId,
-            Some: existing => existing.Add(uniqueGeneId, hash),
-            None: () => HashMap((uniqueGeneId, hash)));
+            existing => existing.Add(uniqueGeneId, hash),
+            () => HashMap((uniqueGeneId, hash)));
     }
 
     public void SetupFodderGene(
@@ -93,8 +93,8 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
         _geneContents = _geneContents.Add((uniqueGeneId, hash), json);
         _genes = _genes.AddOrUpdate(
             validGeneId.GeneSet,
-            Some: existing => existing.Add(uniqueGeneId, hash),
-            None: () => HashMap((uniqueGeneId, hash)));
+            existing => existing.Add(uniqueGeneId, hash),
+            () => HashMap((uniqueGeneId, hash)));
     }
 
     /// <summary>
@@ -116,8 +116,8 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
 
         _genes = _genes.AddOrUpdate(
             validGeneId.GeneSet,
-            Some: existing => existing.Add(uniqueGeneId, hash),
-            None: () => HashMap((uniqueGeneId, hash)));
+            existing => existing.Add(uniqueGeneId, hash),
+            () => HashMap((uniqueGeneId, hash)));
     }
 
     private static GeneHash ComputeHash(GeneManifestData manifest)
@@ -129,5 +129,6 @@ public class MockGenePoolReader : Mock<IGenePoolReader>
     }
 
     private static GeneHash ComputeHash(string content) =>
-        GeneHash.New($"sha256:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant()}");
+        GeneHash.New(
+            $"sha256:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant()}");
 }

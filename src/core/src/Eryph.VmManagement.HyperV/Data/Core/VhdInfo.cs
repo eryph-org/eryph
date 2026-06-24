@@ -10,7 +10,7 @@ namespace Eryph.VmManagement.Data.Core;
 public class VhdInfo
 {
     [PrivateIdentifier] public string Path { get; set; }
-        
+
     public long Size { get; set; }
 
     public long? MinimumSize { get; set; }

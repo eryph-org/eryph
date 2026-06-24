@@ -1,19 +1,15 @@
-﻿using Dbosoft.Functional.Validations;
+﻿using System;
+using System.Text.Json;
+using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
-using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Model.V1;
 using LanguageExt;
-using System;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using static LanguageExt.Prelude;
 using ValidationIssue = Dbosoft.Functional.Validations.ValidationIssue;
 
@@ -44,7 +40,7 @@ public static class RequestValidations
                 .AddJsonPathPrefix(nameof(CatletSpecificationConfig.Content).ToJsonPath(apiNamingPolicy)),
             _ => new ValidationIssue(
                 nameof(CatletSpecificationConfig.ContentType).ToJsonPath(apiNamingPolicy),
-                $"The content type '{specificationConfig.ContentType}' is not supported.")
+                $"The content type '{specificationConfig.ContentType}' is not supported."),
         }
         let configNamingPolicy = Optional(CatletConfigJsonSerializer.Options.PropertyNamingPolicy)
         from _2 in CatletConfigValidations.ValidateCatletConfig(config)
@@ -54,8 +50,8 @@ public static class RequestValidations
 
     public static Validation<ValidationIssue, ProjectNetworksConfig> ValidateProjectNetworkConfig(
         JsonElement jsonElement) =>
-        from config in Try(() => ProjectNetworksConfigJsonSerializer.Deserialize(jsonElement)).
-            ToValidation(ToValidationIssue)
+        from config in Try(() => ProjectNetworksConfigJsonSerializer.Deserialize(jsonElement))
+            .ToValidation(ToValidationIssue)
         let namingPolicy = Optional(ProjectNetworksConfigJsonSerializer.Options.PropertyNamingPolicy)
         from _ in ComplexValidations.ValidateProperty(config, r => r.Project, ProjectName.NewValidation)
             .MapFail(vi => vi.ToJsonPath(namingPolicy))
@@ -67,6 +63,6 @@ public static class RequestValidations
         {
             InvalidConfigException { InnerException: JsonException { Path: not null } jex } =>
                 new ValidationIssue(jex.Path, jex.Message),
-            _ => new ValidationIssue("$", $"The configuration is invalid: {exception.Message}")
+            _ => new ValidationIssue("$", $"The configuration is invalid: {exception.Message}"),
         };
 }

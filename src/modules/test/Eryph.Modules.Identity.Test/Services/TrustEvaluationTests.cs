@@ -1,3 +1,4 @@
+using System;
 using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -21,7 +22,7 @@ public class TrustEvaluationTests
         using var chain = BuildChain(ServerAuthOid);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [chain.Root])
+                chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [chain.Root])
             .Should().BeTrue();
     }
 
@@ -31,7 +32,7 @@ public class TrustEvaluationTests
         using var chain = BuildChain(ServerAuthOid);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateNameMismatch, [chain.Root])
+                chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateNameMismatch, [chain.Root])
             .Should().BeFalse();
     }
 
@@ -44,7 +45,7 @@ public class TrustEvaluationTests
             new X500DistinguishedName("CN=other-root"), "other", otherKey, 3650, []);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [otherRoot])
+                chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [otherRoot])
             .Should().BeFalse();
     }
 
@@ -55,7 +56,7 @@ public class TrustEvaluationTests
         using var chain = BuildChain(ClientAuthOid);
 
         TrustEvaluation.IsTrustedServerCertificate(
-            chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [chain.Root])
+                chain.Leaf, chain.Presented, SslPolicyErrors.RemoteCertificateChainErrors, [chain.Root])
             .Should().BeFalse();
     }
 
@@ -94,8 +95,11 @@ public class TrustEvaluationTests
     // Owns the native handles produced for one test (root + intermediate + leaf + the presented chain)
     // so they are disposed deterministically instead of leaking across the run.
     private sealed class ChainFixture(
-        X509Certificate2 root, X509Certificate2 intermediate, X509Certificate2 leaf, X509Chain presented)
-        : System.IDisposable
+        X509Certificate2 root,
+        X509Certificate2 intermediate,
+        X509Certificate2 leaf,
+        X509Chain presented)
+        : IDisposable
     {
         public X509Certificate2 Root => root;
         public X509Certificate2 Leaf => leaf;

@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -26,9 +19,9 @@ public static class CatletPedigree
         from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(config, geneSetMap)
             .MapLeft(e => Error.New("Could not resolve genes of the catlet.", e))
         from bredConfig in parentConfig.Match(
-            Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
+            pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
                 .MapLeft(e => Error.New("Could not breed the catlet with its parent.", e)),
-            None: () => resolvedConfig)
+            () => resolvedConfig)
         let resultConfig = Mutate(bredConfig)
         select resultConfig;
 
@@ -66,10 +59,10 @@ public static class CatletPedigree
             .MapLeft(e => Error.New($"Could not resolve genes in catlet '{resolvedId}'.", e))
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from bredConfig in parentConfig.Match(
-            Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
+            pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
                 .MapLeft(e => Error.New($"Could not breed catlet '{resolvedId}' with its parent.", e))
                 .MapLeft(e => CreateError(updatedVisitedAncestors, e)),
-            None: () => resolvedConfig)
+            () => resolvedConfig)
         select bredConfig;
 
     private static CatletConfig Mutate(CatletConfig config) =>
@@ -109,8 +102,8 @@ public static class CatletPedigree
         Error innerError) =>
         Error.New(
             visitedAncestors.Match(
-                Empty: () => "Could not breed the catlet config.",
-                Seq: ancestors =>
+                () => "Could not breed the catlet config.",
+                ancestors =>
                     "Could not breed ancestor in the pedigree "
                     + string.Join(" -> ", "catlet".Cons(ancestors.Map(a => a.ToString())))
                     + "."),

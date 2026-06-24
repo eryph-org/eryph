@@ -3,184 +3,183 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using Eryph.Core;
 
-namespace Eryph.Runtime.Zero.Configuration
+namespace Eryph.Runtime.Zero.Configuration;
+
+public static class ZeroConfig
 {
-    public static class ZeroConfig
+    public static string GetConfigPath()
     {
-        public static string GetConfigPath()
-        {
-            return Config.GetConfigPath("zero");
-        }
+        return Config.GetConfigPath("zero");
+    }
 
-        public static string GetVmHostAgentConfigPath()
-        {
-            var privateConfigPath = GetPrivateConfigPath();
-            var agentSettingsPath = Path.Combine(privateConfigPath, "agentsettings");
+    public static string GetVmHostAgentConfigPath()
+    {
+        var privateConfigPath = GetPrivateConfigPath();
+        var agentSettingsPath = Path.Combine(privateConfigPath, "agentsettings");
 
-            return agentSettingsPath;
-        }
+        return agentSettingsPath;
+    }
 
-        public static string GetClientConfigPath()
-        {
-            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
-            var clientsConfigPath = Path.Combine(privateConfigPath, "clients");
+    public static string GetClientConfigPath()
+    {
+        var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+        var clientsConfigPath = Path.Combine(privateConfigPath, "clients");
 
-            return clientsConfigPath;
-        }
+        return clientsConfigPath;
+    }
 
-        private static string GetIdentityConfigPath()
-        {
-            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
-            return Path.Combine(privateConfigPath, "identity");
-        }
+    private static string GetIdentityConfigPath()
+    {
+        var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+        return Path.Combine(privateConfigPath, "identity");
+    }
 
-        public static string GetIdentityRedeemedTokensConfigPath()
-            => Path.Combine(GetIdentityConfigPath(), "redeemed-tokens");
+    public static string GetIdentityRedeemedTokensConfigPath()
+        => Path.Combine(GetIdentityConfigPath(), "redeemed-tokens");
 
-        public static string GetVMConfigPath()
-        {
-            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
-            var vmConfigPath = Path.Combine(privateConfigPath, "vms");
+    public static string GetVMConfigPath()
+    {
+        var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+        var vmConfigPath = Path.Combine(privateConfigPath, "vms");
 
-            return vmConfigPath;
-        }
+        return vmConfigPath;
+    }
 
-        public static string GetMetadataConfigPath()
-        {
-            var vmConfigPath = GetVMConfigPath();
-            var metadataConfigPath = Path.Combine(vmConfigPath, "md");
+    public static string GetMetadataConfigPath()
+    {
+        var vmConfigPath = GetVMConfigPath();
+        var metadataConfigPath = Path.Combine(vmConfigPath, "md");
 
-            return metadataConfigPath;
-        }
+        return metadataConfigPath;
+    }
 
-        public static string GetStorageConfigPath()
-        {
-            var vmConfigPath = GetVMConfigPath();
-            var metadataConfigPath = Path.Combine(vmConfigPath, "storage");
+    public static string GetStorageConfigPath()
+    {
+        var vmConfigPath = GetVMConfigPath();
+        var metadataConfigPath = Path.Combine(vmConfigPath, "storage");
 
-            return metadataConfigPath;
-        }
+        return metadataConfigPath;
+    }
 
-        public static string GetCatletsConfigPath()
-        {
-            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
-            var vmConfigPath = Path.Combine(privateConfigPath, "catlets");
+    public static string GetCatletsConfigPath()
+    {
+        var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+        var vmConfigPath = Path.Combine(privateConfigPath, "catlets");
 
-            return vmConfigPath;
-        }
+        return vmConfigPath;
+    }
 
-        public static string GetCatletSpecificationsConfigPath()
-        {
-            var catletsConfigPath = GetCatletsConfigPath();
-            var specificationsConfigPath = Path.Combine(catletsConfigPath, "specs");
+    public static string GetCatletSpecificationsConfigPath()
+    {
+        var catletsConfigPath = GetCatletsConfigPath();
+        var specificationsConfigPath = Path.Combine(catletsConfigPath, "specs");
 
-            return specificationsConfigPath;
-        }
+        return specificationsConfigPath;
+    }
 
-        public static string GetCatletSpecificationVersionsConfigPath()
-        {
-            var catletsConfigPath = GetCatletsConfigPath();
-            var specificationVersionsConfigPath = Path.Combine(catletsConfigPath, "specversions");
+    public static string GetCatletSpecificationVersionsConfigPath()
+    {
+        var catletsConfigPath = GetCatletsConfigPath();
+        var specificationVersionsConfigPath = Path.Combine(catletsConfigPath, "specversions");
 
-            return specificationVersionsConfigPath;
-        }
+        return specificationVersionsConfigPath;
+    }
 
-        public static string GetNetworksConfigPath()
-        {
-            var privateConfigPath = GetPrivateConfigPath();
-            var networksConfigPath = Path.Combine(privateConfigPath, "networks");
+    public static string GetNetworksConfigPath()
+    {
+        var privateConfigPath = GetPrivateConfigPath();
+        var networksConfigPath = Path.Combine(privateConfigPath, "networks");
 
-            return networksConfigPath;
-        }
+        return networksConfigPath;
+    }
 
-        public static string GetProjectsConfigPath()
-        {
-            var privateConfigPath = GetPrivateConfigPath();
-            var projectsConfigPath = Path.Combine(privateConfigPath, "projects");
+    public static string GetProjectsConfigPath()
+    {
+        var privateConfigPath = GetPrivateConfigPath();
+        var projectsConfigPath = Path.Combine(privateConfigPath, "projects");
 
-            return projectsConfigPath;
-        }
+        return projectsConfigPath;
+    }
 
-        public static string GetControllerSettingsPath()
-        {
-            // Operator-editable controller settings (e.g. placement: datastore/environment names).
-            var privateConfigPath = GetPrivateConfigPath();
-            return Path.Combine(privateConfigPath, "controller");
-        }
+    public static string GetControllerSettingsPath()
+    {
+        // Operator-editable controller settings (e.g. placement: datastore/environment names).
+        var privateConfigPath = GetPrivateConfigPath();
+        return Path.Combine(privateConfigPath, "controller");
+    }
 
-        public static string GetProjectNetworksConfigPath()
-        {
-            var projectsConfigPath = GetProjectsConfigPath();
-            var projectNetworksConfigPath = Path.Combine(projectsConfigPath, "networks");
+    public static string GetProjectNetworksConfigPath()
+    {
+        var projectsConfigPath = GetProjectsConfigPath();
+        var projectNetworksConfigPath = Path.Combine(projectsConfigPath, "networks");
 
-            return projectNetworksConfigPath;
-        }
+        return projectNetworksConfigPath;
+    }
 
-        public static string GetProjectNetworkPortsConfigPath()
-        {
-            var projectsConfigPath = GetProjectsConfigPath();
-            var projectNetworkPortsConfigPath = Path.Combine(projectsConfigPath, "ports");
+    public static string GetProjectNetworkPortsConfigPath()
+    {
+        var projectsConfigPath = GetProjectsConfigPath();
+        var projectNetworkPortsConfigPath = Path.Combine(projectsConfigPath, "ports");
 
-            return projectNetworkPortsConfigPath;
-        }
+        return projectNetworkPortsConfigPath;
+    }
 
-        public static string GetLocksConfigPath()
-        {
-            var privateConfigPath = GetPrivateConfigPath();
-            var locksConfigPath = Path.Combine(privateConfigPath, "locks");
-            return locksConfigPath;
-        }
+    public static string GetLocksConfigPath()
+    {
+        var privateConfigPath = GetPrivateConfigPath();
+        var locksConfigPath = Path.Combine(privateConfigPath, "locks");
+        return locksConfigPath;
+    }
 
-        public static string GetPrivateConfigPath()
-        {
-            return Path.Combine(GetConfigPath(), "private");
-        }
+    public static string GetPrivateConfigPath()
+    {
+        return Path.Combine(GetConfigPath(), "private");
+    }
 
 
-        public static void EnsureConfiguration()
-        {
-            Config.EnsurePath(GetConfigPath());
-            Config.EnsurePath(GetPrivateConfigPath(), GetPrivateDirectorySecurity());
-            Config.EnsurePath(GetClientConfigPath());
-            Config.EnsurePath(GetVMConfigPath());
-            Config.EnsurePath(GetMetadataConfigPath());
-            Config.EnsurePath(GetStorageConfigPath());
-            Config.EnsurePath(GetCatletsConfigPath());
-            Config.EnsurePath(GetCatletSpecificationsConfigPath());
-            Config.EnsurePath(GetCatletSpecificationVersionsConfigPath());
-            Config.EnsurePath(GetNetworksConfigPath());
-            Config.EnsurePath(GetVmHostAgentConfigPath());
-            Config.EnsurePath(GetProjectsConfigPath());
-            Config.EnsurePath(GetProjectNetworksConfigPath());
-            Config.EnsurePath(GetProjectNetworkPortsConfigPath());
-            Config.EnsurePath(GetLocksConfigPath());
-        }
+    public static void EnsureConfiguration()
+    {
+        Config.EnsurePath(GetConfigPath());
+        Config.EnsurePath(GetPrivateConfigPath(), GetPrivateDirectorySecurity());
+        Config.EnsurePath(GetClientConfigPath());
+        Config.EnsurePath(GetVMConfigPath());
+        Config.EnsurePath(GetMetadataConfigPath());
+        Config.EnsurePath(GetStorageConfigPath());
+        Config.EnsurePath(GetCatletsConfigPath());
+        Config.EnsurePath(GetCatletSpecificationsConfigPath());
+        Config.EnsurePath(GetCatletSpecificationVersionsConfigPath());
+        Config.EnsurePath(GetNetworksConfigPath());
+        Config.EnsurePath(GetVmHostAgentConfigPath());
+        Config.EnsurePath(GetProjectsConfigPath());
+        Config.EnsurePath(GetProjectNetworksConfigPath());
+        Config.EnsurePath(GetProjectNetworkPortsConfigPath());
+        Config.EnsurePath(GetLocksConfigPath());
+    }
 
-        public static DirectorySecurity GetPrivateDirectorySecurity()
-        {
-            var directorySecurity = new DirectorySecurity();
-            IdentityReference adminId = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
-            var adminAccess = new FileSystemAccessRule(
-                adminId,
-                FileSystemRights.FullControl,
-                InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
-                PropagationFlags.None,
-                AccessControlType.Allow);
+    public static DirectorySecurity GetPrivateDirectorySecurity()
+    {
+        var directorySecurity = new DirectorySecurity();
+        IdentityReference adminId = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        var adminAccess = new FileSystemAccessRule(
+            adminId,
+            FileSystemRights.FullControl,
+            InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow);
 
-            IdentityReference systemId = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
-            var systemAccess = new FileSystemAccessRule(
-                systemId,
-                FileSystemRights.FullControl,
-                InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
-                PropagationFlags.None,
-                AccessControlType.Allow);
+        IdentityReference systemId = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+        var systemAccess = new FileSystemAccessRule(
+            systemId,
+            FileSystemRights.FullControl,
+            InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow);
 
-            directorySecurity.AddAccessRule(adminAccess);
-            directorySecurity.AddAccessRule(systemAccess);
-            // set the owner and the group to admins
-            directorySecurity.SetAccessRuleProtection(true, true);
+        directorySecurity.AddAccessRule(adminAccess);
+        directorySecurity.AddAccessRule(systemAccess);
+        // set the owner and the group to admins
+        directorySecurity.SetAccessRuleProtection(true, true);
 
-            return directorySecurity;
-        }
+        return directorySecurity;
     }
 }

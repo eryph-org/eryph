@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Net;
+﻿using System.Net;
 using Azure.Core;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ConfigModel;
@@ -33,39 +32,41 @@ public static class GenePoolCli<RT> where RT : struct,
 {
     public static Aff<RT, Unit> login(IGenePoolApiKeyStore apiKeyStore, GenePoolSettings genepoolSettings) =>
         from _1 in AnsiConsole<RT>.write(new Rows(
-            new Text("We will create a dedicated API key for this machine which grants read-only access to the genepool."),
+            new Text(
+                "We will create a dedicated API key for this machine which grants read-only access to the genepool."),
             new Text("You will need to authenticate with your personal credentials."),
             Text.Empty))
         from existingApiKey in apiKeyStore.GetApiKey(genepoolSettings.Name)
             .ToAff(identity)
         from shouldContinue in existingApiKey.Match(
-            Some: apiKey =>
+            apiKey =>
                 from _ in AnsiConsole<RT>.markupLine(
                     "[yellow]A gene pool API key is already configured. "
                     + " When you continue, the existing API key will be overwritten.[/]")
                 from shouldOverwrite in AnsiConsole<RT>.confirm("Overwrite API key?", false)
                 select shouldOverwrite,
-            None: () => SuccessAff<RT, bool>(true))
+            () => SuccessAff<RT, bool>(true))
         from _2 in shouldContinue ? createApiKey(apiKeyStore, genepoolSettings) : unitEff
         select unit;
 
-    public static Aff<RT, Unit> getApiKeyStatus(IGenePoolApiKeyStore genePoolApiStore, GenePoolSettings genepoolSettings) =>
+    public static Aff<RT, Unit> getApiKeyStatus(IGenePoolApiKeyStore genePoolApiStore,
+        GenePoolSettings genepoolSettings) =>
         from apiKeys in genePoolApiStore.GetApiKeys().ToAff(identity)
         let apiKey = apiKeys.Find(genepoolSettings.Name)
         from _ in apiKey.Match(
-            Some: key =>
+            key =>
                 from _1 in AnsiConsole<RT>.writeLine("The following gene pool API key is configured:")
                 from _2 in AnsiConsole<RT>.write(printApiKey(key))
                 from _3 in validateApiKey(key, genepoolSettings)
                 select unit,
-            None: () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
+            () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
         select unit;
 
     public static Aff<RT, Unit> logout(IGenePoolApiKeyStore keyStore, GenePoolSettings genepoolSettings) =>
         from apiKeys in keyStore.GetApiKeys().ToAff(identity)
         let apiKey = apiKeys.Find(genepoolSettings.Name)
         from _ in apiKey.Match(
-            Some: key =>
+            key =>
                 from _1 in AnsiConsole<RT>.writeLine("The following gene pool API key is configured:")
                 from _2 in AnsiConsole<RT>.write(printApiKey(key))
                 from shouldRemove in AnsiConsole<RT>.confirm("Remove API key?", false)
@@ -73,7 +74,7 @@ public static class GenePoolCli<RT> where RT : struct,
                     ? removeApiKey(keyStore, genepoolSettings, key)
                     : unitEff
                 select unit,
-            None: () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
+            () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
         select unit;
 
     private static Aff<RT, Unit> createApiKey(
@@ -97,7 +98,7 @@ public static class GenePoolCli<RT> where RT : struct,
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Option<ApiKeySecretResponse>>(e)))
         from _1 in stopSpinner
         from validResult in result.ToAff(Error.New("The gene pool API key was not created."))
-        let apiKey = new GenePoolApiKey()
+        let apiKey = new GenePoolApiKey
         {
             Id = validResult.KeyId,
             Name = apiKeyName.Value,
@@ -110,22 +111,23 @@ public static class GenePoolCli<RT> where RT : struct,
 
     private static Aff<RT, Unit> validateApiKey(GenePoolApiKey apiKey, GenePoolSettings genepoolSettings) =>
         from userResponse in getApiKeyUser(apiKey, genepoolSettings).Map(Optional)
-                            | @catch(ex => ex is GenepoolClientException { StatusCode: HttpStatusCode.Unauthorized },
-                                Option<GetMeResponse>.None)
-                            | @catch(_ => true, e => Error.New("Could not validate the gene pool API key.", e))
+                             | @catch(ex => ex is GenepoolClientException { StatusCode: HttpStatusCode.Unauthorized },
+                                 Option<GetMeResponse>.None)
+                             | @catch(_ => true, e => Error.New("Could not validate the gene pool API key.", e))
         from _ in userResponse.Match(
-            Some: response =>
+            response =>
                 from _ in AnsiConsole<RT>.write(new Rows(
-                    new Markup("The gene pool API key is valid. The following information was returned by the gene pool:"),
+                    new Markup(
+                        "The gene pool API key is valid. The following information was returned by the gene pool:"),
                     new Grid()
                         .AddColumn()
                         .AddColumn()
                         .AddRow(new Text("Key ID:"), new Text(response.Id))
                         .AddRow(new Text("Key Name:"), new Text(response.DisplayName ?? ""))
-                        .AddRow(new Text(response.GenepoolOrgs?.Length != 1 ? "Organizations:": "Organization:"), 
-                            new Text(string.Join(',', response.GenepoolOrgs.ToSeq().Map(x=>x.Org.Name))))))
+                        .AddRow(new Text(response.GenepoolOrgs?.Length != 1 ? "Organizations:" : "Organization:"),
+                            new Text(string.Join(',', response.GenepoolOrgs.ToSeq().Map(x => x.Org.Name))))))
                 select unit,
-            None: () =>
+            () =>
                 from _ in AnsiConsole<RT>.writeLine("The gene pool API key is invalid.")
                 select unit)
         select unit;
@@ -140,7 +142,7 @@ public static class GenePoolCli<RT> where RT : struct,
             var client = new GenePoolClient(
                 genepoolSettings.ApiEndpoint,
                 new ApiKeyCredential(apiKey.Secret),
-                new GenePoolClientOptions()
+                new GenePoolClientOptions
                 {
                     Diagnostics =
                     {
@@ -149,7 +151,8 @@ public static class GenePoolCli<RT> where RT : struct,
                     HardwareId = hardwareId,
                 });
             var response = await client.GetUserClient()
-                .GetAsync(new GetUserRequestOptions{Expand = new ExpandFromUser{ GenepoolOrgs = true}}, cancellationToken: cancelToken);
+                .GetAsync(new GetUserRequestOptions { Expand = new ExpandFromUser { GenepoolOrgs = true } },
+                    cancelToken);
 
             return response;
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, GetMeResponse>(e)))
@@ -170,7 +173,8 @@ public static class GenePoolCli<RT> where RT : struct,
                   from _1 in AnsiConsole<RT>.write(new Rows(
                       new Markup("[red]Could not delete the API key from the remote gene pool.[/]"),
                       Prelude.Renderable(e)))
-                  from shouldContinue in AnsiConsole<RT>.confirm("Remove the gene pool API key from this machine?", false)
+                  from shouldContinue in AnsiConsole<RT>.confirm("Remove the gene pool API key from this machine?",
+                      false)
                   select shouldContinue)
             : SuccessAff<RT, bool>(true)
         from _2 in shouldContinue
@@ -196,12 +200,14 @@ public static class GenePoolCli<RT> where RT : struct,
         from cancelToken in cancelToken<RT>()
         from applicationId in ApplicationInfo<RT>.applicationId()
         from hardwareId in HardwareId<RT>.hashedHardwareId()
-        from stopSpinner in AnsiConsole<RT>.startSpinner("Authenticating with the gene pool. Please check your browser.")
-        let options = new GenePoolClientOptions(GenePoolClientOptions.ServiceVersion.V1, genepoolSettings.ApiEndpoint.ToString(), genepoolSettings.IsStaging)
+        from stopSpinner in AnsiConsole<RT>.startSpinner(
+            "Authenticating with the gene pool. Please check your browser.")
+        let options = new GenePoolClientOptions(GenePoolClientOptions.ServiceVersion.V1,
+            genepoolSettings.ApiEndpoint.ToString(), genepoolSettings.IsStaging)
         {
             Diagnostics =
             {
-                ApplicationId = applicationId
+                ApplicationId = applicationId,
             },
             HardwareId = hardwareId,
         }
@@ -214,12 +220,12 @@ public static class GenePoolCli<RT> where RT : struct,
                 BrowserCustomization = new BrowserCustomizationOptions
                 {
                     UseEmbeddedWebView = false,
-                }
+                },
             };
-            
+
             var credential = new B2CInteractiveBrowserCredential(credentialOptions);
             await credential.AuthenticateAsync(new TokenRequestContext());
-            
+
             return new GenePoolClient(genepoolSettings.ApiEndpoint, credential, options);
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, GenePoolClient>(e)))
         from _ in stopSpinner

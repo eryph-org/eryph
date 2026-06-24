@@ -2,37 +2,25 @@
 using Ardalis.Specification;
 using Eryph.IdentityDb.Entities;
 
-namespace Eryph.IdentityDb.Specifications
+namespace Eryph.IdentityDb.Specifications;
+
+public static class ClientSpecs
 {
-
-
-    public static class ClientSpecs
+    public sealed class GetAll : Specification<ClientApplicationEntity>
     {
-
-        public sealed class GetAll : Specification<ClientApplicationEntity>
+        public GetAll(Guid tenantId)
         {
-            public GetAll(Guid tenantId)
-            {
-
-                Query.Where(x => x.TenantId == tenantId);
-                Query.OrderBy(x => x.Id);
-
-            }
+            Query.Where(x => x.TenantId == tenantId);
+            Query.OrderBy(x => x.Id);
         }
-
-        public sealed class GetByClientId : Specification<ClientApplicationEntity>, ISingleResultSpecification<ClientApplicationEntity>
-        {
-            public GetByClientId(string clientId, Guid tenantId)
-            {
-                Query.Where(x => x.TenantId == tenantId && x.ClientId == clientId);
-
-            }
-
-        }
-
     }
 
-
-
-
+    public sealed class GetByClientId : Specification<ClientApplicationEntity>,
+        ISingleResultSpecification<ClientApplicationEntity>
+    {
+        public GetByClientId(string clientId, Guid tenantId)
+        {
+            Query.Where(x => x.TenantId == tenantId && x.ClientId == clientId);
+        }
+    }
 }

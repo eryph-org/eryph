@@ -1,6 +1,5 @@
 ﻿using System.Runtime.Versioning;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Sys;

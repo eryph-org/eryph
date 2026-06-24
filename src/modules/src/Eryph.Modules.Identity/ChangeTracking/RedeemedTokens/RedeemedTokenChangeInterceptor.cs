@@ -8,15 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Identity.ChangeTracking.RedeemedTokens;
 
-internal class RedeemedTokenChangeInterceptor : ChangeInterceptorBase<RedeemedTokenChange>
+internal class RedeemedTokenChangeInterceptor(
+    IChangeTrackingQueue<RedeemedTokenChange> queue,
+    ILogger logger)
+    : ChangeInterceptorBase<RedeemedTokenChange>(queue, logger)
 {
-    public RedeemedTokenChangeInterceptor(
-        IChangeTrackingQueue<RedeemedTokenChange> queue,
-        ILogger logger)
-        : base(queue, logger)
-    {
-    }
-
     protected override Task<Seq<RedeemedTokenChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)

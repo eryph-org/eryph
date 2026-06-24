@@ -5,46 +5,34 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.HostAgent;
 
-internal class Tracer : ITracer
+internal class Tracer(ILogger log, ITraceWriter traceWriter) : ITracer
 {
-    private readonly ILogger _log;
-    private readonly ITraceWriter _traceWriter;
-    private readonly ConcurrentDictionary<Guid, RecordsOfContext> _records = new ();
-
-    public Tracer(ILogger log, ITraceWriter traceWriter)
-    {
-        _log = log;
-        _traceWriter = traceWriter;
-    }
+    private readonly ConcurrentDictionary<Guid, RecordsOfContext> _records = new();
 
     public void CloseTrace(Guid traceContext)
     {
-        if(!_records.TryRemove(traceContext, out var records))
+        if (!_records.TryRemove(traceContext, out var records))
             return;
-        
-        _log.LogTrace("closing trace {traceId}", traceContext);
+
+        log.LogTrace("closing trace {traceId}", traceContext);
 
         records.TraceStopped = DateTimeOffset.Now;
-        _traceWriter.WriteTrace(traceContext, records.TraceStarted, records.TraceStopped, records.Records.ToArray());
+        traceWriter.WriteTrace(traceContext, records.TraceStarted, records.TraceStopped, records.Records.ToArray());
     }
 
     public void Write(Guid contextId, string correlationId, TraceData data, string message = null)
     {
-
         _records.AddOrUpdate(contextId, g =>
         {
-            var res = new RecordsOfContext{ TraceStarted = DateTimeOffset.Now, CorrelationId= correlationId };
-            res.Records.Add(new TraceRecord {  Data = data, Message = message, Timestamp = DateTimeOffset.Now });
+            var res = new RecordsOfContext { TraceStarted = DateTimeOffset.Now, CorrelationId = correlationId };
+            res.Records.Add(new TraceRecord { Data = data, Message = message, Timestamp = DateTimeOffset.Now });
             return res;
         }, (g, record) =>
         {
-            _log.LogTrace("write trace {traceId}: {message}, Data: {data}", contextId, message, data.Data);
+            log.LogTrace("write trace {traceId}: {message}, Data: {data}", contextId, message, data.Data);
 
-            record.Records.Add(new TraceRecord { Data =data, Message = message, Timestamp = DateTimeOffset.Now });
+            record.Records.Add(new TraceRecord { Data = data, Message = message, Timestamp = DateTimeOffset.Now });
             return record;
         });
-
     }
-
-
 }

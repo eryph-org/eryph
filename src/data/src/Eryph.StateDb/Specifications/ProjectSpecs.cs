@@ -19,14 +19,12 @@ public static class ProjectSpecs
                 Query.Where(x => x.ProjectRoles
                     .Any(y => authContext.Identities.Contains(y.IdentityId)
                               && sufficientRoles.Contains(y.RoleId)));
-
         }
 
         public GetByName(Guid tenantId, string name)
         {
             Query.Where(x => x.TenantId == tenantId && x.Name == name);
         }
-
     }
 
     public sealed class GetById : Specification<Project>, ISingleResultSpecification<Project>
@@ -45,7 +43,6 @@ public static class ProjectSpecs
         {
             Query.Where(x => x.Id == projectId && x.TenantId == tenantId);
         }
-
     }
 
     public sealed class GetAll : Specification<Project>
@@ -64,5 +61,4 @@ public static class ProjectSpecs
         {
         }
     }
-
 }

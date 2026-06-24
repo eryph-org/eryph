@@ -1,7 +1,4 @@
-﻿namespace Eryph.Messages.Resources.Catlets.Events
-{
-    [SubscribesMessage(MessageSubscriber.VMHostAgents)]
-    public class InventoryRequestedEvent
-    {
-    }
-}
+﻿namespace Eryph.Messages.Resources.Catlets.Events;
+
+[SubscribesMessage(MessageSubscriber.VMHostAgents)]
+public class InventoryRequestedEvent;

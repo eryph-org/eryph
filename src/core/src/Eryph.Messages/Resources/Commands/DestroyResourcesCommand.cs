@@ -1,12 +1,10 @@
 ﻿using Eryph.Resources;
 
-namespace Eryph.Messages.Resources.Commands
+namespace Eryph.Messages.Resources.Commands;
+
+[SendMessageTo(MessageRecipient.Controllers)]
+public class DestroyResourcesCommand : IGenericResourcesCommand, IHasResources, ICommandWithName
 {
-    [SendMessageTo(MessageRecipient.Controllers)]
-    public class DestroyResourcesCommand : IGenericResourcesCommand, IHasResources, ICommandWithName
-    {
-        public Resource[] Resources { get; set; }
-        
-        public string GetCommandName() => "Destroy Resources";
-    }
+    public string GetCommandName() => "Destroy Resources";
+    public Resource[] Resources { get; set; }
 }

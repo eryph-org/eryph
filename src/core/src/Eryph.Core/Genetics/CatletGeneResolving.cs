@@ -2,7 +2,6 @@
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -55,10 +54,7 @@ public static class CatletGeneResolving
             .Map(s => ResolveGeneSetIdentifier(s, resolvedGeneSets))
             .MapT(geneId => geneId.Value)
             .Sequence()
-        select driveConfig.CloneWith(c =>
-        {
-            c.Source = resolvedSource.IfNoneUnsafe(driveConfig.Source);
-        });
+        select driveConfig.CloneWith(c => { c.Source = resolvedSource.IfNoneUnsafe(driveConfig.Source); });
 
     private static Either<Error, GeneIdentifier> ResolveGeneSetIdentifier(
         string geneIdentifier,
@@ -109,13 +105,15 @@ public static class CatletGeneResolving
                          || g.Architecture.Hypervisor.IsAny)
         from _3 in guard(
             hypervisorCompatibleGenes.Count > 0,
-            Error.New($"The gene {geneIdWithType} is not compatible with the hypervisor {catletArchitecture.Hypervisor}."))
+            Error.New(
+                $"The gene {geneIdWithType} is not compatible with the hypervisor {catletArchitecture.Hypervisor}."))
         let processorCompatibleGenes = hypervisorCompatibleGenes
             .Filter(g => g.Architecture.ProcessorArchitecture == catletArchitecture.ProcessorArchitecture
                          || g.Architecture.ProcessorArchitecture.IsAny)
         from _4 in guard(
             processorCompatibleGenes.Count > 0,
-            Error.New($"The gene {geneIdWithType} is not compatible with the processor architecture {catletArchitecture.ProcessorArchitecture}."))
+            Error.New(
+                $"The gene {geneIdWithType} is not compatible with the processor architecture {catletArchitecture.ProcessorArchitecture}."))
         let bestMatch = processorCompatibleGenes.Find(g => g.Architecture == catletArchitecture)
                         | processorCompatibleGenes.Find(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
                                                              && g.Architecture.ProcessorArchitecture.IsAny)

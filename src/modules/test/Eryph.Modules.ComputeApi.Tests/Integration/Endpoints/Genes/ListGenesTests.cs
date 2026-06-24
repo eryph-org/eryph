@@ -8,24 +8,22 @@ using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.TestBase;
-using Eryph.StateDb.Model;
 using Eryph.StateDb;
+using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.Gene;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
 public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
-    private readonly WebModuleFactory<ComputeApiModule> _factory;
-
     private const string AgentName = "testhost";
     private static readonly Guid FodderGeneId = new("77e1e6e5-3ede-4c21-ac09-fdc943e64f1d");
     private static readonly Guid VolumeGeneId = new("bcba0b8c-4ea8-4036-aaa9-b20d80931712");
+    private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public ListGenesTests(
         ITestOutputHelper outputHelper,
@@ -76,7 +74,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var genes = await response.Content.ReadFromJsonAsync<ListResponse<ApiGene>>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         genes.Value.Should().SatisfyRespectively(
             gene =>

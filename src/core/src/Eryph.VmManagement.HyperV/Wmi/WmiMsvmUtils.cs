@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Management;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 
@@ -48,7 +43,7 @@ public static class WmiMsvmUtils
                     .ToEff($"The instance ID '{instanceId} does not contain a valid VM ID.")
                 select Some(vmId),
             _ => FailEff<Option<Guid>>(
-                Error.New($"WMI objects of type '{className}' are not supported."))
+                Error.New($"WMI objects of type '{className}' are not supported.")),
         }
         select vmId;
 
@@ -85,6 +80,6 @@ public static class WmiMsvmUtils
 
     private static Option<T> convert<T>(ushort value) where T : struct, Enum =>
         Optional(value)
-            .Filter(v => Enum.IsDefined(typeof(T),v))
+            .Filter(v => Enum.IsDefined(typeof(T), v))
             .Map(v => (T)Enum.ToObject(typeof(T), v));
 }

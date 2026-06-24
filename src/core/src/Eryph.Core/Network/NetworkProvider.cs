@@ -1,8 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using JetBrains.Annotations;
-using LanguageExt;
-using LanguageExt.Common;
-using YamlDotNet.Serialization;
+﻿using JetBrains.Annotations;
 
 namespace Eryph.Core.Network;
 

@@ -2,99 +2,94 @@
 using System.Collections.Generic;
 using System.Linq;
 using Ardalis.Specification;
-using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 
-namespace Eryph.StateDb.Specifications
+namespace Eryph.StateDb.Specifications;
+
+public static class VirtualDiskSpecs
 {
-    public static class VirtualDiskSpecs
+    public sealed class GetByLocation : Specification<VirtualDisk>
     {
-        public sealed class GetByLocation : Specification<VirtualDisk>
+        public GetByLocation(Guid projectId, string dataStore, string environment,
+            string storageIdentifier, string name, Guid diskIdentifier)
         {
-            public GetByLocation(Guid projectId, string dataStore, string environment, 
-                string storageIdentifier, string name, Guid diskIdentifier)
-            {
-                Query.Where(x => x.Project.Id == projectId);
-                Query.Where(
-                    x => x.DataStore == dataStore &&
-                         x.Environment == environment &&
-                         x.StorageIdentifier == storageIdentifier &&
-                         x.Name == name && x.DiskIdentifier == diskIdentifier);
+            Query.Where(x => x.Project.Id == projectId);
+            Query.Where(x => x.DataStore == dataStore &&
+                             x.Environment == environment &&
+                             x.StorageIdentifier == storageIdentifier &&
+                             x.Name == name && x.DiskIdentifier == diskIdentifier);
 
-                Query.Include(x => x.Project);
-            }
+            Query.Include(x => x.Project);
         }
+    }
 
-        public sealed class GetByName : Specification<VirtualDisk>
+    public sealed class GetByName : Specification<VirtualDisk>
+    {
+        public GetByName(Guid projectId, string dataStore, string environment,
+            string storageIdentifier, string name)
         {
-            public GetByName(Guid projectId, string dataStore, string environment,
-                string storageIdentifier, string name)
-            {
-                Query.Where(x => x.Project.Id == projectId
-                                 && x.DataStore == dataStore
-                                 && x.Environment == environment
-                                 && x.StorageIdentifier == storageIdentifier
-                                 && x.Name == name
-                                 && !x.Deleted);
-            }
+            Query.Where(x => x.Project.Id == projectId
+                             && x.DataStore == dataStore
+                             && x.Environment == environment
+                             && x.StorageIdentifier == storageIdentifier
+                             && x.Name == name
+                             && !x.Deleted);
         }
+    }
 
-        public sealed class FindDeletedWithoutChildren : Specification<VirtualDisk>
+    public sealed class FindDeletedWithoutChildren : Specification<VirtualDisk>
+    {
+        public FindDeletedWithoutChildren(DateTimeOffset cutoff)
         {
-            public FindDeletedWithoutChildren(DateTimeOffset cutoff)
-            {
-                Query.Where(x => x.Deleted
-                                 && x.LastSeen < cutoff
-                                 && x.Children.Count == 0);
-            }
-
+            Query.Where(x => x.Deleted
+                             && x.LastSeen < cutoff
+                             && x.Children.Count == 0);
         }
+    }
 
-        public sealed class FindDeletedInProject : Specification<VirtualDisk>
+    public sealed class FindDeletedInProject : Specification<VirtualDisk>
+    {
+        public FindDeletedInProject(Guid projectId)
         {
-            public FindDeletedInProject(Guid projectId)
-            {
-                Query.Where(x => x.Deleted && x.ProjectId == projectId );
-            }
+            Query.Where(x => x.Deleted && x.ProjectId == projectId);
         }
+    }
 
-        public sealed class FindOutdated : Specification<VirtualDisk>
+    public sealed class FindOutdated : Specification<VirtualDisk>
+    {
+        public FindOutdated(DateTimeOffset lastSeenBefore, string? agentName)
         {
-            public FindOutdated(DateTimeOffset lastSeenBefore, string? agentName)
-            {
-                Query.Where(x => x.LastSeen < lastSeenBefore);
+            Query.Where(x => x.LastSeen < lastSeenBefore);
 
-                if (!string.IsNullOrEmpty(agentName))
-                    Query.Where(x => x.LastSeenAgent == agentName);
-                
-                Query.Include(x => x.Project);
-            }
+            if (!string.IsNullOrEmpty(agentName))
+                Query.Where(x => x.LastSeenAgent == agentName);
+
+            Query.Include(x => x.Project);
         }
+    }
 
-        public sealed class GetByUniqueGeneId : Specification<VirtualDisk>, ISingleResultSpecification
+    public sealed class GetByUniqueGeneId : Specification<VirtualDisk>, ISingleResultSpecification
+    {
+        public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
         {
-            public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
-            {
-                Query.Where(x => x.LastSeenAgent == agentName
-                                 && x.UniqueGeneIndex == geneId.ToUniqueGeneIndex());
+            Query.Where(x => x.LastSeenAgent == agentName
+                             && x.UniqueGeneIndex == geneId.ToUniqueGeneIndex());
 
-                Query.Include(x => x.Project);
-            }
+            Query.Include(x => x.Project);
         }
+    }
 
-        public sealed class GetByUniqueGeneIds : Specification<VirtualDisk>
+    public sealed class GetByUniqueGeneIds : Specification<VirtualDisk>
+    {
+        public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
         {
-            public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
-            {
-                var values = geneIds.Map(id => id.ToUniqueGeneIndex()).ToList();
+            var values = geneIds.Map(id => id.ToUniqueGeneIndex()).ToList();
 
-                Query.Where(x => x.LastSeenAgent == agentName
-                                 && values.Contains(x.UniqueGeneIndex!));
+            Query.Where(x => x.LastSeenAgent == agentName
+                             && values.Contains(x.UniqueGeneIndex!));
 
-                Query.Include(x => x.Project);
-            }
+            Query.Include(x => x.Project);
         }
     }
 }

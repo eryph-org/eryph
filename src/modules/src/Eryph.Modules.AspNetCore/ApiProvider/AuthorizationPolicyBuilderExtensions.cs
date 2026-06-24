@@ -13,6 +13,6 @@ public static class AuthorizationPolicyBuilderExtensions
     public static AuthorizationPolicyBuilder RequireAuthenticatedUserOrSwaggerEndpoint(
         this AuthorizationPolicyBuilder builder) =>
         builder.RequireAssertion(context =>
-            context.Resource is HttpContext httpContext && httpContext.Request.Path.StartsWithSegments("/swagger")
+            (context.Resource is HttpContext httpContext && httpContext.Request.Path.StartsWithSegments("/swagger"))
             || context.User.Identity?.IsAuthenticated == true);
 }

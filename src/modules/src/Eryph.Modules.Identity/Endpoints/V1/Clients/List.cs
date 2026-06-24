@@ -18,23 +18,20 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 public class List(
     IClientService clientService,
     IUserInfoProvider userInfoProvider)
-    : EndpointBaseAsync
-        .WithoutRequest
-        .WithActionResult<ListResponse<Client>>
+    : EndpointBaseAsync.WithoutRequest.WithActionResult<ListResponse<Client>>
 {
     [HttpGet("clients")]
     [Authorize("identity:clients:read")]
     [SwaggerOperation(
-        Summary = "List all clients",
-        Description = "List all clients",
-        OperationId = "Clients_List",
-        Tags = ["Clients"])
+            Summary = "List all clients",
+            Description = "List all clients",
+            OperationId = "Clients_List",
+            Tags = ["Clients"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(ListResponse<Client>),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(ListResponse<Client>), "application/json"),
     ]
     public override async Task<ActionResult<ListResponse<Client>>> HandleAsync(
         CancellationToken cancellationToken = default)

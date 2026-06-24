@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Modules.ComputeApi.Model.V1;
@@ -14,24 +10,21 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 [Route("v{version:apiVersion}")]
-public class ValidateConfig()
-    : EndpointBaseAsync
-        .WithRequest<ValidateConfigRequest>
-        .WithActionResult<CatletConfigValidationResult>
+public class ValidateConfig : EndpointBaseAsync.WithRequest<ValidateConfigRequest>.WithActionResult<
+    CatletConfigValidationResult>
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpPost("catlets/config/validate")]
     [SwaggerOperation(
-        Summary = "Validate catlet config",
-        Description = "Performs a quick validation of the catlet configuration",
-        OperationId = "Catlets_ValidateConfig",
-        Tags = ["Catlets"])
+            Summary = "Validate catlet config",
+            Description = "Performs a quick validation of the catlet configuration",
+            OperationId = "Catlets_ValidateConfig",
+            Tags = ["Catlets"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(CatletConfigValidationResult),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(CatletConfigValidationResult), "application/json"),
     ]
     public override Task<ActionResult<CatletConfigValidationResult>> HandleAsync(
         [FromBody] ValidateConfigRequest request,

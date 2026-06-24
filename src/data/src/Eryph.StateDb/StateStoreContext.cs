@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using Eryph.Core;
-using Eryph.Core.Genetics;
+﻿using Eryph.Core.Genetics;
 using Eryph.StateDb.Converters;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Eryph.StateDb;
 
@@ -16,23 +10,23 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
     public DbSet<OperationModel> Operations { get; set; }
 
     public DbSet<OperationLogEntry> Logs { get; set; }
-    
+
     public DbSet<OperationTaskModel> OperationTasks { get; set; }
-    
+
     public DbSet<TaskProgressEntry> TaskProgress { get; set; }
-    
+
     public DbSet<OperationResourceModel> OperationResources { get; set; }
 
     public DbSet<Resource> Resources { get; set; }
-        
+
     public DbSet<Catlet> Catlets { get; set; }
 
     public DbSet<CatletFarm> CatletFarms { get; set; }
 
     public DbSet<CatletNetworkAdapter> CatletNetworkAdapters { get; set; }
-    
+
     public DbSet<CatletDrive> CatletDrives { get; set; }
-    
+
     public DbSet<VirtualDisk> VirtualDisks { get; set; }
 
     public DbSet<VirtualNetwork> VirtualNetworks { get; set; }
@@ -42,15 +36,15 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
     public DbSet<VirtualNetworkPort> VirtualNetworkPorts { get; set; }
 
     public DbSet<CatletNetworkPort> CatletNetworkPorts { get; set; }
-    
+
     public DbSet<ProviderRouterPort> ProviderRouterPorts { get; set; }
 
     public DbSet<ProviderSubnet> ProviderSubnets { get; set; }
-    
+
     public DbSet<VirtualNetworkSubnet> VirtualNetworkSubnets { get; set; }
 
     public DbSet<IpPool> IpPools { get; set; }
-    
+
     public DbSet<IpPoolAssignment> IpPoolAssignments { get; set; }
 
     public DbSet<ReportedNetwork> ReportedNetworks { get; set; }
@@ -113,12 +107,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Navigation(x => x.Projects);
 
         modelBuilder.Entity<Project>()
-            .HasKey(x=>x.Id);
-        
+            .HasKey(x => x.Id);
+
         modelBuilder.Entity<Project>()
             .HasMany(x => x.Resources)
             .WithOne(x => x.Project)
-            .HasForeignKey(x=>x.ProjectId)
+            .HasForeignKey(x => x.ProjectId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ProjectRoleAssignment>()
@@ -191,7 +185,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
 
         modelBuilder.Entity<NetworkPort>()
-            .HasKey(x=>x.Id);
+            .HasKey(x => x.Id);
 
         modelBuilder.Entity<NetworkPort>()
             .HasMany(x => x.IpAssignments)
@@ -262,7 +256,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
 
         modelBuilder.Entity<CatletNetworkAdapter>()
-            .HasKey(x=>new {x.CatletId, x.Id});
+            .HasKey(x => new { x.CatletId, x.Id });
 
 
         modelBuilder.Entity<CatletDrive>()

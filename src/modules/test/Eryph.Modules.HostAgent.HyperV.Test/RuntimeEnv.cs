@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using Eryph.Core;
-using Eryph.Modules.HostAgent;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using LanguageExt.Effects.Traits;
@@ -8,7 +7,6 @@ using LanguageExt.Sys;
 using LanguageExt.Sys.Test;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Spectre.Console;
 using Spectre.Console.Testing;
 
 namespace Eryph.Modules.HostAgent.HyperV.Test;
@@ -44,17 +42,16 @@ public class RuntimeEnv<RT>(
             hostNetworkCommands,
             networkProviderManager)
     {
-
     }
 
     public CancellationTokenSource Source { get; } = source;
 
     public Encoding Encoding { get; } = encoding;
-    
+
     public MemoryFS FileSystem { get; } = fileSystem;
-    
+
     public TestTimeSpec TimeSpec { get; } = timeSpec ?? TestTimeSpec.RunningFromNow();
-    
+
     public MemorySystemEnvironment SysEnv { get; } = sysEnv;
 
     public TestConsole AnsiConsole { get; } = ansiConsole;

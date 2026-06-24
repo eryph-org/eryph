@@ -1,20 +1,11 @@
-﻿using Eryph.Modules.Controller.Tests.ChangeTracking;
-using Eryph.Modules.Controller.Tests.Serializers;
+﻿using System.Text.Json;
+using Eryph.Core;
+using Eryph.Modules.Controller.Serializers;
+using Eryph.Modules.Controller.Tests.ChangeTracking;
+using Eryph.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
-using IdGen;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Eryph.Core;
-using Eryph.Core.Genetics;
-using Eryph.Modules.Controller.Serializers;
-using Eryph.Serializers;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Seeding;
@@ -59,7 +50,8 @@ public abstract class CatletMetadataSeederTests(
             metadata.Genes.Should().HaveCount(2);
             metadata.Metadata.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Content);
             metadata.SpecificationId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationId);
-            metadata.SpecificationVersionId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationVersionId);
+            metadata.SpecificationVersionId.Should()
+                .Be(CatletMetadataConfigModelTestData.Metadata.SpecificationVersionId);
         });
 
         var backupContent = await MockFileSystem.File.ReadAllTextAsync(
@@ -77,7 +69,8 @@ public abstract class CatletMetadataSeederTests(
         configModel.SecretDataHidden.Should().BeTrue();
         configModel.Metadata.HasValue.Should().BeTrue();
         configModel.SpecificationId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationId);
-        configModel.SpecificationVersionId.Should().Be(CatletMetadataConfigModelTestData.Metadata.SpecificationVersionId);
+        configModel.SpecificationVersionId.Should()
+            .Be(CatletMetadataConfigModelTestData.Metadata.SpecificationVersionId);
         var content = CatletMetadataContentJsonSerializer.Deserialize(configModel.Metadata!.Value);
         content.Should().BeEquivalentTo(CatletMetadataConfigModelTestData.Content);
     }
@@ -90,9 +83,9 @@ public abstract class CatletMetadataSeederTests(
         var vmId = Guid.Parse("99c58ef6-2208-4046-be3e-ece1d56a073a");
         var json = $$"""
                      {
-                       "Id": "{{ metadataId }}",
-                       "VMId": "{{ vmId }}",
-                       "MachineId": "{{ catletId}}",
+                       "Id": "{{metadataId}}",
+                       "VMId": "{{vmId}}",
+                       "MachineId": "{{catletId}}",
                        "SecureDataHidden": true,
                        "Invalid": []
                      }
@@ -149,9 +142,9 @@ public abstract class CatletMetadataSeederTests(
         var vmId = Guid.Parse("a4b1f8d2-7d8a-4a2a-9f6e-9f9f9e0aabba");
         var json = $$"""
                      {
-                       "Id": "{{ metadataId }}",
-                       "VMId": "{{ vmId }}",
-                       "MachineId": "{{ catletId }}",
+                       "Id": "{{metadataId}}",
+                       "VMId": "{{vmId}}",
+                       "MachineId": "{{catletId}}",
                        "Architecture": "hyperv/amd64",
                        "Parent": "dbosoft/ubuntu-22.04/starter",
                        "SecureDataHidden": false
@@ -183,9 +176,9 @@ public abstract class CatletMetadataSeederTests(
         var vmId = Guid.Parse("ec9a37ee-2c0e-4c0e-9f8a-3c8b3f2c3aaa");
         var json = $$"""
                      {
-                       "Id": "{{ metadataId }}",
-                       "VMId": "{{ vmId }}",
-                       "MachineId": "{{ catletId }}",
+                       "Id": "{{metadataId}}",
+                       "VMId": "{{vmId}}",
+                       "MachineId": "{{catletId}}",
                        "Architecture": "not-a-real-arch",
                        "Parent": "some/parent/tag"
                      }

@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Disks;
@@ -33,34 +29,8 @@ public class CleanupGenesSaga(
         IHandleMessages<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CheckDisksExistsCommand>>
 {
-    protected override async Task Initiated(CleanupGenesCommand message)
-    {
-        Data.Data.AgentName = agentLocator.FindAgentForGenePool();
-
-        var unusedGenes = await geneInventoryQueries.FindUnusedGenes(Data.Data.AgentName);
-        if (unusedGenes.Count == 0)
-        {
-            await Complete();
-            return;
-        }
-
-        var geneIds = unusedGenes.ToSeq()
-            .Map(dbGene => dbGene.ParseUniqueGeneId())
-            .Sequence();
-        if (geneIds.IsLeft)
-        {
-            await Fail(Error.Many(geneIds.LeftToSeq()).Print());
-            return;
-        }
-
-        Data.Data.GeneIds = geneIds.ValueUnsafe().ToList();
-
-        await StartNewTask(new RemoveGenesVmHostCommand
-        {
-            AgentName = Data.Data.AgentName,
-            Genes = geneIds.ValueUnsafe().ToList(),
-        });
-    }
+    public Task Handle(OperationTaskStatusEvent<CheckDisksExistsCommand> message) =>
+        FailOrRun(message, Complete);
 
     public Task Handle(OperationTaskStatusEvent<RemoveGenesVmHostCommand> message) =>
         FailOrRun(message, async () =>
@@ -103,8 +73,34 @@ public class CleanupGenesSaga(
             });
         });
 
-    public Task Handle(OperationTaskStatusEvent<CheckDisksExistsCommand> message) =>
-        FailOrRun(message, Complete);
+    protected override async Task Initiated(CleanupGenesCommand message)
+    {
+        Data.Data.AgentName = agentLocator.FindAgentForGenePool();
+
+        var unusedGenes = await geneInventoryQueries.FindUnusedGenes(Data.Data.AgentName);
+        if (unusedGenes.Count == 0)
+        {
+            await Complete();
+            return;
+        }
+
+        var geneIds = unusedGenes.ToSeq()
+            .Map(dbGene => dbGene.ParseUniqueGeneId())
+            .Sequence();
+        if (geneIds.IsLeft)
+        {
+            await Fail(Error.Many(geneIds.LeftToSeq()).Print());
+            return;
+        }
+
+        Data.Data.GeneIds = geneIds.ValueUnsafe().ToList();
+
+        await StartNewTask(new RemoveGenesVmHostCommand
+        {
+            AgentName = Data.Data.AgentName,
+            Genes = geneIds.ValueUnsafe().ToList(),
+        });
+    }
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<CleanupGenesSagaData>> config)
     {

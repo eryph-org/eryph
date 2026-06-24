@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Core;
@@ -26,7 +24,7 @@ internal class IdentityScopesSeeder(
                 Name = scope.Name,
                 Description = scope.Description,
             };
-                    
+
             descriptor.Resources.UnionWith(scope.Resources);
 
             await scopeManager.CreateAsync(descriptor, stoppingToken);

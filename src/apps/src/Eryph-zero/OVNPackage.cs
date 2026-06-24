@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.IO.Hashing;
@@ -18,10 +17,7 @@ internal class OVNPackage
         var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
         var parentDir = baseDir.Parent?.FullName ?? throw new IOException("Invalid OVN package path");
 
-        if (relativePackagePath is not null)
-        {
-            parentDir = Path.Combine(parentDir, relativePackagePath);
-        }
+        if (relativePackagePath is not null) parentDir = Path.Combine(parentDir, relativePackagePath);
 
         var ovnPackageFile = Path.Combine(parentDir, "ovnpackage.zip");
         if (!File.Exists(ovnPackageFile))
@@ -168,8 +164,8 @@ internal class OVNPackage
         foreach (var entry in archive.Entries.Where(e => !e.FullName.EndsWith('/')))
         {
             var entryPath = Path.GetFullPath(entry.FullName, ovnRunDirectory.FullName);
-            var fileInfo = runDirFiles.FirstOrDefault(
-                fi => string.Equals(entryPath, fi.FullName, StringComparison.OrdinalIgnoreCase));
+            var fileInfo = runDirFiles.FirstOrDefault(fi =>
+                string.Equals(entryPath, fi.FullName, StringComparison.OrdinalIgnoreCase));
 
             if (fileInfo is null)
                 return false;

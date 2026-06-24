@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -22,16 +21,15 @@ public class Get(
     [Authorize(Policy = "compute:projects:read")]
     [HttpGet("projects/{id}")]
     [SwaggerOperation(
-        Summary = "Get a project",
-        Description = "Get a project",
-        OperationId = "Projects_Get",
-        Tags = ["Projects"])
+            Summary = "Get a project",
+            Description = "Get a project",
+            OperationId = "Projects_Get",
+            Tags = ["Projects"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(ProjectModel),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(ProjectModel), "application/json"),
     ]
     public override async Task<ActionResult<ProjectModel>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

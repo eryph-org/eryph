@@ -1,101 +1,92 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Eryph.Core
+namespace Eryph.Core;
+
+public class FileSystemService : IFileSystemService
 {
-    public class FileSystemService : IFileSystemService
+    public bool FileExists(string filePath)
     {
+        return File.Exists(filePath);
+    }
 
-        public bool FileExists(string filePath)
-        {
-            return File.Exists(filePath);
-        }
+    public bool DirectoryExists(string path)
+    {
+        return Directory.Exists(path);
+    }
 
-        public bool DirectoryExists(string path)
-        {
-            return Directory.Exists(path);
-        }
+    public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken)
+    {
+        return File.ReadAllTextAsync(path, cancellationToken);
+    }
 
-        public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken)
-        {
-            return File.ReadAllTextAsync(path, cancellationToken);
-        }
+    public Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken)
+    {
+        return File.WriteAllTextAsync(path, text, cancellationToken);
+    }
 
-        public Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken)
-        {
-            return File.WriteAllTextAsync(path, text, cancellationToken);
-        }
+    public void FileDelete(string filePath)
+    {
+        File.Delete(filePath);
+    }
 
-        public void FileDelete(string filePath)
-        {
-            File.Delete(filePath);
-        }
+    public string[] GetFiles(string path, string pattern, SearchOption searchOption)
+    {
+        return !Directory.Exists(path) ? [] : Directory.GetFiles(path, pattern, searchOption);
+    }
 
-        public string[] GetFiles(string path, string pattern, SearchOption searchOption)
-        {
-            return !Directory.Exists(path) ? [] : Directory.GetFiles(path, pattern, searchOption);
-        }
+    public void MoveFile(string path, string newPath)
+    {
+        var directory = Path.GetDirectoryName(newPath);
 
-        public void MoveFile(string path, string newPath)
-        {
+        if (directory != null)
+            Directory.CreateDirectory(directory);
 
-            var directory = Path.GetDirectoryName(newPath);
+        File.Move(path, newPath);
 
-            if(directory!= null)
-                Directory.CreateDirectory(directory);
+        var fi = new FileInfo(path);
+        for (var di = fi.Directory;
+             di?.Parent != null && !di.EnumerateFileSystemInfos().Any();
+             di = di.Parent) di.Delete();
+    }
 
-            File.Move(path, newPath);
+    public long GetFileSize(string filePath)
+    {
+        var fInfo = new FileInfo(filePath);
+        return fInfo.Length;
+    }
 
-            var fi = new FileInfo(path);
-            for (var di = fi.Directory; di?.Parent != null && !di.EnumerateFileSystemInfos().Any(); di = di.Parent)
-            {
-                di.Delete();
-            }
-        }
+    public void EnsureDirectoryExists(string path)
+    {
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path);
+    }
 
-        public long GetFileSize(string filePath)
-        {
+    public void DeleteOldestFiles(string path, string pattern, int filesToKeep)
+    {
+        foreach (var fileInfo in Directory.GetFiles(path, pattern).Select(x => new FileInfo(x))
+                     .OrderByDescending(x => x.LastAccessTime).Skip(filesToKeep)) fileInfo.Delete();
+    }
 
-            var fInfo = new FileInfo(filePath);
-            return fInfo.Length;
-        }
+    public Stream OpenRead(string path)
+    {
+        return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x1000);
+    }
 
-        public void EnsureDirectoryExists(string path)
-        {
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-        }
+    public Stream OpenWrite(string path)
+    {
+        return new FileStream(path, FileMode.Create, FileAccess.Write);
+    }
 
-        public void DeleteOldestFiles(string path, string pattern, int filesToKeep)
-        {
-            foreach (var fileInfo in Directory.GetFiles(path, pattern).Select(x=>new FileInfo(x)).OrderByDescending(x=>x.LastAccessTime).Skip(filesToKeep))
-            {
-                fileInfo.Delete();
-            }
+    public void DeleteDirectory(string directoryPath)
+    {
+        Directory.Delete(directoryPath, true);
+    }
 
-        }
-
-        public Stream OpenRead(string path)
-        {
-            return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x1000);
-        }
-
-        public Stream OpenWrite(string path)
-        {
-            return new FileStream(path, FileMode.Create, FileAccess.Write);
-        }
-
-        public void DeleteDirectory(string directoryPath)
-        {
-            Directory.Delete(directoryPath, true);
-        }
-
-        public void DeleteFile(string path)
-        {
-            File.Delete(path);
-        }
+    public void DeleteFile(string path)
+    {
+        File.Delete(path);
     }
 }

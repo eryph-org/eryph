@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using Dbosoft.Functional.Validations;
 using Eryph.Modules.Identity.Endpoints.V1.Components;
 using Eryph.Modules.Identity.Services;
 using LanguageExt;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Identity;
 
@@ -19,6 +16,10 @@ namespace Eryph.Modules.Identity;
 /// </summary>
 public static class ComponentEnrollmentValidations
 {
+    // A SubjectPublicKeyInfo for RSA-4096 is ~550 bytes (~740 base64 chars); 4 KB is far above any key
+    // we issue against yet bounds the decode/import work an anonymous caller can force with oversized input.
+    private const int MaxPublicKeyBase64Length = 4 * 1024;
+
     /// <summary>Validates a token-based enrollment request (the enroll endpoint).</summary>
     public static Validation<ValidationIssue, EnrollComponentRequest> Validate(EnrollComponentRequest request)
     {
@@ -78,7 +79,8 @@ public static class ComponentEnrollmentValidations
         {
             if (!IsValidPublicKey(request.ServerPublicKey))
                 issues.Add(new ValidationIssue(
-                    "$.server_public_key", "The server public key is not a valid base64-encoded SubjectPublicKeyInfo."));
+                    "$.server_public_key",
+                    "The server public key is not a valid base64-encoded SubjectPublicKeyInfo."));
 
             var names = request.ServerDnsNames ?? [];
             // Bound the count on this anonymous endpoint before validating/issuing each name — a real
@@ -89,11 +91,9 @@ public static class ComponentEnrollmentValidations
                     $"At most {ComponentEnrollmentLimits.MaxServerDnsNames} server DNS names may be requested."));
             else
                 for (var i = 0; i < names.Count; i++)
-                {
                     if (!ComponentEnrollmentService.IsValidDnsName(names[i]))
                         issues.Add(new ValidationIssue(
                             $"$.server_dns_names[{i}]", $"'{names[i]}' is not a valid DNS name."));
-                }
         }
         else if (request.ServerDnsNames is { Count: > 0 })
         {
@@ -110,10 +110,6 @@ public static class ComponentEnrollmentValidations
         issues.Count == 0
             ? Validation<ValidationIssue, EnrollComponentRequest>.Success(request)
             : Validation<ValidationIssue, EnrollComponentRequest>.Fail(issues.ToSeq());
-
-    // A SubjectPublicKeyInfo for RSA-4096 is ~550 bytes (~740 base64 chars); 4 KB is far above any key
-    // we issue against yet bounds the decode/import work an anonymous caller can force with oversized input.
-    private const int MaxPublicKeyBase64Length = 4 * 1024;
 
     // The server-DNS-name count cap (ComponentEnrollmentLimits.MaxServerDnsNames) is shared with the
     // enrollment service so the two cannot drift; a component requests its own FQDN plus a small number

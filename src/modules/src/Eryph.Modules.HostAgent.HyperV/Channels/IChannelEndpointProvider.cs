@@ -27,16 +27,14 @@ public interface IChannelEndpointProvider
 public sealed class ChannelEndpointProvider(ChannelListenerOptions options)
     : IChannelEndpointProvider
 {
-    private readonly ChannelListenerOptions _options = options;
-
     public string BaseUrl
     {
         get
         {
-            var host = string.IsNullOrWhiteSpace(_options.AdvertisedHost)
+            var host = string.IsNullOrWhiteSpace(options.AdvertisedHost)
                 ? ComponentIdentity.GetLocalHostId()
-                : _options.AdvertisedHost;
-            return $"wss://{host}:{_options.Port}";
+                : options.AdvertisedHost;
+            return $"wss://{host}:{options.Port}";
         }
     }
 

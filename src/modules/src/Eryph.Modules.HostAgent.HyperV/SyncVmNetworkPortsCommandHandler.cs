@@ -5,11 +5,11 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using Rebus.Handlers;
 using SimpleInjector;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;

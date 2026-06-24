@@ -1,4 +1,4 @@
-﻿namespace Eryph.VmManagement.TestBase;
+﻿namespace Eryph.VmManagement.HyperV.TestBase;
 
 /// <summary>
 /// Contains constants for status values of Hyper-V WMI classes.

@@ -2,7 +2,6 @@
 using Eryph.Core;
 using Eryph.StateDb.Model;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.CatletManagement;
@@ -48,7 +47,7 @@ public static class CatletConfigGenerator
                 .ToArray(),
             NetworkAdapters = catlet.NetworkAdapters.ToSeq()
                 .Map(BuildNetworkAdapterConfig)
-                .ToArray()
+                .ToArray(),
         };
     }
 
@@ -68,13 +67,13 @@ public static class CatletConfigGenerator
                 .Map(ToMiB)
                 .ToNullable(),
         };
-    
+
     private static Seq<CatletCapabilityConfig> BuildCapabilityConfigs(
         Catlet catlet) =>
         Seq(BuildDynamicMemoryCapabilityConfig(catlet),
-            BuildNestedVirtualizationCapabilityConfig(catlet),
-            BuildSecureBootCapabilityConfig(catlet),
-            BuildTpmCapabilityConfig(catlet))
+                BuildNestedVirtualizationCapabilityConfig(catlet),
+                BuildSecureBootCapabilityConfig(catlet),
+                BuildTpmCapabilityConfig(catlet))
             .Somes();
 
     private static Option<CatletCapabilityConfig> BuildDynamicMemoryCapabilityConfig(
@@ -113,13 +112,13 @@ public static class CatletConfigGenerator
         {
             Name = EryphConstants.Capabilities.Tpm,
         };
-    
+
     private static CatletDriveConfig BuildDriveConfig(
         int position,
         CatletDrive drive) =>
         Optional(drive.AttachedDisk).Filter(d => !d.Deleted).Match(
-            Some: disk => BuildDriveConfig(drive.Type, disk),
-            None: () => new CatletDriveConfig
+            disk => BuildDriveConfig(drive.Type, disk),
+            () => new CatletDriveConfig
             {
                 Type = drive.Type,
                 Name = ToDriveName(position),
@@ -132,7 +131,7 @@ public static class CatletConfigGenerator
         {
             Type = driveType,
             Name = disk.Name,
-            Source =  Optional(disk.Parent)
+            Source = Optional(disk.Parent)
                 .Filter(p => notEmpty(p.GeneSet))
                 .Map(p => $"gene:{p.GeneSet}:{p.GeneName}")
                 .IfNoneUnsafe((string?)null),

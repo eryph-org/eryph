@@ -54,7 +54,7 @@ public sealed class ComponentEnrollmentClient(
         // certificate (mTLS) — the one-time token cannot be reused. A forced refresh of a still-current
         // certificate takes this path too. Otherwise it has no usable certificate and must enroll with
         // the token (blocking, so startup waits for the identity service).
-        await EnrollWithRetryAsync(blocking: !haveValid, renew: haveValid, cancellationToken);
+        await EnrollWithRetryAsync(!haveValid, haveValid, cancellationToken);
     }
 
     private async Task EnrollWithRetryAsync(bool blocking, bool renew, CancellationToken cancellationToken)
@@ -157,11 +157,15 @@ public sealed class ComponentEnrollmentClient(
     //    service may simply not be listening yet).
     private static bool IsNonTransient(Exception ex)
     {
-        if (ex is JsonException)
-            return true;
-        if (ex is HttpRequestException { StatusCode: { } status })
-            return (int)status is >= 400 and < 500
-                && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests);
+        switch (ex)
+        {
+            case JsonException:
+                return true;
+            case HttpRequestException { StatusCode: { } status }:
+                return (int)status is >= 400 and < 500
+                       && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests);
+        }
+
         for (var inner = ex; inner is not null; inner = inner.InnerException)
             if (inner is AuthenticationException)
                 return true;

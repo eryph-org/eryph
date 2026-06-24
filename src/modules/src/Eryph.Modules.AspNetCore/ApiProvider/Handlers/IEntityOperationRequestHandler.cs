@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
-public interface IEntityOperationRequestHandler<TModel> where TModel: class
+public interface IEntityOperationRequestHandler<TModel> where TModel : class
 {
     Task<ActionResult<Operation>> HandleOperationRequest(
         Func<ISingleResultSpecification<TModel>?> specificationFunc,

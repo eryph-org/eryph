@@ -16,14 +16,10 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 public abstract class OperationRequestEndpoint<TRequest, TEntity>(
     IEntityOperationRequestHandler<TEntity> operationHandler,
     ISingleEntitySpecBuilder<TRequest, TEntity> specBuilder)
-    : EndpointBaseAsync
-        .WithRequest<TRequest>
-        .WithActionResult<Operation>
+    : EndpointBaseAsync.WithRequest<TRequest>.WithActionResult<Operation>
     where TEntity : class
     where TRequest : SingleEntityRequest
 {
-    protected abstract object CreateOperationMessage(TEntity model, TRequest request);
-
     /// <summary>
     /// The project access right the caller must hold on the entity. Defaults to
     /// <see cref="AccessRight.Write"/>; endpoints whose operation is authorized by a narrower scope
@@ -31,16 +27,17 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
     /// </summary>
     protected virtual AccessRight RequiredAccessRight => AccessRight.Write;
 
+    protected abstract object CreateOperationMessage(TEntity model, TRequest request);
+
     private ISingleResultSpecification<TEntity>? CreateSpecification(TRequest request)
     {
         return specBuilder.GetSingleEntitySpec(request, RequiredAccessRight);
     }
 
     [SwaggerResponse(
-        statusCode: StatusCodes.Status202Accepted,
-        description: "Success",
-        type: typeof(Operation),
-        contentTypes: ["application/json"])
+            StatusCodes.Status202Accepted,
+            "Success",
+            typeof(Operation), "application/json"),
     ]
 #pragma warning disable S6965
     public override Task<ActionResult<Operation>> HandleAsync(TRequest request,
@@ -58,18 +55,15 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
 [Route("v{version:apiVersion}")]
 public abstract class OperationRequestEndpoint<TEntity>(
     IOperationRequestHandler<TEntity> operationHandler)
-    : EndpointBaseAsync
-        .WithoutRequest
-        .WithActionResult<Operation>
+    : EndpointBaseAsync.WithoutRequest.WithActionResult<Operation>
     where TEntity : class
 {
     protected abstract object CreateOperationMessage();
 
     [SwaggerResponse(
-        statusCode: StatusCodes.Status202Accepted,
-        description: "Success",
-        type: typeof(Operation),
-        contentTypes: ["application/json"])
+            StatusCodes.Status202Accepted,
+            "Success",
+            typeof(Operation), "application/json"),
     ]
 #pragma warning disable S6965
     public override Task<ActionResult<Operation>> HandleAsync(

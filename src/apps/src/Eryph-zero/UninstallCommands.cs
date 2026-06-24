@@ -14,7 +14,6 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Sys.IO;
-
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
 
@@ -94,7 +93,7 @@ internal class UninstallCommands
         let certStore = new WindowsCertificateStoreService()
         from keyPair in Eff(() => Optional(keyStore.GetPersistedRsaKey(keyName)))
         from _2 in keyPair.Match(
-            Some: kp =>
+            kp =>
                 from publicKey in Eff(() => new PublicKey(kp))
                 from _1 in Eff(() =>
                 {
@@ -107,7 +106,7 @@ internal class UninstallCommands
                     return unit;
                 })
                 select unit,
-            None: () => SuccessEff(unit))
+            () => SuccessEff(unit))
         from _3 in Eff(() =>
         {
             keyStore.DeletePersistedKey(keyName);
@@ -126,7 +125,7 @@ internal class UninstallCommands
     private static Aff<DriverCommandsRuntime, Option<Guid>> GetOptionalVmId(string path) =>
         GetVmId(path).Map(Some)
         | @catch(e => from _ in logWarning<UninstallCommands>(e, "Could not get VM ID from metadata '{Path}'.", path)
-                      select Option<Guid>.None);
+            select Option<Guid>.None);
 
     private static Aff<DriverCommandsRuntime, Guid> GetVmId(
         string path) =>
@@ -140,9 +139,9 @@ internal class UninstallCommands
             metadata => from p in Eff(() => metadata.RootElement.GetProperty("vm_id"))
                                   | Eff(() => metadata.RootElement.GetProperty("VMId"))
                                   | @catch(Error.New($"The metadata '{path}' does not contain a VM ID."))
-                        from vmId in Eff(p.GetGuid)
-                                     | @catch(Error.New($"The metadata '{path}' contains an invalid VM ID."))
-                        select vmId)
+                from vmId in Eff(p.GetGuid)
+                             | @catch(Error.New($"The metadata '{path}' contains an invalid VM ID."))
+                select vmId)
         select vmId;
 
     private static Aff<DriverCommandsRuntime, Unit> TryStopAndRemoveVm(Guid vmId) =>
@@ -185,6 +184,6 @@ internal class UninstallCommands
         select unit;
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveStore(string path) =>
-        delete(path, recursive: true) | @catch(e => logWarning<UninstallCommands>(
+        delete(path, true) | @catch(e => logWarning<UninstallCommands>(
             e, "The store '{Path}' could not be removed. If necessary, remove it manually.", path));
 }

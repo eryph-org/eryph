@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
@@ -31,23 +30,21 @@ public class Deploy(
     IStateStoreRepository<CatletSpecification> specificationRepository,
     IStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository,
     IUserRightsProvider userRightsProvider)
-    : EndpointBaseAsync
-        .WithRequest<DeployCatletSpecificationRequest>
-        .WithActionResult<Operation>
+    : EndpointBaseAsync.WithRequest<DeployCatletSpecificationRequest>.WithActionResult<Operation>
 {
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlet_specifications/{specification_id}/versions/{id}/deploy")]
     [SwaggerOperation(
-        Summary = "Deploy a catlet specification",
-        Description = "Deploy a catlet specification",
-        OperationId = "CatletSpecifications_Deploy",
-        Tags = ["Catlet Specifications"])
+            Summary = "Deploy a catlet specification",
+            Description = "Deploy a catlet specification",
+            OperationId = "CatletSpecifications_Deploy",
+            Tags = ["Catlet Specifications"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status202Accepted,
-        description: "Success",
-        type: typeof(Operation),
-        contentTypes: "application/json")]
+        StatusCodes.Status202Accepted,
+        "Success",
+        typeof(Operation),
+        "application/json")]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] DeployCatletSpecificationRequest request,
         CancellationToken cancellationToken = default)
@@ -91,7 +88,8 @@ public class Deploy(
         if (!request.Body.Redeploy.GetValueOrDefault() && catlet is not null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: $"The catlet specification is already deployed as catlet {catlet.Id}. Please remove the catlet before deploying a new version.");
+                detail:
+                $"The catlet specification is already deployed as catlet {catlet.Id}. Please remove the catlet before deploying a new version.");
 
         var catletWithName = await catletRepository.GetBySpecAsync(
             new CatletSpecs.GetByName(specification.Name, specification.ProjectId),
@@ -100,7 +98,8 @@ public class Deploy(
         if (catlet is null && catletWithName is not null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: $"A catlet with the name '{specification.Name}' already exists in the project '{specification.Project.Name}'. Catlet names must be unique within a project.");
+                detail:
+                $"A catlet with the name '{specification.Name}' already exists in the project '{specification.Project.Name}'. Catlet names must be unique within a project.");
 
         return await operationHandler.HandleOperationRequest(
             () => new DeployCatletSpecificationCommand
@@ -121,8 +120,8 @@ public class Deploy(
         DeployCatletSpecificationRequestBody body,
         CatletSpecificationVersion specificationVersion) =>
         from architecture in Optional(body.Architecture).Filter(notEmpty).Match(
-                Some: a => Architecture.NewValidation(a),
-                None: () => Architecture.New(EryphConstants.DefaultArchitecture))
+                Architecture.NewValidation,
+                () => Architecture.New(EryphConstants.DefaultArchitecture))
             .MapFail(e => new ValidationIssue(nameof(DeployCatletSpecificationRequestBody.Architecture), e.Message))
         from variant in specificationVersion.Variants.ToSeq()
             .Find(v => v.Architecture == architecture)

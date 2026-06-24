@@ -2,97 +2,110 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.AppCore;
-using Eryph.Modules.Controller;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
-namespace Eryph.Controller
+namespace Eryph.Controller;
+
+internal class Program
 {
-    internal class Program
+    private static async Task<int> Main(string[] args)
     {
-        private static async Task<int> Main(string[] args)
+        switch (args.Length)
         {
             // Setup command: create the state-database schema in an empty database, then exit. The
             // cluster schema is setup (SQL scripts in production), not a startup migration.
-            if (args.Length > 0 && string.Equals(args[0], CreateDbCommand.Verb, StringComparison.OrdinalIgnoreCase))
+            case > 0 when string.Equals(args[0], CreateDbCommand.Verb, StringComparison.OrdinalIgnoreCase):
                 return await CreateDbCommand.RunAsync(args);
-
             // Operator command: send a decommission request to the running controller (delete the
             // component's broker user + remove its registration), then exit without starting the host.
-            if (args.Length > 0 && string.Equals(args[0], DecommissionCommand.Verb, StringComparison.OrdinalIgnoreCase))
+            case > 0 when string.Equals(args[0], DecommissionCommand.Verb, StringComparison.OrdinalIgnoreCase):
                 return await DecommissionCommand.RunAsync(args);
-
             // Operator command: make a component renew its certificate now, then exit.
-            if (args.Length > 0 && string.Equals(args[0], RenewComponentCommand.Verb, StringComparison.OrdinalIgnoreCase))
+            case > 0 when
+                string.Equals(args[0], RenewComponentCommand.Verb, StringComparison.OrdinalIgnoreCase):
                 return await RenewComponentCommand.RunAsync(args);
+            default:
+                // Use Serilog (like eryph-zero) instead of the host's default logging, which
+                // hits a Microsoft.Extensions.Logging version seam on the .NET 10 runtime.
+                Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Debug()
+                    .Enrich.FromLogContext()
+                    .WriteTo.Console()
+                    .CreateLogger();
 
-            // Use Serilog (like eryph-zero) instead of the host's default logging, which
-            // hits a Microsoft.Extensions.Logging version seam on the .NET 10 runtime.
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
+                try
+                {
+                    var container = new Container();
+                    // Must be set before any registration (and before Hosuto's UseSimpleInjector
+                    // tries to set it), otherwise SimpleInjector throws.
+                    container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                    // Hosuto verifies the container at the proper point in the module lifecycle.
+                    // Auto-verifying on first resolve fires mid-module-config (before cross-wired
+                    // logging is ready) and fails spuriously.
+                    container.Options.EnableAutoVerification = false;
+                    container.Bootstrap();
 
-            try
-            {
-                var container = new Container();
-                // Must be set before any registration (and before Hosuto's UseSimpleInjector
-                // tries to set it), otherwise SimpleInjector throws.
-                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-                // Hosuto verifies the container at the proper point in the module lifecycle.
-                // Auto-verifying on first resolve fires mid-module-config (before cross-wired
-                // logging is ready) and fails spuriously.
-                container.Options.EnableAutoVerification = false;
-                container.Bootstrap();
+                    await ModulesHost.CreateDefaultBuilder(args)
+                        .UseSimpleInjector(container)
+                        .ConfigureAppConfiguration((_, config) =>
+                            config.AddInMemoryCollection(new Dictionary<string, string>
+                            {
+                                // Transport is RabbitMQ (registered configurer); Rebus stores stay
+                                // in-memory for this milestone.
+                                { "store:type", "inmemory" },
+                                { "databus:type", "inmemory" },
 
-                await ModulesHost.CreateDefaultBuilder(args)
-                    .UseSimpleInjector(container)
-                    .ConfigureAppConfiguration((_, config) =>
-                        config.AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                            // Transport is RabbitMQ (registered configurer); Rebus stores stay
-                            // in-memory for this milestone.
-                            { "store:type", "inmemory" },
-                            { "databus:type", "inmemory" },
+                                // Seed the (owned) state DB from the on-disk config under this
+                                // component's config root, mirroring eryph-zero's change-tracking
+                                // setup. Without seedDatabase the network-providers seeder is
+                                // skipped, so the default project's network realization fails to
+                                // find its provider subnet.
+                                { "changeTracking:trackChanges", bool.TrueString },
+                                { "changeTracking:seedDatabase", bool.TrueString },
+                                { "changeTracking:networksConfigPath", AppConfigPaths.GetNetworksConfigPath() },
+                                { "changeTracking:projectsConfigPath", AppConfigPaths.GetProjectsConfigPath() },
+                                {
+                                    "changeTracking:projectNetworksConfigPath",
+                                    AppConfigPaths.GetProjectNetworksConfigPath()
+                                },
+                                {
+                                    "changeTracking:projectNetworkPortsConfigPath",
+                                    AppConfigPaths.GetProjectNetworkPortsConfigPath()
+                                },
+                                { "changeTracking:virtualMachinesConfigPath", AppConfigPaths.GetMetadataConfigPath() },
+                                {
+                                    "changeTracking:catletSpecificationsConfigPath",
+                                    AppConfigPaths.GetCatletSpecificationsConfigPath()
+                                },
+                                {
+                                    "changeTracking:catletSpecificationVersionsConfigPath",
+                                    AppConfigPaths.GetCatletSpecificationVersionsConfigPath()
+                                },
 
-                            // Seed the (owned) state DB from the on-disk config under this
-                            // component's config root, mirroring eryph-zero's change-tracking
-                            // setup. Without seedDatabase the network-providers seeder is
-                            // skipped, so the default project's network realization fails to
-                            // find its provider subnet.
-                            { "changeTracking:trackChanges", bool.TrueString },
-                            { "changeTracking:seedDatabase", bool.TrueString },
-                            { "changeTracking:networksConfigPath", AppConfigPaths.GetNetworksConfigPath() },
-                            { "changeTracking:projectsConfigPath", AppConfigPaths.GetProjectsConfigPath() },
-                            { "changeTracking:projectNetworksConfigPath", AppConfigPaths.GetProjectNetworksConfigPath() },
-                            { "changeTracking:projectNetworkPortsConfigPath", AppConfigPaths.GetProjectNetworkPortsConfigPath() },
-                            { "changeTracking:virtualMachinesConfigPath", AppConfigPaths.GetMetadataConfigPath() },
-                            { "changeTracking:catletSpecificationsConfigPath", AppConfigPaths.GetCatletSpecificationsConfigPath() },
-                            { "changeTracking:catletSpecificationVersionsConfigPath", AppConfigPaths.GetCatletSpecificationVersionsConfigPath() },
+                                // Operator-set deployment endpoints distributed via the Endpoints
+                                // config domain (the override layer). 'identity' is intentionally NOT
+                                // overridden here so it is sourced from what the identity component
+                                // advertises on registration; an operator override would win if set
+                                // (required behind a load balancer for the canonical issuer URL).
+                                { "endpoints:base", "https://localhost:8443/" },
+                                { "endpoints:compute", "https://localhost:8443/compute" },
+                            }))
+                        .AddControllerModule()
+                        .UseSerilog()
+                        .RunConsoleAsync().ConfigureAwait(false);
+                    return 0;
+                }
+                finally
+                {
+                    // Flush any log events buffered by Serilog before the process exits.
+                    await Log.CloseAndFlushAsync();
+                }
 
-                            // Operator-set deployment endpoints distributed via the Endpoints
-                            // config domain (the override layer). 'identity' is intentionally NOT
-                            // overridden here so it is sourced from what the identity component
-                            // advertises on registration; an operator override would win if set
-                            // (required behind a load balancer for the canonical issuer URL).
-                            { "endpoints:base", "https://localhost:8443/" },
-                            { "endpoints:compute", "https://localhost:8443/compute" },
-                        }))
-                    .AddControllerModule()
-                    .UseSerilog()
-                    .RunConsoleAsync().ConfigureAwait(false);
-                return 0;
-            }
-            finally
-            {
-                // Flush any log events buffered by Serilog before the process exits.
-                Log.CloseAndFlush();
-            }
+                break;
         }
     }
 }

@@ -12,6 +12,13 @@ public class ProjectSpecBuilder(IUserRightsProvider userRightsProvider)
     : ISingleEntitySpecBuilder<SingleEntityRequest, Project>,
         IListEntitySpecBuilder<Project>
 {
+    public ISpecification<Project> GetEntitiesSpec()
+    {
+        return new ProjectSpecs.GetAll(
+            userRightsProvider.GetAuthContext(),
+            userRightsProvider.GetProjectRoles(AccessRight.Read));
+    }
+
     public ISingleResultSpecification<Project>? GetSingleEntitySpec(
         SingleEntityRequest request,
         AccessRight accessRight)
@@ -23,12 +30,5 @@ public class ProjectSpecBuilder(IUserRightsProvider userRightsProvider)
             projectId,
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetProjectRoles(accessRight));
-    }
-
-    public ISpecification<Project> GetEntitiesSpec()
-    {
-        return new ProjectSpecs.GetAll(
-            userRightsProvider.GetAuthContext(),
-            userRightsProvider.GetProjectRoles(AccessRight.Read));
     }
 }

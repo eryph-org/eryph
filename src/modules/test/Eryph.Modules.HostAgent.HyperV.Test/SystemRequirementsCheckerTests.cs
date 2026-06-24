@@ -1,5 +1,4 @@
 ﻿using System.Management;
-using Eryph.Modules.HostAgent;
 using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
@@ -16,9 +15,8 @@ using static SystemRequirementsChecker<SystemRequirementsCheckerTests.TestRuntim
 
 public class SystemRequirementsCheckerTests
 {
-    private readonly Mock<WmiIO> _wmiMock = new();
-
     private readonly RT _runtime;
+    private readonly Mock<WmiIO> _wmiMock = new();
 
     public SystemRequirementsCheckerTests()
     {
@@ -28,7 +26,8 @@ public class SystemRequirementsCheckerTests
             _wmiMock.Object));
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public async Task EnsureHyperV_HyperVIsAvailable_ReturnsSuccess(
         bool isService)
     {
@@ -62,7 +61,8 @@ public class SystemRequirementsCheckerTests
         result.Should().BeSuccess();
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public async Task EnsureHyper_FeatureNotInstalled_ReturnsError(
         bool isService)
     {
@@ -114,7 +114,7 @@ public class SystemRequirementsCheckerTests
                 new WmiObject(HashMap(
                     ("DefaultExternalDataRoot", Optional<object>(@"X:\disks")),
                     ("DefaultVirtualHardDiskPath", Optional<object>(@"X:\vms")))
-            ))));
+                ))));
 
         var result = await ensureHyperV(true).Run(_runtime);
 
@@ -149,7 +149,7 @@ public class SystemRequirementsCheckerTests
                 new WmiObject(HashMap(
                     ("DefaultExternalDataRoot", Optional<object>(@"X:\disks")),
                     ("DefaultVirtualHardDiskPath", Optional<object>(@"X:\vms")))
-            ))));
+                ))));
 
         var result = await ensureHyperV(true).Run(_runtime);
 

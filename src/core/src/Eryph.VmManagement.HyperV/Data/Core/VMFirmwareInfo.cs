@@ -1,4 +1,5 @@
 ﻿using System;
+using Eryph.VmManagement.Data.enums;
 
 namespace Eryph.VmManagement.Data.Core;
 

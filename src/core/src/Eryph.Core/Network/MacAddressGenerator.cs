@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
 using Eryph.ConfigModel;
@@ -24,7 +25,7 @@ public static class MacAddressGenerator
     /// </summary>
     public static EryphMacAddress Generate()
     {
-        using var memoryOwner = System.Buffers.MemoryPool<byte>.Shared.Rent(4);
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(4);
         var buffer = memoryOwner.Memory.Span[..4];
         RandomNumberGenerator.Fill(buffer);
         return EryphMacAddress.New($"{Prefix}{Convert.ToHexString(buffer)}");

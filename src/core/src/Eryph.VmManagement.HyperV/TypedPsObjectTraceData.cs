@@ -11,15 +11,14 @@ public class TypedPsObjectTraceData : TraceData
     {
         var data = new Dictionary<string, object>
         {
-            {"sourceType", typedObject.PsObject?.BaseObject?.GetType().FullName},
-            {"mappedType", typeof(T).FullName},
-            {"value", typedObject.Value}
+            { "sourceType", typedObject.PsObject?.BaseObject?.GetType().FullName },
+            { "mappedType", typeof(T).FullName },
+            { "value", typedObject.Value },
         };
 
         return new TypedPsObjectTraceData
         {
-            Data = data
+            Data = data,
         };
-
     }
 }

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
-using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore;
@@ -17,7 +16,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
@@ -31,9 +29,9 @@ public class Create(
     protected override object CreateOperationMessage(NewCatletRequest request)
     {
         var config = CatletConfigJsonSerializer.Deserialize(request.Configuration);
-        
+
         return new CreateCatletCommand
-        { 
+        {
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             TenantId = userRightsProvider.GetUserTenantId(),
             Name = string.IsNullOrWhiteSpace(config.Name) ? EryphConstants.DefaultCatletName : config.Name,
@@ -44,10 +42,10 @@ public class Create(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlets")]
     [SwaggerOperation(
-        Summary = "Create a new catlet",
-        Description = "Create a catlet",
-        OperationId = "Catlets_Create",
-        Tags = ["Catlets"])
+            Summary = "Create a new catlet",
+            Description = "Create a catlet",
+            OperationId = "Catlets_Create",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewCatletRequest request,
@@ -57,17 +55,17 @@ public class Create(
             request.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail: "The catlet configuration is invalid.",
+                "The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(NewCatletRequest.Configuration)));
 
         var config = validation.ToOption().ValueUnsafe();
 
         var tenantId = userRightsProvider.GetUserTenantId();
-            
+
         var projectName = Optional(config.Project).Filter(notEmpty).Match(
-            Some: n => ProjectName.New(n),
-            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
+            n => ProjectName.New(n),
+            () => ProjectName.New(EryphConstants.DefaultProjectName));
 
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)
@@ -85,8 +83,9 @@ public class Create(
         if (existingCatlet != null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: $"A catlet with the name '{catletName}' already exists in the project '{projectName.Value}'. Catlet names must be unique within a project.");
-            
+                detail:
+                $"A catlet with the name '{catletName}' already exists in the project '{projectName.Value}'. Catlet names must be unique within a project.");
+
         return await base.HandleAsync(request, cancellationToken);
     }
 }

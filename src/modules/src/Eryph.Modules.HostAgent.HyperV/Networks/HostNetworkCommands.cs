@@ -8,7 +8,6 @@ using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-
 using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
@@ -67,7 +66,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .AddParameter("Name", EryphConstants.SwitchExtensionName)
         from _ in psEngine.RunAsync(command).ToAff()
         select unit;
-    
+
     public Aff<RT, Seq<HostNetworkAdapter>> GetHostAdapters() =>
         from psEngine in default(RT).Powershell.ToAff()
         let command = PsCommandBuilder.Create()
@@ -175,7 +174,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .SequenceParallel()
         select unit;
 
-    public Aff<RT,Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
+    public Aff<RT, Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
         from psEngine in default(RT).Powershell
         from _ in adapters
             // We resolve the switch by ID so the reconnect succeeds in case
@@ -211,7 +210,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from _ in psEngine.RunAsync(createSwitchWithExtensionCommand).ToAff()
         select unit;
 
-    public Aff<RT,Unit> RemoveOverlaySwitch() =>
+    public Aff<RT, Unit> RemoveOverlaySwitch() =>
         from psEngine in default(RT).Powershell.ToAff()
         let removeSwitchCommand = PsCommandBuilder.Create()
             .AddCommand("Remove-VMSwitch")
@@ -220,7 +219,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from _ in psEngine.RunAsync(removeSwitchCommand).ToAff()
         select unit;
 
-    public Aff<RT,Unit> RemoveNetNat(string natName) =>
+    public Aff<RT, Unit> RemoveNetNat(string natName) =>
         from psEngine in default(RT).Powershell.ToAff()
         let command = PsCommandBuilder.Create()
             .AddCommand("Remove-NetNat")
@@ -238,7 +237,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from _ in psEngine.RunAsync(command).ToAff()
         select unit;
 
-    public Aff<RT,Seq<NetIpAddress>> GetAdapterIpV4Address(string adapterName) =>
+    public Aff<RT, Seq<NetIpAddress>> GetAdapterIpV4Address(string adapterName) =>
         from psEngine in default(RT).Powershell.ToAff()
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-NetIpAddress")

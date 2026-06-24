@@ -6,6 +6,5 @@ namespace Eryph.VmManagement;
 
 public interface IHostInfoProvider
 {
-    EitherAsync<Error, VMHostMachineData> GetHostInfoAsync(bool refresh=false);
-
+    EitherAsync<Error, VMHostMachineData> GetHostInfoAsync(bool refresh = false);
 }

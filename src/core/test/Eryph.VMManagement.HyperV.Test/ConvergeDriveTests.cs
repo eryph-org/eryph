@@ -5,12 +5,12 @@ using Eryph.Core.Genetics;
 using Eryph.Resources.Disks;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using LanguageExt;
 using LanguageExt.Common;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test;
@@ -22,7 +22,7 @@ public class ConvergeDriveTests
     [Theory]
     [InlineData(null, 40, 40)]
     [InlineData(0, 40, 40)]
-    [InlineData(40,30, 40)]
+    [InlineData(40, 30, 40)]
     [InlineData(50, 30, 50)]
     public async Task Converges_existing_disk(int? configSize, int currentSize, int newSize)
     {
@@ -32,17 +32,17 @@ public class ConvergeDriveTests
             {
                 Name = "sda",
                 Store = EryphConstants.DefaultDataStoreName,
-                Size = configSize
-            }
+                Size = configSize,
+            },
         ];
         _fixture.StorageSettings = _fixture.StorageSettings with
         {
             DefaultVhdPath = @"x:\disks\abc",
             StorageIdentifier = "abc",
-            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names,
         };
 
-        var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+        var vmData = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             Id = Guid.NewGuid(),
             HardDrives =
@@ -53,9 +53,9 @@ public class ConvergeDriveTests
                     ControllerLocation = 0,
                     ControllerNumber = 0,
                     ControllerType = ControllerType.SCSI,
-                    Path = @"x:\disks\abc\sda.vhdx"
-                }
-            ]
+                    Path = @"x:\disks\abc\sda.vhdx",
+                },
+            ],
         });
 
         AssertCommand? vhdCommand = null;
@@ -63,11 +63,9 @@ public class ConvergeDriveTests
         _fixture.Engine.RunCallback = command =>
         {
             if (command.ToString().Contains("CheckpointType"))
-            {
                 command.ShouldBeCommand("Set-VM")
                     .ShouldBeParam("VM", vmData.PsObject)
                     .ShouldBeParam("CheckpointType");
-            }
 
             if (command.ToString().Contains("Resize-VHD")) vhdCommand = command;
 
@@ -84,7 +82,7 @@ public class ConvergeDriveTests
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
                     Path = @"x:\disks\abc\sda.vhdx",
-                    Size = currentSize * 1024L * 1024 * 1024
+                    Size = currentSize * 1024L * 1024 * 1024,
                 }));
 
             return Error.New($"Unexpected command: {command}.");
@@ -114,7 +112,7 @@ public class ConvergeDriveTests
         vhdCommand.Should().NotBeNull();
         vhdCommand!.ShouldBeCommand("Resize-VHD")
             .ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx")
-            .ShouldBeParam("SizeBytes", newSize*1024L*1024*1024);
+            .ShouldBeParam("SizeBytes", newSize * 1024L * 1024 * 1024);
     }
 
     [Fact]
@@ -126,17 +124,17 @@ public class ConvergeDriveTests
             {
                 Name = "sda",
                 Store = EryphConstants.DefaultDataStoreName,
-                Size = 150
-            }
+                Size = 150,
+            },
         ];
         _fixture.StorageSettings = _fixture.StorageSettings with
         {
             DefaultVhdPath = @"x:\disks\abc",
             StorageIdentifier = "abc",
-            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names,
         };
 
-        var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+        var vmData = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             Id = Guid.NewGuid(),
             HardDrives =
@@ -147,9 +145,9 @@ public class ConvergeDriveTests
                     ControllerLocation = 0,
                     ControllerNumber = 0,
                     ControllerType = ControllerType.SCSI,
-                    Path = @"x:\disks\abc\sda_B33BA733-5341-4E6A-8801-C0B2F8C3EEAB.avhdx"
-                }
-            ]
+                    Path = @"x:\disks\abc\sda_B33BA733-5341-4E6A-8801-C0B2F8C3EEAB.avhdx",
+                },
+            ],
         });
 
         AssertCommand? vhdCommand = null;
@@ -157,11 +155,9 @@ public class ConvergeDriveTests
         _fixture.Engine.RunCallback = command =>
         {
             if (command.ToString().Contains("CheckpointType"))
-            {
                 command.ShouldBeCommand("Set-VM")
                     .ShouldBeParam("VM", vmData.PsObject)
                     .ShouldBeParam("CheckpointType");
-            }
 
             if (command.ToString().Contains("Resize-VHD")) vhdCommand = command;
 
@@ -178,7 +174,7 @@ public class ConvergeDriveTests
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
                     Path = @"x:\disks\abc\sda.vhdx",
-                    Size = 100 * 1024L * 1024 * 1024
+                    Size = 100 * 1024L * 1024 * 1024,
                 }));
 
             if (commandString.StartsWith(@"Get-VHD [x:\disks\abc\sda_B33BA733-5341-4E6A-8801-C0B2F8C3EEAB.avhdx]"))
@@ -186,7 +182,7 @@ public class ConvergeDriveTests
                 {
                     Path = @"x:\disks\abc\sda_B33BA733-5341-4E6A-8801-C0B2F8C3EEAB.avhdx",
                     ParentPath = @"x:\disks\abc\sda.vhdx",
-                    Size = 100 * 1024L * 1024 * 1024
+                    Size = 100 * 1024L * 1024 * 1024,
                 }));
 
             return Error.New($"Unexpected command: {command}.");
@@ -225,17 +221,17 @@ public class ConvergeDriveTests
                 Type = driveType,
                 Name = "sdb",
                 Store = EryphConstants.DefaultDataStoreName,
-            }
+            },
         ];
         _fixture.StorageSettings = _fixture.StorageSettings with
         {
             DefaultVhdPath = @"x:\disks\abc",
             StorageIdentifier = "abc",
-            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names,
         };
 
 
-        var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+        var vmData = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             Id = Guid.NewGuid(),
             HardDrives =
@@ -257,11 +253,9 @@ public class ConvergeDriveTests
         _fixture.Engine.RunCallback = command =>
         {
             if (command.ToString().Contains("CheckpointType"))
-            {
                 command.ShouldBeCommand("Set-VM")
                     .ShouldBeParam("VM", vmData.PsObject)
                     .ShouldBeParam("CheckpointType");
-            }
 
             if (command.ToString().Contains("New-VHD")) vhdCommand = command;
 
@@ -277,8 +271,8 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
-                    Path = commandString.Contains("sda") ? @"x:\disks\abc\sda.vhdx": $@"x:\disks\abc\sdb{extension}",
-                    Size = 1073741824
+                    Path = commandString.Contains("sda") ? @"x:\disks\abc\sda.vhdx" : $@"x:\disks\abc\sdb{extension}",
+                    Size = 1073741824,
                 }));
 
             if (command.ToString().StartsWith("Add-VMHardDiskDrive"))
@@ -290,7 +284,7 @@ public class ConvergeDriveTests
                     ControllerLocation = 0,
                     ControllerNumber = 0,
                     ControllerType = ControllerType.SCSI,
-                    Path = @"x:\disks\abc\sda.vhdx"
+                    Path = @"x:\disks\abc\sda.vhdx",
                 }));
             }
 
@@ -310,7 +304,7 @@ public class ConvergeDriveTests
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
-        _ = (await convergeTask.Converge(vmData)).IfLeft(l=>l.Throw());
+        _ = (await convergeTask.Converge(vmData)).IfLeft(l => l.Throw());
 
         vhdCommand.Should().NotBeNull();
         vhdCommand!.ShouldBeCommand("New-VHD")
@@ -324,13 +318,9 @@ public class ConvergeDriveTests
             .ShouldBeParam("Path", $@"x:\disks\abc\sdb{extension}");
 
         if (driveType is CatletDriveType.SharedVhd)
-        {
             attachCommand!.ToString().Should().Contain("SupportPersistentReservations");
-        }
         else
-        {
             attachCommand!.ToString().Should().NotContain("SupportPersistentReservations");
-        }
     }
 
     [Theory]
@@ -347,8 +337,8 @@ public class ConvergeDriveTests
             {
                 Name = "sda",
                 Store = EryphConstants.DefaultDataStoreName,
-                Source = "gene:testorg/testset/testtag:sda"
-            }
+                Source = "gene:testorg/testset/testtag:sda",
+            },
         ];
         _fixture.ResolvedGenes =
         [
@@ -362,10 +352,10 @@ public class ConvergeDriveTests
         {
             DefaultVhdPath = @"x:\disks\abc",
             StorageIdentifier = "abc",
-            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names,
         };
 
-        var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+        var vmData = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             Id = Guid.NewGuid(),
         });
@@ -377,11 +367,9 @@ public class ConvergeDriveTests
         _fixture.Engine.RunCallback = command =>
         {
             if (command.ToString().Contains("CheckpointType"))
-            {
                 command.ShouldBeCommand("Set-VM")
                     .ShouldBeParam("VM", vmData.PsObject)
                     .ShouldBeParam("CheckpointType");
-            }
 
             if (command.ToString().Contains("New-VHD")) newVhdCommand = command;
 
@@ -400,7 +388,7 @@ public class ConvergeDriveTests
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
                     Path = @"x:\disks\abc\sda.vhdx",
-                    Size = 1073741824
+                    Size = 1073741824,
                 }));
 
             if (command.ToString().StartsWith("Add-VMHardDiskDrive"))
@@ -412,7 +400,7 @@ public class ConvergeDriveTests
                     ControllerLocation = 0,
                     ControllerNumber = 0,
                     ControllerType = ControllerType.SCSI,
-                    Path = @"x:\disks\abc\sda.vhdx"
+                    Path = @"x:\disks\abc\sda.vhdx",
                 }));
             }
 
@@ -427,7 +415,7 @@ public class ConvergeDriveTests
 
             if (commandString.StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
-            
+
             return Error.New($"unknown command: {command}");
         };
 
@@ -442,8 +430,7 @@ public class ConvergeDriveTests
             .ShouldBeParam("SizeBytes", 1073741824);
 
         setVhdCommand.Should().NotBeNull();
-        setVhdCommand!.ShouldBeCommand("Set-VHD").
-            ShouldBeParam("Path", @"x:\disks\abc\sda_g1.vhdx")
+        setVhdCommand!.ShouldBeCommand("Set-VHD").ShouldBeParam("Path", @"x:\disks\abc\sda_g1.vhdx")
             .ShouldBeFlag("ResetDiskIdentifier")
             .ShouldBeFlag("Force");
 
@@ -491,7 +478,7 @@ public class ConvergeDriveTests
                 Name = "sda",
                 Source = "gene:testorg/testset/testtag:sda",
                 Store = EryphConstants.DefaultDataStoreName,
-            }
+            },
         ];
 
         _fixture.ResolvedGenes =
@@ -506,10 +493,10 @@ public class ConvergeDriveTests
         {
             DefaultVhdPath = @"x:\disks\abc",
             StorageIdentifier = "abc",
-            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names,
         };
 
-        var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+        var vmData = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             Id = Guid.NewGuid(),
         });
@@ -523,11 +510,9 @@ public class ConvergeDriveTests
         _fixture.Engine.RunCallback = command =>
         {
             if (command.ToString().Contains("CheckpointType"))
-            {
                 command.ShouldBeCommand("Set-VM")
                     .ShouldBeParam("VM", vmData.PsObject)
                     .ShouldBeParam("CheckpointType");
-            }
 
             if (command.ToString().Contains("Convert-VHD")) convertVhdCommand = command;
             if (command.ToString().Contains("Set-VHD")) setVhdCommand = command;
@@ -541,12 +526,12 @@ public class ConvergeDriveTests
             var commandString = command.ToString();
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
-            
+
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
-                    Path =  @$"x:\disks\abc\{diskName}",
-                    Size = 1073741824
+                    Path = @$"x:\disks\abc\{diskName}",
+                    Size = 1073741824,
                 }));
 
             if (command.ToString().StartsWith("Add-VMHardDiskDrive"))
@@ -558,7 +543,7 @@ public class ConvergeDriveTests
                     ControllerLocation = 0,
                     ControllerNumber = 0,
                     ControllerType = ControllerType.SCSI,
-                    Path = $@"x:\disks\abc\{diskName}"
+                    Path = $@"x:\disks\abc\{diskName}",
                 }));
             }
 
@@ -587,8 +572,7 @@ public class ConvergeDriveTests
             .ShouldBeArgument(@"x:\disks\abc\sda.vhdx");
 
         setVhdCommand.Should().NotBeNull();
-        setVhdCommand!.ShouldBeCommand("Set-VHD").
-            ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx")
+        setVhdCommand!.ShouldBeCommand("Set-VHD").ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx")
             .ShouldBeFlag("ResetDiskIdentifier")
             .ShouldBeFlag("Force");
 
@@ -607,17 +591,13 @@ public class ConvergeDriveTests
         attachCommand.Should().NotBeNull();
 
         if (driveType == CatletDriveType.SharedVhd)
-        {
             attachCommand!.ShouldBeCommand("Add-VMHardDiskDrive")
                 .ShouldBeParam("VM", vmData.PsObject)
                 .ShouldBeParam("Path", $@"x:\disks\abc\{diskName}")
                 .ShouldBeFlag("SupportPersistentReservations");
-        }
         else
-        {
             attachCommand!.ShouldBeCommand("Add-VMHardDiskDrive")
                 .ShouldBeParam("VM", vmData.PsObject)
                 .ShouldBeParam("Path", $@"x:\disks\abc\{diskName}");
-        }
     }
 }

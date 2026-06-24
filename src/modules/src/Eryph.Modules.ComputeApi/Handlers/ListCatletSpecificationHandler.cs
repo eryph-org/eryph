@@ -8,19 +8,21 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb;
+using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using Microsoft.AspNetCore.Mvc;
 using LanguageExt;
+using Microsoft.AspNetCore.Mvc;
 using CatletSpecification = Eryph.Modules.ComputeApi.Model.V1.CatletSpecification;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
 internal class ListCatletSpecificationHandler(
     IMapper mapper,
-    IReadonlyStateStoreRepository<StateDb.Model.Catlet> catletRepository,
+    IReadonlyStateStoreRepository<Catlet> catletRepository,
     IReadonlyStateStoreRepository<StateDb.Model.CatletSpecification> specificationRepository,
     IUserRightsProvider userRightsProvider)
-    : IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, CatletSpecification, StateDb.Model.CatletSpecification>
+    : IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, CatletSpecification,
+        StateDb.Model.CatletSpecification>
 {
     public async Task<ActionResult<ListResponse<CatletSpecification>>> HandleListRequest(
         ListFilteredByProjectRequest request,

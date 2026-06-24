@@ -2,12 +2,9 @@ using System;
 using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Rebus.Configuration;
-using Eryph.AppCore;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
-using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
-using Eryph.Rebus;
 using Eryph.StateDb.MySql;
 using Medallion.Threading;
 using Medallion.Threading.FileSystem;
@@ -19,92 +16,91 @@ using Rebus.Timeouts;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
-namespace Eryph.Controller
-{
-    /// <summary>
-    /// Hosts the controller module as a standalone runtime, wiring the module-container
-    /// dependencies via Hosuto filters (mirroring eryph-zero's host extensions): the
-    /// MariaDB state store, the RabbitMQ transport, and the (in-memory) Rebus
-    /// saga/timeout stores. The schema is set up out of band (the create-db command /
-    /// SQL scripts), not migrated at startup.
-    /// </summary>
-    internal static class HostControllerModuleExtensions
-    {
-        public static IModulesHostBuilder AddControllerModule(
-            this IModulesHostBuilder builder)
-        {
-            builder.HostModule<ControllerModule>();
-            builder.ConfigureFrameworkServices((_, services) =>
-            {
-                services.AddTransient<IAddSimpleInjectorFilter<ControllerModule>, ControllerModuleFilters>();
-                services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
-            });
+namespace Eryph.Controller;
 
-            return builder;
+/// <summary>
+/// Hosts the controller module as a standalone runtime, wiring the module-container
+/// dependencies via Hosuto filters (mirroring eryph-zero's host extensions): the
+/// MariaDB state store, the RabbitMQ transport, and the (in-memory) Rebus
+/// saga/timeout stores. The schema is set up out of band (the create-db command /
+/// SQL scripts), not migrated at startup.
+/// </summary>
+internal static class HostControllerModuleExtensions
+{
+    public static IModulesHostBuilder AddControllerModule(
+        this IModulesHostBuilder builder)
+    {
+        builder.HostModule<ControllerModule>();
+        builder.ConfigureFrameworkServices((_, services) =>
+        {
+            services.AddTransient<IAddSimpleInjectorFilter<ControllerModule>, ControllerModuleFilters>();
+            services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
+        });
+
+        return builder;
+    }
+
+    private sealed class ControllerModuleFilters
+        : IAddSimpleInjectorFilter<ControllerModule>,
+            IConfigureContainerFilter<ControllerModule>
+    {
+        public Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> Invoke(
+            Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> next)
+        {
+            return (context, options) =>
+            {
+                // The state-database schema is SETUP, not a startup migration: it is created out of
+                // band (the `create-db` command in dev, SQL setup scripts in production) before the
+                // controller runs, so the controller never races its own schema creation against the
+                // bus consuming registration messages.
+                options.RegisterMySqlStateStore();
+
+                // Renew the component certificate before it expires without a restart (the context
+                // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
+                ComponentMtlsTransport.AddRenewal(options);
+
+                // Change tracking (mirroring DB changes back to the on-disk config) is
+                // wired by ControllerModule itself when changeTracking:trackChanges is
+                // set — which Program.cs does — so it must not be added again here.
+
+                next(context, options);
+            };
         }
 
-        private sealed class ControllerModuleFilters
-            : IAddSimpleInjectorFilter<ControllerModule>,
-                IConfigureContainerFilter<ControllerModule>
+        public Action<IModuleContext<ControllerModule>, Container> Invoke(
+            Action<IModuleContext<ControllerModule>, Container> next)
         {
-            public Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> Invoke(
-                Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> next)
+            return (context, container) =>
             {
-                return (context, options) =>
-                {
-                    // The state-database schema is SETUP, not a startup migration: it is created out of
-                    // band (the `create-db` command in dev, SQL setup scripts in production) before the
-                    // controller runs, so the controller never races its own schema creation against the
-                    // bus consuming registration messages.
-                    options.RegisterMySqlStateStore();
+                // The controller module configures and starts its Rebus bus in
+                // ConfigureContainer (invoked by next()), resolving the transport, saga and
+                // timeout configurers during configuration. Register the host-provided bus
+                // primitives, the distributed lock provider and the OVN environment BEFORE
+                // next() so they are available when the module builds the bus.
+                ComponentMtlsTransport.Register(
+                    container,
+                    context.ModulesHostServices.GetRequiredService<IConfiguration>(),
+                    context.ModulesHostServices.GetRequiredService<ILoggerFactory>(),
+                    ComponentType.Controller);
+                container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
+                container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
 
-                    // Renew the component certificate before it expires without a restart (the context
-                    // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
-                    ComponentMtlsTransport.AddRenewal(options);
+                var locksPath = Path.Combine(AppConfigPaths.GetConfigRoot(), "locks");
+                Directory.CreateDirectory(locksPath);
+                container.RegisterInstance<IDistributedLockProvider>(
+                    new FileDistributedSynchronizationProvider(new DirectoryInfo(locksPath)));
 
-                    // Change tracking (mirroring DB changes back to the on-disk config) is
-                    // wired by ControllerModule itself when changeTracking:trackChanges is
-                    // set — which Program.cs does — so it must not be added again here.
+                container.UseOvn();
 
-                    next(context, options);
-                };
-            }
+                // The split runtime manages a real broker, so the controller can delete a
+                // component's RabbitMQ user when it is decommissioned (the revocation cutoff);
+                // eryph-zero appends none and decommission only removes the registration.
+                ComponentBrokerProvisioning.AppendRabbitMq(
+                    container,
+                    context.ModulesHostServices.GetRequiredService<IConfiguration>());
 
-            public Action<IModuleContext<ControllerModule>, Container> Invoke(
-                Action<IModuleContext<ControllerModule>, Container> next)
-            {
-                return (context, container) =>
-                {
-                    // The controller module configures and starts its Rebus bus in
-                    // ConfigureContainer (invoked by next()), resolving the transport, saga and
-                    // timeout configurers during configuration. Register the host-provided bus
-                    // primitives, the distributed lock provider and the OVN environment BEFORE
-                    // next() so they are available when the module builds the bus.
-                    ComponentMtlsTransport.Register(
-                        container,
-                        context.ModulesHostServices.GetRequiredService<IConfiguration>(),
-                        context.ModulesHostServices.GetRequiredService<ILoggerFactory>(),
-                        ComponentType.Controller);
-                    container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
-                    container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
-
-                    var locksPath = Path.Combine(AppConfigPaths.GetConfigRoot(), "locks");
-                    Directory.CreateDirectory(locksPath);
-                    container.RegisterInstance<IDistributedLockProvider>(
-                        new FileDistributedSynchronizationProvider(new DirectoryInfo(locksPath)));
-
-                    container.UseOvn();
-
-                    // The split runtime manages a real broker, so the controller can delete a
-                    // component's RabbitMQ user when it is decommissioned (the revocation cutoff);
-                    // eryph-zero appends none and decommission only removes the registration.
-                    ComponentBrokerProvisioning.AppendRabbitMq(
-                        container,
-                        context.ModulesHostServices.GetRequiredService<IConfiguration>());
-
-                    next(context, container);
-                };
-            }
+                next(context, container);
+            };
         }
     }
 }

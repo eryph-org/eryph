@@ -11,34 +11,24 @@ using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
 
-internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange>
+internal class CatletMetadataChangeHandler(
+    ChangeTrackingConfig config,
+    IFileSystem fileSystem,
+    IStateStore stateStore)
+    : IChangeHandler<CatletMetadataChange>
 {
-    private readonly ChangeTrackingConfig _config;
-    private readonly IFileSystem _fileSystem;
-    private readonly IStateStore _stateStore;
-
-    public CatletMetadataChangeHandler(
-        ChangeTrackingConfig config,
-        IFileSystem fileSystem,
-        IStateStore stateStore)
-    {
-        _config = config;
-        _fileSystem = fileSystem;
-        _stateStore = stateStore;
-    }
-
     public async Task HandleChangeAsync(
         CatletMetadataChange change,
         CancellationToken cancellationToken = default)
     {
         var metadataId = change.MetadataId;
-        var path = Path.Combine(_config.VirtualMachinesConfigPath, $"{metadataId}.json");
+        var path = Path.Combine(config.VirtualMachinesConfigPath, $"{metadataId}.json");
 
-        var metadata = await _stateStore.For<CatletMetadata>()
+        var metadata = await stateStore.For<CatletMetadata>()
             .GetByIdAsync(metadataId, cancellationToken);
         if (metadata is null)
         {
-            _fileSystem.File.Delete(path);
+            fileSystem.File.Delete(path);
             return;
         }
 
@@ -55,6 +45,6 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
         };
 
         var json = CatletMetadataConfigModelJsonSerializer.Serialize(metadataConfig);
-        await _fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
+        await fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
     }
 }

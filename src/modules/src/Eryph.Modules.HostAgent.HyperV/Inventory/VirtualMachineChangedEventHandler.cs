@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -12,11 +9,9 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Inventory;
@@ -71,10 +66,8 @@ internal class VirtualMachineChangedEventHandler(
         var isInventorizable = VmStateUtils.isInventorizable(state, operationalStatus);
 
         if (!isInventorizable)
-        {
             logger.LogInformation("Skipping inventory of VM {VmId} because of its status: {State}, {OperationalStatus}",
                 vmInfo.Value.Id, state, operationalStatus);
-        }
 
         return isInventorizable;
     }

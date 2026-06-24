@@ -12,11 +12,15 @@ using Rebus.Sagas;
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
-internal class OpenSshChannelSaga(IWorkflow workflow,
+internal class OpenSshChannelSaga(
+    IWorkflow workflow,
     ICatletDataService vmDataService) :
     OperationTaskWorkflowSaga<OpenSshChannelCommand, EryphSagaData<OpenSshChannelSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<OpenSshChannelVMCommand>>
 {
+    public Task Handle(OperationTaskStatusEvent<OpenSshChannelVMCommand> message) =>
+        FailOrRun(message, (OpenSshChannelVMCommandResponse response) => Complete(response));
+
     protected override async Task Initiated(OpenSshChannelCommand message)
     {
         var catlet = await vmDataService.Get(message.CatletId);
@@ -40,9 +44,6 @@ internal class OpenSshChannelSaga(IWorkflow workflow,
             AccessKeyValues = message.AccessKeyValues,
         });
     }
-
-    public Task Handle(OperationTaskStatusEvent<OpenSshChannelVMCommand> message) =>
-        FailOrRun(message, (OpenSshChannelVMCommandResponse response) => Complete(response));
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<OpenSshChannelSagaData>> config)
     {

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Management;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LanguageExt;
@@ -33,6 +30,12 @@ internal abstract class WmiWatcherService : IHostedService, IDisposable
         _watcher.EventArrived += OnEventArrived;
     }
 
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _watcher.Start();
@@ -43,12 +46,6 @@ internal abstract class WmiWatcherService : IHostedService, IDisposable
     {
         _watcher.Stop();
         return Task.CompletedTask;
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 
     protected abstract Aff<Option<object>> OnEventArrived(ManagementBaseObject wmiEvent);

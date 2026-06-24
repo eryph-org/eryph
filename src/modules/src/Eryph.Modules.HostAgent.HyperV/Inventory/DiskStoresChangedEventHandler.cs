@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -15,7 +12,6 @@ using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Inventory;
@@ -61,6 +57,6 @@ internal class DiskStoresChangedEventHandler(
         {
             AgentName = Environment.MachineName,
             Timestamp = timestamp,
-            Inventory = diskInfos.Rights().ToList()
+            Inventory = diskInfos.Rights().ToList(),
         };
 }

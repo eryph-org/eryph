@@ -2,7 +2,6 @@
 
 namespace Eryph.Resources.Machines;
 
-
 public sealed class MachineNetworkSettings
 {
     public string AdapterName { get; set; }

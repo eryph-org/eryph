@@ -6,18 +6,13 @@ using LanguageExt.Common;
 
 namespace Eryph.StateDb;
 
-public class RepositoryBaseIO<T> :ReadRepositoryBaseIO<T>, IRepositoryBaseIO<T> where T : class
+public class RepositoryBaseIO<T>(IRepositoryBase<T> innerRepository)
+    : ReadRepositoryBaseIO<T>(innerRepository), IRepositoryBaseIO<T>
+    where T : class
 {
-    private readonly IRepositoryBase<T> _innerRepository;
-
-    public RepositoryBaseIO(IRepositoryBase<T> innerRepository) : base(innerRepository)
-    {
-        _innerRepository = innerRepository;
-    }
-
     public EitherAsync<Error, T> AddAsync(T entity, CancellationToken cancellationToken = default)
     {
-        return Prelude.TryAsync<T>(_innerRepository.AddAsync(entity, cancellationToken))
+        return Prelude.TryAsync(innerRepository.AddAsync(entity, cancellationToken))
             .ToEither();
     }
 
@@ -25,7 +20,7 @@ public class RepositoryBaseIO<T> :ReadRepositoryBaseIO<T>, IRepositoryBaseIO<T> 
     {
         return Prelude.TryAsync(async () =>
             {
-                await _innerRepository.UpdateAsync(entity, cancellationToken).ConfigureAwait(false);
+                await innerRepository.UpdateAsync(entity, cancellationToken).ConfigureAwait(false);
                 return entity;
             })
             .ToEither();
@@ -35,17 +30,18 @@ public class RepositoryBaseIO<T> :ReadRepositoryBaseIO<T>, IRepositoryBaseIO<T> 
     {
         return Prelude.TryAsync(async () =>
             {
-                await _innerRepository.DeleteAsync(entity, cancellationToken).ConfigureAwait(false);
+                await innerRepository.DeleteAsync(entity, cancellationToken).ConfigureAwait(false);
                 return Prelude.unit;
             })
             .ToEither();
     }
 
-    public EitherAsync<Error, Unit> DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Unit> DeleteRangeAsync(IEnumerable<T> entities,
+        CancellationToken cancellationToken = default)
     {
         return Prelude.TryAsync(async () =>
             {
-                await _innerRepository.DeleteRangeAsync(entities, cancellationToken).ConfigureAwait(false);
+                await innerRepository.DeleteRangeAsync(entities, cancellationToken).ConfigureAwait(false);
                 return Prelude.unit;
             })
             .ToEither();
@@ -53,7 +49,7 @@ public class RepositoryBaseIO<T> :ReadRepositoryBaseIO<T>, IRepositoryBaseIO<T> 
 
     public EitherAsync<Error, int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return Prelude.TryAsync(_innerRepository.SaveChangesAsync(cancellationToken))
+        return Prelude.TryAsync(innerRepository.SaveChangesAsync(cancellationToken))
             .ToEither();
     }
 }

@@ -1,24 +1,23 @@
 ﻿using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
-using LanguageExt;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeCpuTests
 {
-    private readonly ConvergeFixture _fixture = new();
     private readonly ConvergeCPU _convergeTask;
+    private readonly ConvergeFixture _fixture = new();
     private AssertCommand? _executedCommand;
 
     public ConvergeCpuTests()
     {
-        _convergeTask = new(_fixture.Context);
+        _convergeTask = new ConvergeCPU(_fixture.Context);
         _fixture.Engine.RunCallback = cmd =>
         {
             _executedCommand = cmd;
@@ -39,7 +38,7 @@ public class ConvergeCpuTests
             State = VirtualMachineState.Off,
             ProcessorCount = vmCpu,
         });
-        
+
         await _convergeTask.Converge(vmData);
 
         if (configCpu.GetValueOrDefault(1) == vmCpu)

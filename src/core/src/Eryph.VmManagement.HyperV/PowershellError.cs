@@ -1,8 +1,6 @@
-﻿using System;
-using System.Management.Automation;
+﻿using System.Management.Automation;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
@@ -86,6 +84,6 @@ public record PowershellError : Error
         {
             "CommandNotFoundException" => PowershellErrorCategory.CommandNotFound,
             "PipelineStopped" => PowershellErrorCategory.PipelineStopped,
-            _ => category.ToPowershellErrorCategory()
+            _ => category.ToPowershellErrorCategory(),
         };
 }

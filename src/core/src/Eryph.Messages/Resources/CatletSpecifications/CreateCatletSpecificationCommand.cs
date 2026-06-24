@@ -18,7 +18,7 @@ public class CreateCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
 
     [MaybeNull] public string Comment { get; set; }
 
-    public Guid CorrelationId { get; set; }
-
     public string GetCommandName() => "Create catlet specification";
+
+    public Guid CorrelationId { get; set; }
 }

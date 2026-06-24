@@ -9,7 +9,7 @@ public enum CatletStatus
     /// The status of the catlet is unknown.
     /// </summary>
     Unknown = 0,
-    
+
     /// <summary>
     /// The catlet is stopped.
     /// </summary>

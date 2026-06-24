@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.AnsiConsole.Sys;
@@ -21,8 +20,8 @@ internal static class DriverCommands
         from hostNetworkCommands in default(DriverCommandsRuntime).HostNetworkCommands
         from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
         let extensionMessage = extensionInfo.Match(
-            Some: ei => $"Hyper-V switch extension found: {ei.Name} {ei.Version}",
-            None: () => "Hyper-V switch extension not found")
+            ei => $"Hyper-V switch extension found: {ei.Name} {ei.Version}",
+            () => "Hyper-V switch extension not found")
         from _1 in writeLine(extensionMessage)
         from isDriverLoaded in isDriverLoaded()
         from _2 in writeLine(isDriverLoaded
@@ -34,11 +33,11 @@ internal static class DriverCommands
             : "Hyper-V switch extension driver service is not running")
         from installedDriverPackages in getInstalledDriverPackages()
         from _4 in write(new Rows([
-                new Text("The following driver packages are installed:"),
-                ..installedDriverPackages.Map(p => new Padder(
-                    new Text($"{p.Driver} - {p.Version} {p.OriginalFileName}"),
-                    new Padding(2, 0, 0 ,0)))
-            ]))
+            new Text("The following driver packages are installed:"),
+            ..installedDriverPackages.Map(p => new Padder(
+                new Text($"{p.Driver} - {p.Version} {p.OriginalFileName}"),
+                new Padding(2, 0, 0, 0))),
+        ]))
         from ovnPackageLogger in default(DriverCommandsRuntime).Logger<OVNPackage>()
         from ovnRunDir in Eff(() => OVNPackage.UnpackAndProvide(ovnPackageLogger))
         let packageInfFile = Path.Combine(ovnRunDir, "driver", "dbo_ovse.inf")
@@ -50,7 +49,7 @@ internal static class DriverCommands
             isDriverPackageTestSigned(
                 packageInfFile)
         from _6 in isDriverPackageTestSigned
-            ? writeLine($"Driver in OVN package is test signed")
+            ? writeLine("Driver in OVN package is test signed")
             : SuccessEff(unit)
         from isDriverTestSigningEnabled in isDriverTestSigningEnabled()
         from _7 in writeLine(
@@ -65,7 +64,7 @@ internal static class DriverCommands
         ILoggerFactory loggerFactory)
     {
         return Run(ensureDriver(
-            ovnRunDir, ovnDataDir, canInstall, canUpgrade),
+                ovnRunDir, ovnDataDir, canInstall, canUpgrade),
             loggerFactory);
     }
 
@@ -78,7 +77,7 @@ internal static class DriverCommands
             loggerFactory.CreateLogger<PowershellEngine>(),
             psEngineLock);
         using var cts = new CancellationTokenSource();
-        var runtime = new DriverCommandsRuntime(new(cts, loggerFactory, psEngine));
+        var runtime = new DriverCommandsRuntime(new DriverCommandsRuntimeEnv(cts, loggerFactory, psEngine));
 
         return await logic.Run(runtime);
     }

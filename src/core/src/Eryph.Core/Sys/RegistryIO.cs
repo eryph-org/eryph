@@ -7,7 +7,8 @@ namespace Eryph.Core.Sys;
 
 public interface RegistryIO
 {
-    [return: MaybeNull] object GetValue(string key, [AllowNull] string valueName);
+    [return: MaybeNull]
+    object GetValue(string key, [AllowNull] string valueName);
 
     public Unit WriteValue(string key, [AllowNull] string valueName, object value);
 }
@@ -26,7 +27,7 @@ public readonly struct LiveRegistryIO : RegistryIO
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException();
-        
+
         Registry.SetValue(key, valueName, value);
         return default;
     }

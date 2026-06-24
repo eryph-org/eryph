@@ -6,6 +6,18 @@ namespace Eryph.Core.Tests.Genetics;
 
 public class CatletBreedingTests
 {
+    public static readonly IEnumerable<string> fodderNames =
+    [
+        "test-fodder",
+        "TEST-FODDER",
+    ];
+
+    public static readonly IEnumerable<string> genesets =
+    [
+        "somegene/utt/123",
+        "SOMEGENE/UTT/123",
+    ];
+
     [Fact]
     public void Naming_and_placement_is_taken_from_child()
     {
@@ -57,8 +69,8 @@ public class CatletBreedingTests
                 new CatletCapabilityConfig
                 {
                     Name = "parent_cap",
-                    Details = ["parent-detail"]
-                }
+                    Details = ["parent-detail"],
+                },
             ],
             Cpu = new CatletCpuConfig { Count = 2 },
             Drives =
@@ -69,16 +81,16 @@ public class CatletBreedingTests
                     Type = CatletDriveType.Vhd,
                     Source = "gene:acme/acme-images/1.0:sda",
                     Store = "parent-lair",
-                    Size = 100
-                }
+                    Size = 100,
+                },
             ],
             Memory = new CatletMemoryConfig { Startup = 2048 },
             NetworkAdapters =
             [
                 new CatletNetworkAdapterConfig
                 {
-                    Name = "eth0"
-                }
+                    Name = "eth0",
+                },
             ],
             Networks =
             [
@@ -89,9 +101,9 @@ public class CatletBreedingTests
                     SubnetV4 = new CatletSubnetConfig
                     {
                         Name = "parent-subnet",
-                        IpPool = "parent-pool"
-                    }
-                }
+                        IpPool = "parent-pool",
+                    },
+                },
             ],
             Fodder =
             [
@@ -99,11 +111,11 @@ public class CatletBreedingTests
                 {
                     Name = "parent-food",
                     Content = "parent food content",
-                }
+                },
             ],
             Variables =
             [
-                new VariableConfig() { Name = "parentVariable" }
+                new VariableConfig { Name = "parentVariable" },
             ],
         };
 
@@ -118,8 +130,8 @@ public class CatletBreedingTests
                 new CatletCapabilityConfig
                 {
                     Name = "child_cap",
-                    Details = ["child-detail"]
-                }
+                    Details = ["child-detail"],
+                },
             ],
             Drives =
             [
@@ -129,23 +141,23 @@ public class CatletBreedingTests
                     Type = CatletDriveType.Vhd,
                     Source = "gene:acme/acme-images/1.0:sdb",
                     Store = "child-lair",
-                    Size = 200
-                }
+                    Size = 200,
+                },
             ],
             NetworkAdapters =
             [
                 new CatletNetworkAdapterConfig
                 {
-                    Name = "eth1"
-                }
+                    Name = "eth1",
+                },
             ],
             Networks =
             [
                 new CatletNetworkConfig
                 {
                     Name = "child-network",
-                    AdapterName = "eth1"
-                }
+                    AdapterName = "eth1",
+                },
             ],
             Fodder =
             [
@@ -153,12 +165,12 @@ public class CatletBreedingTests
                 {
                     Name = "child-food",
                     Content = "child food content",
-                }
+                },
             ],
             Variables =
             [
-                new VariableConfig() { Name = "childVariable" }
-            ]
+                new VariableConfig { Name = "childVariable" },
+            ],
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
@@ -170,7 +182,7 @@ public class CatletBreedingTests
 
         breedChild.Capabilities.Should().SatisfyRespectively(
             capability => capability.Should().BeEquivalentTo(child.Capabilities[0])
-                .And.NotBeSameAs(child.Capabilities[0]), 
+                .And.NotBeSameAs(child.Capabilities[0]),
             capability => capability.Should().BeEquivalentTo(parent.Capabilities[0])
                 .And.NotBeSameAs(parent.Capabilities[0]));
 
@@ -220,9 +232,9 @@ public class CatletBreedingTests
                 new CatletCapabilityConfig
                 {
                     Name = "Cap1",
-                    Details = ["detail"]
-                }
-            ]
+                    Details = ["detail"],
+                },
+            ],
         };
 
         var child = new CatletConfig
@@ -234,16 +246,16 @@ public class CatletBreedingTests
                 new CatletCapabilityConfig
                 {
                     Name = "Cap1",
-                    Details = ["detail2"]
-                }
-            ]
+                    Details = ["detail2"],
+                },
+            ],
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Capabilities.Should().SatisfyRespectively(
-            capability => capability.Details.Should().BeEquivalentTo(["detail2"]));
+        breedChild.Capabilities.Should()
+            .SatisfyRespectively(capability => capability.Details.Should().BeEquivalentTo("detail2"));
     }
 
     [Fact]
@@ -260,7 +272,7 @@ public class CatletBreedingTests
                     Type = CatletDriveType.Vhd,
                     Source = "gene:dbosoft/test/1.0:sda",
                 },
-            ]
+            ],
         };
 
         var child = new CatletConfig
@@ -273,20 +285,19 @@ public class CatletBreedingTests
                 {
                     Name = "sda",
                     Store = "test-store",
-                    Location = "test-location"
+                    Location = "test-location",
                 },
-            ]
+            ],
         };
 
         CatletBreeding.Breed(parent, child).Should().BeRight().Which.Drives
-            .Should().SatisfyRespectively(
-                drive =>
-                {
-                    drive.Type.Should().Be(CatletDriveType.Vhd);
-                    drive.Store.Should().Be("test-store");
-                    drive.Location.Should().Be("test-location");
-                    drive.Source.Should().Be("gene:dbosoft/test/1.0:sda");
-                });
+            .Should().SatisfyRespectively(drive =>
+            {
+                drive.Type.Should().Be(CatletDriveType.Vhd);
+                drive.Store.Should().Be("test-store");
+                drive.Location.Should().Be("test-location");
+                drive.Source.Should().Be("gene:dbosoft/test/1.0:sda");
+            });
     }
 
     [Fact]
@@ -303,7 +314,7 @@ public class CatletBreedingTests
                     Type = CatletDriveType.Vhd,
                     Source = "gene:dbosoft/test/1.0:sda",
                 },
-            ]
+            ],
         };
 
         var child = new CatletConfig
@@ -318,20 +329,19 @@ public class CatletBreedingTests
                     Name = "sda",
                     Type = CatletDriveType.Phd,
                     Store = "test-store",
-                    Location = "test-location"
+                    Location = "test-location",
                 },
-            ]
+            ],
         };
 
         CatletBreeding.Breed(parent, child).Should().BeRight().Which.Drives
-            .Should().SatisfyRespectively(
-                drive =>
-                {
-                    drive.Type.Should().Be(CatletDriveType.Phd);
-                    drive.Store.Should().Be("test-store");
-                    drive.Location.Should().Be("test-location");
-                    drive.Source.Should().BeNull();
-                });
+            .Should().SatisfyRespectively(drive =>
+            {
+                drive.Type.Should().Be(CatletDriveType.Phd);
+                drive.Store.Should().Be("test-store");
+                drive.Location.Should().Be("test-location");
+                drive.Source.Should().BeNull();
+            });
     }
 
     [Fact]
@@ -347,8 +357,8 @@ public class CatletBreedingTests
                     Name = "sda",
                     Type = CatletDriveType.Vhd,
                     Source = "gene:dbosoft/test/1.0:sda",
-                }
-            ]
+                },
+            ],
         };
 
         var child = new CatletConfig
@@ -362,9 +372,9 @@ public class CatletBreedingTests
                     Name = "sda",
                     Type = CatletDriveType.Phd,
                     Store = "test-store",
-                    Location = "test-location"
-                }
-            ]
+                    Location = "test-location",
+                },
+            ],
         };
 
         CatletBreeding.Breed(parent, child).Should().BeLeft().Which.Message
@@ -379,15 +389,15 @@ public class CatletBreedingTests
             Name = "Parent",
             NetworkAdapters =
             [
-                new CatletNetworkAdapterConfig()
+                new CatletNetworkAdapterConfig
                 {
                     Name = "eth0",
                     MacAddress = "addr1",
                     MacAddressSpoofing = false,
                     DhcpGuard = true,
                     RouterGuard = true,
-                }
-            ]
+                },
+            ],
         };
 
         var child = new CatletConfig
@@ -396,29 +406,28 @@ public class CatletBreedingTests
             Parent = "dbosoft/test/1.0",
             NetworkAdapters =
             [
-                new CatletNetworkAdapterConfig()
+                new CatletNetworkAdapterConfig
                 {
                     Name = "eth0",
                     MacAddress = "addr2",
                     MacAddressSpoofing = true,
                     DhcpGuard = false,
                     RouterGuard = false,
-                }
-            ]
+                },
+            ],
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.NetworkAdapters.Should().SatisfyRespectively(
-            adapter =>
-            {
-                adapter.Name.Should().Be("eth0");
-                adapter.MacAddress.Should().Be("addr2");
-                adapter.MacAddressSpoofing.Should().BeTrue();
-                adapter.DhcpGuard.Should().BeFalse();
-                adapter.RouterGuard.Should().BeFalse();
-            });
+        breedChild.NetworkAdapters.Should().SatisfyRespectively(adapter =>
+        {
+            adapter.Name.Should().Be("eth0");
+            adapter.MacAddress.Should().Be("addr2");
+            adapter.MacAddressSpoofing.Should().BeTrue();
+            adapter.DhcpGuard.Should().BeFalse();
+            adapter.RouterGuard.Should().BeFalse();
+        });
     }
 
     [Fact]
@@ -429,22 +438,22 @@ public class CatletBreedingTests
             Name = "Parent",
             Networks =
             [
-                new CatletNetworkConfig()
+                new CatletNetworkConfig
                 {
                     Name = "sda",
                     AdapterName = "eth2",
                     SubnetV4 = new CatletSubnetConfig
                     {
                         Name = "default",
-                        IpPool = "other"
+                        IpPool = "other",
                     },
                     SubnetV6 = new CatletSubnetConfig
                     {
                         Name = "default",
-                        IpPool = "default"
-                    }
-                }
-            ]
+                        IpPool = "default",
+                    },
+                },
+            ],
         };
 
         var child = new CatletConfig
@@ -453,32 +462,31 @@ public class CatletBreedingTests
             Parent = "dbosoft/test/1.0",
             Networks =
             [
-                new CatletNetworkConfig()
+                new CatletNetworkConfig
                 {
                     Name = "sda",
                     AdapterName = "eth1",
                     SubnetV4 = new CatletSubnetConfig
                     {
-                        Name = "none-default"
-                    }
-                }
-            ]
+                        Name = "none-default",
+                    },
+                },
+            ],
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Networks.Should().SatisfyRespectively(
-            network =>
-            {
-                network.AdapterName.Should().Be("eth1");
-                network.SubnetV4.Should().NotBeNull();
-                network.SubnetV4?.Name.Should().Be("none-default");
-                network.SubnetV4?.IpPool.Should().BeNull();
-                network.SubnetV6.Should().NotBeNull();
-                network.SubnetV6?.Name.Should().Be("default");
-                network.SubnetV6?.IpPool.Should().Be("default");
-            });
+        breedChild.Networks.Should().SatisfyRespectively(network =>
+        {
+            network.AdapterName.Should().Be("eth1");
+            network.SubnetV4.Should().NotBeNull();
+            network.SubnetV4?.Name.Should().Be("none-default");
+            network.SubnetV4?.IpPool.Should().BeNull();
+            network.SubnetV6.Should().NotBeNull();
+            network.SubnetV6?.Name.Should().Be("default");
+            network.SubnetV6?.IpPool.Should().Be("default");
+        });
     }
 
     [Fact]
@@ -491,8 +499,8 @@ public class CatletBreedingTests
             {
                 Startup = 2048,
                 Minimum = 1024,
-                Maximum = 9096
-            }
+                Maximum = 9096,
+            },
         };
 
         var child = new CatletConfig
@@ -503,8 +511,8 @@ public class CatletBreedingTests
             {
                 Startup = 2049,
                 Minimum = 1025,
-                Maximum = 9097
-            }
+                Maximum = 9097,
+            },
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
@@ -524,14 +532,14 @@ public class CatletBreedingTests
             Name = "Parent",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "cfg",
                     Type = "type1",
                     Content = "contenta",
-                    Filename = "filenamea"
-                }
-            ]
+                    Filename = "filenamea",
+                },
+            ],
         };
 
         var child = new CatletConfig
@@ -540,26 +548,25 @@ public class CatletBreedingTests
             Parent = "dbosoft/test/1.0",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "cfg",
                     Type = "type2",
                     Content = "contentb",
-                    Filename = "filenameb"
-                }
-            ]
+                    Filename = "filenameb",
+                },
+            ],
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Fodder.Should().SatisfyRespectively(
-            fodder =>
-            {
-                fodder.Type.Should().Be("type2");
-                fodder.Content.Should().Be("contentb");
-                fodder.Filename.Should().Be("filenameb");
-            });
+        breedChild.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Type.Should().Be("type2");
+            fodder.Content.Should().Be("contentb");
+            fodder.Filename.Should().Be("filenameb");
+        });
     }
 
     [Fact]
@@ -570,14 +577,14 @@ public class CatletBreedingTests
             Name = "Parent",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "cfg",
                     Type = "type1",
                     Content = "contenta",
-                    Filename = "filenamea"
-                }
-            ]
+                    Filename = "filenamea",
+                },
+            ],
         };
 
         var child = new CatletConfig
@@ -586,12 +593,12 @@ public class CatletBreedingTests
             Parent = "dbosoft/test/1.0",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "cfg",
-                    Remove = true
-                }
-            ]
+                    Remove = true,
+                },
+            ],
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
@@ -611,7 +618,7 @@ public class CatletBreedingTests
             Name = "Parent",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = fodderName,
                     Source = "gene:somegene/utt/123:gene1",
@@ -625,7 +632,7 @@ public class CatletBreedingTests
             Parent = "dbosoft/test/1.0",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = fodderName,
                     Source = "gene:somegene/utt/123:gene1",
@@ -637,13 +644,12 @@ public class CatletBreedingTests
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Fodder.Should().SatisfyRespectively(
-            fodder =>
-            {
-                fodder.Name.Should().Be(fodderName);
-                fodder.Source.Should().Be("gene:somegene/utt/123:gene1");
-                fodder.Remove.Should().BeTrue();
-            });
+        breedChild.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().Be(fodderName);
+            fodder.Source.Should().Be("gene:somegene/utt/123:gene1");
+            fodder.Remove.Should().BeTrue();
+        });
     }
 
     [Fact]
@@ -654,21 +660,21 @@ public class CatletBreedingTests
             Name = "parent",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "fodder",
                     Content = "parent fodder content",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:somegene/utt/123:gene1",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "fodder",
                     Source = "gene:somegene/utt/123:gene1",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:somegene/utt/123:gene2",
                 },
@@ -681,7 +687,7 @@ public class CatletBreedingTests
             Parent = "dbosoft/test/1.0",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "fodder",
                     Content = "child fodder content",
@@ -694,7 +700,7 @@ public class CatletBreedingTests
                         },
                     ],
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:somegene/utt/123:gene1",
                     Variables =
@@ -706,7 +712,7 @@ public class CatletBreedingTests
                         },
                     ],
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "fodder",
                     Source = "gene:somegene/utt/123:gene1",
@@ -719,7 +725,7 @@ public class CatletBreedingTests
                         },
                     ],
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:somegene/utt/123:gene2",
                     Variables =
@@ -742,45 +748,41 @@ public class CatletBreedingTests
             {
                 fodder.Name.Should().Be("fodder");
                 fodder.Source.Should().BeNull();
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("testVariable");
-                        variable.Value.Should().Be("child fodder value");
-                    });
+                fodder.Variables.Should().SatisfyRespectively(variable =>
+                {
+                    variable.Name.Should().Be("testVariable");
+                    variable.Value.Should().Be("child fodder value");
+                });
             },
             fodder =>
             {
                 fodder.Name.Should().BeNull();
                 fodder.Source.Should().Be("gene:somegene/utt/123:gene1");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("testVariable");
-                        variable.Value.Should().Be("gene 1 child fodder value");
-                    });
+                fodder.Variables.Should().SatisfyRespectively(variable =>
+                {
+                    variable.Name.Should().Be("testVariable");
+                    variable.Value.Should().Be("gene 1 child fodder value");
+                });
             },
             fodder =>
             {
                 fodder.Name.Should().Be("fodder");
                 fodder.Source.Should().Be("gene:somegene/utt/123:gene1");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("testVariable");
-                        variable.Value.Should().Be("gene 1 with name child fodder value");
-                    });
+                fodder.Variables.Should().SatisfyRespectively(variable =>
+                {
+                    variable.Name.Should().Be("testVariable");
+                    variable.Value.Should().Be("gene 1 with name child fodder value");
+                });
             },
             fodder =>
             {
                 fodder.Name.Should().BeNull();
                 fodder.Source.Should().Be("gene:somegene/utt/123:gene2");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("testVariable");
-                        variable.Value.Should().Be("gene 2 child fodder value");
-                    });
+                fodder.Variables.Should().SatisfyRespectively(variable =>
+                {
+                    variable.Name.Should().Be("testVariable");
+                    variable.Value.Should().Be("gene 2 child fodder value");
+                });
             });
     }
 
@@ -797,18 +799,18 @@ public class CatletBreedingTests
                 new CatletCapabilityConfig
                 {
                     Name = "cap1",
-                    Details = ["any"]
+                    Details = ["any"],
                 },
                 new CatletCapabilityConfig
                 {
-                    Name = "cap2"
+                    Name = "cap2",
                 },
                 new CatletCapabilityConfig
                 {
                     Name = "cap3",
-                    Mutation = MutationType.Remove
-                }
-            ]
+                    Mutation = MutationType.Remove,
+                },
+            ],
         };
 
         var child = new CatletConfig
@@ -820,13 +822,13 @@ public class CatletBreedingTests
                 {
                     Name = "cap1",
                     Mutation = type,
-                    Details = ["none"]
+                    Details = ["none"],
                 },
                 new CatletCapabilityConfig
                 {
                     Name = "cap2",
-                }
-            ]
+                },
+            ],
         };
 
         var breedChild = CatletBreeding.Breed(parent, child)
@@ -835,10 +837,7 @@ public class CatletBreedingTests
         breedChild.Capabilities.Should().NotBeNull();
         breedChild.Capabilities.Should().HaveCount(expectedCount);
 
-        if (type == MutationType.Overwrite)
-        {
-            breedChild.Capabilities![0].Details.Should().BeEquivalentTo(["none"]);
-        }
+        if (type == MutationType.Overwrite) breedChild.Capabilities![0].Details.Should().BeEquivalentTo("none");
     }
 
 
@@ -876,15 +875,14 @@ public class CatletBreedingTests
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Variables.Should().SatisfyRespectively(
-            variable =>
-            {
-                variable.Name.Should().Be("catletVariable");
-                variable.Type.Should().BeNull();
-                variable.Value.Should().Be("string value");
-                variable.Required.Should().BeNull();
-                variable.Secret.Should().BeNull();
-            });
+        breedChild.Variables.Should().SatisfyRespectively(variable =>
+        {
+            variable.Name.Should().Be("catletVariable");
+            variable.Type.Should().BeNull();
+            variable.Value.Should().Be("string value");
+            variable.Required.Should().BeNull();
+            variable.Secret.Should().BeNull();
+        });
     }
 
     [Fact]
@@ -937,40 +935,31 @@ public class CatletBreedingTests
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Fodder.Should().SatisfyRespectively(
-            fodder =>
+        breedChild.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Content.Should().Be("child fodder content");
+            fodder.Variables.Should().SatisfyRespectively(variable =>
             {
-                fodder.Content.Should().Be("child fodder content");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("childVariable");
-                        variable.Type.Should().BeNull();
-                        variable.Value.Should().Be("string value");
-                        variable.Required.Should().BeNull();
-                        variable.Secret.Should().BeNull();
-                    });
+                variable.Name.Should().Be("childVariable");
+                variable.Type.Should().BeNull();
+                variable.Value.Should().Be("string value");
+                variable.Required.Should().BeNull();
+                variable.Secret.Should().BeNull();
             });
+        });
     }
 
-    public static readonly IEnumerable<string> fodderNames =
-    [
-        "test-fodder",
-        "TEST-FODDER"
-    ];
-
-    public static readonly IEnumerable<string> genesets =
-    [
-        "somegene/utt/123",
-        "SOMEGENE/UTT/123",
-    ];
-
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Variables_in_fodder_are_replaced_when_source_and_name_are_specified(
-        [CombinatorialMemberData(nameof(fodderNames))] string parentFodderName,
-        [CombinatorialMemberData(nameof(genesets))] string parentGeneset,
-        [CombinatorialMemberData(nameof(fodderNames))] string childFodderName,
-        [CombinatorialMemberData(nameof(genesets))] string childGeneset)
+        [CombinatorialMemberData(nameof(fodderNames))]
+        string parentFodderName,
+        [CombinatorialMemberData(nameof(genesets))]
+        string parentGeneset,
+        [CombinatorialMemberData(nameof(fodderNames))]
+        string childFodderName,
+        [CombinatorialMemberData(nameof(genesets))]
+        string childGeneset)
     {
         var parent = new CatletConfig
         {
@@ -1019,27 +1008,28 @@ public class CatletBreedingTests
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Fodder.Should().SatisfyRespectively(
-            fodder =>
+        breedChild.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().Be(childFodderName);
+            fodder.Source.Should().Be($"gene:{childGeneset}:gene1");
+            fodder.Variables.Should().SatisfyRespectively(variable =>
             {
-                fodder.Name.Should().Be(childFodderName);
-                fodder.Source.Should().Be($"gene:{childGeneset}:gene1");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("childVariable");
-                        variable.Type.Should().BeNull();
-                        variable.Value.Should().Be("string value");
-                        variable.Required.Should().BeNull();
-                        variable.Secret.Should().BeNull();
-                    });
+                variable.Name.Should().Be("childVariable");
+                variable.Type.Should().BeNull();
+                variable.Value.Should().Be("string value");
+                variable.Required.Should().BeNull();
+                variable.Secret.Should().BeNull();
             });
+        });
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Variables_in_fodder_are_replaced_when_source_is_specified(
-    [CombinatorialMemberData(nameof(genesets))] string parentGeneset,
-    [CombinatorialMemberData(nameof(genesets))] string childGeneset)
+        [CombinatorialMemberData(nameof(genesets))]
+        string parentGeneset,
+        [CombinatorialMemberData(nameof(genesets))]
+        string childGeneset)
     {
         var parent = new CatletConfig
         {
@@ -1086,21 +1076,19 @@ public class CatletBreedingTests
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Fodder.Should().SatisfyRespectively(
-            fodder =>
+        breedChild.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().BeNull();
+            fodder.Source.Should().Be($"gene:{childGeneset}:gene1");
+            fodder.Variables.Should().SatisfyRespectively(variable =>
             {
-                fodder.Name.Should().BeNull();
-                fodder.Source.Should().Be($"gene:{childGeneset}:gene1");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("childVariable");
-                        variable.Type.Should().BeNull();
-                        variable.Value.Should().Be("string value");
-                        variable.Required.Should().BeNull();
-                        variable.Secret.Should().BeNull();
-                    });
+                variable.Name.Should().Be("childVariable");
+                variable.Type.Should().BeNull();
+                variable.Value.Should().Be("string value");
+                variable.Required.Should().BeNull();
+                variable.Secret.Should().BeNull();
             });
+        });
     }
 
     [Fact]
@@ -1152,19 +1140,17 @@ public class CatletBreedingTests
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
 
-        breedChild.Fodder.Should().SatisfyRespectively(
-            fodder =>
+        breedChild.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Content.Should().Be("parent fodder content");
+            fodder.Variables.Should().SatisfyRespectively(variable =>
             {
-                fodder.Content.Should().Be("parent fodder content");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("parentVariable");
-                        variable.Type.Should().Be(VariableType.Number);
-                        variable.Value.Should().Be("4.2");
-                        variable.Required.Should().BeTrue();
-                        variable.Secret.Should().BeTrue();
-                    });
+                variable.Name.Should().Be("parentVariable");
+                variable.Type.Should().Be(VariableType.Number);
+                variable.Value.Should().Be("4.2");
+                variable.Required.Should().BeTrue();
+                variable.Secret.Should().BeTrue();
             });
+        });
     }
 }

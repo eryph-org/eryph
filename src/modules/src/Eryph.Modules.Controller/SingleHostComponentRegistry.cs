@@ -1,7 +1,6 @@
 using System;
 using Eryph.Core;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller;

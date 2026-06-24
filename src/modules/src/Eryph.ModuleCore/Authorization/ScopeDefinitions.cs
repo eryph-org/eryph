@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Eryph.Core;
 
 namespace Eryph.ModuleCore.Authorization;
@@ -34,5 +33,4 @@ public static class ScopeDefinitions
         EryphConstants.Authorization.Scopes.IdentityClientsRead,
         EryphConstants.Authorization.Scopes.IdentityClientsWrite,
     ];
-
 }

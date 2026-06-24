@@ -5,9 +5,9 @@ using LanguageExt.Effects.Traits;
 namespace Eryph.Modules.HostAgent.Networks;
 
 public record NetworkChangeOperation<RT>(
-    NetworkChangeOperation Operation, 
+    NetworkChangeOperation Operation,
     Func<Aff<RT, Unit>> Change,
-    Func<Seq<NetworkChangeOperation>,bool>? CanRollBack,
+    Func<Seq<NetworkChangeOperation>, bool>? CanRollBack,
     Func<Aff<RT, Unit>>? Rollback,
     bool Force,
     params object[] Args)
@@ -20,7 +20,6 @@ public record NetworkChangeOperation<RT>(
             try
             {
                 return string.Format(NetworkChangeOperationNames.Instance[Operation], Args);
-
             }
             catch (Exception)
             {
@@ -61,5 +60,5 @@ public enum NetworkChangeOperation
     UpdateBridgeMapping,
 
     EnableSwitchExtension,
-    DisableSwitchExtension
+    DisableSwitchExtension,
 }

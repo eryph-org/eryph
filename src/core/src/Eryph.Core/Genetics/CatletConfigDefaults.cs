@@ -2,7 +2,6 @@
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;

@@ -1,14 +1,10 @@
 ﻿using System.Linq;
 using System.Net;
-using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -43,7 +39,7 @@ internal class ProviderIpManager(
             .SequenceSerial()
         from newAssignment in validPoolAssignments.IsEmpty
             ? from assignment in CreateAssignment(port, providerName, subnetName, poolName)
-              select Some(assignment)
+            select Some(assignment)
             : RightAsync<Error, Option<IpPoolAssignment>>(None)
         select validPoolAssignments.Append(newAssignment).Append(validDirectAssignments)
             .Map(a => IPAddress.Parse(a.IpAddress!))

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
@@ -122,7 +121,7 @@ public class SynchronousCommitChangeTrackingTests
             {
                 context.RedeemedEnrollmentTokens.Remove(first);
                 await context.SaveChangesAsync();
-                transaction.Commit();
+                await transaction.CommitAsync();
             }
 
             var second = await context.RedeemedEnrollmentTokens.SingleAsync(t => t.Jti == "jti-2");
@@ -130,7 +129,7 @@ public class SynchronousCommitChangeTrackingTests
             {
                 context.RedeemedEnrollmentTokens.Remove(second);
                 await context.SaveChangesAsync();
-                transaction.Commit();
+                await transaction.CommitAsync();
             }
         }
 

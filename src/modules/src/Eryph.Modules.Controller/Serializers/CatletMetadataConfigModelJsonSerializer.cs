@@ -17,7 +17,7 @@ internal static class CatletMetadataConfigModelJsonSerializer
             Converters =
             {
                 new JsonStringEnumConverter(),
-                new NewTypeJsonConverter()
+                new NewTypeJsonConverter(),
             },
             WriteIndented = true,
         });
@@ -27,10 +27,7 @@ internal static class CatletMetadataConfigModelJsonSerializer
         if (!document.RootElement.TryGetProperty("version", out var property))
             return 1;
 
-        if (!property.TryGetInt32(out var version))
-            throw new JsonException("The Version property must be a number.");
-        
-        return version;
+        return !property.TryGetInt32(out var version) ? throw new JsonException("The Version property must be a number.") : version;
     }
 
     public static CatletMetadataConfigModel Deserialize(JsonDocument document) =>

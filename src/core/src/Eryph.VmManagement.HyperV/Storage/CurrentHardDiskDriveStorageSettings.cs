@@ -3,7 +3,6 @@ using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Storage;
@@ -56,6 +55,6 @@ public class CurrentHardDiskDriveStorageSettings : HardDiskDriveStorageSettings
             AttachedVMId = hdInfo.Id,
             ControllerNumber = hdInfo.ControllerNumber,
             ControllerLocation = hdInfo.ControllerLocation,
-            DiskSettings = diskSettings.IfNoneUnsafe((DiskStorageSettings)null)
+            DiskSettings = diskSettings.IfNoneUnsafe((DiskStorageSettings)null),
         };
 }

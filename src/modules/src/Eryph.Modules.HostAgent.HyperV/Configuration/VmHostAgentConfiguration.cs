@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Core.VmAgent;
+using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Sys.IO;
-using LanguageExt;
 using LanguageExt.Sys.Traits;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Configuration;
@@ -33,11 +30,11 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         from fileExists in File<RT>.exists(configPath)
         from config in fileExists
             ? from yaml in File<RT>.readAllText(configPath)
-              from config in parseConfigYaml(yaml, false)
-              select config
+            from config in parseConfigYaml(yaml, false)
+            select config
             : from config in SuccessEff(new VmHostAgentConfiguration())
-              from _ in saveConfig(config, configPath, hostSettings)
-              select config
+            from _ in saveConfig(config, configPath, hostSettings)
+            select config
         select applyHostDefaults(config, hostSettings);
 
     public static Aff<RT, Unit> saveConfig(
@@ -64,10 +61,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
                 .WithCaseInsensitivePropertyMatching()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance);
 
-            if (!strict)
-            {
-                builder = builder.IgnoreUnmatchedProperties();
-            }
+            if (!strict) builder = builder.IgnoreUnmatchedProperties();
 
             var yamlDeserializer = builder.Build();
 
@@ -101,7 +95,6 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         {
             Vms = normalizePath(config?.Vms),
             Volumes = normalizePath(config?.Volumes),
-
         };
 
     private static VmHostAgentDataStoreConfiguration normalizePaths(
@@ -131,15 +124,17 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         new()
         {
             Vms = string.Equals(
-                    Path.TrimEndingDirectorySeparator(hostSettings.DefaultDataPath),
-                    defaults.Vms,
-                    StringComparison.OrdinalIgnoreCase)
-                ? null : defaults.Vms,
+                Path.TrimEndingDirectorySeparator(hostSettings.DefaultDataPath),
+                defaults.Vms,
+                StringComparison.OrdinalIgnoreCase)
+                ? null
+                : defaults.Vms,
             Volumes = string.Equals(
-                    Path.TrimEndingDirectorySeparator(hostSettings.DefaultVirtualHardDiskPath),
-                    defaults.Volumes,
-                    StringComparison.OrdinalIgnoreCase)
-                ? null : defaults.Volumes,
+                Path.TrimEndingDirectorySeparator(hostSettings.DefaultVirtualHardDiskPath),
+                defaults.Volumes,
+                StringComparison.OrdinalIgnoreCase)
+                ? null
+                : defaults.Volumes,
         };
 
     private static VmHostAgentConfiguration applyHostDefaults(

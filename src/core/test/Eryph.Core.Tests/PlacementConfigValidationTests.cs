@@ -1,7 +1,4 @@
-using Eryph.Core;
 using Eryph.Core.VmAgent;
-using FluentAssertions;
-using Xunit;
 
 namespace Eryph.Core.Tests;
 
@@ -18,7 +15,7 @@ public class PlacementConfigValidationTests
 
     [Theory]
     [InlineData("fast", true)]
-    [InlineData("FAST", true)]   // case-insensitive
+    [InlineData("FAST", true)] // case-insensitive
     [InlineData("slow", false)]
     public void Datastore_is_allowed_only_when_in_the_distributed_vocabulary(string name, bool expected)
     {
@@ -45,8 +42,8 @@ public class PlacementConfigValidationTests
         {
             Datastores =
             [
-                new VmHostAgentDataStoreConfiguration { Name = "fast", Path = @"D:\fast" },   // distributed → used
-                new VmHostAgentDataStoreConfiguration { Name = "slow", Path = @"D:\slow" },   // not distributed → unused
+                new VmHostAgentDataStoreConfiguration { Name = "fast", Path = @"D:\fast" }, // distributed → used
+                new VmHostAgentDataStoreConfiguration { Name = "slow", Path = @"D:\slow" }, // not distributed → unused
             ],
         };
 
@@ -63,7 +60,7 @@ public class PlacementConfigValidationTests
             Environments =
             [
                 new VmHostAgentEnvironmentConfiguration { Name = "staging" }, // distributed → used
-                new VmHostAgentEnvironmentConfiguration { Name = "prod" },    // not distributed → unused
+                new VmHostAgentEnvironmentConfiguration { Name = "prod" }, // not distributed → unused
             ],
         };
 

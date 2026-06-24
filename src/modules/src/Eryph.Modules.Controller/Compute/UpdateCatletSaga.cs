@@ -21,7 +21,6 @@ using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -35,6 +34,39 @@ internal class UpdateCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DeployCatletCommand>>
 {
+    public Task Handle(OperationTaskStatusEvent<DeployCatletCommand> message)
+    {
+        if (Data.Data.State >= UpdateCatletSagaState.Deployed)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, () =>
+        {
+            Data.Data.State = UpdateCatletSagaState.Deployed;
+            return Complete();
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<ValidateCatletDeploymentCommand> message)
+    {
+        if (Data.Data.State >= UpdateCatletSagaState.DeploymentValidated)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async () =>
+        {
+            Data.Data.State = UpdateCatletSagaState.DeploymentValidated;
+
+            await StartNewTask(new DeployCatletCommand
+            {
+                ProjectId = Data.Data.ProjectId,
+                CatletId = Data.Data.CatletId,
+                AgentName = Data.Data.AgentName,
+                Architecture = Data.Data.Architecture,
+                Config = Data.Data.Config,
+                ResolvedGenes = Data.Data.ResolvedGenes,
+            });
+        });
+    }
+
     protected override async Task Initiated(UpdateCatletCommand message)
     {
         Data.Data.State = UpdateCatletSagaState.Initiated;
@@ -60,13 +92,15 @@ internal class UpdateCatletSaga(
         var metadata = await metadataService.GetMetadata(catlet.MetadataId);
         if (metadata is null)
         {
-            await Fail($"Catlet cannot be updated because the metadata for catlet {Data.Data.CatletId} does not exist.");
+            await Fail(
+                $"Catlet cannot be updated because the metadata for catlet {Data.Data.CatletId} does not exist.");
             return;
         }
 
         if (metadata.IsDeprecated || metadata.Metadata is null)
         {
-            await Fail($"Catlet cannot be updated because the catlet {Data.Data.CatletId} has been created with an old version of eryph.");
+            await Fail(
+                $"Catlet cannot be updated because the catlet {Data.Data.CatletId} has been created with an old version of eryph.");
             return;
         }
 
@@ -95,39 +129,6 @@ internal class UpdateCatletSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<ValidateCatletDeploymentCommand> message)
-    {
-        if (Data.Data.State >= UpdateCatletSagaState.DeploymentValidated)
-            return Task.CompletedTask;
-
-        return FailOrRun(message, async () =>
-        {
-            Data.Data.State = UpdateCatletSagaState.DeploymentValidated;
-
-            await StartNewTask(new DeployCatletCommand
-            {
-                ProjectId = Data.Data.ProjectId,
-                CatletId = Data.Data.CatletId,
-                AgentName = Data.Data.AgentName,
-                Architecture = Data.Data.Architecture,
-                Config = Data.Data.Config,
-                ResolvedGenes = Data.Data.ResolvedGenes,
-            });
-        });
-    }
-
-    public Task Handle(OperationTaskStatusEvent<DeployCatletCommand> message)
-    {
-        if (Data.Data.State >= UpdateCatletSagaState.Deployed)
-            return Task.CompletedTask;
-
-        return FailOrRun(message, () =>
-        {
-            Data.Data.State = UpdateCatletSagaState.Deployed;
-            return Complete();
-        });
-    }
-
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<UpdateCatletSagaData>> config)
     {
         base.CorrelateMessages(config);
@@ -138,7 +139,7 @@ internal class UpdateCatletSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
-    private Either<Error, CatletConfig> PrepareConfig(
+    private static Either<Error, CatletConfig> PrepareConfig(
         CatletConfig updateConfig,
         CatletConfig originalConfig,
         Catlet catlet,

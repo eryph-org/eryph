@@ -1,5 +1,30 @@
-﻿[*.cs]
+root = true
+
+[*]
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
 
 # CA1063: Implement IDisposable Correctly
 dotnet_diagnostic.CA1063.severity = warning
 dotnet_diagnostic.CA2213.severity = warning
+
+# File-scoped namespaces (ReSharper default; already the prevailing style)
+csharp_style_namespace_declarations = file_scoped:warning
+
+# Modern syntax styles applied by the cleanup
+dotnet_style_prefer_collection_expression = true:suggestion
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+resharper_csharp_trailing_comma_in_multiline_lists = true
+csharp_style_prefer_primary_constructors = true:suggestion
+
+# Expression-bodied members are preserved as written, not rewritten either way
+csharp_style_expression_bodied_methods = true:silent
+csharp_style_expression_bodied_constructors = true:silent
+csharp_style_expression_bodied_operators = true:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_accessors = true:silent
+csharp_style_expression_bodied_lambdas = true:silent
+csharp_style_expression_bodied_local_functions = true:silent

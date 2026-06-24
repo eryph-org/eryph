@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+﻿using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -15,7 +11,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
@@ -37,11 +32,11 @@ internal class CreateVirtualDiskVMCommandHandler(
         from _placement in ValidatePlacement(command.DataStore.Value, command.Environment.Value)
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let storageNames = new StorageNames()
+        let storageNames = new StorageNames
         {
             ProjectName = command.ProjectName.Value,
             DataStoreName = command.DataStore.Value,
-            EnvironmentName = command.Environment.Value
+            EnvironmentName = command.Environment.Value,
         }
         from basePath in storageNames.ResolveVolumeStorageBasePath(vmHostAgentConfig)
         let fileName = $"{command.Name.Value}.vhdx"

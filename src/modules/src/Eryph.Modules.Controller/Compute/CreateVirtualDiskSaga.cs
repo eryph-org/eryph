@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.Core;
-using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Disks;
 using Eryph.ModuleCore;
-using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Inventory;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -34,30 +29,6 @@ internal class CreateVirtualDiskSaga(
     : OperationTaskWorkflowSaga<CreateVirtualDiskCommand, EryphSagaData<CreateVirtualDiskSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateVirtualDiskVMCommand>>
 {
-    protected override async Task Initiated(CreateVirtualDiskCommand message)
-    {
-        Data.Data.DiskId = Guid.NewGuid();
-        Data.Data.ProjectId = message.ProjectId;
-
-        var project = await stateStore.For<Project>().GetByIdAsync(Data.Data.ProjectId);
-        if (project is null)
-        {
-            await Fail($"The project {Data.Data.ProjectId} does not exist");
-            return;
-        }
-
-        var result = CreateAgentCommand(message, project);
-        if (result.IsLeft)
-        {
-            await Fail(Error.Many(result.LeftToSeq()).Print());
-            return;
-        }
-
-        var agentCommand = result.ValueUnsafe();
-        Data.Data.AgentName = agentCommand.AgentName;
-        await StartNewTask(agentCommand);
-    }
-
     public Task Handle(OperationTaskStatusEvent<CreateVirtualDiskVMCommand> message)
     {
         return FailOrRun(message, async (CreateVirtualDiskVMCommandResponse response) =>
@@ -83,6 +54,30 @@ internal class CreateVirtualDiskSaga(
         });
     }
 
+    protected override async Task Initiated(CreateVirtualDiskCommand message)
+    {
+        Data.Data.DiskId = Guid.NewGuid();
+        Data.Data.ProjectId = message.ProjectId;
+
+        var project = await stateStore.For<Project>().GetByIdAsync(Data.Data.ProjectId);
+        if (project is null)
+        {
+            await Fail($"The project {Data.Data.ProjectId} does not exist");
+            return;
+        }
+
+        var result = CreateAgentCommand(message, project);
+        if (result.IsLeft)
+        {
+            await Fail(Error.Many(result.LeftToSeq()).Print());
+            return;
+        }
+
+        var agentCommand = result.ValueUnsafe();
+        Data.Data.AgentName = agentCommand.AgentName;
+        await StartNewTask(agentCommand);
+    }
+
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<CreateVirtualDiskSagaData>> config)
     {
         base.CorrelateMessages(config);
@@ -99,13 +94,13 @@ internal class CreateVirtualDiskSaga(
         from dataStoreName in Optional(command.DataStore)
             .Filter(notEmpty)
             .Match(
-                Some: DataStoreName.NewEither,
-                None: () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
+                DataStoreName.NewEither,
+                () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
         from environmentName in Optional(command.Environment)
             .Filter(notEmpty)
             .Match(
-                Some: EnvironmentName.NewEither,
-                None: () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
+                EnvironmentName.NewEither,
+                () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
         let projectName = ProjectName.New(project.Name)
         let agentName = agentLocator.FindAgentForDataStore(
             dataStoreName.Value, environmentName.Value)

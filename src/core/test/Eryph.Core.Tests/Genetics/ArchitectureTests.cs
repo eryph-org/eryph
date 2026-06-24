@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.Genetics;
+﻿using Eryph.Core.Genetics;
 
 namespace Eryph.Core.Tests.Genetics;
 
@@ -51,7 +46,6 @@ public class ArchitectureTests
     {
         var result = Architecture.NewValidation(architecture);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            error => error.Message.Should().Be(expected));
+        result.Should().BeFail().Which.Should().SatisfyRespectively(error => error.Message.Should().Be(expected));
     }
 }

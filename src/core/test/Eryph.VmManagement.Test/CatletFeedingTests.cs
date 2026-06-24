@@ -9,7 +9,6 @@ using FluentAssertions.LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Test;
@@ -18,7 +17,8 @@ public class CatletFeedingTests
 {
     private readonly MockGenePoolReader _genepoolReaderMock = new();
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Feed_AllFoodShouldBeEaten_EatsAllFood(
         [CombinatorialValues(null, "gene:acme/acme-os/1.0:catlet")]
         string? catletSource,
@@ -30,11 +30,11 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "catlet-food",
                     Content = "catlet food content",
@@ -68,7 +68,8 @@ public class CatletFeedingTests
             });
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Feed_SomeFoodShouldBeEaten_EatsOnlySpecificFood(
         [CombinatorialValues(null, "gene:acme/acme-os/1.0:catlet")]
         string? catletSource,
@@ -80,12 +81,12 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "food1",
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "catlet-food",
                     Content = "catlet food content",
@@ -113,10 +114,10 @@ public class CatletFeedingTests
             });
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Feed_FoodShouldNotBeEaten_DoesNotEatFood(
-        [CombinatorialValues(null, "food1")]
-        string? foodName,
+        [CombinatorialValues(null, "food1")] string? foodName,
         [CombinatorialValues(null, "gene:acme/acme-os/1.0:catlet")]
         string? catletSource,
         [CombinatorialValues("any", "hyperv/any", "hyperv/amd64")]
@@ -127,18 +128,18 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = foodName,
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "catlet-food",
                     Content = "catlet food content",
                     Source = catletSource,
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Remove = true,
@@ -150,19 +151,18 @@ public class CatletFeedingTests
 
         var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
 
-        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
-            fodder =>
-            {
-                fodder.Name.Should().Be("catlet-food");
-                fodder.Content.Should().Be("catlet food content");
-                fodder.Source.Should().Be(catletSource);
-            });
+        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().Be("catlet-food");
+            fodder.Content.Should().Be("catlet food content");
+            fodder.Source.Should().Be(catletSource);
+        });
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Feed_SomeFoodShouldNotBeEaten_EatsRemainingFood(
-        [CombinatorialValues(null, "food2")]
-        string? foodName,
+        [CombinatorialValues(null, "food2")] string? foodName,
         [CombinatorialValues(null, "gene:acme/acme-os/1.0:catlet")]
         string? catletSource,
         [CombinatorialValues("any", "hyperv/any", "hyperv/amd64")]
@@ -173,18 +173,18 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = foodName,
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "catlet-food",
                     Content = "catlet food content",
                     Source = catletSource,
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "food1",
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
@@ -212,7 +212,8 @@ public class CatletFeedingTests
             });
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Feed_FoodExistsMultipleTimes_FoodIsMerged(
         [CombinatorialValues("any", "hyperv/any", "hyperv/amd64")]
         string architecture)
@@ -222,25 +223,25 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
-                    Variables = 
+                    Variables =
                     [
-                        new VariableConfig()
+                        new VariableConfig
                         {
                             Name = "geneVariable",
                             Value = "first value",
                         },
                     ],
                 },
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "food1",
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Variables =
                     [
-                        new VariableConfig()
+                        new VariableConfig
                         {
                             Name = "geneVariable",
                             Value = "second value",
@@ -259,24 +260,22 @@ public class CatletFeedingTests
                 fodder.Name.Should().Be("food1");
                 fodder.Content.Should().Be("food 1 content");
                 fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("geneVariable");
-                        variable.Value.Should().Be("second value");
-                    });
+                fodder.Variables.Should().SatisfyRespectively(variable =>
+                {
+                    variable.Name.Should().Be("geneVariable");
+                    variable.Value.Should().Be("second value");
+                });
             },
             fodder =>
             {
                 fodder.Name.Should().Be("food2");
                 fodder.Content.Should().Be("food 2 content");
                 fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("geneVariable");
-                        variable.Value.Should().Be("first value");
-                    });
+                fodder.Variables.Should().SatisfyRespectively(variable =>
+                {
+                    variable.Name.Should().Be("geneVariable");
+                    variable.Value.Should().Be("first value");
+                });
             });
     }
 
@@ -286,33 +285,34 @@ public class CatletFeedingTests
         _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             architecture,
-            new FodderGeneConfig()
+            new FodderGeneConfig
             {
                 Name = "test-fodder",
                 Variables =
                 [
-                    new VariableConfig()
+                    new VariableConfig
                     {
                         Name = "geneVariable",
-                    }
+                    },
                 ],
-                Fodder = 
+                Fodder =
                 [
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Name = "food1",
                         Content = "food 1 content",
                     },
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Name = "food2",
                         Content = "food 2 content",
-                    }
-                ]
+                    },
+                ],
             });
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Feed_FodderVariableIsBound_BoundVariableIsUsed(
         bool? catletSecret,
         bool? geneSecret,
@@ -324,12 +324,12 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Variables =
                     [
-                        new VariableConfig()
+                        new VariableConfig
                         {
                             Name = "foodVariable",
                             Value = "catlet value",
@@ -349,7 +349,7 @@ public class CatletFeedingTests
                 Name = "test-fodder",
                 Variables =
                 [
-                    new VariableConfig()
+                    new VariableConfig
                     {
                         Name = "foodVariable",
                         Value = "gene value",
@@ -360,7 +360,7 @@ public class CatletFeedingTests
                 ],
                 Fodder =
                 [
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Name = "food1",
                         Content = "test food content",
@@ -372,20 +372,18 @@ public class CatletFeedingTests
 
         var newConfig = result.Should().BeRight().Subject;
 
-        newConfig.Fodder.Should().SatisfyRespectively(
-            fodder =>
+        newConfig.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().Be("food1");
+            fodder.Content.Should().Be("test food content");
+            fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder");
+            fodder.Variables.Should().SatisfyRespectively(variable =>
             {
-                fodder.Name.Should().Be("food1");
-                fodder.Content.Should().Be("test food content");
-                fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Name.Should().Be("foodVariable");
-                        variable.Value.Should().Be("catlet value");
-                        variable.Secret.Should().Be(catletSecret | geneSecret);
-                    });
+                variable.Name.Should().Be("foodVariable");
+                variable.Value.Should().Be("catlet value");
+                variable.Secret.Should().Be(catletSecret | geneSecret);
             });
+        });
     }
 
     [Fact]
@@ -396,12 +394,12 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Variables =
                     [
-                        new VariableConfig()
+                        new VariableConfig
                         {
                             Name = "missingVariable",
                             Value = "catlet value",
@@ -420,7 +418,7 @@ public class CatletFeedingTests
                 Name = "test-fodder",
                 Variables =
                 [
-                    new VariableConfig()
+                    new VariableConfig
                     {
                         Name = "foodVariable",
                         Value = "gene value",
@@ -430,7 +428,7 @@ public class CatletFeedingTests
                 ],
                 Fodder =
                 [
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Name = "food1",
                         Content = "test food content",
@@ -443,7 +441,8 @@ public class CatletFeedingTests
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
         error.Inner.Should().BeSome().Which.Message
-            .Should().Be("Found a binding for the variable 'missingVariable' but the variable is not defined in the fodder gene.");
+            .Should().Be(
+                "Found a binding for the variable 'missingVariable' but the variable is not defined in the fodder gene.");
     }
 
     [Fact]
@@ -454,7 +453,7 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "test-fodder",
                     Content = "test food content",
@@ -464,13 +463,12 @@ public class CatletFeedingTests
 
         var result = CatletFeeding.Feed(config, Empty, _genepoolReaderMock.Object);
 
-        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
-            fodder =>
-            {
-                fodder.Name.Should().Be("test-fodder");
-                fodder.Content.Should().Be("test food content");
-                fodder.Source.Should().BeNull();
-            });
+        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().Be("test-fodder");
+            fodder.Content.Should().Be("test food content");
+            fodder.Source.Should().BeNull();
+        });
 
         _genepoolReaderMock.Verify(
             x => x.GetReferencedGeneSet(
@@ -494,7 +492,7 @@ public class CatletFeedingTests
             Parent = "acme/acme-os/1.0",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "parent-fodder",
                     Content = "parent fodder content",
@@ -505,13 +503,12 @@ public class CatletFeedingTests
 
         var result = CatletFeeding.Feed(config, Empty, _genepoolReaderMock.Object);
 
-        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
-            fodder =>
-            {
-                fodder.Name.Should().Be("parent-fodder");
-                fodder.Source.Should().Be("gene:acme/acme-os/1.0:catlet");
-                fodder.Content.Should().Be("parent fodder content");
-            });
+        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().Be("parent-fodder");
+            fodder.Source.Should().Be("gene:acme/acme-os/1.0:catlet");
+            fodder.Content.Should().Be("parent fodder content");
+        });
 
         // The informational fodder source for fodder taken from the parent
         // must not be resolved (as no fodder gene actually exists).
@@ -536,7 +533,7 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                 },
@@ -551,7 +548,8 @@ public class CatletFeedingTests
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
         error.Inner.Should().BeSome().Which.Message
-            .Should().Be("The gene 'gene:acme/acme-tools/1.0:test-fodder' has not been correctly resolved. This should not happen.");
+            .Should().Be(
+                "The gene 'gene:acme/acme-tools/1.0:test-fodder' has not been correctly resolved. This should not happen.");
     }
 
     [Fact]
@@ -562,7 +560,7 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/latest:test-fodder",
                 },
@@ -576,10 +574,12 @@ public class CatletFeedingTests
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/latest:test-fodder'.");
         error.Inner.Should().BeSome().Which.Message
-            .Should().Be("The gene 'gene:acme/acme-tools/latest:test-fodder' is an unresolved reference. This should not happen.");
+            .Should().Be(
+                "The gene 'gene:acme/acme-tools/latest:test-fodder' is an unresolved reference. This should not happen.");
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public void Feed_FodderNotInGenePool_ReturnsError(
         [CombinatorialValues("any", "hyperv/any", "hyperv/amd64")]
         string architecture)
@@ -589,7 +589,7 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
                 },
@@ -610,7 +610,7 @@ public class CatletFeedingTests
         var resolvedGenes = HashMap((uniqueGeneId, geneHash));
 
         var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
-        
+
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
         error.Inner.Should().BeSome().Which.Message
@@ -625,7 +625,7 @@ public class CatletFeedingTests
             Name = "test",
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Name = "food2",
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
@@ -638,17 +638,17 @@ public class CatletFeedingTests
         _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             "hyperv/amd64",
-            new FodderGeneConfig()
+            new FodderGeneConfig
             {
                 Name = "test-fodder",
                 Fodder =
                 [
-                    new FodderConfig()
+                    new FodderConfig
                     {
                         Name = "food1",
                         Content = "food 1 content",
                     },
-                ]
+                ],
             });
 
         var result = CatletFeeding.Feed(config, _genepoolReaderMock.ResolvedGenes, _genepoolReaderMock.Object);
@@ -656,6 +656,7 @@ public class CatletFeedingTests
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
         error.Inner.Should().BeSome().Which.Message
-            .Should().Match("The food 'food2' does not exist in the gene fodder::gene:acme/acme-tools/1.0:test-fodder[hyperv/amd64] (sha256:*).");
+            .Should().Match(
+                "The food 'food2' does not exist in the gene fodder::gene:acme/acme-tools/1.0:test-fodder[hyperv/amd64] (sha256:*).");
     }
 }

@@ -35,10 +35,13 @@ internal sealed class ComponentHeartbeatService(
     {
         await _stopping.CancelAsync();
         if (_loop is not null)
-        {
-            try { await _loop; }
-            catch (OperationCanceledException) { }
-        }
+            try
+            {
+                await _loop;
+            }
+            catch (OperationCanceledException)
+            {
+            }
 
         // Graceful shutdown: tell the controller we are leaving so the registration is removed now
         // rather than aged out after the heartbeat timeout. Best-effort — if the bus is already
@@ -65,7 +68,6 @@ internal sealed class ComponentHeartbeatService(
     private async Task RunAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
-        {
             try
             {
                 await Task.Delay(Interval, cancellationToken);
@@ -85,6 +87,5 @@ internal sealed class ComponentHeartbeatService(
             {
                 logger.LogError(ex, "Failed to send component heartbeat.");
             }
-        }
     }
 }

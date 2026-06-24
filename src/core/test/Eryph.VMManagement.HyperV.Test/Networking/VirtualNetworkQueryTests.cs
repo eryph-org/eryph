@@ -1,28 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.VmManagement.Data.Full;
+﻿using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
 using FluentAssertions;
-using LanguageExt;
 using FluentAssertions.LanguageExt;
+using LanguageExt;
 using Moq;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test.Networking;
 
 public class VirtualNetworkQueryTests
 {
-    private readonly Mock<WmiIO> _wmiIOMock = new();
-
     private const string AdapterId =
         @"Microsoft:2FE70974-C81A-4F3A-BF4E-7BE405B88C97\596574F5-A810-43EF-B349-D20783874CE5";
+
+    private readonly Mock<WmiIO> _wmiIOMock = new();
 
     [Fact]
     public void GetNetworkByAdapter_ValidNetworkData_ReturnsData()
@@ -30,7 +24,7 @@ public class VirtualNetworkQueryTests
         ArrangeData();
 
         var result = VirtualNetworkQuery<TestRuntime>.getNetworkByAdapter(
-                new VMNetworkAdapter()
+                new VMNetworkAdapter
                 {
                     Id = AdapterId,
                     Name = "eth0",
@@ -57,7 +51,7 @@ public class VirtualNetworkQueryTests
         ArrangeData();
 
         var result = VirtualNetworkQuery<TestRuntime>.getNetworkByAdapter(
-                new VMNetworkAdapter()
+                new VMNetworkAdapter
                 {
                     Id = AdapterId,
                     Name = "eth0",
@@ -91,7 +85,7 @@ public class VirtualNetworkQueryTests
                 ("DHCPEnabled", Optional<object>(true)),
                 ("IPAddresses", Optional<object>(new[] { "10.0.0.100", "fe80::d0ab:1ff:fed0:501" })),
                 ("Subnets", Optional<object>(new[] { "255.255.240.0", "/64" }))
-                )))));
+            )))));
     }
 
     private readonly struct TestRuntime(WmiIO wmiIO) : HasWmi<TestRuntime>

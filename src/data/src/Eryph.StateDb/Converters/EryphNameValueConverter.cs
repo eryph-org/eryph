@@ -8,4 +8,3 @@ public class EryphNameValueConverter<TName>()
         v => v.Value,
         v => EryphName<TName>.New(v))
     where TName : EryphName<TName>;
-

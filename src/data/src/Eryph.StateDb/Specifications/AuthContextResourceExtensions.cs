@@ -13,7 +13,7 @@ public static class AuthContextResourceExtensions
         ISpecificationBuilder<T> query,
         IEnumerable<Guid> sufficientRoles) where T : Resource
     {
-        query.Where(x=>x.Project.TenantId == authContext.TenantId)
+        query.Where(x => x.Project.TenantId == authContext.TenantId)
             .Include(x => x.Project);
 
 

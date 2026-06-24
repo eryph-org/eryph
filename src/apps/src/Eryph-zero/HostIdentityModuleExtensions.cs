@@ -3,7 +3,6 @@ using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
 using Eryph.IdentityDb.Sqlite;
-using Eryph.Modules.Controller;
 using Eryph.Modules.Identity;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Clients;
@@ -12,66 +11,65 @@ using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
-namespace Eryph.Runtime.Zero
+namespace Eryph.Runtime.Zero;
+
+public static class HostIdentityModuleExtensions
 {
-    public static class HostIdentityModuleExtensions
+    public static IModulesHostBuilder AddIdentityModule(this IModulesHostBuilder builder)
     {
-        public static IModulesHostBuilder AddIdentityModule(this IModulesHostBuilder builder)
+        builder.HostModule<IdentityModule>();
+
+        builder.ConfigureFrameworkServices((ctx, services) =>
         {
-            builder.HostModule<IdentityModule>();
+            services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityModuleFilters>();
+            services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityModuleFilters>();
+        });
 
-            builder.ConfigureFrameworkServices((ctx, services) =>
+        return builder;
+    }
+
+
+    private class IdentityModuleFilters : IConfigureContainerFilter<IdentityModule>,
+        IAddSimpleInjectorFilter<IdentityModule>
+    {
+        public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
+            Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
+        {
+            return (context, options) =>
             {
-                services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityModuleFilters>();
-                services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityModuleFilters>();
-            });
+                // eryph-zero's identity store is the disposable on-disk SQLite database (mirrored to
+                // config files). The host picks the provider; the module stays provider-agnostic.
+                var connectionString = new SqliteConnectionStringBuilder
+                {
+                    DataSource = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
+                }.ToString();
+                options.RegisterSqliteIdentityStore(connectionString);
 
-            return builder;
+                // No startup migration here: eryph-zero migrates the identity database in its warmup
+                // phase (IdentityDatabaseResetHandler in Program.cs), exactly like the state database
+                // (DatabaseResetHandler) — the main host just uses the already-migrated database.
+                next(context, options);
+            };
         }
 
-
-        private class IdentityModuleFilters : IConfigureContainerFilter<IdentityModule>,
-            IAddSimpleInjectorFilter<IdentityModule>
+        public Action<IModuleContext<IdentityModule>, Container> Invoke(
+            Action<IModuleContext<IdentityModule>, Container> next)
         {
-            public Action<IModuleContext<IdentityModule>, Container> Invoke(
-                Action<IModuleContext<IdentityModule>, Container> next)
+            return (context, container) =>
             {
-                return (context, container) =>
-                {
-                    // The identity module configures its own bus + component registration in
-                    // ConfigureContainer (invoked by next()), so the transport must be registered
-                    // BEFORE next() — matching the standalone identity host filter.
-                    container.UseInMemoryBus(context.ModulesHostServices);
+                // The identity module configures its own bus + component registration in
+                // ConfigureContainer (invoked by next()), so the transport must be registered
+                // BEFORE next() — matching the standalone identity host filter.
+                container.UseInMemoryBus(context.ModulesHostServices);
 
-                    next(context, container);
+                next(context, container);
 
-                    // Client persistence is now handled by the identity module's change-tracking export
-                    // (replacing the old ClientServiceWithConfigServiceDecorator write-through) and its
-                    // ClientSeeder (replacing IdentityClientSeeder). IFileSystem + SeedFromConfigHandler
-                    // are registered by the module. Only the scope seeder remains zero-specific.
-                    container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
-                };
-            }
-
-            public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
-                Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
-            {
-                return (context, options) =>
-                {
-                    // eryph-zero's identity store is the disposable on-disk SQLite database (mirrored to
-                    // config files). The host picks the provider; the module stays provider-agnostic.
-                    var connectionString = new SqliteConnectionStringBuilder
-                    {
-                        DataSource = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
-                    }.ToString();
-                    options.RegisterSqliteIdentityStore(connectionString);
-
-                    // No startup migration here: eryph-zero migrates the identity database in its warmup
-                    // phase (IdentityDatabaseResetHandler in Program.cs), exactly like the state database
-                    // (DatabaseResetHandler) — the main host just uses the already-migrated database.
-                    next(context, options);
-                };
-            }
+                // Client persistence is now handled by the identity module's change-tracking export
+                // (replacing the old ClientServiceWithConfigServiceDecorator write-through) and its
+                // ClientSeeder (replacing IdentityClientSeeder). IFileSystem + SeedFromConfigHandler
+                // are registered by the module. Only the scope seeder remains zero-specific.
+                container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
+            };
         }
     }
 }

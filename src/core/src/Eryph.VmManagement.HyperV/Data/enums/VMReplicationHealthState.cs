@@ -1,10 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMReplicationHealthState
 {
-    public enum VMReplicationHealthState
-    {
-        NotApplicable,
-        Normal,
-        Warning,
-        Critical
-    }
+    NotApplicable,
+    Normal,
+    Warning,
+    Critical,
 }

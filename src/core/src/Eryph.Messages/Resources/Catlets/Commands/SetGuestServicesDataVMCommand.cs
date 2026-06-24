@@ -8,9 +8,9 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 [SendMessageTo(MessageRecipient.VMHostAgent)]
 public class SetGuestServicesDataVMCommand : IVMCommand, IHasResource
 {
+    public Dictionary<string, string> Values { get; set; } = new();
+    public List<string> RemoveKeys { get; set; } = [];
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
     public Guid CatletId { get; set; }
     public Guid VmId { get; set; }
-    public Dictionary<string, string> Values { get; set; } = new();
-    public List<string> RemoveKeys { get; set; } = new();
-    public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

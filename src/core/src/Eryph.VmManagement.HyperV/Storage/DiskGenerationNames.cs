@@ -3,7 +3,6 @@ using System.IO;
 using System.Text.RegularExpressions;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static Eryph.Core.RegexPrelude;
 using static LanguageExt.Prelude;
 
@@ -40,8 +39,8 @@ public static partial class DiskGenerationNames
             .Filter(notEmpty)
             .ToInvalidPathError(path)
         from result in parentPath.Match(
-            Some: p => GetFileNameWithoutSuffix(nameWithoutExtension, p),
-            None: () => nameWithoutExtension)
+            p => GetFileNameWithoutSuffix(nameWithoutExtension, p),
+            () => nameWithoutExtension)
         select result;
 
     private static Either<Error, string> GetFileNameWithoutSuffix(
@@ -60,15 +59,15 @@ public static partial class DiskGenerationNames
             .Map(s => fileName.IndexOf(s, StringComparison.OrdinalIgnoreCase))
             .Filter(i => i > 0)
         select index.Match(
-            Some: i => fileName[..i],
-            None: () => fileName);
-    
+            i => fileName[..i],
+            () => fileName);
+
     private static Either<Error, Option<int>> GetGenerationFromFileName(string fileName) =>
         from match in regexMatch(GenerationSuffixRegex(), fileName).ToEither()
         let result = from m in match
-                     from g in regexGroup(m.Groups, 1)
-                     from generation in parseInt(g.Value)
-                     select generation
+            from g in regexGroup(m.Groups, 1)
+            from generation in parseInt(g.Value)
+            select generation
         select result;
 
     private static Either<Error, string> ToInvalidPathError(

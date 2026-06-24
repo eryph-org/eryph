@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -16,7 +15,6 @@ using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Inventory;
@@ -74,7 +72,7 @@ internal class InventoryRequestedEventHandler(
             HostInventory = hostInventory,
             VMInventory = vmData.Somes().ToList(),
             DiskInventory = diskInfos.Rights().ToList(),
-            Timestamp = timestamp
+            Timestamp = timestamp,
         };
 
     private Aff<Option<VirtualMachineData>> InventoryVm(
@@ -94,12 +92,10 @@ internal class InventoryRequestedEventHandler(
         var operationalStatus = VmStateUtils.convertMsvmOperationalStatus(vmInfo.Value.OperationalStatus);
         var state = vmInfo.Value.State;
         var isInventorizable = VmStateUtils.isInventorizable(state, operationalStatus);
-        
+
         if (!isInventorizable)
-        {
             log.LogInformation("Skipping inventory of VM {VmId} because of its status: {State}, {OperationalStatus}",
                 vmInfo.Value.Id, state, operationalStatus);
-        }
 
         return isInventorizable;
     }

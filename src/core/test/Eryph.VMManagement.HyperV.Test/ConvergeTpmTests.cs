@@ -3,26 +3,26 @@ using Eryph.Core;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using LanguageExt.Common;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeTpmTests
 {
-    private readonly ConvergeFixture _fixture = new();
     private readonly ConvergeTpm _convergeTask;
+    private readonly ConvergeFixture _fixture = new();
     private readonly TypedPsObject<VirtualMachineInfo> _vmInfo;
 
     public ConvergeTpmTests()
     {
-        _convergeTask = new(_fixture.Context);
-        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo()
+        _convergeTask = new ConvergeTpm(_fixture.Context);
+        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             State = VirtualMachineState.Off,
         });
@@ -31,22 +31,22 @@ public class ConvergeTpmTests
     [Fact]
     public async Task Converge_TpmShouldBeEnabled_CreatesProtectorAndEnablesTpm()
     {
-        bool guardianCreated = false;
-        bool protectorCreated = false;
-        bool tpmEnabled = false;
+        var guardianCreated = false;
+        var protectorCreated = false;
+        var tpmEnabled = false;
         var cimHgsGuardian = _fixture.Engine.ToPsObject((object)new CimHgsGuardian());
         var protector = new byte[] { 1, 2, 3, 4, 5 };
-        var cimHgsKeyProtector = _fixture.Engine.ToPsObject((object)new CimHgsKeyProtector()
+        var cimHgsKeyProtector = _fixture.Engine.ToPsObject((object)new CimHgsKeyProtector
         {
             RawData = protector,
         });
 
         _fixture.Config.Capabilities =
         [
-            new CatletCapabilityConfig()
+            new CatletCapabilityConfig
             {
                 Name = EryphConstants.Capabilities.Tpm,
-            }
+            },
         ];
 
         _fixture.Engine.GetObjectCallback = (_, command) =>
@@ -85,7 +85,7 @@ public class ConvergeTpmTests
                     .ShouldBeComplete();
 
                 guardianCreated = true;
-                return Seq1(cimHgsGuardian); 
+                return Seq1(cimHgsGuardian);
             }
 
             return Error.New($"Unexpected command: {command}.");
@@ -99,7 +99,7 @@ public class ConvergeTpmTests
                     .ShouldBeParam("VM", _vmInfo.PsObject)
                     .ShouldBeComplete();
 
-                return Seq1<object>(new VMSecurityInfo()
+                return Seq1<object>(new VMSecurityInfo
                 {
                     TpmEnabled = false,
                 });
@@ -145,7 +145,7 @@ public class ConvergeTpmTests
         };
 
         var result = await _convergeTask.Converge(_vmInfo);
-        
+
         result.Should().BeRight();
         guardianCreated.Should().BeTrue();
         protectorCreated.Should().BeTrue();
@@ -155,7 +155,7 @@ public class ConvergeTpmTests
     [Fact]
     public async Task Converge_TpmShouldBeDisabled_DisablesTpm()
     {
-        bool tpmDisabled = false;
+        var tpmDisabled = false;
 
         // No capabilities configured -> TPM must be disabled
         _fixture.Config.Capabilities = null;
@@ -168,7 +168,7 @@ public class ConvergeTpmTests
                     .ShouldBeParam("VM", _vmInfo.PsObject)
                     .ShouldBeComplete();
 
-                return Seq1<object>(new VMSecurityInfo()
+                return Seq1<object>(new VMSecurityInfo
                 {
                     TpmEnabled = true,
                 });
@@ -188,22 +188,23 @@ public class ConvergeTpmTests
         };
 
         var result = await _convergeTask.Converge(_vmInfo);
-        
+
         result.Should().BeRight();
         tpmDisabled.Should().BeTrue();
     }
 
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public async Task Converge_TpmInRequiredState_DoesNotModifyTpm(bool tpmState)
     {
         _fixture.Config.Capabilities =
         [
-            new CatletCapabilityConfig()
+            new CatletCapabilityConfig
             {
                 Name = EryphConstants.Capabilities.Tpm,
                 Details = tpmState ? [] : ["disabled"],
-            }
+            },
         ];
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -214,7 +215,7 @@ public class ConvergeTpmTests
                     .ShouldBeParam("VM", _vmInfo.PsObject)
                     .ShouldBeComplete();
 
-                return Seq1<object>(new VMSecurityInfo()
+                return Seq1<object>(new VMSecurityInfo
                 {
                     TpmEnabled = tpmState,
                 });
@@ -224,7 +225,7 @@ public class ConvergeTpmTests
         };
 
         var result = await _convergeTask.Converge(_vmInfo);
-        
+
         result.Should().BeRight();
     }
 }

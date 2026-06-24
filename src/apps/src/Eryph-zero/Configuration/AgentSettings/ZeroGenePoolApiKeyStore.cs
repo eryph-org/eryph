@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Eryph.Modules.GenePool.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero.Configuration.AgentSettings;
@@ -50,7 +45,7 @@ internal class ZeroGenePoolApiKeyStore : IGenePoolApiKeyStore
 
     private static Either<Error, HashMap<string, GenePoolApiKey>> Deserialize(string json) =>
         from optionalDictionary in Try(() =>
-            Optional(JsonSerializer.Deserialize<IReadOnlyDictionary<string, GenePoolApiKey>>(json)))
+                Optional(JsonSerializer.Deserialize<IReadOnlyDictionary<string, GenePoolApiKey>>(json)))
             .ToEither(ex => Error.New("Could not deserialize the contents of the gene pool key store.", ex))
         from dictionary in optionalDictionary.ToEither(
             Error.New("Could not deserialize the contents of the gene pool key store."))

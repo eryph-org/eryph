@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Core.Sys;
 using Eryph.GenePool.Model;
 using LanguageExt;
-using LanguageExt.Common;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
@@ -20,7 +18,7 @@ internal interface ILocalGenePool
 
     Aff<CancelRt, Option<string>> GetCachedGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
-         GeneHash geneHash);
+        GeneHash geneHash);
 
     Aff<CancelRt, Option<long>> GetGeneSize(
         UniqueGeneIdentifier uniqueGeneId,

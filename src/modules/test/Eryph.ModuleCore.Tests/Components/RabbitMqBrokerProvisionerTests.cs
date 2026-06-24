@@ -1,22 +1,15 @@
-using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.ModuleCore.Components;
 using FluentAssertions;
-using Xunit;
 
 namespace Eryph.ModuleCore.Tests.Components;
 
 public class RabbitMqBrokerProvisionerTests
 {
-    private static readonly Guid ComponentId = Guid.Parse("11112222-3333-4444-5555-666677778888");
-
     // The broker user name is the component-id URN; in a URL it must be percent-encoded (the ':' becomes
     // %3A), under both /api/users and /api/permissions.
     private const string EncodedUser = "urn%3Aeryph%3Acomponent%3A11112222-3333-4444-5555-666677778888";
+    private static readonly Guid ComponentId = Guid.Parse("11112222-3333-4444-5555-666677778888");
 
     [Fact]
     public void UserName_is_the_component_id_urn()

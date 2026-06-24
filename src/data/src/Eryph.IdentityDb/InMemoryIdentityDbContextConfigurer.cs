@@ -1,22 +1,12 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Eryph.IdentityDb
+namespace Eryph.IdentityDb;
+
+public class InMemoryIdentityDbContextConfigurer(InMemoryDatabaseRoot dbRoot) : IDbContextConfigurer<IdentityDbContext>
 {
-    public class InMemoryIdentityDbContextConfigurer : IDbContextConfigurer<IdentityDbContext>
+    public void Configure(DbContextOptionsBuilder options)
     {
-        private readonly InMemoryDatabaseRoot _dbRoot;
-
-        public InMemoryIdentityDbContextConfigurer(InMemoryDatabaseRoot dbRoot)
-        {
-            _dbRoot = dbRoot;
-        }
-
-        public void Configure(DbContextOptionsBuilder options)
-        {
-            options.UseInMemoryDatabase("IdentityDb", _dbRoot);
-        }
+        options.UseInMemoryDatabase("IdentityDb", dbRoot);
     }
 }

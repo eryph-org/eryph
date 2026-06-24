@@ -1,10 +1,6 @@
 using System;
-using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.Security.Cryptography;
 
 namespace Eryph.Runtime.Zero.HttpSys;
@@ -29,18 +25,16 @@ public class SslEndpointManager(
         subjectNameBuilder.AddOrganizationalUnitName("eryph-zero");
         subjectNameBuilder.AddCommonName(options.Url.IdnHost);
         var subjectName = subjectNameBuilder.Build();
-        
+
         var myStoreCertificates = storeService.GetFromMyStore(subjectName);
         var rootStoreCertificates = storeService.GetFromRootStore(subjectName);
         if (myStoreCertificates.Count == 1
             && rootStoreCertificates.Count == 1
             && IsUsable(myStoreCertificates[0], rootStoreCertificates[0], options))
-        {
             return myStoreCertificates[0];
-        }
-        
+
         RemoveCertificate(subjectName, options.KeyName);
-        
+
         var subjectAlternativeNameBuilder = new SubjectAlternativeNameBuilder();
         subjectAlternativeNameBuilder.AddDnsName(options.Url.IdnHost);
 

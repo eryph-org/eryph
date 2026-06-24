@@ -13,7 +13,7 @@ public class IpPool
     public string? FirstIp { get; set; }
 
     public string? NextIp { get; set; }
-    
+
     public string? LastIp { get; set; }
 
     public string? IpNetwork { get; set; }

@@ -23,9 +23,11 @@ internal readonly struct WindowsGenePoolRuntime :
     public static WindowsGenePoolRuntime New(ILoggerFactory loggerFactory) =>
         new(new GenePoolRuntimeEnv(loggerFactory));
 
-    public Eff<WindowsGenePoolRuntime, ILogger> Logger(string category) => Eff<WindowsGenePoolRuntime, ILogger>(rt => rt._env.LoggerFactory.CreateLogger(category));
+    public Eff<WindowsGenePoolRuntime, ILogger> Logger(string category) =>
+        Eff<WindowsGenePoolRuntime, ILogger>(rt => rt._env.LoggerFactory.CreateLogger(category));
 
-    public Eff<WindowsGenePoolRuntime, ILogger<T>> Logger<T>() => Eff<WindowsGenePoolRuntime, ILogger<T>>(rt => LoggerFactoryExtensions.CreateLogger<T>(rt._env.LoggerFactory));
+    public Eff<WindowsGenePoolRuntime, ILogger<T>> Logger<T>() =>
+        Eff<WindowsGenePoolRuntime, ILogger<T>>(rt => rt._env.LoggerFactory.CreateLogger<T>());
 
     public Eff<WindowsGenePoolRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
 

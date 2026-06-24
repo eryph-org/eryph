@@ -11,10 +11,10 @@ public class VMSecurityInfo
     public bool KsdEnabled { get; init; }
 
     public bool Shielded { get; init; }
-    
+
     public bool EncryptStateAndVmMigrationTraffic { get; init; }
-    
+
     public bool VirtualizationBasedSecurityOptOut { get; init; }
-    
+
     public bool BindToHostTpm { get; init; }
 }

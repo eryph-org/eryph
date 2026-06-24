@@ -27,7 +27,7 @@ public class CatletUpdateValidatorTests
             {
                 Startup = 1024,
             },
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
@@ -35,8 +35,8 @@ public class CatletUpdateValidatorTests
                     Type = CatletDriveType.Vhd,
                     Source = "gene:acme/acme-os/1.0:sda",
                     Store = "test-store",
-                    Location = "test-location"
-                }
+                    Location = "test-location",
+                },
             ],
         };
 
@@ -57,7 +57,7 @@ public class CatletUpdateValidatorTests
             {
                 Startup = 2048,
             },
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
@@ -65,9 +65,9 @@ public class CatletUpdateValidatorTests
                     Type = CatletDriveType.Vhd,
                     Source = "gene:acme/acme-os/1.0:sda",
                     Store = "test-store",
-                    Location = "test-location"
-                }
-            ]
+                    Location = "test-location",
+                },
+            ],
         };
 
         var result = CatletUpdateValidator.Validate(updateConfig, currentConfig);
@@ -86,7 +86,7 @@ public class CatletUpdateValidatorTests
             Store = "test-store",
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
-            Hostname = "test-host"
+            Hostname = "test-host",
         };
 
         var updateConfig = new CatletConfig
@@ -97,7 +97,7 @@ public class CatletUpdateValidatorTests
             Store = "other-store",
             Location = "other-location",
             Parent = "acme/acme-os/2.0",
-            Hostname = "other-host"
+            Hostname = "other-host",
         };
 
         var result = CatletUpdateValidator.Validate(updateConfig, currentConfig);
@@ -163,22 +163,22 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Fodder = 
+            Fodder =
             [
                 new FodderConfig
                 {
                     Name = "test-fodder",
-                    Content = "test content"
-                }
+                    Content = "test content",
+                },
             ],
-            Variables = 
+            Variables =
             [
                 new VariableConfig
                 {
                     Name = "test_variable",
-                    Value = "test-value"
-                }
-            ]
+                    Value = "test-value",
+                },
+            ],
         };
 
         var result = CatletUpdateValidator.Validate(updateConfig, currentConfig);
@@ -208,15 +208,15 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
                     Name = "sda",
                     Type = CatletDriveType.Vhd,
-                    Source = "gene:acme/acme-os/1.0:system"
-                }
-            ]
+                    Source = "gene:acme/acme-os/1.0:system",
+                },
+            ],
         };
 
         var updateConfig = new CatletConfig
@@ -228,31 +228,30 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
                     Name = "sda",
                     Type = CatletDriveType.Vhd,
-                    Source = "gene:acme/acme-os/1.0:system"
+                    Source = "gene:acme/acme-os/1.0:system",
                 },
                 new CatletDriveConfig
                 {
                     Name = "sdb",
                     Type = CatletDriveType.Vhd,
-                    Source = "gene:acme/acme-tools/1.0:sdb"
-                }
-            ]
+                    Source = "gene:acme/acme-tools/1.0:sdb",
+                },
+            ],
         };
 
         var result = CatletUpdateValidator.Validate(updateConfig, currentConfig);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("Drives[1].Source");
-                issue.Message.Should().Be("Cannot add new gene pool drives when updating an existing catlet.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("Drives[1].Source");
+            issue.Message.Should().Be("Cannot add new gene pool drives when updating an existing catlet.");
+        });
     }
 
     [Fact]
@@ -267,15 +266,15 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
                     Name = "sda",
                     Type = CatletDriveType.Vhd,
-                    Source = "gene:acme/acme-os/1.0:sda"
+                    Source = "gene:acme/acme-os/1.0:sda",
                 },
-            ]
+            ],
         };
 
         var updateConfig = new CatletConfig
@@ -292,12 +291,11 @@ public class CatletUpdateValidatorTests
 
         var result = CatletUpdateValidator.Validate(updateConfig, currentConfig);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("Drives");
-                issue.Message.Should().Be("The drive sda cannot be removed when updating the catlet.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("Drives");
+            issue.Message.Should().Be("The drive sda cannot be removed when updating the catlet.");
+        });
     }
 
     [Fact]
@@ -312,7 +310,7 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
@@ -320,9 +318,9 @@ public class CatletUpdateValidatorTests
                     Type = CatletDriveType.Vhd,
                     Source = "gene:acme/acme-os/1.0:sda",
                     Store = "test-store",
-                    Location = "test-location"
-                }
-            ]
+                    Location = "test-location",
+                },
+            ],
         };
 
         var updateConfig = new CatletConfig
@@ -334,7 +332,7 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
@@ -342,9 +340,9 @@ public class CatletUpdateValidatorTests
                     Type = CatletDriveType.Phd,
                     Source = "gene:acme/acme-os/2.0:sda",
                     Store = "other-store",
-                    Location = "other-location"
-                }
-            ]
+                    Location = "other-location",
+                },
+            ],
         };
 
         var result = CatletUpdateValidator.Validate(updateConfig, currentConfig);
@@ -353,7 +351,8 @@ public class CatletUpdateValidatorTests
             issue =>
             {
                 issue.Member.Should().Be("Drives[0].Type");
-                issue.Message.Should().Be("The drive type of a gene pool drive cannot be changed when updating an existing catlet.");
+                issue.Message.Should()
+                    .Be("The drive type of a gene pool drive cannot be changed when updating an existing catlet.");
             },
             issue =>
             {
@@ -384,15 +383,15 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
                     Name = "sda",
                     Type = CatletDriveType.Vhd,
-                    Source = "gene:acme/acme-os/1.0:sda"
-                }
-            ]
+                    Source = "gene:acme/acme-os/1.0:sda",
+                },
+            ],
         };
 
         var updateConfig = new CatletConfig
@@ -404,21 +403,21 @@ public class CatletUpdateValidatorTests
             Location = "test-location",
             Parent = "acme/acme-os/1.0",
             Hostname = "test-host",
-            Drives = 
+            Drives =
             [
                 new CatletDriveConfig
                 {
                     Name = "sda",
                     Type = CatletDriveType.Vhd,
-                    Source = "gene:acme/acme-os/1.0:sda"
+                    Source = "gene:acme/acme-os/1.0:sda",
                 },
                 new CatletDriveConfig
                 {
                     Name = "sdb",
                     Type = CatletDriveType.Vhd,
-                    Size = 1024
-                }
-            ]
+                    Size = 1024,
+                },
+            ],
         };
 
         var result = CatletUpdateValidator.Validate(updateConfig, currentConfig);

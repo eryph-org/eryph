@@ -20,6 +20,5 @@ public static class SchannelCertificate
     public static X509Certificate2 MakeUsable(X509Certificate2 certificateWithPrivateKey) =>
         X509CertificateLoader.LoadPkcs12(
             certificateWithPrivateKey.Export(X509ContentType.Pkcs12),
-            password: null,
-            keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+            null);
 }

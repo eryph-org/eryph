@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
@@ -14,6 +8,4 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 [JsonDerivedType(typeof(CatletSpecificationOperationResult), "CatletSpecification")]
 [JsonDerivedType(typeof(SshChannelOperationResult), "SshChannel")]
 [JsonDerivedType(typeof(GuestServicesStatusOperationResult), "GuestServicesStatus")]
-public abstract class OperationResult
-{
-}
+public abstract class OperationResult;

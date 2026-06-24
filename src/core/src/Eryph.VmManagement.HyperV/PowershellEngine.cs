@@ -14,7 +14,6 @@ using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.PowerShell;
 using Microsoft.PowerShell.Commands;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
@@ -24,9 +23,26 @@ public sealed class PowershellEngine(
     IPowershellEngineLock engineLock)
     : IPowershellEngine, IDisposable, IPsObjectRegistry
 {
-    private RunspacePool _runspacePool;
-    private readonly SemaphoreSlim _runspaceSemaphore = new(1, 1);
     private readonly IList<PSObject> _createdObjects = new List<PSObject>();
+    private readonly SemaphoreSlim _runspaceSemaphore = new(1, 1);
+    private RunspacePool _runspacePool;
+
+    /// <summary>
+    /// Indicates whether to skip the Powershell edition check when loading modules.
+    /// </summary>
+    /// <remarks>
+    /// The Hyper-V Powershell module is only fully compatible with Powershell 7 in Windows 1809
+    /// (Build 17763) and later. The module works for our use cases, but we need to disable the
+    /// Powershell edition check to be able to load it.
+    /// </remarks>
+    private static bool SkipEditionCheck => Environment.OSVersion.Version.Build < 17763;
+
+    public void Dispose()
+    {
+        _runspaceSemaphore.Dispose();
+        _runspacePool?.Dispose();
+        foreach (var psObject in _createdObjects) psObject.DisposeObject();
+    }
 
     public ITypedPsObjectMapping ObjectMapping { get; } = new TypedPsObjectMapping(logger);
 
@@ -50,7 +66,8 @@ public sealed class PowershellEngine(
                            && (pse.Category == PowershellErrorCategory.ObjectNotFound
                                // Hyper-V Cmdlets sometimes use the category
                                // InvalidArgument when the entity does not exist.
-                               || pse.Reason == "VirtualizationException" && pse.Category == PowershellErrorCategory.InvalidArgument)
+                               || (pse.Reason == "VirtualizationException" &&
+                                   pse.Category == PowershellErrorCategory.InvalidArgument))
                 ? RightAsync<Error, Seq<TypedPsObject<T>>>(Empty)
                 : LeftAsync<Error, Seq<TypedPsObject<T>>>(e))
         select results;
@@ -72,10 +89,7 @@ public sealed class PowershellEngine(
         TryAsync(async () =>
         {
             var outputs = await ExecuteAsync(builder, reportProgress, withoutLock, cancellationToken);
-            foreach (var output in outputs)
-            {
-                output.DisposeObject();
-            }
+            foreach (var output in outputs) output.DisposeObject();
 
             return unit;
         }).ToEither().MapLeft(ToPowershellError);
@@ -90,8 +104,8 @@ public sealed class PowershellEngine(
             logger.LogInformation("Executing Powershell command '{Command}' out of process...",
                 builder.ToChain().OfType<PsCommandBuilder.CommandPart>().ToSeq()
                     .Map(cp => $"{cp.Command} ...")
-                    .Match(Empty: () => "?", Seq: cps => string.Join(' ', cps)));
-            
+                    .Match(() => "?", cps => string.Join(' ', cps)));
+
             if (!withoutLock)
                 await engineLock.AcquireLockAsync(cancellationToken);
 
@@ -109,10 +123,7 @@ public sealed class PowershellEngine(
                 powerShell.Runspace = processRunSpace;
 
                 var outputs = await ExecuteAsync(powerShell, builder, reportProgress, cancellationToken);
-                foreach (var output in outputs)
-                {
-                    output.DisposeObject();
-                }
+                foreach (var output in outputs) output.DisposeObject();
 
                 return unit;
             }
@@ -159,9 +170,9 @@ public sealed class PowershellEngine(
 
         var inputs = builder.Build(powerShell);
         using var inputData = new PSDataCollection<PSObject>(
-            inputs.Map(input => input is PSObject pso ? pso : new PSObject(input)));
+            inputs.Map(input => input as PSObject ?? new PSObject(input)));
 
-        var invocationSettings = new PSInvocationSettings()
+        var invocationSettings = new PSInvocationSettings
         {
             ErrorActionPreference = ActionPreference.Stop,
         };
@@ -173,11 +184,8 @@ public sealed class PowershellEngine(
             var task = powerShell.InvokeAsync(inputData, invocationSettings, null, null);
 
             await ((Task)task.WaitAsync(cancellationToken))
-                .ConfigureAwait(options: ConfigureAwaitOptions.SuppressThrowing);
-            if (cancellationToken.IsCancellationRequested)
-            {
-                await powerShell.StopAsync(null, null);
-            }
+                .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            if (cancellationToken.IsCancellationRequested) await powerShell.StopAsync(null, null);
 
             // The 'await task' will throw a PipelineStoppedException when the pipeline
             // has been stopped with StopAsync.
@@ -199,18 +207,13 @@ public sealed class PowershellEngine(
         }
 
         foreach (var error in errors)
-        {
             logger.LogDebug(error.Exception, "Powershell command '{Command}' failed: {Error}",
                 error.InvocationInfo?.MyCommand, error.ToString());
-        }
 
         if (errors.Count == 0)
             return outputs;
 
-        foreach (var output in outputs)
-        {
-            output.DisposeObject();
-        }
+        foreach (var output in outputs) output.DisposeObject();
 
         throw new PsErrorException(errors);
     }
@@ -222,7 +225,7 @@ public sealed class PowershellEngine(
         ps.RunspacePool = runspacePool;
         return ps;
     }
-    
+
     private async Task<RunspacePool> GetRunspacePool()
     {
         await _runspaceSemaphore.WaitAsync();
@@ -235,20 +238,18 @@ public sealed class PowershellEngine(
             iss.ExecutionPolicy = ExecutionPolicy.RemoteSigned;
 
             if (SkipEditionCheck)
-            {
                 iss.Variables.Add(new SessionStateVariableEntry(
                     "PSDefaultParameterValues",
                     new Hashtable { ["Import-Module:SkipEditionCheck"] = true },
                     ""));
-            }
 
             iss.ImportPSModule(
             [
                 new ModuleSpecification(new Hashtable
                 {
-                    ["ModuleName"] = "Hyper-V" ,
+                    ["ModuleName"] = "Hyper-V",
                     ["ModuleVersion"] = "2.0.0.0",
-                })
+                }),
             ]);
 
             // We cannot enable ThrowOnRunspaceOpenError. It always reports an error
@@ -265,16 +266,6 @@ public sealed class PowershellEngine(
             _runspaceSemaphore.Release();
         }
     }
-
-    /// <summary>
-    /// Indicates whether to skip the Powershell edition check when loading modules.
-    /// </summary>
-    /// <remarks>
-    /// The Hyper-V Powershell module is only fully compatible with Powershell 7 in Windows 1809
-    /// (Build 17763) and later. The module works for our use cases, but we need to disable the
-    /// Powershell edition check to be able to load it.
-    /// </remarks>
-    private static bool SkipEditionCheck => Environment.OSVersion.Version.Build < 17763;
 
     private IDisposable InitializeProgressReporting(
         PowerShell ps,
@@ -293,8 +284,8 @@ public sealed class PowershellEngine(
                     await reportProgress!(progress.PercentComplete).ConfigureAwait(false);
                 }))
                 .Subscribe(
-                    onNext: _ => {},
-                    onError: ex => logger.LogError(ex, "Failed to process Powershell progress record.")),
+                    _ => { },
+                    ex => logger.LogError(ex, "Failed to process Powershell progress record.")),
             _ => Disposable.Empty,
         };
 
@@ -318,16 +309,6 @@ public sealed class PowershellEngine(
                 None),
             _ => Error.New("Unexpected exception in Powershell engine.", error),
         };
-
-    public void Dispose()
-    {
-        _runspaceSemaphore.Dispose();
-        _runspacePool?.Dispose();
-        foreach (var psObject in _createdObjects)
-        {
-            psObject.DisposeObject();
-        }
-    }
 
     /// <summary>
     /// This exception shortly holds an <see cref="ErrorRecord"/> and allows

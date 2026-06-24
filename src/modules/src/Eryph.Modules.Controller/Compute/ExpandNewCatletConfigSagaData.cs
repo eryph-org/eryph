@@ -7,7 +7,7 @@ namespace Eryph.Modules.Controller.Compute;
 internal class ExpandNewCatletConfigSagaData
 {
     public Architecture? Architecture { get; set; }
-    
+
     public CatletConfig? Config { get; set; }
 
     public ProjectName? ProjectName { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Eryph.StateDb.Model;
 
-public abstract class VirtualNetworkPort: NetworkPort
+public abstract class VirtualNetworkPort : NetworkPort
 {
     public Guid NetworkId { get; set; }
 

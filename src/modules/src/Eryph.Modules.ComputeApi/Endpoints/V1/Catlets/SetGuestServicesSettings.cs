@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.GuestServices.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -26,11 +25,11 @@ public class SetGuestServicesSettings(
     ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
     : ResourceOperationEndpoint<SetGuestServicesSettingsRequest, Catlet>(operationHandler, specBuilder)
 {
-    // Authorized by the compute:catlets:remote-access scope; requires read (not write) project access.
-    protected override AccessRight RequiredAccessRight => AccessRight.Read;
-
     // Each setting must fit the Hyper-V KVP value limit.
     private const int MaxShellLength = 512;
+
+    // Authorized by the compute:catlets:remote-access scope; requires read (not write) project access.
+    protected override AccessRight RequiredAccessRight => AccessRight.Read;
 
     protected override object CreateOperationMessage(Catlet model, SetGuestServicesSettingsRequest request)
     {
@@ -51,12 +50,12 @@ public class SetGuestServicesSettings(
     [Authorize(Policy = "compute:catlets:remote-access")]
     [HttpPatch("catlets/{id}/guest-services/settings")]
     [SwaggerOperation(
-        Summary = "Update the guest services settings of a catlet",
-        Description =
-            "Starts an operation that updates the catlet's guest-services settings (the SSH session shell). "
-            + "A null field is left unchanged; an empty field clears the override.",
-        OperationId = "Catlets_SetGuestServicesSettings",
-        Tags = ["Catlets"])
+            Summary = "Update the guest services settings of a catlet",
+            Description =
+                "Starts an operation that updates the catlet's guest-services settings (the SSH session shell). "
+                + "A null field is left unchanged; an empty field clears the override.",
+            OperationId = "Catlets_SetGuestServicesSettings",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SetGuestServicesSettingsRequest request,

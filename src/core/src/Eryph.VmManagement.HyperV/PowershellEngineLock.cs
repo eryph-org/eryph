@@ -18,16 +18,6 @@ public sealed class PowershellEngineLock(bool disposeSemaphore = true) : IPowers
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public async Task AcquireLockAsync(CancellationToken cancellationToken = default)
-    {
-        await _semaphore.WaitAsync(cancellationToken);
-    }
-
-    public void ReleaseLock()
-    {
-        _semaphore.Release();
-    }
-
     public void Dispose()
     {
         // The semaphore is not disposed when this lock is part of the dependency
@@ -38,5 +28,15 @@ public sealed class PowershellEngineLock(bool disposeSemaphore = true) : IPowers
             return;
 
         _semaphore.Dispose();
+    }
+
+    public async Task AcquireLockAsync(CancellationToken cancellationToken = default)
+    {
+        await _semaphore.WaitAsync(cancellationToken);
+    }
+
+    public void ReleaseLock()
+    {
+        _semaphore.Release();
     }
 }

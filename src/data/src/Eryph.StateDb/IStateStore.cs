@@ -14,16 +14,18 @@ public interface IStateStore
     IStateStoreRepository<T> For<T>() where T : class;
     IReadonlyStateStoreRepository<T> Read<T>() where T : class;
 
-    EitherAsync<Error, T> ReadBySpecAsync<T, Spec>(Spec specification, Error notFound, CancellationToken cancellationToken = default)
-        where T: class
+    EitherAsync<Error, T> ReadBySpecAsync<T, Spec>(Spec specification, Error notFound,
+        CancellationToken cancellationToken = default)
+        where T : class
         where Spec : ISingleResultSpecification, ISpecification<T>;
 
-    EitherAsync<Error, T> GetBySpecAsync<T, Spec>(Spec specification, Error notFound, CancellationToken cancellationToken = default)
+    EitherAsync<Error, T> GetBySpecAsync<T, Spec>(Spec specification, Error notFound,
+        CancellationToken cancellationToken = default)
         where T : class
         where Spec : ISingleResultSpecification, ISpecification<T>;
 
 
-    public Task LoadPropertyAsync<T,TProperty>(T entry, Expression<Func<T, TProperty?>> propertyExpression,
+    public Task LoadPropertyAsync<T, TProperty>(T entry, Expression<Func<T, TProperty?>> propertyExpression,
         CancellationToken cancellationToken = default)
         where T : class
         where TProperty : class;
@@ -33,7 +35,8 @@ public interface IStateStore
         where TProperty : class;
 
 
-    public Task LoadCollectionAsync<T, TProperty>(T entry, Expression<Func<T, IEnumerable<TProperty>>> propertyExpression,
+    public Task LoadCollectionAsync<T, TProperty>(T entry,
+        Expression<Func<T, IEnumerable<TProperty>>> propertyExpression,
         CancellationToken cancellationToken = default)
         where T : class
         where TProperty : class;
@@ -43,5 +46,4 @@ public interface IStateStore
         where TProperty : class;
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-
 }

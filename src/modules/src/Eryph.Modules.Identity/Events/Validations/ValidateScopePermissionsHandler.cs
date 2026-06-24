@@ -21,8 +21,11 @@ public sealed class ValidateScopePermissionsHandler(
     ILogger<ValidateScopePermissionsHandler> logger)
     : IOpenIddictServerHandler<ValidateTokenRequestContext>
 {
-    private readonly IOpenIddictApplicationManager _applicationManager = applicationManager ?? throw new ArgumentNullException(nameof(applicationManager));
-    private readonly ILogger<ValidateScopePermissionsHandler> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly IOpenIddictApplicationManager _applicationManager =
+        applicationManager ?? throw new ArgumentNullException(nameof(applicationManager));
+
+    private readonly ILogger<ValidateScopePermissionsHandler> _logger =
+        logger ?? throw new ArgumentNullException(nameof(logger));
 
     public static OpenIddictServerHandlerDescriptor Descriptor { get; }
         = OpenIddictServerHandlerDescriptor.CreateBuilder<ValidateTokenRequestContext>()
@@ -41,10 +44,7 @@ public sealed class ValidateScopePermissionsHandler(
             .Select(s => s.Trim())
             .ToHashSet(StringComparer.Ordinal);
 
-        if (requestedScopes.Count == 0)
-        {
-            return;
-        }
+        if (requestedScopes.Count == 0) return;
 
         // Get the client application
         var application = await _applicationManager.FindByClientIdAsync(context.ClientId!, context.CancellationToken);
@@ -52,15 +52,17 @@ public sealed class ValidateScopePermissionsHandler(
         {
             _logger.LogError("The client application associated with '{ClientId}' cannot be found.", context.ClientId);
             context.Reject(
-                error: OpenIddictConstants.Errors.InvalidClient,
-                description: "The client application cannot be found.");
+                OpenIddictConstants.Errors.InvalidClient,
+                "The client application cannot be found.");
             return;
         }
 
         // Get the permissions associated with the application
-        var applicationPermissions = await _applicationManager.GetPermissionsAsync(application, context.CancellationToken);
+        var applicationPermissions =
+            await _applicationManager.GetPermissionsAsync(application, context.CancellationToken);
         var applicationScopes = applicationPermissions
-            .Where(permission => permission.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.Ordinal))
+            .Where(permission =>
+                permission.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.Ordinal))
             .Select(permission => permission[OpenIddictConstants.Permissions.Prefixes.Scope.Length..])
             .ToImmutableArray();
 
@@ -80,14 +82,14 @@ public sealed class ValidateScopePermissionsHandler(
         if (invalidScopes.Length > 0)
         {
             _logger.LogDebug("Client '{ClientId}' requested invalid scopes: {InvalidScopes}. " +
-                "Available scopes: {AvailableScopes}",
+                             "Available scopes: {AvailableScopes}",
                 context.ClientId,
                 string.Join(", ", invalidScopes),
                 string.Join(", ", expandedApplicationScopes));
 
             context.Reject(
-                error: OpenIddictConstants.Errors.InvalidScope,
-                description: "The specified scope is not supported.");
+                OpenIddictConstants.Errors.InvalidScope,
+                "The specified scope is not supported.");
             return;
         }
 

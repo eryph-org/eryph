@@ -18,7 +18,7 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
     public string? AgentName { get; set; }
 
     public CreateCatletSagaState State { get; set; }
-        
+
     public Guid TenantId { get; set; }
 
     public Guid ProjectId { get; set; }
@@ -27,5 +27,6 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
 
     public Architecture? Architecture { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } =
+        new Dictionary<UniqueGeneIdentifier, GeneHash>();
 }

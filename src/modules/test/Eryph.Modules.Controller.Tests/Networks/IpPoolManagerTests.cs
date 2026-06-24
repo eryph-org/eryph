@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core;
+﻿using Eryph.Core;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -19,10 +13,10 @@ public class IpPoolManagerTests(
     ITestOutputHelper outputHelper)
     : InMemoryStateDbTestBase(outputHelper)
 {
+    private const string IpPoolName = "test-pool";
     private static readonly Guid NetworkId = Guid.NewGuid();
     private static readonly Guid SubnetId = Guid.NewGuid();
     private static readonly Guid IpPoolId = Guid.NewGuid();
-    private const string IpPoolName = "test-pool";
     private static readonly Guid CatletMetadataId = Guid.NewGuid();
     private static readonly Guid NetworkPortId = Guid.NewGuid();
 
@@ -72,8 +66,8 @@ public class IpPoolManagerTests(
     [Fact]
     public async Task AcquireIp_HighestIpIsUsed_ReturnsFirstFreeIpAfterRollover()
     {
-        Guid firstAssignmentId = default;
-        Guid secondAssignmentId = default;
+        var firstAssignmentId = Guid.Empty;
+        var secondAssignmentId = Guid.Empty;
         await WithScope(async (poolManager, stateStore) =>
         {
             firstAssignmentId = (await AcquireIpAndAssign(poolManager)).Id;
@@ -112,12 +106,12 @@ public class IpPoolManagerTests(
     [Fact]
     public async Task AcquireIp_HighestIpIsUsedAndOneIpLeft_ReturnsFreeIpAfterRollover()
     {
-        Guid assignmentId = default;
+        var assignmentId = Guid.Empty;
         await WithScope(async (poolManager, stateStore) =>
         {
             await AcquireIpAndAssign(poolManager);
             await AcquireIpAndAssign(poolManager);
-            assignmentId = (await AcquireIpAndAssign(poolManager)).Id; 
+            assignmentId = (await AcquireIpAndAssign(poolManager)).Id;
             await AcquireIpAndAssign(poolManager);
             await AcquireIpAndAssign(poolManager);
 
@@ -168,7 +162,7 @@ public class IpPoolManagerTests(
             error.Message.Should().Be($"IP pool {IpPoolName}({IpPoolId}) has no more free IP addresses.");
 
             var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
-            ipPool!.NextIp.Should().Be($"10.0.0.100");
+            ipPool!.NextIp.Should().Be("10.0.0.100");
         });
     }
 
@@ -181,7 +175,7 @@ public class IpPoolManagerTests(
     }
 
 
-    private async Task<IpPoolAssignment> AcquireIpAndAssign(IIpPoolManager ipPoolManager)
+    private static async Task<IpPoolAssignment> AcquireIpAndAssign(IIpPoolManager ipPoolManager)
     {
         var result = await ipPoolManager.AcquireIp(SubnetId, IpPoolName);
         var ipAssignment = result.Should().BeRight().Subject;
@@ -199,7 +193,7 @@ public class IpPoolManagerTests(
         await SeedDefaultTenantAndProject();
 
         await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork()
+            new VirtualNetwork
             {
                 Id = NetworkId,
                 Name = "test-network",
@@ -208,13 +202,13 @@ public class IpPoolManagerTests(
                 NetworkProvider = EryphConstants.DefaultProviderName,
                 Subnets =
                 [
-                    new VirtualNetworkSubnet()
+                    new VirtualNetworkSubnet
                     {
                         Id = SubnetId,
                         Name = "test-subnet",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = IpPoolId,
                                 Name = IpPoolName,
@@ -222,20 +216,20 @@ public class IpPoolManagerTests(
                                 FirstIp = "10.0.0.100",
                                 NextIp = "10.0.0.100",
                                 LastIp = "10.0.0.104",
-                            }
-                        ]
+                            },
+                        ],
                     },
-                ]
+                ],
             });
 
         await stateStore.For<CatletMetadata>().AddAsync(
-            new CatletMetadata()
+            new CatletMetadata
             {
                 Id = CatletMetadataId,
             });
-        
+
         await stateStore.For<CatletNetworkPort>().AddAsync(
-            new CatletNetworkPort()
+            new CatletNetworkPort
             {
                 Id = NetworkPortId,
                 Name = "test-catlet-port",

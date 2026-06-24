@@ -1,36 +1,27 @@
-﻿using Eryph.Core;
+﻿using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
+using Eryph.Core;
+using Eryph.Core.Network;
 using Eryph.Modules.Controller.ChangeTracking;
+using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Seeding;
 using Eryph.Modules.Controller.Tests.ChangeTracking;
 using Eryph.StateDb;
-using Eryph.StateDb.Sqlite;
 using Eryph.StateDb.TestBase;
+using LanguageExt.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
-using System;
-using System.Collections.Generic;
-using System.IO.Abstractions;
-using System.IO.Abstractions.TestingHelpers;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.Network;
-using Eryph.Modules.Controller.DataServices;
-using LanguageExt.Common;
 using Xunit.Abstractions;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.Seeding;
 
 public abstract class SeederTestBase : StateDbTestBase
 {
-    protected readonly MockFileSystem MockFileSystem = new();
-    protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
     protected readonly ChangeTrackingConfig ChangeTrackingConfig = new()
     {
         TrackChanges = true,
@@ -43,6 +34,9 @@ public abstract class SeederTestBase : StateDbTestBase
         CatletSpecificationsConfigPath = @"Z:\catlets\specs",
         CatletSpecificationVersionsConfigPath = @"Z:\catlets\specversions",
     };
+
+    protected readonly MockFileSystem MockFileSystem = new();
+    protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
 
     protected SeederTestBase(
         IDatabaseFixture databaseFixture,
@@ -110,6 +104,7 @@ public abstract class SeederTestBase : StateDbTestBase
 
             await dbTransaction.CommitAsync();
         }
+
         await ChangeTrackingTestHelpers.WaitForIdleAsync(host, TimeSpan.FromSeconds(10));
         await host.StopAsync();
     }

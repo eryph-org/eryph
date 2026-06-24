@@ -29,9 +29,14 @@ public class ComponentCertificateAuthority(
     private const string ClientAuthOid = "1.3.6.1.5.5.7.3.2"; // id-kp-clientAuth
     private const string ServerAuthOid = "1.3.6.1.5.5.7.3.1"; // id-kp-serverAuth
 
-    private static readonly CaTier Root = new("eryph-component-root-ca", "eryph-component-root-ca-key", "eryph component root CA");
-    private static readonly CaTier ClientCa = new("eryph-component-client-ca", "eryph-component-client-ca-key", "eryph component client CA");
-    private static readonly CaTier ServerCa = new("eryph-server-tls-ca", "eryph-server-tls-ca-key", "eryph server TLS CA");
+    private static readonly CaTier Root = new("eryph-component-root-ca", "eryph-component-root-ca-key",
+        "eryph component root CA");
+
+    private static readonly CaTier ClientCa = new("eryph-component-client-ca", "eryph-component-client-ca-key",
+        "eryph component client CA");
+
+    private static readonly CaTier ServerCa = new("eryph-server-tls-ca", "eryph-server-tls-ca-key",
+        "eryph server TLS CA");
 
     public IReadOnlyList<X509Certificate2> GetTrustedCaCertificates()
     {
@@ -66,14 +71,13 @@ public class ComponentCertificateAuthority(
         // anyway. If a tier has no intermediate yet (no leaf ever issued), it simply contributes none.
         var result = new List<X509Certificate2>();
         foreach (var tier in new[] { ClientCa, ServerCa })
+        foreach (var certificate in storeService.GetFromMyStore(tier.SubjectName))
         {
-            foreach (var certificate in storeService.GetFromMyStore(tier.SubjectName))
-            {
-                if (IsValidCa(certificate))
-                    result.Add(X509CertificateLoader.LoadCertificate(certificate.RawData));
-                certificate.Dispose();
-            }
+            if (IsValidCa(certificate))
+                result.Add(X509CertificateLoader.LoadCertificate(certificate.RawData));
+            certificate.Dispose();
         }
+
         return result;
     }
 
@@ -125,6 +129,52 @@ public class ComponentCertificateAuthority(
         RetireSuperseded(ServerCa);
     }
 
+    public IssuedCertificate IssueComponentCertificate(
+        string componentId, string fqdn, RSA subjectPublicKey, int validDays = 90)
+    {
+        if (string.IsNullOrWhiteSpace(componentId))
+            throw new ArgumentException("The component id must be provided.", nameof(componentId));
+        if (string.IsNullOrWhiteSpace(fqdn))
+            throw new ArgumentException("The component FQDN must be provided.", nameof(fqdn));
+
+        var subject = new X500DistinguishedNameBuilder();
+        subject.AddOrganizationName("eryph");
+        subject.AddOrganizationalUnitName("component");
+        subject.AddCommonName(fqdn);
+
+        var san = new SubjectAlternativeNameBuilder();
+        san.AddDnsName(fqdn);
+        // The stable component id as a URN SAN so a peer can map the authenticated certificate to
+        // the exact component identity rather than the (human-oriented) CN. This MUST remain the only
+        // (and therefore first) URI-type SAN: the broker authenticates components with
+        // ssl_cert_login_from = subject_alternative_name / san_type = uri / san_index = 0, i.e. it takes
+        // the FIRST URI SAN as the AMQP user name. Adding another URI SAN before it would change the
+        // derived broker user and break authentication.
+        san.AddUri(new Uri($"urn:eryph:component:{componentId}"));
+
+        return Issue(ClientCa, subject.Build(), $"eryph component {fqdn}", subjectPublicKey, ClientAuthOid, san,
+            validDays);
+    }
+
+    public IssuedCertificate IssueServerCertificate(
+        IReadOnlyList<string> dnsNames, RSA subjectPublicKey, int validDays = 90)
+    {
+        if (dnsNames is null || dnsNames.Count == 0 || dnsNames.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("At least one non-empty server DNS name must be provided.", nameof(dnsNames));
+
+        var subject = new X500DistinguishedNameBuilder();
+        subject.AddOrganizationName("eryph");
+        subject.AddOrganizationalUnitName("server");
+        subject.AddCommonName(dnsNames[0]);
+
+        var san = new SubjectAlternativeNameBuilder();
+        foreach (var dnsName in dnsNames)
+            san.AddDnsName(dnsName);
+
+        return Issue(ServerCa, subject.Build(), $"eryph server {dnsNames[0]}", subjectPublicKey, ServerAuthOid, san,
+            validDays);
+    }
+
     // Replaces every key-bearing certificate of a tier with a public-only copy: it remains trusted (still
     // in the store, still returned by GetTrustedCaCertificates / GetIssuingCaCertificates) but can no
     // longer sign, because the signing key is selected from the store and only key-bearing certificates
@@ -141,6 +191,7 @@ public class ComponentCertificateAuthority(
                 storeService.RemoveFromMyStore(certificate.PublicKey);
                 storeService.AddToMyStore(publicOnly);
             }
+
             certificate.Dispose();
         }
     }
@@ -171,50 +222,6 @@ public class ComponentCertificateAuthority(
             foreach (var certificate in candidates)
                 certificate.Dispose();
         }
-    }
-
-    public IssuedCertificate IssueComponentCertificate(
-        string componentId, string fqdn, RSA subjectPublicKey, int validDays = 90)
-    {
-        if (string.IsNullOrWhiteSpace(componentId))
-            throw new ArgumentException("The component id must be provided.", nameof(componentId));
-        if (string.IsNullOrWhiteSpace(fqdn))
-            throw new ArgumentException("The component FQDN must be provided.", nameof(fqdn));
-
-        var subject = new X500DistinguishedNameBuilder();
-        subject.AddOrganizationName("eryph");
-        subject.AddOrganizationalUnitName("component");
-        subject.AddCommonName(fqdn);
-
-        var san = new SubjectAlternativeNameBuilder();
-        san.AddDnsName(fqdn);
-        // The stable component id as a URN SAN so a peer can map the authenticated certificate to
-        // the exact component identity rather than the (human-oriented) CN. This MUST remain the only
-        // (and therefore first) URI-type SAN: the broker authenticates components with
-        // ssl_cert_login_from = subject_alternative_name / san_type = uri / san_index = 0, i.e. it takes
-        // the FIRST URI SAN as the AMQP user name. Adding another URI SAN before it would change the
-        // derived broker user and break authentication.
-        san.AddUri(new Uri($"urn:eryph:component:{componentId}"));
-
-        return Issue(ClientCa, subject.Build(), $"eryph component {fqdn}", subjectPublicKey, ClientAuthOid, san, validDays);
-    }
-
-    public IssuedCertificate IssueServerCertificate(
-        IReadOnlyList<string> dnsNames, RSA subjectPublicKey, int validDays = 90)
-    {
-        if (dnsNames is null || dnsNames.Count == 0 || dnsNames.Any(string.IsNullOrWhiteSpace))
-            throw new ArgumentException("At least one non-empty server DNS name must be provided.", nameof(dnsNames));
-
-        var subject = new X500DistinguishedNameBuilder();
-        subject.AddOrganizationName("eryph");
-        subject.AddOrganizationalUnitName("server");
-        subject.AddCommonName(dnsNames[0]);
-
-        var san = new SubjectAlternativeNameBuilder();
-        foreach (var dnsName in dnsNames)
-            san.AddDnsName(dnsName);
-
-        return Issue(ServerCa, subject.Build(), $"eryph server {dnsNames[0]}", subjectPublicKey, ServerAuthOid, san, validDays);
     }
 
     private IssuedCertificate Issue(
@@ -337,7 +344,7 @@ public class ComponentCertificateAuthority(
     // Dispose every certificate in the set except the one we keep, releasing the unmanaged key handles
     // of the candidates we did not select (passing null for kept disposes them all).
     private static void DisposeExcept(
-        System.Collections.Generic.IReadOnlyList<X509Certificate2> certificates, X509Certificate2? kept)
+        IReadOnlyList<X509Certificate2> certificates, X509Certificate2? kept)
     {
         foreach (var certificate in certificates)
             if (!ReferenceEquals(certificate, kept))
@@ -352,9 +359,9 @@ public class ComponentCertificateAuthority(
         // or issued leaves would fail chain validation until its validity begins.
         var now = DateTime.UtcNow;
         return certificate.NotBefore.ToUniversalTime() <= now
-            && certificate.NotAfter.ToUniversalTime() > now
-            && certificate.Extensions.OfType<X509BasicConstraintsExtension>()
-                .Any(e => e.CertificateAuthority);
+               && certificate.NotAfter.ToUniversalTime() > now
+               && certificate.Extensions.OfType<X509BasicConstraintsExtension>()
+                   .Any(e => e.CertificateAuthority);
     }
 
     private sealed record CaTier(string CommonName, string KeyName, string FriendlyName)

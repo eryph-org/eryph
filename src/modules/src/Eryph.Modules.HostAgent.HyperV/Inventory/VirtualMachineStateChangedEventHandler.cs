@@ -5,7 +5,6 @@ using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Inventory;

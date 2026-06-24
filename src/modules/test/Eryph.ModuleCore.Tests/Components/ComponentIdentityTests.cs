@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using FluentAssertions;
@@ -20,7 +19,7 @@ public class ComponentIdentityTests
 
         // Same component type on the same host => same stable id, even across restarts/queues.
         a.ComponentId.Should().Be(b.ComponentId);
-        a.ComponentId.Should().NotBe(default(System.Guid));
+        a.ComponentId.Should().NotBe(Guid.Empty);
     }
 
     [Fact]

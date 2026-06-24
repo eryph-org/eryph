@@ -1,7 +1,7 @@
 ﻿using Eryph.Modules.HostAgent.Inventory;
 using Eryph.Resources.Machines;
+using Eryph.VmManagement.HyperV.TestBase;
 using Eryph.VmManagement.Sys;
-using Eryph.VmManagement.TestBase;
 using Eryph.VmManagement.Wmi;
 using FluentAssertions.Extensions;
 using LanguageExt;
@@ -32,14 +32,13 @@ public class WmiVmUptimeCheckJobTests
         var result = WmiVmUptimeCheckJob<TestRuntime>.Execute()
             .Run(TestRuntime.New(_wmiIOMock.Object));
 
-        result.Should().BeSuccess().Which.Should().SatisfyRespectively(
-            message =>
-            {
-                message.VmId.Should().Be(Guid.Parse("2FE70974-C81A-4F3A-BF4E-7BE405B88C97"));
-                message.Status.Should().Be(VmStatus.Running);
-                message.UpTime.Should().Be(TimeSpan.FromSeconds(42));
-                message.Timestamp.Should().BeWithin(1.Seconds()).After(timestamp);
-            });
+        result.Should().BeSuccess().Which.Should().SatisfyRespectively(message =>
+        {
+            message.VmId.Should().Be(Guid.Parse("2FE70974-C81A-4F3A-BF4E-7BE405B88C97"));
+            message.Status.Should().Be(VmStatus.Running);
+            message.UpTime.Should().Be(TimeSpan.FromSeconds(42));
+            message.Timestamp.Should().BeWithin(1.Seconds()).After(timestamp);
+        });
     }
 
     [Fact]

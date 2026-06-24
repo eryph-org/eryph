@@ -1,24 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations;
+﻿using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Modules.Controller.Networks;
-using Eryph.StateDb;
-using Eryph.StateDb.TestBase;
-using Moq;
-using SimpleInjector.Integration.ServiceCollection;
-using SimpleInjector;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.Controller.Networks;
+using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using LanguageExt;
+using Eryph.StateDb.TestBase;
 using LanguageExt.Common;
+using Moq;
+using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 using Xunit.Abstractions;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
@@ -51,9 +44,9 @@ public class UpdateCatletNetworksCommandHandlerTests(
 
     private const string CatletMetadataId = "15e2b061-c625-4469-9fe7-7c455058fcc0";
     private const string CatletId = "de8c6710-172a-44be-bbed-27ba9905ed8f";
+    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
 
     private readonly Mock<ITaskMessaging> _taskMessingMock = new();
-    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
 
     [Theory]
     [InlineData(DefaultProjectId, "default", null, null, null,
@@ -103,7 +96,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = environment,
-                Networks = 
+                Networks =
                 [
                     new CatletNetworkConfig
                     {
@@ -116,29 +109,28 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 IpPool = poolName,
                             }
                             : null,
-                    }
-                ]
+                    },
+                ],
             },
         };
 
         await WithScope(async (handler, stateStore) =>
         {
             var result = await handler.UpdateNetworks(command);
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("default");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be(networkName);
-                    settings.AddressesV4.Should().Equal(expectedIp);
-                    settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                    settings.MacAddressSpoofing.Should().BeFalse();
-                    settings.DhcpGuard.Should().BeFalse();
-                    settings.RouterGuard.Should().BeFalse();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("default");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be(networkName);
+                settings.AddressesV4.Should().Equal(expectedIp);
+                settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+                settings.MacAddressSpoofing.Should().BeFalse();
+                settings.DhcpGuard.Should().BeFalse();
+                settings.RouterGuard.Should().BeFalse();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -166,8 +158,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -175,21 +167,20 @@ public class UpdateCatletNetworksCommandHandlerTests(
         {
             var result = await handler.UpdateNetworks(command);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("flat-provider");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be("flat-network");
-                    settings.AddressesV4.Should().BeEmpty();
-                    settings.FloatingAddressV4.Should().BeNull();
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                    settings.MacAddressSpoofing.Should().BeFalse();
-                    settings.DhcpGuard.Should().BeTrue();
-                    settings.RouterGuard.Should().BeTrue();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("flat-provider");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be("flat-network");
+                settings.AddressesV4.Should().BeEmpty();
+                settings.FloatingAddressV4.Should().BeNull();
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+                settings.MacAddressSpoofing.Should().BeFalse();
+                settings.DhcpGuard.Should().BeTrue();
+                settings.RouterGuard.Should().BeTrue();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -214,8 +205,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-static-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -223,19 +214,18 @@ public class UpdateCatletNetworksCommandHandlerTests(
         {
             var result = await handler.UpdateNetworks(command);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("flat-static-provider");
-                    settings.NetworkName.Should().Be("flat-static-network");
-                    settings.AddressesV4.Should().Equal("192.168.5.12");
-                    settings.FloatingAddressV4.Should().BeNull();
-                    settings.PrefixLengthV4.Should().Be(24);
-                    settings.GatewayV4.Should().Be("192.168.5.1");
-                    settings.DnsServersV4.Should().Equal("9.9.9.9", "8.8.8.8");
-                    settings.DnsDomain.Should().Be("example.com");
-                    settings.Mtu.Should().Be(1400);
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("flat-static-provider");
+                settings.NetworkName.Should().Be("flat-static-network");
+                settings.AddressesV4.Should().Equal("192.168.5.12");
+                settings.FloatingAddressV4.Should().BeNull();
+                settings.PrefixLengthV4.Should().Be(24);
+                settings.GatewayV4.Should().Be("192.168.5.1");
+                settings.DnsServersV4.Should().Equal("9.9.9.9", "8.8.8.8");
+                settings.DnsDomain.Should().Be("example.com");
+                settings.Mtu.Should().Be(1400);
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -267,8 +257,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 Environment = "default",
                 Networks =
                 [
-                    new CatletNetworkConfig { AdapterName = "eth0", Name = "default" }
-                ]
+                    new CatletNetworkConfig { AdapterName = "eth0", Name = "default" },
+                ],
             },
         };
 
@@ -288,8 +278,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 Environment = "default",
                 Networks =
                 [
-                    new CatletNetworkConfig { AdapterName = "eth0", Name = "flat-static-network" }
-                ]
+                    new CatletNetworkConfig { AdapterName = "eth0", Name = "flat-static-network" },
+                ],
             },
         };
 
@@ -297,13 +287,12 @@ public class UpdateCatletNetworksCommandHandlerTests(
         {
             var result = await handler.UpdateNetworks(updatedConfigCommand);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("flat-static-provider");
-                    settings.AddressesV4.Should().Equal("192.168.5.12");
-                    settings.GatewayV4.Should().Be("192.168.5.1");
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("flat-static-provider");
+                settings.AddressesV4.Should().Equal("192.168.5.12");
+                settings.GatewayV4.Should().Be("192.168.5.1");
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -338,7 +327,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         Name = "eth0",
                         MacAddress = "420042004202",
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -346,7 +335,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
+                    },
                 ],
             },
         };
@@ -355,13 +344,12 @@ public class UpdateCatletNetworksCommandHandlerTests(
         {
             var result = await handler.UpdateNetworks(command);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.MacAddress.Should().Be("42:00:42:00:42:02");
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.MacAddress.Should().Be("42:00:42:00:42:02");
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -391,7 +379,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     new CatletNetworkConfig
                     {
                         AdapterName = "eth0",
-                    }
+                    },
                 ],
             },
         };
@@ -430,8 +418,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -458,31 +446,30 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "default",
-                        SubnetV4 =  new CatletSubnetConfig
+                        SubnetV4 = new CatletSubnetConfig
                         {
                             Name = "default",
                             IpPool = "default",
                         },
-                    }
-                ]
+                    },
+                ],
             },
         };
 
         await WithScope(async (handler, stateStore) =>
         {
             var result = await handler.UpdateNetworks(updatedConfigCommand);
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("default");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be("default");
-                    settings.AddressesV4.Should().Equal("10.0.0.12");
-                    settings.FloatingAddressV4.Should().Be("10.249.248.12");
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("default");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be("default");
+                settings.AddressesV4.Should().Equal("10.0.0.12");
+                settings.FloatingAddressV4.Should().Be("10.249.248.12");
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -508,8 +495,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     new CatletNetworkConfig
                     {
                         AdapterName = "eth0",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -539,26 +526,25 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
         await WithScope(async (handler, stateStore) =>
         {
             var result = await handler.UpdateNetworks(updatedConfigCommand);
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("flat-provider");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be("flat-network");
-                    settings.AddressesV4.Should().BeEmpty();
-                    settings.FloatingAddressV4.Should().BeNull();
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("flat-provider");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be("flat-network");
+                settings.AddressesV4.Should().BeEmpty();
+                settings.FloatingAddressV4.Should().BeNull();
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -612,8 +598,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     new CatletNetworkConfig
                     {
                         AdapterName = "eth0",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -647,27 +633,26 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         {
                             Name = subnetName,
                             IpPool = poolName,
-                        }
-                    }
-                ]
+                        },
+                    },
+                ],
             },
         };
 
         await WithScope(async (handler, stateStore) =>
         {
             var result = await handler.UpdateNetworks(updatedConfigCommand);
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("default");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be(networkName);
-                    settings.AddressesV4.Should().Equal(expectedIp);
-                    settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("default");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be(networkName);
+                settings.AddressesV4.Should().Equal(expectedIp);
+                settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -693,8 +678,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     new CatletNetworkConfig
                     {
                         AdapterName = "eth0",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -753,12 +738,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         MacAddressSpoofing = true,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -766,8 +752,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -775,21 +761,20 @@ public class UpdateCatletNetworksCommandHandlerTests(
         {
             var result = await handler.UpdateNetworks(command);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("flat-provider");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be("flat-network");
-                    settings.AddressesV4.Should().BeEmpty();
-                    settings.FloatingAddressV4.Should().BeNull();
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                    settings.MacAddressSpoofing.Should().BeTrue();
-                    settings.DhcpGuard.Should().BeTrue();
-                    settings.RouterGuard.Should().BeTrue();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("flat-provider");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be("flat-network");
+                settings.AddressesV4.Should().BeEmpty();
+                settings.FloatingAddressV4.Should().BeNull();
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+                settings.MacAddressSpoofing.Should().BeTrue();
+                settings.DhcpGuard.Should().BeTrue();
+                settings.RouterGuard.Should().BeTrue();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -815,12 +800,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         MacAddressSpoofing = true,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -828,8 +814,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -853,12 +839,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         MacAddressSpoofing = true,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -866,8 +853,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "default",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -891,12 +878,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         DhcpGuard = false,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -904,8 +892,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -913,21 +901,20 @@ public class UpdateCatletNetworksCommandHandlerTests(
         {
             var result = await handler.UpdateNetworks(command);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("flat-provider");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be("flat-network");
-                    settings.AddressesV4.Should().BeEmpty();
-                    settings.FloatingAddressV4.Should().BeNull();
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                    settings.MacAddressSpoofing.Should().BeFalse();
-                    settings.DhcpGuard.Should().BeFalse();
-                    settings.RouterGuard.Should().BeTrue();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("flat-provider");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be("flat-network");
+                settings.AddressesV4.Should().BeEmpty();
+                settings.FloatingAddressV4.Should().BeNull();
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+                settings.MacAddressSpoofing.Should().BeFalse();
+                settings.DhcpGuard.Should().BeFalse();
+                settings.RouterGuard.Should().BeTrue();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -953,12 +940,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         DhcpGuard = false,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -966,8 +954,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -991,12 +979,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         DhcpGuard = true,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -1004,8 +993,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "default",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -1029,12 +1018,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         RouterGuard = false,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -1042,8 +1032,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -1051,21 +1041,20 @@ public class UpdateCatletNetworksCommandHandlerTests(
         {
             var result = await handler.UpdateNetworks(command);
 
-            result.Should().BeRight().Which.Should().SatisfyRespectively(
-                settings =>
-                {
-                    settings.NetworkProviderName.Should().Be("flat-provider");
-                    settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
-                    settings.NetworkName.Should().Be("flat-network");
-                    settings.AddressesV4.Should().BeEmpty();
-                    settings.FloatingAddressV4.Should().BeNull();
-                    settings.AddressesV6.Should().BeEmpty();
-                    settings.FloatingAddressV6.Should().BeNull();
-                    settings.MacAddressSpoofing.Should().BeFalse();
-                    settings.DhcpGuard.Should().BeTrue();
-                    settings.RouterGuard.Should().BeFalse();
-                });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(settings =>
+            {
+                settings.NetworkProviderName.Should().Be("flat-provider");
+                settings.AdapterName.Should().Be("eth0");
+                settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                settings.NetworkName.Should().Be("flat-network");
+                settings.AddressesV4.Should().BeEmpty();
+                settings.FloatingAddressV4.Should().BeNull();
+                settings.AddressesV6.Should().BeEmpty();
+                settings.FloatingAddressV6.Should().BeNull();
+                settings.MacAddressSpoofing.Should().BeFalse();
+                settings.DhcpGuard.Should().BeTrue();
+                settings.RouterGuard.Should().BeFalse();
+            });
 
             await stateStore.SaveChangesAsync();
         });
@@ -1091,12 +1080,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         RouterGuard = false,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -1104,8 +1094,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "flat-network",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -1129,12 +1119,13 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Config = new CatletConfig
             {
                 Environment = "default",
-                NetworkAdapters = [
+                NetworkAdapters =
+                [
                     new CatletNetworkAdapterConfig
                     {
                         Name = "eth0",
                         RouterGuard = true,
-                    }
+                    },
                 ],
                 Networks =
                 [
@@ -1142,8 +1133,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     {
                         AdapterName = "eth0",
                         Name = "default",
-                    }
-                ]
+                    },
+                ],
             },
         };
 
@@ -1249,14 +1240,14 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                     Name = "default",
                                     FirstIp = "10.249.248.10",
                                     NextIp = "10.249.248.12",
-                                    LastIp = "10.249.248.19"
+                                    LastIp = "10.249.248.19",
                                 },
                                 new NetworkProviderIpPool
                                 {
                                     Name = "second-provider-pool",
                                     FirstIp = "10.249.248.20",
                                     NextIp = "10.249.248.22",
-                                    LastIp = "10.249.248.29"
+                                    LastIp = "10.249.248.29",
                                 },
                             ],
                         },
@@ -1272,7 +1263,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                     Name = "default",
                                     FirstIp = "10.249.249.10",
                                     NextIp = "10.249.249.12",
-                                    LastIp = "10.249.249.19"
+                                    LastIp = "10.249.249.19",
                                 },
                             ],
                         },
@@ -1311,7 +1302,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         },
                     ],
                 },
-            ]
+            ],
         };
 
         _networkProviderManagerMock
@@ -1320,7 +1311,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 networkProvidersConfig));
         _networkProviderManagerMock
             .SetupGet(m => m.Defaults)
-            .Returns(() => new NetworkProviderDefaults()
+            .Returns(() => new NetworkProviderDefaults
             {
                 MacAddressSpoofing = true,
                 DisableDhcpGuard = true,
@@ -1330,7 +1321,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await WithScope(async (_, stateStore) =>
         {
             var configRealizer = new NetworkProvidersConfigRealizer(stateStore);
-            await configRealizer.RealizeConfigAsync(networkProvidersConfig, default);
+            await configRealizer.RealizeConfigAsync(networkProvidersConfig, CancellationToken.None);
         });
     }
 
@@ -1343,7 +1334,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
             Id = Guid.Parse(CatletMetadataId),
         });
 
-        await stateStore.For<Project>().AddAsync(new Project()
+        await stateStore.For<Project>().AddAsync(new Project
         {
             Id = Guid.Parse(SecondProjectId),
             Name = "second-project",
@@ -1367,7 +1358,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         IpNetwork = "10.0.0.0/15",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -1376,7 +1367,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 NextIp = "10.0.0.12",
                                 LastIp = "10.0.0.19",
                             },
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = "second-pool",
@@ -1384,7 +1375,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 FirstIp = "10.0.1.10",
                                 NextIp = "10.0.1.12",
                                 LastIp = "10.0.1.19",
-                            }
+                            },
                         ],
                     },
                     new VirtualNetworkSubnet
@@ -1394,7 +1385,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         IpNetwork = "10.1.0.0/16",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -1402,7 +1393,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 FirstIp = "10.1.0.10",
                                 NextIp = "10.1.0.12",
                                 LastIp = "10.1.0.19",
-                            }
+                            },
                         ],
                     },
                 ],
@@ -1415,7 +1406,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
                         MacAddress = "42:00:42:00:00:01",
-                    }
+                    },
                 ],
             });
 
@@ -1437,7 +1428,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         IpNetwork = "10.5.0.0/16",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -1445,7 +1436,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 FirstIp = "10.5.0.10",
                                 NextIp = "10.5.0.12",
                                 LastIp = "10.5.0.19",
-                            }
+                            },
                         ],
                     },
                 ],
@@ -1458,8 +1449,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = "second-provider-pool",
                         MacAddress = "42:00:42:00:00:02",
-                    }
-                ]
+                    },
+                ],
             });
 
         await stateStore.For<VirtualNetwork>().AddAsync(
@@ -1480,7 +1471,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         IpNetwork = "10.5.0.0/16",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -1488,7 +1479,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 FirstIp = "10.6.0.10",
                                 NextIp = "10.6.0.12",
                                 LastIp = "10.6.0.19",
-                            }
+                            },
                         ],
                     },
                 ],
@@ -1501,8 +1492,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         SubnetName = "second-provider-subnet",
                         PoolName = EryphConstants.DefaultIpPoolName,
                         MacAddress = "42:00:42:00:00:03",
-                    }
-                ]
+                    },
+                ],
             });
 
         await stateStore.For<VirtualNetwork>().AddAsync(
@@ -1523,7 +1514,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         IpNetwork = "10.10.0.0/16",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -1531,7 +1522,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 FirstIp = "10.10.0.10",
                                 NextIp = "10.10.0.12",
                                 LastIp = "10.10.0.19",
-                            }
+                            },
                         ],
                     },
                 ],
@@ -1544,8 +1535,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
                         MacAddress = "42:00:42:00:00:04",
-                    }
-                ]
+                    },
+                ],
             });
 
         await stateStore.For<VirtualNetwork>().AddAsync(
@@ -1566,7 +1557,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         IpNetwork = "10.100.0.0/16",
                         IpPools =
                         [
-                            new IpPool()
+                            new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = EryphConstants.DefaultIpPoolName,
@@ -1574,7 +1565,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                                 FirstIp = "10.100.0.10",
                                 NextIp = "10.100.0.12",
                                 LastIp = "10.100.0.19",
-                            }
+                            },
                         ],
                     },
                 ],
@@ -1587,8 +1578,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
                         MacAddress = "42:00:42:00:00:05",
-                    }
-                ]
+                    },
+                ],
             });
 
         await stateStore.For<VirtualNetwork>().AddAsync(

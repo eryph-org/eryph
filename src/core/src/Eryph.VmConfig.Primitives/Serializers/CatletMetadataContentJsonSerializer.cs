@@ -24,7 +24,7 @@ public static class CatletMetadataContentJsonSerializer
             Converters =
             {
                 new JsonStringEnumConverter(),
-                new NewTypeJsonConverter()
+                new NewTypeJsonConverter(),
             },
         });
 
@@ -32,7 +32,7 @@ public static class CatletMetadataContentJsonSerializer
 
     public static CatletMetadataContent Deserialize(string json) =>
         JsonSerializer.Deserialize<CatletMetadataContent>(json, Options)
-            ?? throw new JsonException("The metadata must not be null.");
+        ?? throw new JsonException("The metadata must not be null.");
 
     public static CatletMetadataContent Deserialize(JsonElement json) =>
         json.Deserialize<CatletMetadataContent>(Options)

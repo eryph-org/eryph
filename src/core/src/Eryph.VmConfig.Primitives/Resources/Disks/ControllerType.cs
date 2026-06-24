@@ -1,9 +1,8 @@
-﻿namespace Eryph.Resources.Disks
+﻿namespace Eryph.Resources.Disks;
+
+public enum ControllerType
 {
-    public enum ControllerType
-    {
-        IDE,
-        SCSI,
-        PMEM
-    }
+    IDE,
+    SCSI,
+    PMEM,
 }

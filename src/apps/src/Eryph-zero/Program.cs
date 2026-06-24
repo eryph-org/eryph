@@ -6,7 +6,6 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Abstractions;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -46,6 +45,7 @@ using LanguageExt.Effects.Traits;
 using LanguageExt.Sys.IO;
 using LanguageExt.Sys.Traits;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,26 +54,29 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.Win32;
 using Serilog;
+using Serilog.Core;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using Serilog.Templates;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Spectre.Console;
-
 using static Eryph.Modules.HostAgent.Networks.NetworkProviderManager<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdate<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.HostAgent.Networks.OvsDriverProvider<Eryph.Runtime.Zero.ConsoleRuntime>;
-
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
+using IFileSystem = System.IO.Abstractions.IFileSystem;
 
 namespace Eryph.Runtime.Zero;
 
 internal static class Program
 {
+    private const string RegistryKeyName = "eryph-zero";
     private static GenePoolSettings _genepoolSettings = GenePoolConstants.ProductionGenePool;
+
+    private static readonly IPEndPoint DefaultLoopbackEndpoint = new(IPAddress.Loopback, 0);
 
     private static async Task<int> Main(string[] args)
     {
@@ -86,41 +89,40 @@ internal static class Program
         {
             _genepoolSettings = GenePoolConstants.StagingGenePool;
             var overwriteGenePoolApi = Environment.GetEnvironmentVariable("ERYPH_GENEPOOL_API");
-            if(!string.IsNullOrWhiteSpace(overwriteGenePoolApi))
+            if (!string.IsNullOrWhiteSpace(overwriteGenePoolApi))
                 _genepoolSettings = _genepoolSettings with { ApiEndpoint = new Uri(overwriteGenePoolApi) };
-
         }
 
 
         var rootCommand = new RootCommand();
-        var debugWaitOption = new System.CommandLine.Option<bool>(name: "--debuggerWait",
+        var debugWaitOption = new System.CommandLine.Option<bool>("--debuggerWait",
             () => false, "Stops and waits for a debugger to be attached");
 
         rootCommand.AddGlobalOption(debugWaitOption);
 
         var inFileOption = new System.CommandLine.Option<FileInfo?>(
-            name: "--inFile",
-            description: "Use input file instead of reading from stdin.");
+            "--inFile",
+            "Use input file instead of reading from stdin.");
 
         var outFileOption = new System.CommandLine.Option<FileInfo?>(
-            name: "--outFile",
-            description: "Use output file instead of writing to stdout.");
+            "--outFile",
+            "Use output file instead of writing to stdout.");
 
         var nonInteractiveOption = new System.CommandLine.Option<bool>(
-            name: "--non-interactive",
-            description: "No operator involved - commands will not query for confirmation.");
+            "--non-interactive",
+            "No operator involved - commands will not query for confirmation.");
 
         var warmupOption = new System.CommandLine.Option<bool>(
-            name: "--warmup",
-            description: "Run in warmup mode (internal use)");
+            "--warmup",
+            "Run in warmup mode (internal use)");
 
         var noCurrentConfigCheckOption = new System.CommandLine.Option<bool>(
-            name: "--no-current-config-check",
-            description: "Do not check if host state is valid for current config. ");
+            "--no-current-config-check",
+            "Do not check if host state is valid for current config. ");
 
         var jsonOption = new System.CommandLine.Option<bool>(
-            name: "--json",
-            description: "Command output use the JSON lines format. This implies non-interactive.");
+            "--json",
+            "Command output use the JSON lines format. This implies non-interactive.");
 
         var runCommand = new Command("run");
         runCommand.AddOption(warmupOption);
@@ -129,8 +131,8 @@ internal static class Program
 
         var installCommand = new Command("install");
         var deleteOutFile = new System.CommandLine.Option<bool>(
-            name: "--deleteOutFile", 
-            description: "Delete output file on exit - useful if file is watched for changes.");
+            "--deleteOutFile",
+            "Delete output file on exit - useful if file is watched for changes.");
         installCommand.AddOption(outFileOption);
         installCommand.AddOption(deleteOutFile);
         installCommand.SetHandler(SelfInstall, outFileOption, deleteOutFile);
@@ -141,12 +143,12 @@ internal static class Program
         uninstallCommand.AddOption(outFileOption);
         uninstallCommand.AddOption(deleteOutFile);
         var deleteAppData = new System.CommandLine.Option<bool>(
-            name: "--delete-app-data",
-            description: "Delete all local application data");
+            "--delete-app-data",
+            "Delete all local application data");
         uninstallCommand.AddOption(deleteAppData);
         var deleteCatlets = new System.CommandLine.Option<bool>(
-            name: "--delete-catlets",
-            description: "Delete all catlets and disks");
+            "--delete-catlets",
+            "Delete all catlets and disks");
         uninstallCommand.AddOption(deleteCatlets);
         uninstallCommand.SetHandler(SelfUnInstall, outFileOption, deleteOutFile, deleteAppData, deleteCatlets);
         rootCommand.AddCommand(uninstallCommand);
@@ -241,12 +243,8 @@ internal static class Program
             if (debugHaltOn)
             {
                 Console.WriteLine("Waiting for debugger to be attached");
-                while (!Debugger.IsAttached)
-                {
-                    await Task.Delay(500, context.GetCancellationToken());
-                }
+                while (!Debugger.IsAttached) await Task.Delay(500, context.GetCancellationToken());
                 Console.WriteLine("Debugger attached");
-
             }
 
             await next(context);
@@ -262,7 +260,7 @@ internal static class Program
         return await AdminGuard.CommandIsElevated(async () =>
         {
             string? basePath;
-            Serilog.Core.Logger logger;
+            Logger logger;
 
             var warmupMode = args.Contains("--warmup");
 
@@ -270,7 +268,9 @@ internal static class Program
             {
                 var startupConfig = ReadConfiguration(args);
                 basePath = startupConfig["basePath"];
-                logger = warmupMode ? ZeroLogging.CreateWarmupLogger(startupConfig) : ZeroLogging.CreateLogger(startupConfig);
+                logger = warmupMode
+                    ? ZeroLogging.CreateWarmupLogger(startupConfig)
+                    : ZeroLogging.CreateLogger(startupConfig);
             }
             catch (Exception ex)
             {
@@ -281,15 +281,12 @@ internal static class Program
             try
             {
                 if (warmupMode)
-                {
                     logger.ForWarmupProgress().Information(
                         "Starting eryph-zero {Version} in warmup mode. Process will be stopped after warmup has been completed.",
                         new ZeroApplicationInfoProvider().ProductVersion);
-                }
                 else
-                {
-                    logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
-                }
+                    logger.Information("Starting eryph-zero {Version}",
+                        new ZeroApplicationInfoProvider().ProductVersion);
 
                 await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
@@ -299,13 +296,13 @@ internal static class Program
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-                
+
                 if (warmupMode)
                 {
                     container.UseSqlLite();
                     container.RegisterInstance<IEryphOvnPathProvider>(new EryphOvnPathProvider());
 
-                    container.RegisterSingleton<System.IO.Abstractions.IFileSystem, FileSystem>();
+                    container.RegisterSingleton<IFileSystem, FileSystem>();
                     container.Register<IHostSettingsProvider, HostSettingsProvider>();
                     container.Register<INetworkProviderManager, NetworkProviderManager>();
                     container.Register<IControllerSettingsManager, ControllerSettingsManager>();
@@ -325,14 +322,14 @@ internal static class Program
                             });
                         })
                         .ConfigureChangeTracking()
-                        .ConfigureServices((context, services )=>
+                        .ConfigureServices((context, services) =>
                         {
                             var changeTrackingConfig = new ChangeTrackingConfig();
                             context.Configuration.GetSection("ChangeTracking").Bind(changeTrackingConfig);
                             services.AddSimpleInjector(container, options =>
                             {
                                 options.AddLogging();
-                                
+
                                 options.RegisterSqliteStateStore();
 
                                 options.AddStartupHandler<EnsureHyperVAndOvnStartupHandler>();
@@ -343,9 +340,9 @@ internal static class Program
                                 // state store. It is disposable and rebuilt from the config mirror by the
                                 // identity module's seeders in the main host, so reset-on-pending-migration
                                 // (IdentityDatabaseResetHandler) is the right behavior, mirroring the state store.
-                                var identityDbConnectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+                                var identityDbConnectionString = new SqliteConnectionStringBuilder
                                 {
-                                    DataSource = System.IO.Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
+                                    DataSource = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
                                 }.ToString();
                                 options.RegisterSqliteIdentityStore(identityDbConnectionString);
                                 options.AddStartupHandler<IdentityDatabaseResetHandler>();
@@ -362,7 +359,7 @@ internal static class Program
                         })
                         // The logger must not be disposed here as it is used for error reporting
                         // after the host has stopped.
-                        .UseSerilog(logger: logger, dispose: false)
+                        .UseSerilog(logger)
                         .Build()
                         .UseSimpleInjector(container);
                     try
@@ -378,13 +375,9 @@ internal static class Program
                     finally
                     {
                         if (warmupHost is IAsyncDisposable asyncDisposable)
-                        {
                             await asyncDisposable.DisposeAsync();
-                        }
                         else
-                        {
                             warmupHost.Dispose();
-                        }
                     }
                 }
 
@@ -401,7 +394,7 @@ internal static class Program
                 {
                     {
                         "endpoints", endpoints
-                    }
+                    },
                 });
 
                 container.Bootstrap();
@@ -414,10 +407,7 @@ internal static class Program
                 builder.UseContentRoot(AppContext.BaseDirectory);
 
                 var host = builder
-                    .ConfigureInternalHost(hb =>
-                    {
-                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero");
-                    })
+                    .ConfigureInternalHost(hb => { hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero"); })
                     .UseAspNetCore((module, webHostBuilder) =>
                     {
                         webHostBuilder.UseHttpSys(options =>
@@ -469,12 +459,11 @@ internal static class Program
                     .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
                     // The logger must not be disposed here as it is injected into multiple modules.
                     // Serilog requires a single logger instance for synchronization.
-                    .UseSerilog(logger: logger, dispose: false)
+                    .UseSerilog(logger)
                     .Build();
 
                 await host.RunAsync();
                 return 0;
-                
             }
             catch (Exception ex)
             {
@@ -486,7 +475,6 @@ internal static class Program
                 await logger.DisposeAsync();
             }
         });
-
     }
 
     private static Uri ConfigureUrl(string? basePath)
@@ -508,67 +496,65 @@ internal static class Program
         return configHost.Services.GetRequiredService<IConfiguration>();
     }
 
-    private static T ConfigureEryphAppConfiguration<T>(this T hostBuilder, string[] args)
-        where T : IHostBuilder
+    extension<T>(T hostBuilder) where T : IHostBuilder
     {
-        hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
+        private T ConfigureEryphAppConfiguration(string[] args)
         {
-            var env = hostingContext.HostingEnvironment;
-            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: false)
-                .AddJsonFile(Path.Combine(ZeroConfig.GetConfigPath(), "appsettings.json"), optional: true, reloadOnChange: false);
-
-            config.AddEnvironmentVariables();
-            config.AddEnvironmentVariables("ERYPH_");
-
-            if (args is { Length: > 0 })
+            hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
             {
-                config.AddCommandLine(args);
-            }
-        });
+                var env = hostingContext.HostingEnvironment;
+                config.AddJsonFile("appsettings.json", true, false)
+                    .AddJsonFile($"appsettings.{env.EnvironmentName}.json", true, false)
+                    .AddJsonFile(Path.Combine(ZeroConfig.GetConfigPath(), "appsettings.json"), true, false);
 
-        return hostBuilder;
-    }
+                config.AddEnvironmentVariables();
+                config.AddEnvironmentVariables("ERYPH_");
 
-    private static T ConfigureChangeTracking<T>(this T hostBuilder) where T : IHostBuilder
-    {
-        hostBuilder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string>
-            {
-                ["changeTracking:trackChanges"] = bool.TrueString,
-                ["changeTracking:seedDatabase"] = bool.TrueString,
-                ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
-                ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
-                ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
-                ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
-                ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
-                ["changeTracking:catletSpecificationsConfigPath"] = ZeroConfig.GetCatletSpecificationsConfigPath(),
-                ["changeTracking:catletSpecificationVersionsConfigPath"] = ZeroConfig.GetCatletSpecificationVersionsConfigPath(),
-
-                // Identity store change tracking: the SQLite identity DB is disposable and rebuilt from
-                // these files (same model as the state store).
-                ["identityChangeTracking:trackChanges"] = bool.TrueString,
-                ["identityChangeTracking:seedDatabase"] = bool.TrueString,
-                // Reuse the existing clients directory so previously written client files (incl. the
-                // system client) load, and the change-tracking export replaces the old decorator.
-                ["identityChangeTracking:clientsConfigPath"] = ZeroConfig.GetClientConfigPath(),
-                ["identityChangeTracking:redeemedTokensConfigPath"] = ZeroConfig.GetIdentityRedeemedTokensConfigPath(),
-                // OpenIddict tokens/authorizations are not file-exported (FK-bound runtime state); they
-                // live in the SQLite store and are re-acquired on a full drop.
+                if (args is { Length: > 0 }) config.AddCommandLine(args);
             });
-        });
 
-        return hostBuilder;
+            return hostBuilder;
+        }
+
+        private T ConfigureChangeTracking()
+        {
+            hostBuilder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    ["changeTracking:trackChanges"] = bool.TrueString,
+                    ["changeTracking:seedDatabase"] = bool.TrueString,
+                    ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
+                    ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
+                    ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
+                    ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
+                    ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
+                    ["changeTracking:catletSpecificationsConfigPath"] = ZeroConfig.GetCatletSpecificationsConfigPath(),
+                    ["changeTracking:catletSpecificationVersionsConfigPath"] =
+                        ZeroConfig.GetCatletSpecificationVersionsConfigPath(),
+
+                    // Identity store change tracking: the SQLite identity DB is disposable and rebuilt from
+                    // these files (same model as the state store).
+                    ["identityChangeTracking:trackChanges"] = bool.TrueString,
+                    ["identityChangeTracking:seedDatabase"] = bool.TrueString,
+                    // Reuse the existing clients directory so previously written client files (incl. the
+                    // system client) load, and the change-tracking export replaces the old decorator.
+                    ["identityChangeTracking:clientsConfigPath"] = ZeroConfig.GetClientConfigPath(),
+                    ["identityChangeTracking:redeemedTokensConfigPath"] = ZeroConfig.GetIdentityRedeemedTokensConfigPath(),
+                    // OpenIddict tokens/authorizations are not file-exported (FK-bound runtime state); they
+                    // live in the SQLite store and are re-acquired on a full drop.
+                });
+            });
+
+            return hostBuilder;
+        }
     }
-
-    private static readonly IPEndPoint DefaultLoopbackEndpoint = new(IPAddress.Loopback, port: 0);
 
     private static int GetAvailablePort()
     {
         using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         socket.Bind(DefaultLoopbackEndpoint);
-        return (((IPEndPoint)socket.LocalEndPoint)!).Port;
+        return ((IPEndPoint)socket.LocalEndPoint)!.Port;
     }
 
     private static async Task<int> SelfInstall(FileSystemInfo? outFile, bool deleteOutFile)
@@ -601,7 +587,8 @@ internal static class Program
                 var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "eryph", "zero", "private");
 
-                var backupDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                var backupDataDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "eryph", "zero", "private.old");
                 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
                 var sysEnv = new WindowsSystemEnvironment(loggerFactory);
@@ -631,7 +618,6 @@ internal static class Program
                                 var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                                 Exception? lastException = null;
                                 while (!cancelSource.IsCancellationRequested)
-                                {
                                     try
                                     {
                                         Directory.Move(targetDir, backupDir);
@@ -642,22 +628,19 @@ internal static class Program
                                     catch (IOException ex)
                                     {
                                         lastException = ex;
-                                        if(Directory.Exists(backupDir))
+                                        if (Directory.Exists(backupDir))
                                             Directory.Delete(backupDir, true);
                                         await Task.Delay(1000, CancellationToken.None);
                                     }
-                                }
-                                if(lastException != null)
-                                    throw lastException;
 
+                                if (lastException != null)
+                                    throw lastException;
                             }
 
                             CopyDirectory(parentDir, targetDir);
 
                             return Unit.Default;
                         }).ToEither();
-
-
                     }
 
                     Log.Information("Installing eryph-zero service");
@@ -666,8 +649,7 @@ internal static class Program
                         from serviceExists in serviceManager.ServiceExists()
                         let cancelSource1 = new CancellationTokenSource(TimeSpan.FromMinutes(1))
                         from uStopped in serviceExists
-                            ?
-                            LogProgress("Stopping running service...").Bind(_ =>
+                            ? LogProgress("Stopping running service...").Bind(_ =>
                                 serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
                         from uDBackup in TryAsync(async () =>
@@ -681,15 +663,21 @@ internal static class Program
                             dataBackupCreated = true;
                             return Unit.Default;
                         }).ToEither()
-                        from ovnRootPath in Try(() => OVNPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVNPackage>()))
+                        from ovnRootPath in Try(() =>
+                                OVNPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVNPackage>()))
                             .ToEitherAsync()
                         from _ in DriverCommands.EnsureDriver(
                                 ovnRootPath, OVNPackage.GetOvnDataPath(), true, true, loggerFactory)
                             .Map(r => r.ToEither()).ToAsync()
-                        from uCopy in CopyService() 
-                        from __ in Try(() => { RegisterUninstaller(targetDir); return unit; })
+                        from uCopy in CopyService()
+                        from __ in Try(() =>
+                            {
+                                RegisterUninstaller(targetDir);
+                                return unit;
+                            })
                             .ToEitherAsync()
-                        from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
+                        from uWarmup in LogProgress("Migrate and warmup... (this could take a while)")
+                            .Bind(_ => RunWarmup(zeroExe))
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uInstalled in serviceExists
                             ? LogProgress("Updating service...")
@@ -707,7 +695,6 @@ internal static class Program
                                 None,
                                 cancelSource2.Token))
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
-
                         from pStart in LogProgress("Starting service...")
                         from uStarted in serviceManager.EnsureServiceStarted(cancelSource3.Token)
                         select Unit.Default;
@@ -722,21 +709,19 @@ internal static class Program
 
                     //update path variable
                     const string pathVariable = "PATH";
-                    var pathVariableValue = Environment.GetEnvironmentVariable(pathVariable, EnvironmentVariableTarget.Machine);
+                    var pathVariableValue =
+                        Environment.GetEnvironmentVariable(pathVariable, EnvironmentVariableTarget.Machine);
                     var runDir = Path.Combine(targetDir, "bin");
 
-                    if (pathVariableValue == null || 
+                    if (pathVariableValue == null ||
                         !pathVariableValue.Contains(runDir, StringComparison.OrdinalIgnoreCase))
-                    {
                         Environment.SetEnvironmentVariable(pathVariable,
                             $"{pathVariableValue};{runDir}", EnvironmentVariableTarget.Machine);
-                    }
 
 
                     Log.Logger.Information("Installation completed");
 
                     return 0;
-
                 }
                 catch (Exception ex)
                 {
@@ -756,7 +741,7 @@ internal static class Program
                             from uStopped in serviceExists
                                 ? serviceManager.EnsureServiceStopped(cancelSourceStop.Token)
                                 : Unit.Default
-                            from uCopy in TryAsync (async () =>
+                            from uCopy in TryAsync(async () =>
                             {
                                 if (backupCreated)
                                 {
@@ -774,12 +759,11 @@ internal static class Program
 
                                 return Unit.Default;
                             }).ToEither()
-
                             from serviceExists2 in serviceManager.ServiceExists()
                             let cancelSourceStart = new CancellationTokenSource(TimeSpan.FromMinutes(5))
-
                             from uStarted in serviceExists2
-                                ? LogProgress("Starting service...").Bind(_ => serviceManager.EnsureServiceStarted(cancelSourceStart.Token))
+                                ? LogProgress("Starting service...").Bind(_ =>
+                                    serviceManager.EnsureServiceStarted(cancelSourceStart.Token))
                                 : Unit.Default
                             select Unit.Default;
 
@@ -823,7 +807,7 @@ internal static class Program
                     RedirectStandardOutput = true,
                     RedirectStandardError = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = Environment.SystemDirectory
+                    WorkingDirectory = Environment.SystemDirectory,
                 },
             };
             process.Start();
@@ -838,13 +822,14 @@ internal static class Program
                         break;
                     Console.WriteLine(line);
                 }
+
                 await process.WaitForExitAsync(exitCts.Token);
             }
             catch (OperationCanceledException)
             {
                 // Kill the process tree as the warmup might start additional processes
                 // (e.g. when checking if the OVS driver is installed).
-                process.Kill(entireProcessTree: true);
+                process.Kill(true);
                 try
                 {
                     // Kill() is asynchronous. Hence, we call WaitForExitAsync again.
@@ -855,21 +840,17 @@ internal static class Program
                 catch (OperationCanceledException)
                 {
                     // At this point, the process did not terminate after the kill command.
-                    throw Error.New("Warmup got stuck and cannot be aborted. Please reboot the machine and attempt a manual reinstallation.");
+                    throw Error.New(
+                        "Warmup got stuck and cannot be aborted. Please reboot the machine and attempt a manual reinstallation.");
                 }
             }
 
-            if (process.ExitCode != 0)
-            {
-                throw Error.New("The warmup failed.");
-            }
-            
-            return Unit.Default;
+            return process.ExitCode != 0 ? throw Error.New("The warmup failed.") : Unit.Default;
         }).ToEither();
-        
     }
 
-    private static async Task<int> SelfUnInstall(FileSystemInfo? outFile, bool deleteOutFile, bool deleteAppData, bool deleteCatlets)
+    private static async Task<int> SelfUnInstall(FileSystemInfo? outFile, bool deleteOutFile, bool deleteAppData,
+        bool deleteCatlets)
     {
         TextWriter? outWriter = null;
         var standardOut = Console.Out;
@@ -890,7 +871,7 @@ internal static class Program
                 .Enrich.FromLogContext()
                 .WriteTo.Logger(c =>
                     c.MinimumLevel.Is(LogEventLevel.Information)
-                    .WriteTo.Console(consoleTemplate))
+                        .WriteTo.Console(consoleTemplate))
                 .CreateLogger();
 
             return await AdminGuard.CommandIsElevated(async () =>
@@ -918,17 +899,18 @@ internal static class Program
                                     .Bind(_ => syncClient.SendSyncCommand("STOP_OVSDB", cancelSource1.Token))
                                     .Run();
                                 fin.IfFail(l => Log.Logger.Debug(l, "Failed to send stop chassis commands."));
-                                return Unit.Default; // ignore error from stop command - we can also take control of existing processes
+                                return
+                                    Unit.Default; // ignore error from stop command - we can also take control of existing processes
                             }).ToAsync()
                             : Unit.Default
-
                         from uStopped in serviceExists
                             ? LogProgress("Stopping running service...")
                                 .Bind(_ => serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uUninstalled in serviceExists
-                            ? LogProgress("Removing service...").Bind(_ => serviceManager.RemoveService(cancelSource2.Token))
+                            ? LogProgress("Removing service...")
+                                .Bind(_ => serviceManager.RemoveService(cancelSource2.Token))
                             : Unit.Default
                         select Unit.Default;
 
@@ -941,13 +923,14 @@ internal static class Program
                         var ovnEnv = new EryphOvnEnvironment(new EryphOvnPathProvider(ovnPath), loggerFactory);
                         var ovsControl = new OVSControl(ovnEnv);
                         await using var ovsDbNode = new OVSDbNode(ovnEnv, new LocalOVSWithOVNSettings(), loggerFactory);
-                        await using var ovsVSwitchNode = new OVSSwitchNode(ovnEnv, new LocalOVSWithOVNSettings(), loggerFactory);
+                        await using var ovsVSwitchNode =
+                            new OVSSwitchNode(ovnEnv, new LocalOVSWithOVNSettings(), loggerFactory);
                         var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                         // ReSharper disable AccessToDisposedClosure
 
                         var ovsCleanup =
                             from uStartLog in LogProgress("Starting temporary chassis services...")
-                            from dbStart in ovsDbNode.Start(cancelSource.Token).MapAsync( async _=>
+                            from dbStart in ovsDbNode.Start(cancelSource.Token).MapAsync(async _ =>
                             {
                                 await ovsDbNode.WaitForStart(cancelSource.Token);
                                 return Unit.Default;
@@ -966,33 +949,31 @@ internal static class Program
                                     .MapLeft(l => Error.New($"Failed to remove OVS bridge {b.Name}.", l)))
                                 .SequenceSerial().Map(_ => Unit.Default)
                             let stopCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
-
                             from uStopLog in LogProgress("Stopping temporary chassis services...")
                             from switchStop in ovsVSwitchNode.Stop(true, stopCancel.Token)
                             from dbStop in ovsDbNode.Stop(true, stopCancel.Token)
-                            
                             select Unit.Default;
-                        
+
                         _ = await ovsCleanup.IfLeft(l =>
                         {
-                            Log.Logger.Warning(l, "The OVS cleanup failed. If necessary, delete the OVS network adapters manually.");
+                            Log.Logger.Warning(l,
+                                "The OVS cleanup failed. If necessary, delete the OVS network adapters manually.");
                         });
 
                         // ReSharper restore AccessToDisposedClosure
-
                     }
 
                     if (Directory.Exists(ovnDataDir))
-                    {
                         try
                         {
                             Directory.Delete(ovnDataDir, true);
                         }
                         catch (Exception ex)
                         {
-                            Log.Logger.Warning(ex, "The OVN data files cleanup failed. If necessary, delete the OVN data files manually from '{OvnPath}'.", ovnDataDir);
+                            Log.Logger.Warning(ex,
+                                "The OVN data files cleanup failed. If necessary, delete the OVN data files manually from '{OvnPath}'.",
+                                ovnDataDir);
                         }
-                    }
 
                     await DriverCommands.Run(
                         UninstallCommands.RemoveNetworking(),
@@ -1005,14 +986,11 @@ internal static class Program
                     // We need the configuration stored in the data directory to perform
                     // the cleanup of the catlets and disks.
                     if (Directory.Exists(dataDir) && deleteCatlets)
-                    {
                         await DriverCommands.Run(
                             UninstallCommands.RemoveCatletsAndDisk(),
                             loggerFactory);
-                    }
 
                     if (Directory.Exists(dataDir) && deleteAppData)
-                    {
                         try
                         {
                             Log.Logger.Information("Removing data files...");
@@ -1020,16 +998,16 @@ internal static class Program
                         }
                         catch (Exception ex)
                         {
-                            Log.Logger.Warning(ex, "The data files cleanup failed. If necessary, delete data files manually from '{DataDir}'.", dataDir);
+                            Log.Logger.Warning(ex,
+                                "The data files cleanup failed. If necessary, delete data files manually from '{DataDir}'.",
+                                dataDir);
                         }
-                    }
 
                     UnregisterUninstaller();
 
                     Log.Logger.Information("Uninstallation completed.");
 
                     return 0;
-
                 }
                 catch (Exception ex)
                 {
@@ -1076,9 +1054,7 @@ internal static class Program
     private static async Task SaveDirectoryMove(string source, string target, CancellationToken cancellationToken)
     {
         if (Directory.Exists(target))
-        {
             while (!cancellationToken.IsCancellationRequested)
-            {
                 try
                 {
                     Directory.Delete(target, true);
@@ -1088,8 +1064,6 @@ internal static class Program
                 {
                     await Task.Delay(1000, cancellationToken);
                 }
-            }
-        }
 
         Directory.Move(source, target);
     }
@@ -1103,7 +1077,9 @@ internal static class Program
             from _2 in WriteResult<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+                json
+                    ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console)
+                    : Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
@@ -1128,14 +1104,16 @@ internal static class Program
             from _4 in canConnect
                 ? from _1 in AnsiConsole<SimpleConsoleRuntime>.writeLine(
                     "eryph is running. Syncing agent settings...")
-                  from _2 in default(SimpleConsoleRuntime).SyncClientEff.Bind(
-                    sc => sc.SendSyncCommand("SYNC_AGENT_SETTINGS", CancellationToken.None))
-                  select unit
+                from _2 in default(SimpleConsoleRuntime).SyncClientEff.Bind(sc =>
+                    sc.SendSyncCommand("SYNC_AGENT_SETTINGS", CancellationToken.None))
+                select unit
                 : SuccessAff(unit)
             from _5 in WriteResultToConsole<SimpleConsoleRuntime>(null)
             select unit,
             SimpleConsoleRuntime.New(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+                json
+                    ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console)
+                    : Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> Login(GenePoolSettings genepoolSettings) =>
         Run(from _1 in AdminGuard.ensureElevated()
@@ -1164,22 +1142,25 @@ internal static class Program
         using var psEngineLock = new PowershellEngineLock();
         using var psEngine = new PowershellEngine(
             loggerFactory.CreateLogger<PowershellEngine>(),
-             psEngineLock);
+            psEngineLock);
 
         return await Run(
             from _1 in AdminGuard.ensureElevated()
             from _2 in DriverCommands.GetDriverStatus()
             select unit,
-            new DriverCommandsRuntime(new(new CancellationTokenSource(), loggerFactory, psEngine)));
+            new DriverCommandsRuntime(new DriverCommandsRuntimeEnv(new CancellationTokenSource(), loggerFactory,
+                psEngine)));
     }
 
     private static Task<int> GetNetworks(FileSystemInfo? outFile, bool json) =>
         Run(from _1 in AdminGuard.ensureElevated()
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
-            from _2 in  WriteResult<SimpleConsoleRuntime>(outFile, yaml)
+            from _2 in WriteResult<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+                json
+                    ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console)
+                    : Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> GetControllerSettings(FileSystemInfo? outFile, bool json) =>
         Run(from _1 in AdminGuard.ensureElevated()
@@ -1187,7 +1168,9 @@ internal static class Program
             from _2 in WriteResult<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
             SimpleConsoleRuntime.New(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+                json
+                    ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console)
+                    : Spectre.Console.AnsiConsole.Console));
 
     private static Task<int> ImportControllerSettings(FileSystemInfo? inFile, bool json) =>
         Run(from _1 in AdminGuard.ensureElevated()
@@ -1202,7 +1185,9 @@ internal static class Program
             from _5 in WriteResultToConsole<SimpleConsoleRuntime>(null)
             select unit,
             SimpleConsoleRuntime.New(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console));
+                json
+                    ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console)
+                    : Spectre.Console.AnsiConsole.Console));
 
     private static async Task<int> ImportNetworkConfig(
         FileSystemInfo? inFile,
@@ -1237,7 +1222,7 @@ internal static class Program
                         currentConfigChanges,
                         nonInteractive || json,
                         getHostStateWithProgress)
-                    select r
+                    select r,
             }
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
             from _4 in validateNetworkImpact(newConfig, currentConfig, defaults)
@@ -1245,7 +1230,7 @@ internal static class Program
                 newConfigChanges,
                 getHostStateWithProgress,
                 nonInteractive || json,
-                Some(currentConfig).Filter(_ =>syncResult.IsValid))
+                Some(currentConfig).Filter(_ => syncResult.IsValid))
             from _6 in saveConfigurationYaml(configString)
             from _7 in syncNetworks()
             from _8 in AnsiConsole<ConsoleRuntime>.writeLine("New Network configuration was imported.")
@@ -1253,7 +1238,9 @@ internal static class Program
             from _10 in WriteResultToConsole<ConsoleRuntime>(null)
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
+                json
+                    ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console)
+                    : Spectre.Console.AnsiConsole.Console,
                 nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
@@ -1286,7 +1273,9 @@ internal static class Program
             from _8 in WriteResultToConsole<ConsoleRuntime>(null)
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
-                json ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console) : Spectre.Console.AnsiConsole.Console,
+                json
+                    ? new JsonLinesAnsiConsole(Spectre.Console.AnsiConsole.Console)
+                    : Spectre.Console.AnsiConsole.Console,
                 nullLoggerFactory,
                 psEngine,
                 sysEnv,
@@ -1313,22 +1302,22 @@ internal static class Program
     private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
         where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
         action.Catch(e =>
-                from _ in  WriteError<RT>(e)
+                from _ in WriteError<RT>(e)
                 from __ in FailAff<RT>(e)
                 select unit)
             .Run(runtime)
             .AsTask()
             .Map(r => r.Match(
-                Succ: _ => 0,
-                Fail: error => error.Code != 0 ? error.Code : -1));
+                _ => 0,
+                error => error.Code != 0 ? error.Code : -1));
 
     private static Aff<RT, Unit> WriteResult<RT>(
         FileSystemInfo? outFile,
         string content)
         where RT : struct, HasAnsiConsole<RT>, HasFile<RT> =>
         from _ in Optional(outFile).Match(
-            Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
-            None: () => WriteResultToConsole<RT>(content))
+            fsi => File<RT>.writeAllText(fsi.FullName, content),
+            () => WriteResultToConsole<RT>(content))
         select unit;
 
     private static Aff<RT, Unit> WriteResultToConsole<RT>(
@@ -1366,7 +1355,7 @@ internal static class Program
                 }),
             _ => AnsiConsole<RT>.write(new Rows(
                 new Markup("[red]The command failed with the following error(s):[/]"),
-                Renderable(error)))
+                Renderable(error))),
         }
         select unit;
 
@@ -1388,7 +1377,7 @@ internal static class Program
         // Get the files in the source directory and copy to the destination directory
         foreach (var file in dir.GetFiles())
         {
-            if(ignoredFiles.Contains(file.Name))
+            if (ignoredFiles.Contains(file.Name))
                 continue;
 
             var targetFilePath = Path.Combine(destinationDir, file.Name);
@@ -1402,21 +1391,20 @@ internal static class Program
         }
     }
 
-    private const string RegistryKeyName = "eryph-zero";
-
     private static void RegisterUninstaller(string installDirectory)
     {
         var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
         var uninstallerPath = Path.Combine(installDirectory, "bin", "eryph-uninstaller.exe");
 
         var uninstallKey = Registry.LocalMachine.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Uninstall",
-                writable: true)
-            ?? throw new InvalidOperationException("Could not open the uninstall registry.");
+                               @"Software\Microsoft\Windows\CurrentVersion\Uninstall",
+                               true)
+                           ?? throw new InvalidOperationException("Could not open the uninstall registry.");
 
-        uninstallKey.DeleteSubKeyTree(RegistryKeyName, throwOnMissingSubKey: false);
+        uninstallKey.DeleteSubKeyTree(RegistryKeyName, false);
         var eryphKey = uninstallKey.CreateSubKey(RegistryKeyName)
-            ?? throw new InvalidOperationException("Could not create registry key for registering the uninstaller.");
+                       ?? throw new InvalidOperationException(
+                           "Could not create registry key for registering the uninstaller.");
 
         eryphKey.SetValue("DisplayName", "eryph-zero");
         eryphKey.SetValue("DisplayIcon", @"C:\Windows\System32\msiexec.exe,0");
@@ -1432,9 +1420,9 @@ internal static class Program
     private static void UnregisterUninstaller()
     {
         var uninstallKey = Registry.LocalMachine.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Uninstall",
-                writable: true)
-            ?? throw new InvalidOperationException("Could not open the uninstall registry.");
+                               @"Software\Microsoft\Windows\CurrentVersion\Uninstall",
+                               true)
+                           ?? throw new InvalidOperationException("Could not open the uninstall registry.");
 
         uninstallKey.DeleteSubKeyTree(RegistryKeyName);
     }

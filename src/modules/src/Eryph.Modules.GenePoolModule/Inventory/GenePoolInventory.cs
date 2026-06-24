@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.IO;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -16,7 +10,6 @@ using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Inventory;
@@ -31,11 +24,11 @@ internal class GenePoolInventory(
     public Aff<CancelRt, Seq<GeneData>> InventorizeGenePool() =>
         from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         from manifestPaths in Eff(() => fileSystemService.GetFiles(
-                genePoolPath, "geneset-tag.json", SearchOption.AllDirectories))
+            genePoolPath, "geneset-tag.json", SearchOption.AllDirectories))
         from geneSets in manifestPaths.ToSeq()
             .Map(p => InventorizeGeneSet(genePoolPath, p).Match(
-                Succ: identity,
-                Fail: error =>
+                identity,
+                error =>
                 {
                     logger.LogError(error, "Inventory of gene set manifest {Path} failed", p);
                     return Seq<GeneData>();

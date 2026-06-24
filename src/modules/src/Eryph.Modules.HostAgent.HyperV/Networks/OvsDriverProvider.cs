@@ -1,28 +1,20 @@
-﻿using Eryph.Modules.HostAgent.Networks.Powershell;
-using LanguageExt.Effects.Traits;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Core.Sys;
+using Eryph.Modules.HostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
-using LanguageExt.Sys;
+using LanguageExt.Effects.Traits;
 using LanguageExt.Sys.IO;
 using LanguageExt.Sys.Traits;
 using static LanguageExt.Prelude;
-using Microsoft.PowerShell;
-using System.Management.Automation.Runspaces;
-using Eryph.VmManagement.Sys;
 
 namespace Eryph.Modules.HostAgent.Networks;
 
@@ -45,61 +37,63 @@ public class OvsDriverProvider<RT> where RT : struct,
         from hostNetworkCommands in default(RT).HostNetworkCommands
         from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
         from _ in match(extensionInfo,
-            Some: ei => logInformation("OVS Hyper-V switch extension {ExtensionVersion} is installed", ei.Version),
-            None: () => logInformation("OVS Hyper-V switch extension is not installed"))
+            ei => logInformation("OVS Hyper-V switch extension {ExtensionVersion} is installed", ei.Version),
+            () => logInformation("OVS Hyper-V switch extension is not installed"))
         let infPath = Path.Combine(ovnRunDir, "driver", "dbo_ovse.inf")
         from infVersion in getDriverVersionFromInfFile(infPath)
         from isDriverTestSigningEnabled in isDriverTestSigningEnabled()
         from isDriverPackageTestSigned in isDriverPackageTestSigned(infPath)
-        from __ in isDriverPackageTestSigned && ! isDriverTestSigningEnabled
-            ? logWarning("Driver package is test signed but test signing is disabled in the OS. The driver will not be used.")
+        from __ in isDriverPackageTestSigned && !isDriverTestSigningEnabled
+            ? logWarning(
+                "Driver package is test signed but test signing is disabled in the OS. The driver will not be used.")
             : SuccessAff<RT, Unit>(unit)
         let canInstall = allowInstall && (!isDriverPackageTestSigned || isDriverTestSigningEnabled)
         let canUpgrade = allowUpgrade && (!isDriverPackageTestSigned || isDriverTestSigningEnabled)
         from ___ in match(extensionInfo,
-            Some: ei =>
+            ei =>
                 from extensionVersion in parseVersion(ei.Version).ToAff(Error.New(
                     "Could not parse the version of the Hyper-V extension"))
                 from _ in extensionVersion != infVersion && canUpgrade
                     ? from switchExtensions in hostNetworkCommands.GetSwitchExtensions()
-                      // The Open vSwitch extension should only be enabled for the single
-                      // overlay switch. Just in case, we disable the extension on all switches.
-                      // Normally, there should be only one overlay switch. Otherwise, the network
-                      // needs to be rebuilt.
-                      let overlaySwitchId = switchExtensions
-                          .Find(e => e.SwitchName == EryphConstants.OverlaySwitchName)
-                          .Map(e => e.SwitchId)
-                      from _ in switchExtensions
-                          .Filter(e => e.Enabled)
-                          .Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
-                          .SequenceSerial()
-                      from __ in uninstallDriver()
-                      // Wait for the driver service to be stopped/removed. Otherwise, the
-                      // installation of the new driver might fail with error code 0x80070430.
-                      from ___ in waitUntilDriverServiceHasStopped()
-                      from ____ in removeAllDriverPackages()
-                      // The OVN/OVS database schemas are tied to the binaries shipped in
-                      // the package. On any version change we drop the databases so the new
-                      // binaries start from a clean state. The network plan realizer rebuilds
-                      // the OVN configuration from eryph's state on the next sync.
-                      from _____ in dropOvnDatabaseFiles(ovnDataDir)
-                      from ______ in installDriver(infPath)
-                      from _______ in match(overlaySwitchId,
-                          Some: switchId =>
-                              from _ in hostNetworkCommands.EnableSwitchExtension(switchId)
-                              // We suspect that the switch extension might not be enabled
-                              // immediately on slow systems
-                              from __ in waitUntilSwitchExtensionIsEnabled(switchId)
-                              select unit,
-                          None: () => SuccessAff<RT, Unit>(unit))
-                      select unit
+                    // The Open vSwitch extension should only be enabled for the single
+                    // overlay switch. Just in case, we disable the extension on all switches.
+                    // Normally, there should be only one overlay switch. Otherwise, the network
+                    // needs to be rebuilt.
+                    let overlaySwitchId = switchExtensions
+                        .Find(e => e.SwitchName == EryphConstants.OverlaySwitchName)
+                        .Map(e => e.SwitchId)
+                    from _ in switchExtensions
+                        .Filter(e => e.Enabled)
+                        .Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
+                        .SequenceSerial()
+                    from __ in uninstallDriver()
+                    // Wait for the driver service to be stopped/removed. Otherwise, the
+                    // installation of the new driver might fail with error code 0x80070430.
+                    from ___ in waitUntilDriverServiceHasStopped()
+                    from ____ in removeAllDriverPackages()
+                    // The OVN/OVS database schemas are tied to the binaries shipped in
+                    // the package. On any version change we drop the databases so the new
+                    // binaries start from a clean state. The network plan realizer rebuilds
+                    // the OVN configuration from eryph's state on the next sync.
+                    from _____ in dropOvnDatabaseFiles(ovnDataDir)
+                    from ______ in installDriver(infPath)
+                    from _______ in match(overlaySwitchId,
+                        switchId =>
+                            from _ in hostNetworkCommands.EnableSwitchExtension(switchId)
+                            // We suspect that the switch extension might not be enabled
+                            // immediately on slow systems
+                            from __ in waitUntilSwitchExtensionIsEnabled(switchId)
+                            select unit,
+                        () => SuccessAff<RT, Unit>(unit))
+                    select unit
                     : from _ in extensionVersion != infVersion
-                        ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match packaged driver version {DriverVersion}",
+                        ? logWarning(
+                            "Hyper-V switch extension version {ExtensionVersion} does not match packaged driver version {DriverVersion}",
                             ei.Version, infVersion)
                         : SuccessAff<RT, Unit>(unit)
-                      select unit
+                    select unit
                 select unit,
-            None: () => canInstall
+            () => canInstall
                 ? installDriver(infPath)
                 : FailAff<RT, Unit>(Error.New("OVS Hyper-V switch extension is missing")))
         select unit;
@@ -108,9 +102,9 @@ public class OvsDriverProvider<RT> where RT : struct,
         from exists in Directory<RT>.exists(ovnDataDir)
         from _ in exists
             ? from __ in logInformation("Dropping OVN database files at {Path}...", ovnDataDir)
-              from ___ in Directory<RT>.delete(ovnDataDir, recursive: true)
-              from ____ in logInformation("Successfully dropped OVN database files")
-              select unit
+            from ___ in Directory<RT>.delete(ovnDataDir)
+            from ____ in logInformation("Successfully dropped OVN database files")
+            select unit
             : logInformation("No OVN database files to drop at {Path}.", ovnDataDir)
         select unit;
 
@@ -186,7 +180,8 @@ public class OvsDriverProvider<RT> where RT : struct,
         // The result can be null. Hence, we cannot directly call HeadOrNone().
         from signer in powershellResult.Map(Optional).Somes().HeadOrNone()
             .ToEff(Error.New("Could not read signature from file"))
-        select !signer.Contains("Microsoft Windows Hardware Compatibility Publisher", StringComparison.OrdinalIgnoreCase);
+        select !signer.Contains("Microsoft Windows Hardware Compatibility Publisher",
+            StringComparison.OrdinalIgnoreCase);
 
     internal static Aff<RT, string> getInfFileContent(string filePath) =>
         from bytes in File<RT>.readAllBytes(filePath)

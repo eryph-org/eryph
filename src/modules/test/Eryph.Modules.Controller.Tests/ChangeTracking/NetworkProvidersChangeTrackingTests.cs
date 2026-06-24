@@ -38,7 +38,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
     {
         FloatingPorts =
         [
-            new FloatingNetworkPortConfigModel()
+            new FloatingNetworkPortConfigModel
             {
                 Name = "test-floating-port",
                 ProviderName = "test-provider",
@@ -47,7 +47,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
                 MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
-                    new IpAssignmentConfigModel()
+                    new IpAssignmentConfigModel
                     {
                         IpAddress = "10.0.0.104",
                         SubnetName = "provider-test-subnet",
@@ -68,8 +68,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         MockNetworkProviderManager.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, NetworkProvidersConfiguration>(GetProvidersConfig()));
 
-        MockNetworkProviderManager.Setup(
-                m => m.SaveConfiguration(It.IsAny<NetworkProvidersConfiguration>()))
+        MockNetworkProviderManager.Setup(m => m.SaveConfiguration(It.IsAny<NetworkProvidersConfiguration>()))
             .Returns(RightAsync<Error, Unit>(unit))
             .Callback((NetworkProvidersConfiguration c) => _savedProvidersConfig = c);
     }
@@ -98,7 +97,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
     {
         await WithHostScope(async stateStore =>
         {
-            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
+            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort
             {
                 Name = "new-floating-port",
                 MacAddress = "42:00:42:00:00:02",
@@ -115,7 +114,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         _expectedPortsConfig.FloatingPorts =
         [
             .._expectedPortsConfig.FloatingPorts,
-            new FloatingNetworkPortConfigModel()
+            new FloatingNetworkPortConfigModel
             {
                 Name = "new-floating-port",
                 MacAddress = "42:00:42:00:00:02",
@@ -171,7 +170,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
                 new ProviderSubnetSpecs.GetForChangeTracking());
             var floatingPort = await stateStore.For<FloatingNetworkPort>().GetByIdAsync(FloatingPortId);
             await stateStore.LoadCollectionAsync(floatingPort!, p => p.IpAssignments);
-            floatingPort!.IpAssignments.Add(new IpPoolAssignment()
+            floatingPort!.IpAssignments.Add(new IpPoolAssignment
             {
                 IpAddress = "10.0.0.150",
                 SubnetId = subnets[0].Id,
@@ -186,7 +185,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         _expectedPortsConfig.FloatingPorts[0].IpAssignments =
         [
             .._expectedPortsConfig.FloatingPorts[0].IpAssignments,
-            new IpAssignmentConfigModel()
+            new IpAssignmentConfigModel
             {
                 IpAddress = "10.0.0.150",
                 SubnetName = "provider-test-subnet",
@@ -237,7 +236,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         await using (var scope = CreateScope())
         {
             await scope.GetInstance<INetworkProvidersConfigRealizer>()
-                .RealizeConfigAsync(GetProvidersConfig(), default);
+                .RealizeConfigAsync(GetProvidersConfig(), CancellationToken.None);
             await scope.GetInstance<IStateStore>().SaveChangesAsync();
         }
 
@@ -247,7 +246,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             var subnets = await stateStore.For<ProviderSubnet>().ListAsync(
                 new ProviderSubnetSpecs.GetForChangeTracking());
 
-            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
+            await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
@@ -257,7 +256,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
                 MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
-                    new IpPoolAssignment()
+                    new IpPoolAssignment
                     {
                         Id = IpAssignmentId,
                         SubnetId = subnets[0].Id,
@@ -283,29 +282,29 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         return JsonSerializer.Deserialize<FloatingNetworkPortsConfigModel>(json)!;
     }
 
-    private NetworkProvidersConfiguration GetProvidersConfig() => new()
+    private static NetworkProvidersConfiguration GetProvidersConfig() => new()
     {
         NetworkProviders =
         [
-            new NetworkProvider()
+            new NetworkProvider
             {
                 Name = "test-provider",
                 Type = NetworkProviderType.NatOverlay,
                 Subnets =
                 [
-                    new NetworkProviderSubnet()
+                    new NetworkProviderSubnet
                     {
                         Name = "provider-test-subnet",
                         Network = "10.0.0.0/24",
                         IpPools =
                         [
-                            new NetworkProviderIpPool()
+                            new NetworkProviderIpPool
                             {
                                 Name = "provider-test-pool",
                                 FirstIp = "10.0.0.100",
                                 NextIp = "10.0.0.100",
                                 LastIp = "10.0.0.200",
-                            }
+                            },
                         ],
                     },
                 ],

@@ -1,5 +1,4 @@
-﻿using System;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
 namespace Eryph.Core.VmAgent;
 
@@ -11,4 +10,3 @@ public class VmHostAgentConfiguration
 
     [CanBeNull] public VmHostAgentEnvironmentConfiguration[] Environments { get; init; }
 }
-

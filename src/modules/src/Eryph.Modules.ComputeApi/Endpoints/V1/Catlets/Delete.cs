@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -23,17 +22,17 @@ public class Delete(
     {
         return new DestroyCatletCommand
         {
-            CatletId = model.Id
+            CatletId = model.Id,
         };
     }
 
     [Authorize(Policy = "compute:catlets:write")]
     [HttpDelete("catlets/{id}")]
     [SwaggerOperation(
-        Summary = "Delete a catlet",
-        Description = "Deletes a catlet",
-        OperationId = "Catlets_Delete",
-        Tags = ["Catlets"])
+            Summary = "Delete a catlet",
+            Description = "Deletes a catlet",
+            OperationId = "Catlets_Delete",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

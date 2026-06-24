@@ -1,8 +1,7 @@
-﻿namespace Eryph.Resources.Networks
+﻿namespace Eryph.Resources.Networks;
+
+public enum NetworkType
 {
-    public enum NetworkType
-    {
-        Bridged,
-        Private
-    }
+    Bridged,
+    Private,
 }

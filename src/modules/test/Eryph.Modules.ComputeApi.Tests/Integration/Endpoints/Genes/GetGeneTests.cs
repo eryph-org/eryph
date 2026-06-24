@@ -13,15 +13,12 @@ using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.GeneWithUsage;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
 public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
-    private readonly WebModuleFactory<ComputeApiModule> _factory;
-    
     private const string AgentName = "testhost";
     private static readonly Guid FodderGeneId = Guid.NewGuid();
     private static readonly Guid VolumeGeneId = Guid.NewGuid();
@@ -29,6 +26,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
     private static readonly Guid CatletMetadataId = Guid.NewGuid();
     private static readonly Guid DiskId = Guid.NewGuid();
     private static readonly Guid GeneDiskId = Guid.NewGuid();
+    private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public GetGeneTests(
         ITestOutputHelper outputHelper,
@@ -55,7 +53,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Size = 42,
         });
 
-        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata()
+        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
         {
             Id = CatletMetadataId,
             Genes =
@@ -142,7 +140,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         response.EnsureSuccessStatusCode();
 
         var gene = await response.Content.ReadFromJsonAsync<ApiGene>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         gene.Should().NotBeNull();
         gene.Id.Should().Be(FodderGeneId.ToString());
@@ -166,7 +164,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         response.EnsureSuccessStatusCode();
 
         var gene = await response.Content.ReadFromJsonAsync<ApiGene>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         gene.Should().NotBeNull();
         gene.Id.Should().Be(VolumeGeneId.ToString());

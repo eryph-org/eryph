@@ -25,8 +25,8 @@ internal sealed class NetworkProvidersConfigRealizer(
     public async Task ApplyAsync(long version, string payload, CancellationToken cancellationToken)
     {
         await networkProviderManager.SaveConfigurationYaml(payload).Match(
-            Right: _ => { },
-            Left: error => throw new InvalidOperationException(
+            _ => { },
+            error => throw new InvalidOperationException(
                 $"Failed to persist network provider configuration: {error.Message}"));
 
         logger.LogInformation(

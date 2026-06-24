@@ -1,8 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Xunit;
@@ -26,12 +22,11 @@ public class RequestValidationsTests
                                                 """);
 
         var result = RequestValidations.ValidateCatletConfig(document.RootElement);
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("$.network_adapters[0].name");
-                issue.Message.Should().StartWith("The JSON value could not be converted to System.String");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("$.network_adapters[0].name");
+            issue.Message.Should().StartWith("The JSON value could not be converted to System.String");
+        });
     }
 
     [Fact]
@@ -50,12 +45,13 @@ public class RequestValidationsTests
 
 
         var result = RequestValidations.ValidateCatletConfig(document.RootElement);
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("$.network_adapters[0].name");
-                issue.Message.Should().StartWith("The catlet network adapter name contains invalid characters. Only latin characters, numbers and hyphens are permitted.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("$.network_adapters[0].name");
+            issue.Message.Should()
+                .StartWith(
+                    "The catlet network adapter name contains invalid characters. Only latin characters, numbers and hyphens are permitted.");
+        });
     }
 
     [Fact]
@@ -76,12 +72,11 @@ public class RequestValidationsTests
                                                 """);
 
         var result = RequestValidations.ValidateProjectNetworkConfig(document.RootElement);
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("$.networks[0].provider.ip_pool");
-                issue.Message.Should().StartWith("The JSON value could not be converted to System.String");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("$.networks[0].provider.ip_pool");
+            issue.Message.Should().StartWith("The JSON value could not be converted to System.String");
+        });
     }
 
     [Fact]
@@ -95,11 +90,12 @@ public class RequestValidationsTests
 
 
         var result = RequestValidations.ValidateCatletConfig(document.RootElement);
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("$.project");
-                issue.Message.Should().StartWith("The project name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("$.project");
+            issue.Message.Should()
+                .StartWith(
+                    "The project name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
+        });
     }
 }

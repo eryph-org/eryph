@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
@@ -22,7 +21,7 @@ public class Update(
     ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
     : ResourceOperationEndpoint<UpdateCatletRequest, Catlet>(operationHandler, specBuilder)
 {
-    protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
+    protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request)
     {
         var config = CatletConfigJsonSerializer.Deserialize(request.Body.Configuration);
 
@@ -30,17 +29,17 @@ public class Update(
         {
             CatletId = model.Id,
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
-            Config = config
+            Config = config,
         };
     }
 
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPut("catlets/{id}")]
     [SwaggerOperation(
-        Summary = "Update a catlet",
-        Description = "Update a catlet",
-        OperationId = "Catlets_Update",
-        Tags = ["Catlets"])
+            Summary = "Update a catlet",
+            Description = "Update a catlet",
+            OperationId = "Catlets_Update",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] UpdateCatletRequest request,
@@ -50,7 +49,7 @@ public class Update(
             request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail:"The catlet configuration is invalid.",
+                "The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(UpdateCatletRequestBody.Configuration)));
 

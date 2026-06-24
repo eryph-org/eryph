@@ -13,7 +13,9 @@ public class EryphOvnPathProvider : IEryphOvnPathProvider
 {
     private string? _ovnRunPath;
 
-    public EryphOvnPathProvider() { }
+    public EryphOvnPathProvider()
+    {
+    }
 
     public EryphOvnPathProvider(string ovnRunPath)
     {

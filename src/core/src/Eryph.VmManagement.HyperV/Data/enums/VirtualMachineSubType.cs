@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VirtualMachineSubType
 {
-    public enum VirtualMachineSubType
-    {
-        Unknown,
-        Generation1,
-        Generation2
-    }
+    Unknown,
+    Generation1,
+    Generation2,
 }

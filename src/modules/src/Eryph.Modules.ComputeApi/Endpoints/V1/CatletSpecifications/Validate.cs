@@ -14,7 +14,6 @@ using LanguageExt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
@@ -41,10 +40,10 @@ public class Validate(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlet_specifications/validate")]
     [SwaggerOperation(
-        Summary = "Validate a catlet specification",
-        Description = "Validates a catlet specification",
-        OperationId = "CatletSpecifications_Validate",
-        Tags = ["Catlet Specifications"])
+            Summary = "Validate a catlet specification",
+            Description = "Validates a catlet specification",
+            OperationId = "CatletSpecifications_Validate",
+            Tags = ["Catlet Specifications"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] ValidateSpecificationRequest request,
@@ -53,7 +52,7 @@ public class Validate(
         var validation = ValidateRequest(request);
         if (validation.IsFail)
             return ValidationProblem(validation.ToModelStateDictionary());
-        
+
         return await base.HandleAsync(request, cancellationToken);
     }
 
@@ -63,8 +62,10 @@ public class Validate(
         let apiNamingPolicy = Optional(ApiJsonSerializerOptions.Options.PropertyNamingPolicy)
         from _2 in RequestValidations.ValidateCatletSpecificationConfig(request.Configuration)
                        .Map(_ => unit)
-                       .AddJsonPathPrefix(nameof(ValidateSpecificationRequest.Configuration).ToJsonPath(apiNamingPolicy))
-                   | ValidateList(request, r => r.Architectures, ValidateArchitecture, nameof(ValidateSpecificationRequest.Architectures))
+                       .AddJsonPathPrefix(
+                           nameof(ValidateSpecificationRequest.Configuration).ToJsonPath(apiNamingPolicy))
+                   | ValidateList(request, r => r.Architectures, ValidateArchitecture,
+                           nameof(ValidateSpecificationRequest.Architectures))
                        .ToJsonPath(apiNamingPolicy)
         select unit;
 

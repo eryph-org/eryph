@@ -1,15 +1,10 @@
-using System;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 using Eryph.Messages.Components;
-using Eryph.ModuleCore;
 using Eryph.ModuleCore.Components;
 using FluentAssertions;
-using Xunit;
 
 namespace Eryph.ModuleCore.Tests.Components;
 
@@ -22,12 +17,13 @@ public class HttpEnrollmentTransportTests
     private static JsonSerializerOptions CreateServerJsonOptions()
     {
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
-        options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        options.Converters.Add(new JsonStringEnumConverter());
         return options;
     }
 
     [Fact]
-    public async Task EnrollAsync_posts_under_the_identity_path_base_with_the_eryph_json_contract_and_deserializes_the_result()
+    public async Task
+        EnrollAsync_posts_under_the_identity_path_base_with_the_eryph_json_contract_and_deserializes_the_result()
     {
         var componentId = Guid.NewGuid();
         string? sentBody = null;
@@ -37,7 +33,7 @@ public class HttpEnrollmentTransportTests
             // The identity endpoint carries a path base ("/identity"); the enroll request must be sent
             // under it, not at the authority root, or it 404s when identity is hosted under a path base.
             request.RequestUri.Should().Be(new Uri("https://identity.eryph.local:8080/identity/v1/components/enroll"));
-            sentBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            sentBody = request.Content!.ReadAsStringAsync(_).GetAwaiter().GetResult();
 
             // The server (AddEryphApiSettings) parses the request with snake_case + string enums; the
             // request must round-trip through those exact options or multi-word fields drop to null.
@@ -68,7 +64,8 @@ public class HttpEnrollmentTransportTests
 
         var transport = new HttpEnrollmentTransport(
             new HttpClient(handler),
-            new EndpointResolver(new() { ["identity"] = "https://identity.eryph.local:8080/identity" }));
+            new EndpointResolver(new Dictionary<string, string>
+                { ["identity"] = "https://identity.eryph.local:8080/identity" }));
 
         var result = await transport.EnrollAsync(
             new ComponentEnrollmentRequest
@@ -114,7 +111,8 @@ public class HttpEnrollmentTransportTests
 
         var transport = new HttpEnrollmentTransport(
             new HttpClient(handler),
-            new EndpointResolver(new() { ["identity"] = "https://identity.eryph.local:8080/identity" }));
+            new EndpointResolver(new Dictionary<string, string>
+                { ["identity"] = "https://identity.eryph.local:8080/identity" }));
 
         var result = await transport.RenewAsync(
             new ComponentEnrollmentRequest { ComponentType = ComponentType.Controller, Fqdn = "host.example" },
@@ -131,7 +129,8 @@ public class HttpEnrollmentTransportTests
         var handler = new StubHandler((_, _) => new HttpResponseMessage(HttpStatusCode.Unauthorized));
         var transport = new HttpEnrollmentTransport(
             new HttpClient(handler),
-            new EndpointResolver(new() { ["identity"] = "https://identity.eryph.local:8080/identity" }));
+            new EndpointResolver(new Dictionary<string, string>
+                { ["identity"] = "https://identity.eryph.local:8080/identity" }));
 
         var act = () => transport.EnrollAsync(new ComponentEnrollmentRequest(), CancellationToken.None);
 

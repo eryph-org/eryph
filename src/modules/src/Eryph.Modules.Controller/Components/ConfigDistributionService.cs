@@ -40,7 +40,8 @@ internal sealed class ConfigDistributionService(
             // Host agents need the placement vocabulary (datastore/environment names)
             // and the network-provider configuration to realize host networking, plus
             // the deployment endpoints (e.g. the identity issuer) to reach other components.
-            [ComponentType.VMHostAgent] = [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders, ConfigDomain.Endpoints],
+            [ComponentType.VMHostAgent] =
+                [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders, ConfigDomain.Endpoints],
         };
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>
@@ -65,7 +66,7 @@ internal sealed class ConfigDistributionService(
             if (record is null)
                 continue;
 
-            var known = knownVersions.TryGetValue(domain, out var v) ? v : 0;
+            var known = knownVersions.GetValueOrDefault(domain, 0);
             if (record.Version > known)
                 bundles.Add(new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload });
         }

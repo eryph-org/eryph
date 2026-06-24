@@ -12,6 +12,18 @@ public class ProjectMemberSpecBuilder(IUserRightsProvider userRightsProvider) :
     ISingleEntitySpecBuilder<SingleEntityInProjectRequest, ProjectRoleAssignment>,
     IListEntitySpecBuilder<ListInProjectRequest, ProjectRoleAssignment>
 {
+    public ISpecification<ProjectRoleAssignment> GetEntitiesSpec(
+        ListInProjectRequest request)
+    {
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            throw new ArgumentException("The ID is not a GUID", nameof(request));
+
+        return new ProjectRoleAssignmentSpecs.GetByProject(
+            projectId,
+            userRightsProvider.GetAuthContext(),
+            userRightsProvider.GetProjectRoles(AccessRight.Read));
+    }
+
     public ISingleResultSpecification<ProjectRoleAssignment>? GetSingleEntitySpec(
         SingleEntityInProjectRequest request,
         AccessRight accessRight)
@@ -27,17 +39,5 @@ public class ProjectMemberSpecBuilder(IUserRightsProvider userRightsProvider) :
             projectId,
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetProjectRoles(accessRight));
-    }
-
-    public ISpecification<ProjectRoleAssignment> GetEntitiesSpec(
-        ListInProjectRequest request)
-    {
-        if (!Guid.TryParse(request.ProjectId, out var projectId))
-            throw new ArgumentException("The ID is not a GUID", nameof(request));
-
-        return new ProjectRoleAssignmentSpecs.GetByProject(
-            projectId,
-            userRightsProvider.GetAuthContext(),
-            userRightsProvider.GetProjectRoles(AccessRight.Read));
     }
 }

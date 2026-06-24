@@ -6,7 +6,6 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
@@ -47,10 +46,7 @@ public static class CatletSpecificationBuilder
                 resolvedGenes,
                 genePoolReader)
             .MapLeft(e => Error.New("Could not feed the catlet.", e))
-        let resultConfig = expandedConfig.CloneWith(c =>
-        {
-            c.ConfigType = CatletConfigType.Specification;
-        })
+        let resultConfig = expandedConfig.CloneWith(c => { c.ConfigType = CatletConfigType.Specification; })
         select (resultConfig, resolvedGenes);
 
     internal static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveConfig(
@@ -77,9 +73,9 @@ public static class CatletSpecificationBuilder
             .MapLeft(e => CreateError(visitedAncestors, e))
             .ToAsync()
         from result in validParentId.Match(
-            Some: id => ResolveParent(id, resolvedGeneSets, resolvedCatlets,
-                    visitedAncestors, geneProvider, cancellationToken),
-            None: () => (resolvedGeneSets, resolvedCatlets))
+            id => ResolveParent(id, resolvedGeneSets, resolvedCatlets,
+                visitedAncestors, geneProvider, cancellationToken),
+            () => (resolvedGeneSets, resolvedCatlets))
         select result;
 
     private static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveParent(
@@ -103,7 +99,8 @@ public static class CatletSpecificationBuilder
             // Catlets are never architecture-specific. Hence, we hard code any here.
             Architecture.New(EryphConstants.AnyArchitecture))
         from catletGeneHash in genes.Find(catletGeneId)
-            .ToEitherAsync(Error.New($"The gene set {id} is the parent of a catlet but does not contain a catlet gene."))
+            .ToEitherAsync(
+                Error.New($"The gene set {id} is the parent of a catlet but does not contain a catlet gene."))
         from config in ReadCatletConfig(catletGeneId, catletGeneHash, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from resolveResult in ResolveGeneSets(config, resolvedGeneSets, geneProvider, cancellationToken)
@@ -134,8 +131,8 @@ public static class CatletSpecificationBuilder
         IGenePoolReader geneProvider,
         CancellationToken cancellationToken) =>
         resolvedGeneSets.Find(geneSetId).Match(
-            Some: _ => resolvedGeneSets,
-            None: () =>
+            _ => resolvedGeneSets,
+            () =>
                 from resolvedGeneSet in ResolveGeneSet(geneSetId, geneProvider, cancellationToken)
                 select resolvedGeneSets.Add(geneSetId, resolvedGeneSet));
 
@@ -160,8 +157,8 @@ public static class CatletSpecificationBuilder
             Error.New($"The chain of gene set references is too long (up to {maxChainLength} references are allowed)."))
         from resolvedGeneSetId in genePoolReader.GetReferencedGeneSet(geneSetId, cancellationToken)
         from result in resolvedGeneSetId.Match(
-            Some: gsi => ResolveGeneSet(gsi, visited.Add(geneSetId), genePoolReader, cancellationToken),
-            None: () => RightAsync<Error, GeneSetIdentifier>(geneSetId))
+            gsi => ResolveGeneSet(gsi, visited.Add(geneSetId), genePoolReader, cancellationToken),
+            () => RightAsync<Error, GeneSetIdentifier>(geneSetId))
         select result;
 
     public static EitherAsync<Error, CatletConfig> ReadCatletConfig(
@@ -172,10 +169,12 @@ public static class CatletSpecificationBuilder
         from json in genePoolReader.GetGeneContent(uniqueGeneId, geneHash, cancellationToken)
         from genes in genePoolReader.GetGenes(uniqueGeneId.Id.GeneSet, cancellationToken)
         from config in Try(() => CatletConfigJsonSerializer.Deserialize(json))
-            .ToEither(ex => Error.New($"Could not deserialize catlet config in gene {uniqueGeneId} ({geneHash}).", Error.New(ex)))
+            .ToEither(ex => Error.New($"Could not deserialize catlet config in gene {uniqueGeneId} ({geneHash}).",
+                Error.New(ex)))
             .ToAsync()
         from normalizedConfig in NormalizeSources(config, uniqueGeneId.Id.GeneSet, genes.Keys.ToSeq())
-            .MapLeft(e => Error.New($"Cannot normalize the gene pool sources in the catlet gene {uniqueGeneId} ({geneHash}.", e))
+            .MapLeft(e =>
+                Error.New($"Cannot normalize the gene pool sources in the catlet gene {uniqueGeneId} ({geneHash}.", e))
         select normalizedConfig;
 
     private static EitherAsync<Error, CatletConfig> NormalizeSources(
@@ -224,11 +223,11 @@ public static class CatletSpecificationBuilder
         Error innerError) =>
         Error.New(
             visitedAncestors.Match(
-                    Empty: () => "Could not resolve genes in the catlet config.",
-                    Seq: ancestors =>
-                        "Could not resolve genes in the ancestor "
-                        + string.Join(" -> ", "catlet".Cons(ancestors.Map(a => a.ToString())))
-                        + "."),
+                () => "Could not resolve genes in the catlet config.",
+                ancestors =>
+                    "Could not resolve genes in the ancestor "
+                    + string.Join(" -> ", "catlet".Cons(ancestors.Map(a => a.ToString())))
+                    + "."),
             innerError);
 
     public static EitherAsync<Error, HashMap<UniqueGeneIdentifier, GeneHash>> ResolveGenes(

@@ -1,10 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum CacheAttributes
 {
-    public enum CacheAttributes
-    {
-        Default,
-        WriteCacheEnabled,
-        WriteCacheAndFUAEnabled,
-        WriteCacheDisabled
-    }
+    Default,
+    WriteCacheEnabled,
+    WriteCacheAndFUAEnabled,
+    WriteCacheDisabled,
 }

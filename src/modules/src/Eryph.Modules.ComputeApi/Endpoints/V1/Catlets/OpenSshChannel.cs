@@ -57,13 +57,13 @@ public class OpenSshChannel(
     [Authorize(Policy = "compute:catlets:remote-access")]
     [HttpPut("catlets/{id}/guest-services/ssh-channel")]
     [SwaggerOperation(
-        Summary = "Open an SSH channel to a catlet",
-        Description =
-            "Starts an operation that prepares a one-time SSH channel to the catlet's guest services. "
-            + "Track the returned operation; its result carries the channel token. Then connect the "
-            + "data-plane WebSocket at catlets/{id}/guest-services/ssh-channel/connect with that token.",
-        OperationId = "Catlets_OpenSshChannel",
-        Tags = ["Catlets"])
+            Summary = "Open an SSH channel to a catlet",
+            Description =
+                "Starts an operation that prepares a one-time SSH channel to the catlet's guest services. "
+                + "Track the returned operation; its result carries the channel token. Then connect the "
+                + "data-plane WebSocket at catlets/{id}/guest-services/ssh-channel/connect with that token.",
+            OperationId = "Catlets_OpenSshChannel",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] OpenSshChannelRequest request,
@@ -85,7 +85,7 @@ public class OpenSshChannel(
                     statusCode: StatusCodes.Status400BadRequest,
                     detail: "The public key must not contain line breaks or quote characters.");
 
-            if (request.Ttl is { } ttl && (ttl <= 0 || ttl > SshChannelLimits.MaxTtlSeconds))
+            if (request.Ttl is { } ttl && ttl is <= 0 or > SshChannelLimits.MaxTtlSeconds)
                 return Problem(
                     statusCode: StatusCodes.Status400BadRequest,
                     detail: $"The ttl must be between 1 and {SshChannelLimits.MaxTtlSeconds} seconds.");

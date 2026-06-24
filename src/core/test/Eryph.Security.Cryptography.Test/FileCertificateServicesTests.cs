@@ -16,7 +16,7 @@ public sealed class FileCertificateServicesTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_dir))
-            Directory.Delete(_dir, recursive: true);
+            Directory.Delete(_dir, true);
     }
 
     private static X509Certificate2 SelfSignedWithKey(string subject)
@@ -113,7 +113,7 @@ public sealed class FileCertificateServicesTests : IDisposable
     {
         var sut = new FileCertificateStoreService(_dir);
         using var a1 = SelfSignedWithKey("CN=eryph-ca");
-        using var a2 = SelfSignedWithKey("CN=eryph-ca");      // same subject, new generation
+        using var a2 = SelfSignedWithKey("CN=eryph-ca"); // same subject, new generation
         using var b = SelfSignedWithKey("CN=other");
         sut.AddToMyStore(a1);
         sut.AddToMyStore(a2);

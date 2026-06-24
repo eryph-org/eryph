@@ -13,22 +13,15 @@ using OpenIddict.Abstractions;
 
 namespace Eryph.Modules.Identity.Services;
 
-public abstract class BaseApplicationService<TEntity, TDescriptor>
+public abstract class BaseApplicationService<TEntity, TDescriptor>(
+    IOpenIddictApplicationManager applicationManager,
+    IIdentityDbRepository<TEntity> repository)
     where TEntity : ApplicationEntity, new()
     where TDescriptor : ApplicationDescriptor, new()
 {
-    private readonly IOpenIddictApplicationManager _applicationManager;
-    private readonly IIdentityDbRepository<TEntity> _repository;
-
-    protected BaseApplicationService(IOpenIddictApplicationManager applicationManager, IIdentityDbRepository<TEntity> repository)
-    {
-        _applicationManager = applicationManager;
-        _repository = repository;
-    }
-
     public async ValueTask<IReadOnlyList<TDescriptor>> List(Guid tenantId, CancellationToken cancellationToken)
     {
-        var clients = await _repository.ListAsync(GetListSpec(tenantId), cancellationToken);
+        var clients = await repository.ListAsync(GetListSpec(tenantId), cancellationToken);
         var populatedClients = await clients.ToSeq().Map(async entity =>
         {
             var descriptor = new TDescriptor();
@@ -41,9 +34,9 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
 
     public async ValueTask<TDescriptor?> Get(string clientId, Guid tenantId, CancellationToken cancellationToken)
     {
-        var entity = await _repository.GetBySpecAsync(GetSingleEntitySpec(clientId, tenantId), cancellationToken);
-        if(entity == null)
-            return default;
+        var entity = await repository.GetBySpecAsync(GetSingleEntitySpec(clientId, tenantId), cancellationToken);
+        if (entity == null)
+            return null;
 
         var descriptor = new TDescriptor();
         await PopulateDescriptorFromApplication(descriptor, entity, cancellationToken);
@@ -55,8 +48,9 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         if (descriptor.ClientId == EryphConstants.SystemClientId)
             throw new Exception("System client can't be updated");
 
-        var currentApplication = await _repository.GetBySpecAsync(
-            GetSingleEntitySpec(descriptor.ClientId, descriptor.TenantId), cancellationToken) 
+        ArgumentNullException.ThrowIfNull(descriptor.ClientId);
+        var currentApplication = await repository.GetBySpecAsync(
+                                     GetSingleEntitySpec(descriptor.ClientId, descriptor.TenantId), cancellationToken)
                                  ?? throw new Exception("Application not found");
 
         var newDescriptor = descriptor.Clone<TDescriptor>();
@@ -67,12 +61,12 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         var clientSecret = descriptor.ClientSecret;
         newDescriptor.ClientSecret = null;
 
-        if (clientSecret!= null)
-            await _applicationManager.UpdateAsync(currentApplication, clientSecret, cancellationToken);
+        if (clientSecret != null)
+            await applicationManager.UpdateAsync(currentApplication, clientSecret, cancellationToken);
         else
-            await _applicationManager.UpdateAsync(currentApplication, cancellationToken);
+            await applicationManager.UpdateAsync(currentApplication, cancellationToken);
 
-        var updatedApp = await _repository.GetBySpecAsync(
+        var updatedApp = await repository.GetBySpecAsync(
                              GetSingleEntitySpec(descriptor.ClientId, descriptor.TenantId), cancellationToken)
                          ?? throw new Exception("Application not found");
         newDescriptor.ClientSecret = updatedApp?.ClientSecret;
@@ -84,14 +78,15 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         if (clientId == EryphConstants.SystemClientId)
             throw new Exception("System client can't be deleted");
 
-        var entity = await _repository.GetBySpecAsync(GetSingleEntitySpec(clientId, tenantId), cancellationToken);
+        var entity = await repository.GetBySpecAsync(GetSingleEntitySpec(clientId, tenantId), cancellationToken);
         if (entity == null)
             return;
 
-        await _applicationManager.DeleteAsync(entity, cancellationToken);
+        await applicationManager.DeleteAsync(entity, cancellationToken);
     }
 
-    public async ValueTask<TDescriptor> Add(TDescriptor descriptor, bool hashedSecret, CancellationToken cancellationToken)
+    public async ValueTask<TDescriptor> Add(TDescriptor descriptor, bool hashedSecret,
+        CancellationToken cancellationToken)
     {
         var application = new TEntity();
 
@@ -99,7 +94,7 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         InitializeDescriptor(newDescriptor);
 
         // openiddict requires client secret to be set
-        var clientSecret = newDescriptor.ClientSecret 
+        var clientSecret = newDescriptor.ClientSecret
                            ?? Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
         // and it should never be in descriptor
@@ -107,16 +102,16 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
 
         await PopulateApplicationFromDescriptor(application, newDescriptor, cancellationToken);
         application.Id = $"{newDescriptor.TenantId}_{newDescriptor.ClientId}";
-        await _applicationManager.CreateAsync(application, clientSecret, cancellationToken);
+        await applicationManager.CreateAsync(application, clientSecret, cancellationToken);
 
         // if secret passed was already the hashed secret set it directly in entity as openiddict has hashed it again
         if (descriptor.ClientSecret != null && hashedSecret)
         {
+            ArgumentNullException.ThrowIfNull(newDescriptor.ClientId);
             var entity =
-                await _repository.GetBySpecAsync(GetSingleEntitySpec(newDescriptor.ClientId, newDescriptor.TenantId),
+                await repository.GetBySpecAsync(GetSingleEntitySpec(newDescriptor.ClientId, newDescriptor.TenantId),
                     cancellationToken);
-            if(entity != null)
-                entity.ClientSecret = descriptor.ClientSecret;
+            entity?.ClientSecret = descriptor.ClientSecret;
 
             newDescriptor.ClientSecret = descriptor.ClientSecret;
         }
@@ -128,16 +123,15 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
     protected virtual async ValueTask PopulateDescriptorFromApplication(TDescriptor descriptor, TEntity application,
         CancellationToken cancellationToken)
     {
-        await _applicationManager.PopulateAsync(descriptor, application, cancellationToken);
+        await applicationManager.PopulateAsync(descriptor, application, cancellationToken);
         descriptor.TenantId = application.TenantId;
-        descriptor.AppRoles.UnionWith(application.AppRoles.Split(',', 
+        descriptor.AppRoles.UnionWith(application.AppRoles.Split(',',
             StringSplitOptions.RemoveEmptyEntries).Select(Guid.Parse));
-            
-        var permissions = await _applicationManager.GetPermissionsAsync(application, cancellationToken);
+
+        var permissions = await applicationManager.GetPermissionsAsync(application, cancellationToken);
         descriptor.Scopes.UnionWith(permissions.Where(x => x.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope))
             .Select(x => x[OpenIddictConstants.Permissions.Prefixes.Scope.Length..]));
         descriptor.ClientSecret = null;
-
     }
 
 
@@ -147,24 +141,18 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         descriptor.Permissions.RemoveWhere(x => x.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope));
 
         foreach (var scope in descriptor.Scopes)
-        {
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + scope);
-        }
 
-        await _applicationManager.PopulateAsync(application, descriptor, cancellationToken);
+        await applicationManager.PopulateAsync(application, descriptor, cancellationToken);
         application.TenantId = descriptor.TenantId;
         application.AppRoles = string.Join(',', descriptor.AppRoles.Select(g => g.ToString()));
-           
-
     }
 
     protected virtual void InitializeDescriptor(TDescriptor descriptor)
     {
-
     }
 
     protected abstract ISingleResultSpecification<TEntity> GetSingleEntitySpec(string clientId, Guid tenantId);
 
     protected abstract ISpecification<TEntity> GetListSpec(Guid tenantId);
-
 }

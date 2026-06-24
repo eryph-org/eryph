@@ -5,15 +5,14 @@ using Eryph.Resources;
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
 [SendMessageTo(MessageRecipient.Controllers)]
-public class UpdateCatletNetworksCommand: IHasResource, IHasProjectId
+public class UpdateCatletNetworksCommand : IHasResource, IHasProjectId
 {
-    public Guid ProjectId { get; set; }
-
     public CatletConfig Config { get; set; }
-    
+
     public Guid CatletId { get; set; }
 
     public Guid CatletMetadataId { get; set; }
+    public Guid ProjectId { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

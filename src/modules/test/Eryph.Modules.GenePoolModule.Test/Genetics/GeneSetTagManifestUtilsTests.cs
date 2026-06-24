@@ -14,37 +14,37 @@ public class GeneSetTagManifestUtilsTests
         CatletGene = ComputeHash("catlet"),
         FodderGenes =
         [
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "first-food",
                 Architecture = "any",
                 Hash = ComputeHash("first-food-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "first-food",
                 Architecture = "hyperv/any",
                 Hash = ComputeHash("first-food-hyperv-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "first-food",
                 Architecture = "hyperv/amd64",
                 Hash = ComputeHash("first-food-hyperv-amd64"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "second-food",
                 Architecture = "any",
                 Hash = ComputeHash("second-food-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "second-food",
                 Architecture = "hyperv/any",
                 Hash = ComputeHash("second-food-hyperv-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "third-food",
                 Architecture = "any",
@@ -53,37 +53,37 @@ public class GeneSetTagManifestUtilsTests
         ],
         VolumeGenes =
         [
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "sda",
                 Architecture = "any",
                 Hash = ComputeHash("sda-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "sda",
                 Architecture = "hyperv/any",
                 Hash = ComputeHash("sda-hyperv-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "sda",
                 Architecture = "hyperv/amd64",
                 Hash = ComputeHash("sda-hyperv-amd64"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "sdb",
                 Architecture = "any",
                 Hash = ComputeHash("sdb-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "sdb",
                 Architecture = "hyperv/any",
                 Hash = ComputeHash("sdb-hyperv-any"),
             },
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "sdc",
                 Architecture = "any",
@@ -91,7 +91,7 @@ public class GeneSetTagManifestUtilsTests
             },
             // Gene for a hypervisor which this version of eryph does not understand.
             // It must be ignored to allow future extensions of the gene pool.
-            new GeneReferenceData()
+            new GeneReferenceData
             {
                 Name = "sda",
                 Architecture = "kvm/amd64",
@@ -115,11 +115,13 @@ public class GeneSetTagManifestUtilsTests
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("first-food-any")));
         dictionary.Should().ContainKey(UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[hyperv/any]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("first-food-hyperv-any")));
-        dictionary.Should().ContainKey(UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[hyperv/amd64]"))
+        dictionary.Should()
+            .ContainKey(UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[hyperv/amd64]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("first-food-hyperv-amd64")));
         dictionary.Should().ContainKey(UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:second-food[any]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("second-food-any")));
-        dictionary.Should().ContainKey(UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:second-food[hyperv/any]"))
+        dictionary.Should()
+            .ContainKey(UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:second-food[hyperv/any]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("second-food-hyperv-any")));
         dictionary.Should().ContainKey(UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:third-food[any]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("third-food-any")));

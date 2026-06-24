@@ -1,5 +1,9 @@
-﻿using Dbosoft.Rebus.Operations.Events;
+﻿using System;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
+using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -10,11 +14,6 @@ using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
-using Eryph.ConfigModel.Yaml;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -29,42 +28,6 @@ internal class CreateCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletDeploymentCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DeployCatletCommand>>
 {
-    protected override async Task Initiated(CreateCatletCommand message)
-    {
-        Data.Data.State = CreateCatletSagaState.Initiated;
-        Data.Data.TenantId = message.TenantId;
-        Data.Data.AgentName = Environment.MachineName;
-        Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
-
-        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
-            Some: n => ProjectName.New(n),
-            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
-        var project = await stateStore.For<Project>()
-            .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, Data.Data.ProjectName.Value));
-        if (project is null)
-        {
-            await Fail($"The project '{Data.Data.ProjectName}' does not exist.");
-            return;
-        }
-
-        Data.Data.ProjectId = project.Id;
-
-        Data.Data.ContentType = "application/yaml";
-        Data.Data.OriginalConfig = CatletConfigYamlSerializer.Serialize(
-            message.Config.CloneWith(c =>
-            {
-                c.Project = null;
-            }));
-
-        await StartNewTask(new BuildCatletSpecificationCommand
-        {
-            AgentName = Data.Data.AgentName,
-            ContentType = Data.Data.ContentType,
-            Configuration = Data.Data.OriginalConfig,
-            Architecture = Data.Data.Architecture,
-        });
-    }
-
     public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message)
     {
         if (Data.Data.State >= CreateCatletSagaState.SpecificationBuilt)
@@ -92,6 +55,18 @@ internal class CreateCatletSaga(
         });
     }
 
+    public Task Handle(OperationTaskStatusEvent<DeployCatletCommand> message)
+    {
+        if (Data.Data.State >= CreateCatletSagaState.Deployed)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, () =>
+        {
+            Data.Data.State = CreateCatletSagaState.Deployed;
+            return Complete();
+        });
+    }
+
     public Task Handle(OperationTaskStatusEvent<ValidateCatletDeploymentCommand> message)
     {
         if (Data.Data.State >= CreateCatletSagaState.DeploymentValidated)
@@ -114,15 +89,36 @@ internal class CreateCatletSaga(
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<DeployCatletCommand> message)
+    protected override async Task Initiated(CreateCatletCommand message)
     {
-        if (Data.Data.State >= CreateCatletSagaState.Deployed)
-            return Task.CompletedTask;
+        Data.Data.State = CreateCatletSagaState.Initiated;
+        Data.Data.TenantId = message.TenantId;
+        Data.Data.AgentName = Environment.MachineName;
+        Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
-        return FailOrRun(message, () =>
+        Data.Data.ProjectName = Optional(message.Config.Project).Filter(notEmpty).Match(
+            n => ProjectName.New(n),
+            () => ProjectName.New(EryphConstants.DefaultProjectName));
+        var project = await stateStore.For<Project>()
+            .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, Data.Data.ProjectName.Value));
+        if (project is null)
         {
-            Data.Data.State = CreateCatletSagaState.Deployed;
-            return Complete();
+            await Fail($"The project '{Data.Data.ProjectName}' does not exist.");
+            return;
+        }
+
+        Data.Data.ProjectId = project.Id;
+
+        Data.Data.ContentType = "application/yaml";
+        Data.Data.OriginalConfig = CatletConfigYamlSerializer.Serialize(
+            message.Config.CloneWith(c => { c.Project = null; }));
+
+        await StartNewTask(new BuildCatletSpecificationCommand
+        {
+            AgentName = Data.Data.AgentName,
+            ContentType = Data.Data.ContentType,
+            Configuration = Data.Data.OriginalConfig,
+            Architecture = Data.Data.Architecture,
         });
     }
 

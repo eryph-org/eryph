@@ -1,13 +1,6 @@
 using System.Net;
-using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Modules.HostAgent;
-using FluentAssertions;
-using LanguageExt;
-using Xunit;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.HyperV.Test;
 
@@ -110,9 +103,9 @@ public class OVNChassisServiceTests
         {
             NetworkProviders =
             [
-                new NetworkProvider { Name = "nat",  Type = NetworkProviderType.NatOverlay, BridgeName = "br-nat" },
-                new NetworkProvider { Name = "flat", Type = NetworkProviderType.Flat,       BridgeName = "br-flat" },
-                new NetworkProvider { Name = "tun",  Type = NetworkProviderType.Overlay,    BridgeName = "br-tun" },
+                new NetworkProvider { Name = "nat", Type = NetworkProviderType.NatOverlay, BridgeName = "br-nat" },
+                new NetworkProvider { Name = "flat", Type = NetworkProviderType.Flat, BridgeName = "br-flat" },
+                new NetworkProvider { Name = "tun", Type = NetworkProviderType.Overlay, BridgeName = "br-tun" },
             ],
         };
 

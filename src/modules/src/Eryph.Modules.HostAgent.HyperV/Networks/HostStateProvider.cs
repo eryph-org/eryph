@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -11,7 +6,6 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
@@ -55,25 +49,25 @@ public static class HostStateProvider<RT>
         Func<double, Eff<Unit>> progressCallback) =>
         from ovsTool in default(RT).OVS
         from hostCommands in default(RT).HostNetworkCommands
-        from _1 in progressCallback(1/9d)
+        from _1 in progressCallback(1 / 9d)
         from vmSwitchExtensions in hostCommands.GetSwitchExtensions()
-        from _2 in progressCallback(2/9d)
+        from _2 in progressCallback(2 / 9d)
         from vmSwitches in hostCommands.GetSwitches()
-        from _3 in progressCallback(3/9d)
+        from _3 in progressCallback(3 / 9d)
         from hostAdapters in hostCommands.GetHostAdapters()
-        from _4 in progressCallback(4/9d)
+        from _4 in progressCallback(4 / 9d)
         from hostVirtualAdapters in hostCommands.GetHostVirtualAdapters()
-        from _5 in progressCallback(5/9d)
+        from _5 in progressCallback(5 / 9d)
         from netNat in hostCommands.GetNetNat()
-        from _6 in progressCallback(6/9d)
+        from _6 in progressCallback(6 / 9d)
         from netRoutes in hostCommands.GetNetRoute()
-        from _7 in progressCallback(7/9d)
+        from _7 in progressCallback(7 / 9d)
         from ovsBridges in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from b in ovsTool.GetBridges(ct).ToAff(e => e)
             select b)
-        from _8 in progressCallback(8/9d)
+        from _8 in progressCallback(8 / 9d)
         from ovsBridgePorts in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
@@ -101,16 +95,16 @@ public static class HostStateProvider<RT>
     private static Validation<Error, Unit> checkHostInterface(
         OvsInterfaceInfo interfaceInfo) =>
         interfaceInfo.Error.Match<Validation<Error, Unit>>(
-            Some: e => Error.New($"The host interface '{interfaceInfo.Name}' reported an error: {e}."),
-            None: () => unit);
+            e => Error.New($"The host interface '{interfaceInfo.Name}' reported an error: {e}."),
+            () => unit);
 
     private static OvsBridgesInfo createBridgesInfo(
         Seq<OvsBridge> ovsBridges,
         Seq<OvsBridgePort> ovsPorts,
         Seq<OvsInterface> ovsInterfaces) =>
         new(ovsBridges.Map(ovsBridge => createBridgeInfo(ovsBridge, ovsPorts, ovsInterfaces))
-                .Map(bridgeInfo => (bridgeInfo.Name, bridgeInfo))
-                .ToHashMap());
+            .Map(bridgeInfo => (bridgeInfo.Name, bridgeInfo))
+            .ToHashMap());
 
     private static OvsBridgeInfo createBridgeInfo(
         OvsBridge ovsBridge,

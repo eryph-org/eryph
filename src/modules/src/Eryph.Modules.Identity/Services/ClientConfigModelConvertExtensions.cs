@@ -33,8 +33,8 @@ internal static class ClientConfigModelConvertExtensions
             Certificate = configModel.X509CertificateBase64,
         };
 
-        descriptor.Scopes.UnionWith(configModel.AllowedScopes ?? Array.Empty<string>());
-        descriptor.AppRoles.UnionWith(configModel.Roles ?? Array.Empty<Guid>());
+        descriptor.Scopes.UnionWith(configModel.AllowedScopes ?? []);
+        descriptor.AppRoles.UnionWith(configModel.Roles ?? []);
 
         return descriptor;
     }

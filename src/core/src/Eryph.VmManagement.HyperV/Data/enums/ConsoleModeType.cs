@@ -1,10 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum ConsoleModeType
 {
-    public enum ConsoleModeType
-    {
-        Default,
-        COM1,
-        COM2,
-        None
-    }
+    Default,
+    COM1,
+    COM2,
+    None,
 }

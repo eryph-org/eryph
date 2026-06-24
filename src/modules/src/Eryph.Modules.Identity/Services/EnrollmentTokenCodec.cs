@@ -11,7 +11,10 @@ namespace Eryph.Modules.Identity.Services;
 
 /// <summary>The verified contents of an enrollment token.</summary>
 public sealed record EnrollmentTokenContent(
-    string Jti, ComponentType ComponentType, string Fqdn, DateTimeOffset ExpiresAt);
+    string Jti,
+    ComponentType ComponentType,
+    string Fqdn,
+    DateTimeOffset ExpiresAt);
 
 /// <summary>
 /// The enrollment-token format: a payload (<c>jti</c>, bound component type, bound host FQDN, expiry)
@@ -93,8 +96,8 @@ public static class EnrollmentTokenCodec
             // host FQDN must be present. (A token is CA-signed, so this only guards against a malformed
             // token we ourselves could have minted.)
             if (payload?.Jti is null || payload.Jti.Length is 0 or > 64
-                || !Enum.IsDefined(payload.Type)
-                || string.IsNullOrWhiteSpace(payload.Fqdn))
+                                     || !Enum.IsDefined(payload.Type)
+                                     || string.IsNullOrWhiteSpace(payload.Fqdn))
                 return null;
 
             return new EnrollmentTokenContent(
@@ -124,6 +127,7 @@ public static class EnrollmentTokenCodec
                     && key.VerifyData(payload, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
                     return true;
             }
+
             return false;
         }
         finally
@@ -147,6 +151,7 @@ public static class EnrollmentTokenCodec
                 if (key is not null)
                     return key;
             }
+
             throw new InvalidOperationException(
                 "No component CA root certificate with a usable private key is available to sign enrollment tokens.");
         }

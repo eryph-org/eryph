@@ -43,10 +43,10 @@ public class Update(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPut("catlet_specifications/{id}")]
     [SwaggerOperation(
-        Summary = "Update a catlet specification",
-        Description = "Update a catlet specification",
-        OperationId = "CatletSpecifications_Update",
-        Tags = ["Catlet Specifications"])
+            Summary = "Update a catlet specification",
+            Description = "Update a catlet specification",
+            OperationId = "CatletSpecifications_Update",
+            Tags = ["Catlet Specifications"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] UpdateCatletSpecificationRequest request,
@@ -56,7 +56,7 @@ public class Update(
             request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail: "The catlet configuration is invalid.",
+                "The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(UpdateCatletSpecificationRequestBody.Configuration)));
 

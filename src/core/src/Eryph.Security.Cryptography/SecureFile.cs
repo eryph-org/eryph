@@ -33,27 +33,25 @@ public static class SecureFile
     {
         using var identity = WindowsIdentity.GetCurrent();
         var owner = identity.User
-            ?? throw new InvalidOperationException(
-                "Cannot determine the current user to restrict the directory.");
+                    ?? throw new InvalidOperationException(
+                        "Cannot determine the current user to restrict the directory.");
 
         var security = new DirectorySecurity();
         // Protect from inheritance so the (potentially world-readable) parent ACL does not apply, and
         // grant full control only to owner + Administrators + SYSTEM, inherited by child files/dirs.
-        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        security.SetAccessRuleProtection(true, false);
         foreach (var sid in new[]
                  {
                      owner,
                      new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
                      new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
                  })
-        {
             security.AddAccessRule(new FileSystemAccessRule(
                 sid,
                 FileSystemRights.FullControl,
                 InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
                 PropagationFlags.None,
                 AccessControlType.Allow));
-        }
 
         security.CreateDirectory(path);
     }
@@ -78,9 +76,11 @@ public static class SecureFile
                 options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
 
             using (var stream = new FileStream(tempPath, options))
+            {
                 stream.Write(contents);
+            }
 
-            File.Move(tempPath, path, overwrite: true);
+            File.Move(tempPath, path, true);
         }
         catch
         {
@@ -93,6 +93,7 @@ public static class SecureFile
             {
                 // best effort — do not mask the original failure
             }
+
             throw;
         }
     }

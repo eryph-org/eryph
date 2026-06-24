@@ -7,7 +7,6 @@ using Eryph.ConfigModel.Variables;
 using Eryph.Core.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
@@ -51,10 +50,7 @@ public static class CatletFeeding
         let mergedFodder = filteredFodder
             .ToLookup(fwk => fwk.Key, fwk => fwk.Config)
             .Map(g => g.Aggregate(CatletBreeding.MergeFodder))
-        let fedConfig = catletConfig.CloneWith(c =>
-        {
-            c.Fodder = mergedFodder.ToArray();
-        })
+        let fedConfig = catletConfig.CloneWith(c => { c.Fodder = mergedFodder.ToArray(); })
         select fedConfig;
 
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfig(
@@ -69,9 +65,9 @@ public static class CatletFeeding
             .FilterT(id => id.GeneName != GeneName.New("catlet"))
             .ToAsync()
         from expanded in geneId.Match(
-            Some: id => ExpandFodderConfigFromSource(fodderConfig, resolvedGenes, genepoolReader)
+            id => ExpandFodderConfigFromSource(fodderConfig, resolvedGenes, genepoolReader)
                 .MapLeft(e => Error.New($"Could not expand the fodder gene '{id}'.", e)),
-            None: () => Seq([fodderConfig]))
+            () => Seq([fodderConfig]))
         select expanded;
 
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
@@ -96,16 +92,16 @@ public static class CatletFeeding
             .ToEither(Error.New).ToAsync()
         from geneFodderWithName in geneFodderConfig.Fodder.ToSeq()
             .Map(f => from n in FodderName.NewEither(f.Name)
-                      select (Name: n, Config: f))
+                select (Name: n, Config: f))
             .Sequence()
             .ToAsync()
         from filteredGeneFodderWithName in name.Match(
-            Some: n => from food in geneFodderWithName
-                          .Find(fwn => fwn.Name == n)
-                          .ToEither(Error.New($"The food '{n}' does not exist in the gene {uniqueGeneId} ({geneHash})."))
-                          .ToAsync()
-                       select Seq1(food),
-            None: () => geneFodderWithName)
+            n => from food in geneFodderWithName
+                    .Find(fwn => fwn.Name == n)
+                    .ToEither(Error.New($"The food '{n}' does not exist in the gene {uniqueGeneId} ({geneHash})."))
+                    .ToAsync()
+                select Seq1(food),
+            () => geneFodderWithName)
         from boundVariables in BindVariables(fodderConfig.Variables.ToSeq(), geneFodderConfig.Variables.ToSeq())
             .ToAsync()
         let boundFodder = filteredGeneFodderWithName
@@ -123,7 +119,7 @@ public static class CatletFeeding
         Seq<VariableConfig> geneVariables) =>
         from variablesWithNames in variables
             .Map(vc => from name in VariableName.NewEither(vc.Name)
-                       select (name, vc))
+                select (name, vc))
             .Sequence()
             .Map(s => s.ToHashMap())
         from geneVariableNames in geneVariables
@@ -133,8 +129,9 @@ public static class CatletFeeding
         from _ in variablesWithNames
             .Filter((n, _) => !geneVariableNamesSet.Contains(n))
             .HeadOrNone().Match<Either<Error, Unit>>(
-                Some: v => Error.New($"Found a binding for the variable '{v.Value.Name}' but the variable is not defined in the fodder gene."),
-                None: () => unit)
+                v => Error.New(
+                    $"Found a binding for the variable '{v.Value.Name}' but the variable is not defined in the fodder gene."),
+                () => unit)
         from boundVariables in geneVariables
             .Map(geneVc => BindVariable(geneVc, variablesWithNames))
             .Sequence()
@@ -145,12 +142,12 @@ public static class CatletFeeding
         HashMap<VariableName, VariableConfig> variables) =>
         from name in VariableName.NewEither(geneVariable.Name)
         select variables.Find(name).Match(
-            Some: v => geneVariable.CloneWith(r =>
+            v => geneVariable.CloneWith(r =>
             {
                 r.Value = v.Value ?? geneVariable.Value;
                 r.Secret = v.Secret | geneVariable.Secret;
             }),
-            None: geneVariable.Clone());
+            geneVariable.Clone());
 
     private static EitherAsync<Error, Unit> ValidateIsResolved(
         GeneIdentifier geneId,

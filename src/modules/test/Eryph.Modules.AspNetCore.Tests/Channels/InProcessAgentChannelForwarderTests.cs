@@ -1,9 +1,5 @@
-using System;
-using System.IO;
 using System.Net.WebSockets;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.Channels;
 using FluentAssertions;
 
@@ -95,6 +91,17 @@ public class InProcessAgentChannelForwarderTests
         private readonly Channel<byte[]?> _reads = Channel.CreateUnbounded<byte[]?>();
         public bool Disposed { get; private set; }
 
+        public override bool CanRead => true;
+        public override bool CanWrite => true;
+        public override bool CanSeek => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
         {
             // Block until the bridge is torn down (cancellation), mimicking an idle guest socket.
@@ -119,16 +126,10 @@ public class InProcessAgentChannelForwarderTests
             return base.DisposeAsync();
         }
 
-        public override bool CanRead => true;
-        public override bool CanWrite => true;
-        public override bool CanSeek => false;
-        public override long Length => throw new NotSupportedException();
-        public override long Position
+        public override void Flush()
         {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
         }
-        public override void Flush() { }
+
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
@@ -141,6 +142,11 @@ public class InProcessAgentChannelForwarderTests
         private WebSocketState _state = WebSocketState.Open;
 
         public bool Closed { get; private set; }
+
+        public override WebSocketState State => _state;
+        public override WebSocketCloseStatus? CloseStatus => null;
+        public override string? CloseStatusDescription => null;
+        public override string? SubProtocol => null;
 
         public void QueueClose() => _incoming.Writer.TryWrite(true);
 
@@ -171,11 +177,12 @@ public class InProcessAgentChannelForwarderTests
             return Task.CompletedTask;
         }
 
-        public override WebSocketState State => _state;
-        public override WebSocketCloseStatus? CloseStatus => null;
-        public override string? CloseStatusDescription => null;
-        public override string? SubProtocol => null;
-        public override void Abort() { }
-        public override void Dispose() { }
+        public override void Abort()
+        {
+        }
+
+        public override void Dispose()
+        {
+        }
     }
 }

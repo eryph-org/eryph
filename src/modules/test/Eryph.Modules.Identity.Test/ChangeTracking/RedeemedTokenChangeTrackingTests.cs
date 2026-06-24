@@ -23,9 +23,9 @@ namespace Eryph.Modules.Identity.Test.ChangeTracking;
 /// </summary>
 public class RedeemedTokenChangeTrackingTests : IDisposable
 {
+    private readonly IdentityChangeTrackingConfig _config;
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eryph-id-ct-" + Guid.NewGuid().ToString("N"));
     private readonly IFileSystem _fileSystem = new FileSystem();
-    private readonly IdentityChangeTrackingConfig _config;
 
     public RedeemedTokenChangeTrackingTests()
     {
@@ -34,6 +34,12 @@ public class RedeemedTokenChangeTrackingTests : IDisposable
             SeedDatabase = true,
             RedeemedTokensConfigPath = Path.Combine(_dir, "redeemed-tokens"),
         };
+    }
+
+    public void Dispose()
+    {
+        if (_fileSystem.Directory.Exists(_dir))
+            _fileSystem.Directory.Delete(_dir, true);
     }
 
     private static IdentityDbContext NewContext(InMemoryDatabaseRoot root)
@@ -102,11 +108,5 @@ public class RedeemedTokenChangeTrackingTests : IDisposable
         await handler.HandleChangeAsync(new RedeemedTokenChange("jti-2"));
 
         _fileSystem.File.Exists(path).Should().BeFalse("a removed token must remove its mirror file");
-    }
-
-    public void Dispose()
-    {
-        if (_fileSystem.Directory.Exists(_dir))
-            _fileSystem.Directory.Delete(_dir, recursive: true);
     }
 }

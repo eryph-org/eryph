@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMNetworkAdapterAclDirection : byte
 {
-    public enum VMNetworkAdapterAclDirection : byte
-    {
-        Inbound = 1,
-        Outbound = 2,
-        Both = 3
-    }
+    Inbound = 1,
+    Outbound = 2,
+    Both = 3,
 }

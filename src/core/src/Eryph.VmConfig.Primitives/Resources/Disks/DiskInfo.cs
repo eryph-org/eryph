@@ -10,15 +10,15 @@ public class DiskInfo
     public Guid Id { get; set; }
 
     public string Name { get; set; }
-    
+
     public string StorageIdentifier { get; set; }
-    
+
     public string DataStore { get; set; }
 
     public Guid? ProjectId { get; set; }
-    
+
     public string ProjectName { get; set; }
-    
+
     public string Environment { get; set; }
 
     public Guid DiskIdentifier { get; set; }
@@ -44,5 +44,6 @@ public class DiskInfo
     /// This means that this disk is differential (i.e. it has a parent) but
     /// the parent is missing.
     /// </summary>
-    [CanBeNull] public string ParentPath { get; set; }
+    [CanBeNull]
+    public string ParentPath { get; set; }
 }

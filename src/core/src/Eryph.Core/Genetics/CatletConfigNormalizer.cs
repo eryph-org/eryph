@@ -4,7 +4,6 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static Eryph.ConfigModel.Validations;
 using static LanguageExt.Prelude;
 
@@ -26,14 +25,14 @@ public static class CatletConfigNormalizer
             .Sequence()
         let hostName = Optional(config.Hostname).Filter(notEmpty) | name.Map(n => n.Value)
         from projectName in Optional(config.Project).Filter(notEmpty).Match(
-            Some: ProjectName.NewValidation,
-            None: () => ProjectName.New(EryphConstants.DefaultProjectName))
+            ProjectName.NewValidation,
+            () => ProjectName.New(EryphConstants.DefaultProjectName))
         from dataStoreName in Optional(config.Store).Filter(notEmpty).Match(
-            Some: DataStoreName.NewValidation,
-            None: () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
+            DataStoreName.NewValidation,
+            () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
         from environmentName in Optional(config.Environment).Filter(notEmpty).Match(
-            Some: EnvironmentName.NewValidation,
-            None: () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
+            EnvironmentName.NewValidation,
+            () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
         from storageIdentifier in Optional(config.Location)
             .Filter(notEmpty)
             .Map(StorageIdentifier.NewValidation)
@@ -70,17 +69,14 @@ public static class CatletConfigNormalizer
     private static Validation<Error, CatletCapabilityConfig> Normalize(
         CatletCapabilityConfig config) =>
         from name in CatletCapabilityName.NewValidation(config.Name)
-        select config.CloneWith(c =>
-        {
-            c.Name = name.Value;
-        });
+        select config.CloneWith(c => { c.Name = name.Value; });
 
     private static Validation<Error, CatletDriveConfig> Normalize(
         CatletDriveConfig config) =>
         from name in CatletDriveName.NewValidation(config.Name)
         from dataStoreName in Optional(config.Store).Filter(notEmpty).Match(
-            Some: DataStoreName.NewValidation,
-            None: () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
+            DataStoreName.NewValidation,
+            () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
         from storageIdentifier in Optional(config.Location)
             .Filter(notEmpty)
             .Map(StorageIdentifier.NewValidation)
@@ -181,8 +177,8 @@ public static class CatletConfigNormalizer
         let adaptersByName = networkAdapters.Map(a => (a.Name, a)).ToHashMap()
         let adaptersForNetworks = networks
             .Map(n => adaptersByName.Find(n.AdapterName).Match(
-                Some: identity,
-                None: () => new CatletNetworkAdapterConfig { Name = n.AdapterName }))
+                identity,
+                () => new CatletNetworkAdapterConfig { Name = n.AdapterName }))
         let missingAdapters = networkAdapters
             .Filter(a => !adaptersForNetworks.Any(afn => a.Name == afn.Name))
         select adaptersForNetworks.Concat(missingAdapters);
@@ -219,8 +215,8 @@ public static class CatletConfigNormalizer
     private static FodderConfig[]? Trim(
         Seq<FodderConfig> configs) =>
         configs.Match(
-            Empty: () => null!,
-            Seq: s => s.Map(Trim).ToArray());
+            () => null!,
+            s => s.Map(Trim).ToArray());
 
     private static FodderConfig Trim(FodderConfig config) =>
         config.CloneWith(c => { c.Variables = Trim(Seq(c.Variables)); });
@@ -229,6 +225,6 @@ public static class CatletConfigNormalizer
         Seq<T> configs)
         where T : ICloneableConfig<T> =>
         configs.Match(
-            Empty: () => null!,
-            Seq: s => s.Map(c => c.Clone()).ToArray());
+            () => null!,
+            s => s.Map(c => c.Clone()).ToArray());
 }

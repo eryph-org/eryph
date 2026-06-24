@@ -1,18 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Design;
-using System.Linq;
 using System.Management;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.VmManagement;
-using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
-
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
 using static Eryph.VmManagement.Wmi.WmiEventUtils;

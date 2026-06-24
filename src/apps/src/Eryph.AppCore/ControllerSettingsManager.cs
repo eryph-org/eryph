@@ -3,10 +3,9 @@ using Eryph.Core;
 using Eryph.Core.Settings;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
-namespace Eryph.AppCore;
+namespace Eryph;
 
 /// <summary>
 /// Standalone-runtime implementation of <see cref="IControllerSettingsManager"/>.

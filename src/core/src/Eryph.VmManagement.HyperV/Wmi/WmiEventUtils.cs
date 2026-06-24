@@ -1,19 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Management;
-using System.Text;
-using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 
 namespace Eryph.VmManagement.Wmi;
 
 public static class WmiEventUtils
-{ 
+{
     public static Eff<WmiEvent> convertEvent(
         ManagementBaseObject wmiEvent,
         Seq<string> properties) =>

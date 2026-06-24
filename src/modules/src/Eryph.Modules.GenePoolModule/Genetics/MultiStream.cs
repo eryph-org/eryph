@@ -3,24 +3,36 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
 internal class MultiStream : Stream
 {
-    private readonly Stream[] _streams;
-    private long _position;
-    private int _currentStreamIndex;
     private readonly long _length;
+    private readonly Stream[] _streams;
+    private int _currentStreamIndex;
+    private long _position;
 
     public MultiStream(IEnumerable<Stream> streams)
     {
         _streams = streams.ToArray();
 
-        foreach (var stream in _streams)
-        {
-            _length += stream.Length;
-        }
+        foreach (var stream in _streams) _length += stream.Length;
+    }
+
+    public override bool CanRead => true;
+
+    public override bool CanSeek => true;
+
+    public override bool CanWrite => false;
+
+    public override long Length => _length;
+
+    public override long Position
+    {
+        get => _position;
+        set => Seek(value, SeekOrigin.Begin);
     }
 
     public override long Seek(long offset, SeekOrigin origin)
@@ -48,11 +60,10 @@ internal class MultiStream : Stream
         var seekBack = offsetLeft < 0;
 
         if (seekBack)
-        {
             while (offsetLeft < 0)
             {
                 var currentStream = _streams[_currentStreamIndex];
-                if (currentStream.Length < offsetLeft*-1)
+                if (currentStream.Length < offsetLeft * -1)
                 {
                     offsetLeft += currentStream.Length;
                     _position -= currentStream.Length;
@@ -64,11 +75,8 @@ internal class MultiStream : Stream
                 currentStream.Seek(offsetLeft, SeekOrigin.Current);
                 _position += offsetLeft;
                 offsetLeft = 0;
-
             }
-        }
         else
-        {
             while (offsetLeft > 0)
             {
                 var currentStream = _streams[_currentStreamIndex];
@@ -84,9 +92,7 @@ internal class MultiStream : Stream
                 currentStream.Seek(offsetLeft, SeekOrigin.Current);
                 _position += offsetLeft;
                 offsetLeft = 0;
-
             }
-        }
 
         return _position;
     }
@@ -98,7 +104,6 @@ internal class MultiStream : Stream
 
     public override void Flush()
     {
-        
     }
 
     public override int Read(byte[] buffer, int offset, int count)
@@ -120,7 +125,7 @@ internal class MultiStream : Stream
             if (count <= 0) continue;
 
 
-            if (_currentStreamIndex == _streams.Length-1)
+            if (_currentStreamIndex == _streams.Length - 1)
                 break;
 
             _currentStreamIndex++;
@@ -131,7 +136,7 @@ internal class MultiStream : Stream
     }
 
 
-    public override async System.Threading.Tasks.Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         var result = 0;
         var position = offset;
@@ -155,7 +160,6 @@ internal class MultiStream : Stream
 
             _currentStreamIndex++;
             _streams[_currentStreamIndex].Seek(0, SeekOrigin.Begin);
-
         }
 
         return result;
@@ -170,25 +174,6 @@ internal class MultiStream : Stream
     {
         base.Dispose(disposing);
 
-        foreach (var stream in _streams)
-        {
-            stream.Dispose();
-        }
-
+        foreach (var stream in _streams) stream.Dispose();
     }
-
-    public override bool CanRead => true;
-
-    public override bool CanSeek => true;
-
-    public override bool CanWrite => false;
-
-    public override long Length => _length;
-
-    public override long Position
-    {
-        get => _position;
-        set => Seek(value, SeekOrigin.Begin);
-    }
-
 }

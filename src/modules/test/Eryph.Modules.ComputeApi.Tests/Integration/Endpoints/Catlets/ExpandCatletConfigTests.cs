@@ -1,4 +1,3 @@
-using System;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -29,10 +28,10 @@ public class ExpandCatletConfigTests(ITestOutputHelper outputHelper)
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, scope, false)
             .PostAsJsonAsync($"v1/catlets/{CatletId}/config/expand", new ExpandCatletConfigRequestBody
-            {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig()),
-            },
-            options: ApiJsonSerializerOptions.Options);
+                {
+                    Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig()),
+                },
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(expectedStatusCode);
     }
@@ -48,10 +47,10 @@ public class ExpandCatletConfigTests(ITestOutputHelper outputHelper)
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:write", false)
             .PostAsJsonAsync($"v1/catlets/{CatletId}/config/expand", new ExpandCatletConfigRequestBody
-            {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig()),
-            },
-            options: ApiJsonSerializerOptions.Options);
+                {
+                    Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig()),
+                },
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -62,15 +61,15 @@ public class ExpandCatletConfigTests(ITestOutputHelper outputHelper)
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync($"v1/catlets/{CatletId}/config/expand", new ExpandCatletConfigRequestBody
-            {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig
                 {
-                    // A name containing an invalid character must be rejected by
-                    // CatletConfigValidations.
-                    Name = "invalid name!",
-                }),
-            },
-            options: ApiJsonSerializerOptions.Options);
+                    Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig
+                    {
+                        // A name containing an invalid character must be rejected by
+                        // CatletConfigValidations.
+                        Name = "invalid name!",
+                    }),
+                },
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -81,14 +80,14 @@ public class ExpandCatletConfigTests(ITestOutputHelper outputHelper)
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync($"v1/catlets/{CatletId}/config/expand", new ExpandCatletConfigRequestBody
-            {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig
                 {
-                    Name = "test-config",
-                }),
-                ShowSecrets = true,
-            },
-            options: ApiJsonSerializerOptions.Options);
+                    Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig
+                    {
+                        Name = "test-config",
+                    }),
+                    ShowSecrets = true,
+                },
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
@@ -111,20 +110,18 @@ public class ExpandCatletConfigTests(ITestOutputHelper outputHelper)
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync($"v1/catlets/{CatletId}/config/expand", new ExpandCatletConfigRequestBody
-            {
-                Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig
                 {
-                    Project = OtherProjectName,
-                }),
-            },
-            options: ApiJsonSerializerOptions.Options);
+                    Configuration = CatletConfigJsonSerializer.SerializeToElement(new CatletConfig
+                    {
+                        Project = OtherProjectName,
+                    }),
+                },
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = Factory.GetPendingRebusMessages<ExpandNewCatletConfigCommand>();
-        messages.Should().SatisfyRespectively(m =>
-        {
-            m.Config!.Project.Should().Be(EryphConstants.DefaultProjectName);
-        });
+        messages.Should()
+            .SatisfyRespectively(m => { m.Config!.Project.Should().Be(EryphConstants.DefaultProjectName); });
     }
 }

@@ -14,22 +14,15 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.Controller.Seeding;
 
-internal class CatletSpecificationSeeder : SeederBase
+internal class CatletSpecificationSeeder(
+    ChangeTrackingConfig config,
+    IFileSystem fileSystem,
+    IStateStoreRepository<CatletSpecification> specificationRepository)
+    : SeederBase(fileSystem, config.CatletSpecificationsConfigPath)
 {
-    private readonly IStateStoreRepository<CatletSpecification> _specificationRepository;
-
-    public CatletSpecificationSeeder(
-        ChangeTrackingConfig config,
-        IFileSystem fileSystem,
-        IStateStoreRepository<CatletSpecification> specificationRepository)
-        : base(fileSystem, config.CatletSpecificationsConfigPath)
-    {
-        _specificationRepository = specificationRepository;
-    }
-
     protected override async Task SeedAsync(Guid entityId, string json, CancellationToken cancellationToken = default)
     {
-        bool exists = await _specificationRepository.AnyAsync(
+        var exists = await specificationRepository.AnyAsync(
             new CatletSpecificationSpecs.GetByIdReadOnly(entityId),
             cancellationToken);
         if (exists)
@@ -48,7 +41,7 @@ internal class CatletSpecificationSeeder : SeederBase
                 .ToHashSet(),
         };
 
-        await _specificationRepository.AddAsync(specification, cancellationToken);
-        await _specificationRepository.SaveChangesAsync(cancellationToken);
+        await specificationRepository.AddAsync(specification, cancellationToken);
+        await specificationRepository.SaveChangesAsync(cancellationToken);
     }
 }

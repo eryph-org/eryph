@@ -4,10 +4,7 @@ namespace Eryph.Resources.Machines;
 
 public class VMHostSwitchData
 {
-    [PrivateIdentifier]
+    [PrivateIdentifier] public string Id { get; set; }
 
-    public string Id { get; set; }
-
-    [PrivateIdentifier]
-    public string VirtualSwitchName { get; set; }
+    [PrivateIdentifier] public string VirtualSwitchName { get; set; }
 }

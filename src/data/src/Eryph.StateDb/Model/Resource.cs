@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using Eryph.Resources;
 
 namespace Eryph.StateDb.Model;

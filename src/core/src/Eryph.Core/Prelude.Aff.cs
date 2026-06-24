@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core;

@@ -4,5 +4,5 @@ internal enum VMPortChange
 {
     Remove,
     Add,
-    Nothing
+    Nothing,
 }

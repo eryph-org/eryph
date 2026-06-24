@@ -13,39 +13,26 @@ using Eryph.Modules.HostAgent.Inventory;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
 
-internal class SyncService : BackgroundService
+internal class SyncService(
+    ILogger<SyncService> logger,
+    IAgentControlService controlService,
+    INetworkSyncService networkSyncService,
+    DiskStoresChangeWatcherService diskStoresChangeWatcherService)
+    : BackgroundService
 {
-    private readonly ILogger _logger;
-    private readonly IAgentControlService _controlService;
-    private readonly INetworkSyncService _networkSyncService;
-    private readonly DiskStoresChangeWatcherService _diskStoresChangeWatcherService;
-
-    public SyncService(
-        ILogger<SyncService> logger, 
-        IAgentControlService controlService,
-        INetworkSyncService networkSyncService,
-        DiskStoresChangeWatcherService diskStoresChangeWatcherService)
-    {
-        _logger = logger;
-        _controlService = controlService;
-        _networkSyncService = networkSyncService;
-        _diskStoresChangeWatcherService = diskStoresChangeWatcherService;
-    }
+    private readonly ILogger _logger = logger;
 
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-
         while (!stoppingToken.IsCancellationRequested)
         {
             await using var pipeServer =
                 NamedPipeServerStreamAcl.Create("eryph_hostagent_sync",
-
                     PipeDirection.InOut,
                     1,
                     PipeTransmissionMode.Message,
@@ -60,7 +47,7 @@ internal class SyncService : BackgroundService
                 var ss = new StreamString(pipeServer);
 
 
-                var commandString= await ss.ReadString(stoppingToken);
+                var commandString = await ss.ReadString(stoppingToken);
                 var command = JsonSerializer.Deserialize<SyncServiceCommand>(commandString);
 
                 var hasPermission = false;
@@ -85,7 +72,6 @@ internal class SyncService : BackgroundService
                 }
 
                 if (commandValid && !hasPermission)
-                {
                     pipeServer.RunAsClient(() =>
                     {
                         AdminGuard.InElevatedProcess(() => Unit.Default,
@@ -95,10 +81,11 @@ internal class SyncService : BackgroundService
                                 return Unit.Default;
                             });
                     });
-                }
 
                 if (!commandValid)
-                    await ss.WriteResponse(new SyncServiceResponse{Response = "INVALID"}, stoppingToken);
+                {
+                    await ss.WriteResponse(new SyncServiceResponse { Response = "INVALID" }, stoppingToken);
+                }
                 else
                 {
                     if (hasPermission)
@@ -107,7 +94,10 @@ internal class SyncService : BackgroundService
                         await ss.WriteResponse(response, stoppingToken);
                     }
                     else
-                        await ss.WriteResponse(new SyncServiceResponse { Response = "PERMISSION_DENIED" }, stoppingToken);
+                    {
+                        await ss.WriteResponse(new SyncServiceResponse { Response = "PERMISSION_DENIED" },
+                            stoppingToken);
+                    }
                 }
 
                 pipeServer.WaitForPipeDrain();
@@ -125,7 +115,6 @@ internal class SyncService : BackgroundService
                 }
                 catch (Exception)
                 {
-
                 }
             }
         }
@@ -137,19 +126,20 @@ internal class SyncService : BackgroundService
         AgentServiceOperation operation;
         switch (command.CommandName)
         {
-            case "STATUS": return new SyncServiceResponse
-            {
-                Response = "DONE", Data = JsonSerializer.SerializeToElement(true)
-            };
+            case "STATUS":
+                return new SyncServiceResponse
+                {
+                    Response = "DONE", Data = JsonSerializer.SerializeToElement(true),
+                };
             case "VALIDATE_CHANGES":
-                var networkProviders = command.Data.HasValue 
+                var networkProviders = command.Data.HasValue
                     ? command.Data.Value.Deserialize<NetworkProvider[]>()
                     : [];
-                return await _networkSyncService.ValidateChanges(networkProviders)
+                return await networkSyncService.ValidateChanges(networkProviders)
                     .Match(r => new SyncServiceResponse
                         {
                             Response = "DONE",
-                            Data = JsonSerializer.SerializeToElement(r)
+                            Data = JsonSerializer.SerializeToElement(r),
                         },
                         l =>
                         {
@@ -158,13 +148,13 @@ internal class SyncService : BackgroundService
                             return new SyncServiceResponse { Response = "FAILED", Error = l.Message };
                         });
             case "REBUILD_NETWORKS":
-                return await _networkSyncService.SyncNetworks(CancellationToken.None)
-                        .Match(r => new SyncServiceResponse { Response = "DONE" },
-                            l =>
-                            {
-                                _logger.LogDebug("sync command REBUILD_NETWORKS failed, Error: {@error}", l );
-                                return new SyncServiceResponse { Response = "FAILED", Error = l.Message };
-                            });
+                return await networkSyncService.SyncNetworks(CancellationToken.None)
+                    .Match(r => new SyncServiceResponse { Response = "DONE" },
+                        l =>
+                        {
+                            _logger.LogDebug("sync command REBUILD_NETWORKS failed, Error: {@error}", l);
+                            return new SyncServiceResponse { Response = "FAILED", Error = l.Message };
+                        });
             case "STOP_OVN":
                 service = AgentService.OVNController;
                 operation = AgentServiceOperation.Stop;
@@ -182,10 +172,10 @@ internal class SyncService : BackgroundService
                 operation = AgentServiceOperation.Stop;
                 break;
             case "SYNC_AGENT_SETTINGS":
-                return await TryAsync(async () => await _diskStoresChangeWatcherService.Restart().ToUnit())
+                return await TryAsync(async () => await diskStoresChangeWatcherService.Restart().ToUnit())
                     .Match(
-                        Succ: _ => new SyncServiceResponse { Response = "DONE" },
-                        Fail: ex =>
+                        _ => new SyncServiceResponse { Response = "DONE" },
+                        ex =>
                         {
                             _logger.LogError(ex, "Failed to restart disk store change watcher");
                             return new SyncServiceResponse { Response = "FAILED", Error = ex.Message };
@@ -193,11 +183,10 @@ internal class SyncService : BackgroundService
             default: return new SyncServiceResponse { Response = "INVALID" };
         }
 
-        var succeeded = await _controlService.SendControlEvent(
+        var succeeded = await controlService.SendControlEvent(
             service, operation, CancellationToken.None);
 
         return new SyncServiceResponse { Response = succeeded ? "DONE" : "FAILED" };
-
     }
 
     private static PipeSecurity CreateSystemIOPipeSecurity()
@@ -209,11 +198,9 @@ internal class SyncService : BackgroundService
 
         // Allow Everyone read and write access to the pipe. 
         pipeSecurity.SetAccessRule(
-            new PipeAccessRule(id, PipeAccessRights.ReadWrite, 
+            new PipeAccessRule(id, PipeAccessRights.ReadWrite,
                 AccessControlType.Allow));
 
         return pipeSecurity;
     }
-
-
 }

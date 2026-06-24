@@ -3,8 +3,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
-using Eryph.Core.Sys;
 using Eryph.Core.Genetics;
+using Eryph.Core.Sys;
 using Eryph.GenePool;
 using Eryph.GenePool.Client;
 using Eryph.GenePool.Model;
@@ -12,7 +12,6 @@ using Eryph.Messages.Genes.Commands;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Genetics;
@@ -27,31 +26,22 @@ internal class LocalFirstGeneProvider(
         GeneSetIdentifier geneSetId) =>
         from cachedManifest in localGenePool.GetCachedGeneSet(geneSetId)
         from pulledGeneSet in cachedManifest.Match(
-                Some: cm => notEmpty(cm.Reference)
-                    // Gene set references should always be checked online, but we ignore
-                    // any network errors. We have a cached version of the gene set reference,
-                    // and it should be possible to proceed when the gene pool is not reachable.
-                    // We also return the cached version when the gene set does not exist on
-                    // any remote gene pool. This is useful for local development when the gene
-                    // set has been copied by hand into the local gene pool.
-                    ? PullAndCacheGeneSet(geneSetId)
-                        .Map(r => r | Some(cm))
-                        .Catch(ex => ex is GenepoolClientException && !IsUnexpectedHttpClientError(ex), SuccessAff(Some(cm)))
-                    : SuccessAff<CancelRt, Option<GenesetTagManifestData>>(Some(cm)),
-                None: () => PullAndCacheGeneSet(geneSetId))
+            cm => notEmpty(cm.Reference)
+                // Gene set references should always be checked online, but we ignore
+                // any network errors. We have a cached version of the gene set reference,
+                // and it should be possible to proceed when the gene pool is not reachable.
+                // We also return the cached version when the gene set does not exist on
+                // any remote gene pool. This is useful for local development when the gene
+                // set has been copied by hand into the local gene pool.
+                ? PullAndCacheGeneSet(geneSetId)
+                    .Map(r => r | Some(cm))
+                    .Catch(ex => ex is GenepoolClientException && !IsUnexpectedHttpClientError(ex),
+                        SuccessAff(Some(cm)))
+                : SuccessAff<CancelRt, Option<GenesetTagManifestData>>(Some(cm)),
+            () => PullAndCacheGeneSet(geneSetId))
         from result in pulledGeneSet.ToAff(
             Error.New($"The gene set {geneSetId} is not available in local or remote gene pools."))
         select result;
-
-    private Aff<CancelRt, Option<GenesetTagManifestData>> PullAndCacheGeneSet(
-        GeneSetIdentifier geneSetId) =>
-        from pulledGeneSet in IterateGenePools(
-                genepoolFactory,
-                pool => pool.GetGeneSet(geneSetId))
-        from _ in pulledGeneSet
-            .Map(localGenePool.CacheGeneSet)
-            .Sequence()
-        select pulledGeneSet.Map(gi => gi.Manifest);
 
     public Aff<CancelRt, string> GetGeneContent(
         UniqueGeneIdentifier uniqueGeneId,
@@ -70,35 +60,11 @@ internal class LocalFirstGeneProvider(
             .Sequence()
         from cachedGeneContent in localGenePool.GetCachedGeneContent(uniqueGeneId, geneHash)
         from pulledGeneContent in cachedGeneContent.Match(
-            Some: c => SuccessAff<Option<string>>(c),
-            None: () => PullAndCacheGeneContent(uniqueGeneId, geneHash))
+            c => SuccessAff<Option<string>>(c),
+            () => PullAndCacheGeneContent(uniqueGeneId, geneHash))
         from result in pulledGeneContent.ToAff(
             Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available in local or remote gene pools."))
         select result;
-
-    private Aff<CancelRt, Unit> MergeGeneContentParts(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash,
-        HashMap<GenePartHash, Option<long>> downloadedParts) =>
-        from validParts in downloadedParts.Values.ToSeq()
-            .Sequence()
-            .ToAff(Error.New($"The local gene pool contains an incomplete packed version of the gene {uniqueGeneId} ({geneHash})."))
-        from _1 in guard(
-            validParts.Count <= 1 && validParts.Sum() <= EryphConstants.Limits.MaxGeneSizeDirectDownload,
-            Error.New($"The packed version of the gene {uniqueGeneId} ({geneHash}) in the local gene pool it too big."))
-        from _2 in localGenePool.MergeGene(uniqueGeneId, geneHash, (_,_) => Task.FromResult(unit))
-        select unit;
-
-    private Aff<CancelRt, Option<string>> PullAndCacheGeneContent(
-        UniqueGeneIdentifier uniqueGeneId,
-        GeneHash geneHash) =>
-        from pulledGene in IterateGenePools(
-            genepoolFactory,
-            genePool => genePool.GetGeneContent(uniqueGeneId, geneHash))
-        from content in pulledGene
-            .Map(localGenePool.CacheGeneContent)
-            .Sequence()
-        select content;
 
     public Aff<CancelRt, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
@@ -112,7 +78,7 @@ internal class LocalFirstGeneProvider(
         select new PrepareGeneResponse
         {
             RequestedGene = uniqueGeneId,
-            Inventory = new GeneData()
+            Inventory = new GeneData
             {
                 Id = uniqueGeneId,
                 Hash = geneHash,
@@ -120,6 +86,41 @@ internal class LocalFirstGeneProvider(
             },
             Timestamp = timestamp,
         };
+
+    private Aff<CancelRt, Option<GenesetTagManifestData>> PullAndCacheGeneSet(
+        GeneSetIdentifier geneSetId) =>
+        from pulledGeneSet in IterateGenePools(
+            genepoolFactory,
+            pool => pool.GetGeneSet(geneSetId))
+        from _ in pulledGeneSet
+            .Map(localGenePool.CacheGeneSet)
+            .Sequence()
+        select pulledGeneSet.Map(gi => gi.Manifest);
+
+    private Aff<CancelRt, Unit> MergeGeneContentParts(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        HashMap<GenePartHash, Option<long>> downloadedParts) =>
+        from validParts in downloadedParts.Values.ToSeq()
+            .Sequence()
+            .ToAff(Error.New(
+                $"The local gene pool contains an incomplete packed version of the gene {uniqueGeneId} ({geneHash})."))
+        from _1 in guard(
+            validParts.Count <= 1 && validParts.Sum() <= EryphConstants.Limits.MaxGeneSizeDirectDownload,
+            Error.New($"The packed version of the gene {uniqueGeneId} ({geneHash}) in the local gene pool it too big."))
+        from _2 in localGenePool.MergeGene(uniqueGeneId, geneHash, (_, _) => Task.FromResult(unit))
+        select unit;
+
+    private Aff<CancelRt, Option<string>> PullAndCacheGeneContent(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash) =>
+        from pulledGene in IterateGenePools(
+            genepoolFactory,
+            genePool => genePool.GetGeneContent(uniqueGeneId, geneHash))
+        from content in pulledGene
+            .Map(localGenePool.CacheGeneContent)
+            .Sequence()
+        select content;
 
     private Aff<CancelRt, Unit> EnsureGene(
         UniqueGeneIdentifier uniqueGeneId,
@@ -136,8 +137,10 @@ internal class LocalFirstGeneProvider(
 
                 var overallPercent = Convert.ToInt32(processedPercent * 50d);
 
-                var progressMessage = $"Verifying downloaded parts of {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
-                log.LogTrace("Verifying downloaded parts of {GeneId} ({GeneHash}): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
+                var progressMessage =
+                    $"Verifying downloaded parts of {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
+                log.LogTrace(
+                    "Verifying downloaded parts of {GeneId} ({GeneHash}): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
                     uniqueGeneId, geneHash, totalReadMb, totalMb, processedPercent);
                 await reportProgress(progressMessage, overallPercent);
             })
@@ -158,11 +161,13 @@ internal class LocalFirstGeneProvider(
                     var totalReadMb = Math.Round(processedBytes / 1024d / 1024d, 0);
                     var totalMb = Math.Round(totalBytes / 1024d / 1024d, 0);
                     var processedPercent = Math.Round(processedBytes / (double)totalBytes, 3);
-                    
+
                     var overallPercent = Convert.ToInt32(processedPercent * 50d + 50d);
-                    
-                    var progressMessage = $"Extracting {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
-                    log.LogTrace("Extracting {GeneId} ({GeneHash}0): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
+
+                    var progressMessage =
+                        $"Extracting {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
+                    log.LogTrace(
+                        "Extracting {GeneId} ({GeneHash}0): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
                         uniqueGeneId, geneHash, totalReadMb, totalMb, processedPercent);
                     await reportProgress(progressMessage, overallPercent);
                 })
@@ -197,8 +202,10 @@ internal class LocalFirstGeneProvider(
 
                             var overallPercent = Convert.ToInt32(processedPercent * 50d);
 
-                            var progressMessage = $"Downloading parts of {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
-                            log.LogTrace("Downloading parts of {GeneId} ({GeneHash}): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
+                            var progressMessage =
+                                $"Downloading parts of {uniqueGeneId} ({geneHash}): {totalReadMb:F} MiB / {totalMb:F} MiB => {processedPercent:P1} completed";
+                            log.LogTrace(
+                                "Downloading parts of {GeneId} ({GeneHash}): {TotalReadMiB} MiB / {TotalMiB} MiB => {Percent:P1} completed",
                                 uniqueGeneId, geneHash, totalReadMb, totalMb, processedPercent);
                             await reportProgress(progressMessage, overallPercent);
                         })))
@@ -206,28 +213,28 @@ internal class LocalFirstGeneProvider(
                 Error.New($"The gene {uniqueGeneId} ({geneHash}) is not available on any remote gene pool."))
             select unit);
 
-    private Aff<CancelRt, Option<R>> IterateGenePools<R>(
+    private static Aff<CancelRt, Option<R>> IterateGenePools<R>(
         IGenePoolFactory genePoolFactory,
         Func<IGenePool, Aff<CancelRt, Option<R>>> action) =>
         genePoolFactory.GetRemotePools().ToSeq()
             .Fold(
                 SuccessAff<CancelRt, Option<R>>(None),
                 (state, poolName) => state.BiBind(
-                    Succ: o => o.Match(
+                    o => o.Match(
                         // We have a valid result, nothing more to do
-                        Some: r => SuccessAff<CancelRt, Option<R>>(r),
+                        r => SuccessAff<CancelRt, Option<R>>(r),
                         // No result, try next pool
-                        None: () => action(genePoolFactory.CreateNew(poolName))),
-                    Fail: e => IsUnexpectedHttpClientError(e)
+                        () => action(genePoolFactory.CreateNew(poolName))),
+                    e => IsUnexpectedHttpClientError(e)
                         // If the error is an HTTP client error, we immediately fail. This way,
                         // authentication errors are always propagated to the caller.
                         ? FailAff<CancelRt, Option<R>>(e)
                         : from o in action(genePoolFactory.CreateNew(poolName))
-                          // When an error occurred, we still try the next pool. When the next pool
-                          // does not contain the gene, we return the last error. This way, one error
-                          // is propagated to the caller.
-                          from r in o.ToAff(e)
-                          select Some(r)))
+                        // When an error occurred, we still try the next pool. When the next pool
+                        // does not contain the gene, we return the last error. This way, one error
+                        // is propagated to the caller.
+                        from r in o.ToAff(e)
+                        select Some(r)))
             .MapFail(e => IsUnexpectedHttpClientError(e)
                 ? Error.New("Failed to query remote gene pools. Check that any configured API keys are valid.", e)
                 : e);
@@ -237,8 +244,8 @@ internal class LocalFirstGeneProvider(
             .Map(ex => ex is GenepoolClientException
             {
                 StatusCode: >= HttpStatusCode.BadRequest
-                    and < HttpStatusCode.InternalServerError
-                    and not HttpStatusCode.NotFound
+                and < HttpStatusCode.InternalServerError
+                and not HttpStatusCode.NotFound,
             })
             .IfNone(false);
 }

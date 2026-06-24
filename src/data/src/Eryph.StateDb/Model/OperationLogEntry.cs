@@ -15,6 +15,6 @@ public class OperationLogEntry
     public OperationTaskModel Task { get; set; } = null!;
 
     public string? Message { get; set; }
-        
+
     public DateTimeOffset Timestamp { get; set; }
 }

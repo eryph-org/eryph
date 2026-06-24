@@ -17,7 +17,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
-
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
@@ -31,10 +30,10 @@ public class Create(
     [Authorize(Policy = "compute:projects:write")]
     [HttpPost("projects/{project_id}/members")]
     [SwaggerOperation(
-        Summary = "Add a project member",
-        Description = "Add a project member",
-        OperationId = "ProjectMembers_Add",
-        Tags = ["Project Members"])
+            Summary = "Add a project member",
+            Description = "Add a project member",
+            OperationId = "ProjectMembers_Add",
+            Tags = ["Project Members"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] NewProjectMemberRequest request,

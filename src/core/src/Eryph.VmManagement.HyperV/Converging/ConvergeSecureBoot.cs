@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
@@ -20,7 +19,7 @@ public class ConvergeSecureBoot(
     public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeSecureBootState(vmInfo).ToEither();
-    
+
     private EitherAsync<Error, Unit> ConvergeSecureBootState(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -43,7 +42,8 @@ public class ConvergeSecureBoot(
         bool enableSecureBoot,
         string secureBootTemplate) =>
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
-                Error.New("Cannot change secure boot settings if the catlet is not stopped. Stop the catlet and retry."))
+                Error.New(
+                    "Cannot change secure boot settings if the catlet is not stopped. Stop the catlet and retry."))
             .ToEitherAsync()
         from _2 in Context.ReportProgressAsync(enableSecureBoot
             ? $"Configuring secure boot settings (Template: {secureBootTemplate})"

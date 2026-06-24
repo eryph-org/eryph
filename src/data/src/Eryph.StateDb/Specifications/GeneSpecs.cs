@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Ardalis.Specification;
-using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 
@@ -38,12 +35,7 @@ public class GeneSpecs
         }
     }
 
-    public sealed class GetAll : Specification<Gene>
-    {
-        public GetAll()
-        {
-        }
-    }
+    public sealed class GetAll : Specification<Gene>;
 
     public sealed class GetForInventory : Specification<Gene>, ISingleResultSpecification<Gene>
     {

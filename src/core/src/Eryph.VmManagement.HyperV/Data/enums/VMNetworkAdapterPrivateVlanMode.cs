@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMNetworkAdapterPrivateVlanMode
 {
-    public enum VMNetworkAdapterPrivateVlanMode
-    {
-        Isolated = 1,
-        Community = 2,
-        Promiscuous = 3
-    }
+    Isolated = 1,
+    Community = 2,
+    Promiscuous = 3,
 }

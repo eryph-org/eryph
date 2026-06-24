@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.Network;
+﻿using Eryph.Core.Network;
 
 namespace Eryph.Core.Tests.Network;
 
@@ -16,7 +11,7 @@ public class NetworkProvidersConfigValidationsTests
             NetworkProvidersConfiguration.DefaultConfig);
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
-        
+
         result.Should().BeSuccess();
     }
 
@@ -27,12 +22,11 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders");
-                issue.Message.Should().Be("The list must have 1 or more entries.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders");
+            issue.Message.Should().Be("The list must have 1 or more entries.");
+        });
     }
 
     [Fact]
@@ -54,12 +48,11 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders[0].BridgeName");
-                issue.Message.Should().Be("The bridge name 'br-int' is reserved.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders[0].BridgeName");
+            issue.Message.Should().Be("The bridge name 'br-int' is reserved.");
+        });
     }
 
     [Fact]
@@ -88,12 +81,11 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders");
-                issue.Message.Should().Be("The network provider name 'default' is not unique.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders");
+            issue.Message.Should().Be("The network provider name 'default' is not unique.");
+        });
     }
 
     [Fact]
@@ -122,12 +114,11 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders");
-                issue.Message.Should().Be("The bridge name 'br-nat' is not unique.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders");
+            issue.Message.Should().Be("The bridge name 'br-nat' is not unique.");
+        });
     }
 
     [Fact]
@@ -158,12 +149,11 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders");
-                issue.Message.Should().Be("The adapter 'test-adapter-1' is not unique.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders");
+            issue.Message.Should().Be("The adapter 'test-adapter-1' is not unique.");
+        });
     }
 
     [Theory]
@@ -196,7 +186,7 @@ public class NetworkProvidersConfigValidationsTests
                                     Name = EryphConstants.DefaultIpPoolName,
                                     FirstIp = "10.249.249.50",
                                     NextIp = "10.249.249.60",
-                                    LastIp = "10.249.249.100"
+                                    LastIp = "10.249.249.100",
                                 },
                             ],
                         },
@@ -207,12 +197,13 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].Network");
-                issue.Message.Should().Match("The normalized IP network '10.249.248.0/22' does not match the specified network '10.249.249.0/22'.*");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders[0].Subnets[0].Network");
+            issue.Message.Should()
+                .Match(
+                    "The normalized IP network '10.249.248.0/22' does not match the specified network '10.249.249.0/22'.*");
+        });
     }
 
     [Theory]
@@ -245,7 +236,7 @@ public class NetworkProvidersConfigValidationsTests
                                     Name = EryphConstants.DefaultIpPoolName,
                                     FirstIp = "10.249.0.50",
                                     NextIp = "10.249.0.60",
-                                    LastIp = "10.249.0.100"
+                                    LastIp = "10.249.0.100",
                                 },
                             ],
                         },
@@ -260,22 +251,26 @@ public class NetworkProvidersConfigValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].Subnets[0].Gateway");
-                issue.Message.Should().Be("The IP address '10.249.0.1' is not part of the provider's network '10.249.248.0/22'.");
+                issue.Message.Should()
+                    .Be("The IP address '10.249.0.1' is not part of the provider's network '10.249.248.0/22'.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].Subnets[0].IpPools[0].FirstIp");
-                issue.Message.Should().Be("The IP address '10.249.0.50' is not part of the provider's network '10.249.248.0/22'.");
+                issue.Message.Should()
+                    .Be("The IP address '10.249.0.50' is not part of the provider's network '10.249.248.0/22'.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].Subnets[0].IpPools[0].NextIp");
-                issue.Message.Should().Be("The IP address '10.249.0.60' is not part of the provider's network '10.249.248.0/22'.");
+                issue.Message.Should()
+                    .Be("The IP address '10.249.0.60' is not part of the provider's network '10.249.248.0/22'.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].Subnets[0].IpPools[0].LastIp");
-                issue.Message.Should().Be("The IP address '10.249.0.100' is not part of the provider's network '10.249.248.0/22'.");
+                issue.Message.Should()
+                    .Be("The IP address '10.249.0.100' is not part of the provider's network '10.249.248.0/22'.");
             });
     }
 
@@ -497,22 +492,26 @@ public class NetworkProvidersConfigValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].Vlan");
-                issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of a VLAN.");
+                issue.Message.Should()
+                    .Be("The NAT overlay network provider does not support the configuration of a VLAN.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].MacAddressSpoofing");
-                issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of MAC address spoofing.");
+                issue.Message.Should()
+                    .Be("The NAT overlay network provider does not support the configuration of MAC address spoofing.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].DisableDhcpGuard");
-                issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of the DHCP guard.");
+                issue.Message.Should()
+                    .Be("The NAT overlay network provider does not support the configuration of the DHCP guard.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].DisableRouterGuard");
-                issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of the router guard.");
+                issue.Message.Should()
+                    .Be("The NAT overlay network provider does not support the configuration of the router guard.");
             });
     }
 
@@ -559,17 +558,20 @@ public class NetworkProvidersConfigValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].MacAddressSpoofing");
-                issue.Message.Should().Be("The overlay network provider does not support the configuration of MAC address spoofing.");
+                issue.Message.Should()
+                    .Be("The overlay network provider does not support the configuration of MAC address spoofing.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].DisableDhcpGuard");
-                issue.Message.Should().Be("The overlay network provider does not support the configuration of the DHCP guard.");
+                issue.Message.Should()
+                    .Be("The overlay network provider does not support the configuration of the DHCP guard.");
             },
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].DisableRouterGuard");
-                issue.Message.Should().Be("The overlay network provider does not support the configuration of the router guard.");
+                issue.Message.Should()
+                    .Be("The overlay network provider does not support the configuration of the router guard.");
             },
             issue =>
             {
@@ -609,7 +611,7 @@ public class NetworkProvidersConfigValidationsTests
                                     Name = "default",
                                     FirstIp = "10.249.0.50",
                                     NextIp = "10.249.0.60",
-                                    LastIp = "10.249.0.100"
+                                    LastIp = "10.249.0.100",
                                 },
                             ],
                         },
@@ -620,12 +622,11 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders[0].Subnets");
-                issue.Message.Should().Be("The NAT overlay provider must contain only the default subnet.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders[0].Subnets");
+            issue.Message.Should().Be("The NAT overlay provider must contain only the default subnet.");
+        });
     }
 
     [Fact]
@@ -654,7 +655,7 @@ public class NetworkProvidersConfigValidationsTests
                                     Name = EryphConstants.DefaultIpPoolName,
                                     FirstIp = "10.249.0.50",
                                     NextIp = "10.249.0.60",
-                                    LastIp = "10.249.0.100"
+                                    LastIp = "10.249.0.100",
                                 },
                             ],
                         },
@@ -679,7 +680,7 @@ public class NetworkProvidersConfigValidationsTests
                                     Name = EryphConstants.DefaultIpPoolName,
                                     FirstIp = "10.249.1.50",
                                     NextIp = "10.249.1.60",
-                                    LastIp = "10.249.1.100"
+                                    LastIp = "10.249.1.100",
                                 },
                             ],
                         },
@@ -690,13 +691,12 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("NetworkProviders");
-                issue.Message.Should().Be(
-                    "The network '10.249.0.0/22' of provider 'default' overlaps with the network '10.249.1.0/24' of provider 'second-nat-provider'.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("NetworkProviders");
+            issue.Message.Should().Be(
+                "The network '10.249.0.0/22' of provider 'default' overlaps with the network '10.249.1.0/24' of provider 'second-nat-provider'.");
+        });
     }
 
     [Theory]
@@ -723,12 +723,11 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("EastWestNetwork");
-                issue.Message.Should().Be($"The east-west IP network '{network}' is invalid.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("EastWestNetwork");
+            issue.Message.Should().Be($"The east-west IP network '{network}' is invalid.");
+        });
     }
 
     [Fact]
@@ -751,19 +750,19 @@ public class NetworkProvidersConfigValidationsTests
 
         var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("EastWestNetwork");
-                issue.Message.Should().Be("The east-west IP network '10.0.0.0/28' is too small. A /24 or larger network is required.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("EastWestNetwork");
+            issue.Message.Should()
+                .Be("The east-west IP network '10.0.0.0/28' is too small. A /24 or larger network is required.");
+        });
     }
 
     private static NetworkProviderSubnet ArrangeDefaultSubnet() =>
-    new()
-    {
-        Name = EryphConstants.DefaultSubnetName,
-        Gateway = "10.249.0.1",
+        new()
+        {
+            Name = EryphConstants.DefaultSubnetName,
+            Gateway = "10.249.0.1",
             Network = "10.249.0.0/22",
             IpPools =
             [
@@ -772,7 +771,7 @@ public class NetworkProvidersConfigValidationsTests
                     Name = EryphConstants.DefaultSubnetName,
                     FirstIp = "10.249.0.50",
                     NextIp = "10.249.0.60",
-                    LastIp = "10.249.0.100"
+                    LastIp = "10.249.0.100",
                 },
             ],
         };

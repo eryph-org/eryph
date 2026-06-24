@@ -19,20 +19,27 @@ public static class SeedingContainerExtensions
         options.Container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultTenantSeeder>(Lifestyle.Scoped);
         if (config.SeedDatabase)
         {
-            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkProvidersSeeder>(Lifestyle.Scoped);
-            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, FloatingNetworkPortSeeder>(Lifestyle.Scoped);
-            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, CatletMetadataSeeder>(Lifestyle.Scoped);
+            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkProvidersSeeder>(
+                Lifestyle.Scoped);
+            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, FloatingNetworkPortSeeder>(
+                Lifestyle.Scoped);
+            options.Container.Collection
+                .Append<IConfigSeeder<ControllerModule>, CatletMetadataSeeder>(Lifestyle.Scoped);
             options.Container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
-            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
-            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, CatletNetworkPortSeeder>(Lifestyle.Scoped);
+            options.Container.Collection
+                .Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
+            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, CatletNetworkPortSeeder>(
+                Lifestyle.Scoped);
         }
-        
+
         options.Container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultProjectSeeder>(Lifestyle.Scoped);
 
         if (config.SeedDatabase)
         {
-            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, CatletSpecificationSeeder>(Lifestyle.Scoped);
-            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, CatletSpecificationVersionSeeder>(Lifestyle.Scoped);
+            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, CatletSpecificationSeeder>(
+                Lifestyle.Scoped);
+            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, CatletSpecificationVersionSeeder>(
+                Lifestyle.Scoped);
         }
 
         options.AddHostedService<SeedFromConfigHandler<ControllerModule>>();

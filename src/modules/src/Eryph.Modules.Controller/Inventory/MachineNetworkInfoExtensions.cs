@@ -34,7 +34,7 @@ internal static class MachineNetworkInfoExtensions
                 .Select(n => n.ToString()).ToArray(),
             IpV6Subnets = mn.Subnets.Select(IPNetwork2.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
-                .Select(n => n.ToString()).ToArray()
+                .Select(n => n.ToString()).ToArray(),
         });
     }
 }

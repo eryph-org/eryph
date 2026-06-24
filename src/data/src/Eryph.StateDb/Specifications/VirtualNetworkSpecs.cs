@@ -12,7 +12,6 @@ public static class VirtualNetworkSpecs
         {
             Query.Where(x => x.Project.Id == projectId && x.Name == name && x.Environment == environment);
         }
-
     }
 
     public sealed class GetForProjectConfig : Specification<VirtualNetwork>

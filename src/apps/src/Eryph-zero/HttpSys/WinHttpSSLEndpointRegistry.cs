@@ -20,27 +20,25 @@ public class WinHttpSslEndpointRegistry : ISslEndpointRegistry
         var sidType = WellKnownSidType.BuiltinAdministratorsSid;
         if (Environment.UserName == "SYSTEM")
             sidType = WellKnownSidType.LocalSystemSid;
-        
+
         var permissions = new UrlPermissions(sidType);
         using var api = new UrlAclManager();
 
         var aclFound = false;
-        foreach (var reservation in api.QueryUrls().Where(x=>x.Url == options.Url.ToString()))
+        foreach (var reservation in api.QueryUrls().Where(x => x.Url == options.Url.ToString()))
         {
             var reservationPermissions = reservation.GetPermissions();
 
             if (reservationPermissions
-                .Select(reservationPermission => 
+                .Select(reservationPermission =>
                     new SecurityIdentifier(reservationPermission.Sid))
                 .Any(identifier => identifier.IsWellKnown(sidType)))
-            {
                 aclFound = true;
-            }
-            
-            if(aclFound)
+
+            if (aclFound)
                 break;
         }
-        
+
         if (!aclFound)
             api.AddUrl(options.Url.ToString(), permissions, false);
 
@@ -61,10 +59,7 @@ public class WinHttpSslEndpointRegistry : ISslEndpointRegistry
     {
         var certBindingConfig = new CertificateBindingConfiguration();
         var existingBindings = certBindingConfig.Query().Where(x => x.AppId == applicationId);
-        foreach (var existingBinding in existingBindings)
-        {
-            certBindingConfig.Delete(existingBinding.IpPort);
-        }
+        foreach (var existingBinding in existingBindings) certBindingConfig.Delete(existingBinding.IpPort);
 
         var ipPort = url.IsDefaultPort ? 443 : url.Port;
         if (url.IdnHost == "localhost")
@@ -92,15 +87,9 @@ public class WinHttpSslEndpointRegistry : ISslEndpointRegistry
     {
         ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
         var existingBindings = config.Query().Where(x => x.AppId == applicationId);
-        foreach (var existingBinding in existingBindings)
-        {
-            config.Delete(existingBinding.IpPort);
-        }
+        foreach (var existingBinding in existingBindings) config.Delete(existingBinding.IpPort);
 
         using var api = new UrlAclManager();
-        foreach (var urlAcl in api.QueryUrls().Where(x => x.Url == url))
-        {
-            api.DeleteUrl(urlAcl.Url);
-        }
+        foreach (var urlAcl in api.QueryUrls().Where(x => x.Url == url)) api.DeleteUrl(urlAcl.Url);
     }
 }

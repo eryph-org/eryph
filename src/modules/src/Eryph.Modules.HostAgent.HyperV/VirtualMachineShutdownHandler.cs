@@ -10,7 +10,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Handlers;
 using SimpleInjector;
-
 using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
@@ -36,19 +35,19 @@ internal class VirtualMachineShutdownHandler(
         from powershell in default(AgentRuntime).Powershell
         from vmInfo in getVmInfo(command.VmId)
         from _ in timeout(
-            EryphConstants.OperationTimeout,
-            from ct in cancelToken<AgentRuntime>()
-            let stopCommand = PsCommandBuilder.Create()
-                .AddCommand("Stop-VM")
-                .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Force")
-            from _ in powershell.RunAsync(stopCommand, withoutLock: true, cancellationToken: ct).ToAff()
-            select unit)
-            // Shutting down a VM is best-effort. Hyper-V waits for a graceful shutdown
-            // by the guest integration which can cause the command to block for a long time.
-            | @catchError(
-                e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
-                _ => unitAff)
+                      EryphConstants.OperationTimeout,
+                      from ct in cancelToken<AgentRuntime>()
+                      let stopCommand = PsCommandBuilder.Create()
+                          .AddCommand("Stop-VM")
+                          .AddParameter("VM", vmInfo.PsObject)
+                          .AddParameter("Force")
+                      from _ in powershell.RunAsync(stopCommand, withoutLock: true, cancellationToken: ct).ToAff()
+                      select unit)
+                  // Shutting down a VM is best-effort. Hyper-V waits for a graceful shutdown
+                  // by the guest integration which can cause the command to block for a long time.
+                  | catchError(
+                      e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
+                      _ => unitAff)
         let timestamp = DateTimeOffset.UtcNow
         from reloadedVmInfo in getVmInfo(command.VmId)
         select new CatletStateResponse

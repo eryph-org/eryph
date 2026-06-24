@@ -4,7 +4,6 @@ using Eryph.Modules.Controller.Tests.ChangeTracking;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Seeding;
@@ -34,7 +33,7 @@ public abstract class CatletSpecificationSeederTests(
         await MockFileSystem.File.WriteAllTextAsync(
             Path.Combine(ChangeTrackingConfig.CatletSpecificationsConfigPath, $"{specificationId}.json"),
             CatletSpecificationConfigModelTestData.SpecificationJson);
-        
+
         var specificationVersionId = CatletSpecificationConfigModelTestData.SpecificationVersion.Id;
         await MockFileSystem.File.WriteAllTextAsync(
             Path.Combine(ChangeTrackingConfig.CatletSpecificationVersionsConfigPath, $"{specificationVersionId}.json"),
@@ -57,7 +56,8 @@ public abstract class CatletSpecificationSeederTests(
             version!.Id.Should().Be(specificationVersionId);
             version.SpecificationId.Should().Be(specificationId);
             version.ContentType.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.ContentType);
-            version.Configuration.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.OriginalConfig);
+            version.Configuration.Should()
+                .Be(CatletSpecificationConfigModelTestData.SpecificationVersion.OriginalConfig);
             version.Comment.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.Comment);
             version.CreatedAt.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersion.CreatedAt);
 
@@ -67,7 +67,8 @@ public abstract class CatletSpecificationSeederTests(
             variant!.Id.Should().Be(expectedVariant.Id);
             variant.SpecificationVersionId.Should().Be(specificationVersionId);
             variant.Architecture.Should().Be(Architecture.New(expectedVariant.Architecture));
-            variant.BuiltConfig.Should().Be(CatletConfigJsonSerializer.Serialize(CatletSpecificationConfigModelTestData.Config));
+            variant.BuiltConfig.Should()
+                .Be(CatletConfigJsonSerializer.Serialize(CatletSpecificationConfigModelTestData.Config));
             variant.PinnedGenes.Should().HaveCount(2);
         });
 
@@ -76,7 +77,8 @@ public abstract class CatletSpecificationSeederTests(
         specificationBackupContent.Should().Be(CatletSpecificationConfigModelTestData.SpecificationJson);
 
         var specificationVersionBackupContent = await MockFileSystem.File.ReadAllTextAsync(
-            Path.Combine(ChangeTrackingConfig.CatletSpecificationVersionsConfigPath, $"{specificationVersionId}.json.bak"));
+            Path.Combine(ChangeTrackingConfig.CatletSpecificationVersionsConfigPath,
+                $"{specificationVersionId}.json.bak"));
         specificationVersionBackupContent.Should().Be(CatletSpecificationConfigModelTestData.SpecificationVersionJson);
 
         var updatedSpecificationContent = await MockFileSystem.File.ReadAllTextAsync(

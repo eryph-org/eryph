@@ -3,8 +3,8 @@ using System;
 using System.Linq;
 using System.Security.Cryptography;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Components;
 using Eryph.Modules.AspNetCore;
-using Eryph.Modules.Identity;
 using Eryph.Modules.Identity.Endpoints.V1.Components;
 using Eryph.Modules.Identity.Models;
 using FluentAssertions;
@@ -173,7 +173,7 @@ public class ComponentEnrollmentApiTests
         serviceRequest.PublicKey.Should().Equal(Convert.FromBase64String(request.PublicKey));
         serviceRequest.Token.Should().Be("enroll-token");
 
-        var result = new ComponentEnrollmentResultBuilder().Build();
+        var result = ComponentEnrollmentResultBuilder.Build();
         var api = result.ToApiModel();
         api.ComponentId.Should().Be(result.ComponentId.ToString());
         api.Certificate.Should().Be(Convert.ToBase64String(result.Certificate));
@@ -184,12 +184,12 @@ public class ComponentEnrollmentApiTests
     // Local helper to build a service result without depending on the CA.
     private sealed class ComponentEnrollmentResultBuilder
     {
-        public ModuleCore.Components.ComponentEnrollmentResult Build() => new()
+        public static ComponentEnrollmentResult Build() => new()
         {
             ComponentId = Guid.NewGuid(),
             Certificate = [1, 2, 3],
-            IssuingChain = [new byte[] { 4, 5 }],
-            CaTrustBundle = [new byte[] { 6, 7 }],
+            IssuingChain = [[4, 5]],
+            CaTrustBundle = [[6, 7]],
         };
     }
 }

@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.Messages.Resources.Disks;
 
@@ -10,8 +6,6 @@ namespace Eryph.Messages.Resources.Disks;
 public class CreateVirtualDiskCommand : IHasCorrelationId, ICommandWithName
 {
     public Guid ProjectId { get; set; }
-
-    public Guid CorrelationId { get; set; }
 
     public string Name { get; set; }
 
@@ -27,4 +21,6 @@ public class CreateVirtualDiskCommand : IHasCorrelationId, ICommandWithName
     {
         return $"Create disk {Name}";
     }
+
+    public Guid CorrelationId { get; set; }
 }

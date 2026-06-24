@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using Eryph.Core.Network;
 using LanguageExt;
 
 namespace Eryph.Modules.HostAgent.Networks;
@@ -9,10 +7,10 @@ public record OvsBridgesInfo(
     HashMap<string, OvsBridgeInfo> Bridges)
 {
     public OvsBridgesInfo RemoveBridges(Seq<string> bridgeNames) =>
-        new(Bridges: Bridges.RemoveRange(bridgeNames));
+        new(Bridges.RemoveRange(bridgeNames));
 
     public OvsBridgesInfo SetBridge(OvsBridgeInfo bridgeInfo) =>
-        new(Bridges: Bridges.SetItem(bridgeInfo.Name, bridgeInfo));
+        new(Bridges.SetItem(bridgeInfo.Name, bridgeInfo));
 }
 
 public record OvsBridgeInfo(
@@ -25,7 +23,7 @@ public record OvsBridgeInfo(
 
 public record OvsBridgePortInfo(
     string Name,
-    string BridgeName, 
+    string BridgeName,
     Option<int> Tag,
     Option<string> VlanMode,
     Option<string> BondMode,

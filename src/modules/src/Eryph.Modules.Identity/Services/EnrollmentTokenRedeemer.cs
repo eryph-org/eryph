@@ -37,9 +37,9 @@ public sealed class EnrollmentTokenRedeemer(
         // component. The token is bound to a single component type AND host FQDN (DNS-insensitive).
         var content = EnrollmentTokenCodec.TryRead(certificateAuthority, token);
         if (content is null || content.ExpiresAt <= now
-            || content.ComponentType != expectedComponentType
-            || !string.Equals(content.Fqdn, expectedFqdn, StringComparison.OrdinalIgnoreCase)
-            || await redeemedTokens.GetByIdAsync(content.Jti, cancellationToken) is not null)
+                            || content.ComponentType != expectedComponentType
+                            || !string.Equals(content.Fqdn, expectedFqdn, StringComparison.OrdinalIgnoreCase)
+                            || await redeemedTokens.GetByIdAsync(content.Jti, cancellationToken) is not null)
         {
             // Commit the prune (only when there was something to prune) even though the token is rejected.
             if (expired.Count > 0)

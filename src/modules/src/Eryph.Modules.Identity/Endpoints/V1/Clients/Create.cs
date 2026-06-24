@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
@@ -13,7 +12,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
@@ -26,23 +24,20 @@ public class Create(
     ICertificateKeyService certificateKeyService,
     IOpenIddictScopeManager scopeManager,
     IUserInfoProvider userInfoProvider)
-    : EndpointBaseAsync
-        .WithRequest<NewClientRequestBody>
-        .WithActionResult<ClientWithSecret>
+    : EndpointBaseAsync.WithRequest<NewClientRequestBody>.WithActionResult<ClientWithSecret>
 {
     [Authorize(Policy = "identity:clients:write")]
     [HttpPost("clients")]
     [SwaggerOperation(
-        Summary = "Create a new client",
-        Description = "Create a new client",
-        OperationId = "Clients_Create",
-        Tags = ["Clients"])
+            Summary = "Create a new client",
+            Description = "Create a new client",
+            OperationId = "Clients_Create",
+            Tags = ["Clients"]),
     ]
     [SwaggerResponse(
-        statusCode: Status201Created,
-        description: "Success",
-        type: typeof(ClientWithSecret),
-        contentTypes: ["application/json"])
+            Status201Created,
+            "Success",
+            typeof(ClientWithSecret), "application/json"),
     ]
     public override async Task<ActionResult<ClientWithSecret>> HandleAsync(
         [FromBody] NewClientRequestBody client,

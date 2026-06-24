@@ -1,11 +1,9 @@
-using System.Collections.Generic;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
 using FluentAssertions;
 using LanguageExt;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test.Converging;

@@ -3,40 +3,41 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Eryph.VmManagement.Networking
+namespace Eryph.VmManagement.Networking;
+
+public static class NetworkAddresses
 {
-    public static class NetworkAddresses
+    public static string[] GetAddressesByFamily(IEnumerable<string> addresses, AddressFamily family)
     {
-        public static string[] GetAddressesByFamily(IEnumerable<string> addresses, AddressFamily family)
+        return addresses.Where(a =>
         {
-            return addresses.Where(a =>
-            {
-                var ipAddress = IPAddress.Parse(a);
-                return ipAddress.AddressFamily == family;
-            }).ToArray();
-        }
+            var ipAddress = IPAddress.Parse(a);
+            return ipAddress.AddressFamily == family;
+        }).ToArray();
+    }
 
 
-        public static IEnumerable<string> AddressesAndSubnetsToSubnets(IReadOnlyList<string> ipAddresses,
-            IReadOnlyList<string> netmasks)
+    public static IEnumerable<string> AddressesAndSubnetsToSubnets(IReadOnlyList<string> ipAddresses,
+        IReadOnlyList<string> netmasks)
+    {
+        for (var i = 0; i < ipAddresses.Count; i++)
         {
-            for (var i = 0; i < ipAddresses.Count; i++)
-            {
-                var address = ipAddresses[i];
-                var netmask = netmasks[i];
+            var address = ipAddresses[i];
+            var netmask = netmasks[i];
 
-                if (netmask.StartsWith("/"))
-                    yield return IPNetwork2.Parse(address + netmask).ToString();
-                else
+            if (netmask.StartsWith("/"))
+            {
+                yield return IPNetwork2.Parse(address + netmask).ToString();
+            }
+            else
+            {
+                if (byte.TryParse(netmask, out _))
                 {
-                    if (byte.TryParse(netmask, out _))
-                    {
-                        yield return IPNetwork2.Parse(address + "/" + netmask).ToString();
-                        continue;
-                    }
-
-                    yield return IPNetwork2.Parse(address, netmask).ToString();
+                    yield return IPNetwork2.Parse(address + "/" + netmask).ToString();
+                    continue;
                 }
+
+                yield return IPNetwork2.Parse(address, netmask).ToString();
             }
         }
     }

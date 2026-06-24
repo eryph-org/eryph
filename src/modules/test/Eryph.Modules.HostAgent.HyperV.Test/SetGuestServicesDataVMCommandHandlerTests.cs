@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Moq;
@@ -27,7 +26,7 @@ public class SetGuestServicesDataVMCommandHandlerTests
             CatletId = Guid.NewGuid(),
             VmId = VmId,
             Values = new Dictionary<string, string> { ["eryph:guest-services:shell"] = "/bin/bash" },
-            RemoveKeys = new List<string> { "eryph:guest-services:shell-args" },
+            RemoveKeys = ["eryph:guest-services:shell-args"],
         }));
 
         captured.Should().NotBeNull();
@@ -55,7 +54,7 @@ public class SetGuestServicesDataVMCommandHandlerTests
             CatletId = Guid.NewGuid(),
             VmId = VmId,
             // Values defaults to an empty collection; this is the remove-keys-only path.
-            RemoveKeys = new List<string> { "eryph:guest-services:shell", "eryph:guest-services:shell-args" },
+            RemoveKeys = ["eryph:guest-services:shell", "eryph:guest-services:shell-args"],
         }));
 
         captured.Should().NotBeNull();

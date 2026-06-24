@@ -3,25 +3,25 @@ using Eryph.Core;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeNestedVirtualizationTests
 {
-    private readonly ConvergeFixture _fixture = new();
     private readonly ConvergeNestedVirtualization _convergeTask;
+    private readonly ConvergeFixture _fixture = new();
     private readonly TypedPsObject<VirtualMachineInfo> _vmInfo;
     private AssertCommand? _executedCommand;
 
     public ConvergeNestedVirtualizationTests()
     {
-        _convergeTask = new(_fixture.Context);
-        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo()
+        _convergeTask = new ConvergeNestedVirtualization(_fixture.Context);
+        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
             State = VirtualMachineState.Off,
         });
@@ -32,7 +32,8 @@ public class ConvergeNestedVirtualizationTests
         };
     }
 
-    [Theory, CombinatorialData]
+    [Theory]
+    [CombinatorialData]
     public async Task Converge_EnablesNestedVirtualizationWhenNecessary(bool exposed, bool? shouldExpose)
     {
         _fixture.Config.Capabilities = shouldExpose.HasValue switch
@@ -45,7 +46,7 @@ public class ConvergeNestedVirtualizationTests
                     Details = shouldExpose.GetValueOrDefault()
                         ? [EryphConstants.CapabilityDetails.Enabled]
                         : [EryphConstants.CapabilityDetails.Disabled],
-                }
+                },
             ],
             false => null,
         };
@@ -69,7 +70,7 @@ public class ConvergeNestedVirtualizationTests
             _executedCommand.Should().BeNull();
             return;
         }
-        
+
         _executedCommand.Should().NotBeNull();
         _executedCommand!.ShouldBeCommand("Set-VMProcessor")
             .ShouldBeParam("VM")

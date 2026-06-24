@@ -13,23 +13,25 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
 
 public class List(
-    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, CatletSpecification, StateDb.Model.CatletSpecification> listRequestHandler,
+    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, CatletSpecification,
+        StateDb.Model.CatletSpecification> listRequestHandler,
     IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.CatletSpecification> specBuilder)
-    : ListEntitiesEndpoint<ListFilteredByProjectRequest, CatletSpecification, StateDb.Model.CatletSpecification>(listRequestHandler, specBuilder)
+    : ListEntitiesEndpoint<ListFilteredByProjectRequest, CatletSpecification, StateDb.Model.CatletSpecification>(
+        listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlet_specifications")]
     [SwaggerOperation(
-        Summary = "List all catlet specifications",
-        Description = "List all catlet specifications",
-        OperationId = "CatletSpecifications_List",
-        Tags = ["Catlet Specifications"])
+            Summary = "List all catlet specifications",
+            Description = "List all catlet specifications",
+            OperationId = "CatletSpecifications_List",
+            Tags = ["Catlet Specifications"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(ListResponse<CatletSpecification>),
-        contentTypes: "application/json")
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(ListResponse<CatletSpecification>),
+            "application/json"),
     ]
     public override Task<ActionResult<ListResponse<CatletSpecification>>> HandleAsync(
         [FromRoute] ListFilteredByProjectRequest request,

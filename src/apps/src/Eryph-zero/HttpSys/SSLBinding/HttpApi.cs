@@ -81,7 +81,7 @@ internal static class HttpApi
         HttpServiceConfigIPListenList = 0,
         HttpServiceConfigSSLCertInfo,
         HttpServiceConfigUrlAclInfo,
-        HttpServiceConfigMax
+        HttpServiceConfigMax,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -92,14 +92,9 @@ internal static class HttpApi
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct HTTP_SERVICE_CONFIG_SSL_KEY
+    public struct HTTP_SERVICE_CONFIG_SSL_KEY(IntPtr pIpPort)
     {
-        public IntPtr pIpPort;
-
-        public HTTP_SERVICE_CONFIG_SSL_KEY(IntPtr pIpPort)
-        {
-            this.pIpPort = pIpPort;
-        }
+        public IntPtr pIpPort = pIpPort;
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -118,16 +113,10 @@ internal static class HttpApi
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
-    public struct HTTPAPI_VERSION
+    public struct HTTPAPI_VERSION(ushort majorVersion, ushort minorVersion)
     {
-        public ushort HttpApiMajorVersion;
-        public ushort HttpApiMinorVersion;
-
-        public HTTPAPI_VERSION(ushort majorVersion, ushort minorVersion)
-        {
-            HttpApiMajorVersion = majorVersion;
-            HttpApiMinorVersion = minorVersion;
-        }
+        public ushort HttpApiMajorVersion = majorVersion;
+        public ushort HttpApiMinorVersion = minorVersion;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -142,7 +131,7 @@ internal static class HttpApi
     {
         HttpServiceConfigQueryExact = 0,
         HttpServiceConfigQueryNext,
-        HttpServiceConfigQueryMax
+        HttpServiceConfigQueryMax,
     }
 
     /// <summary>
@@ -151,30 +140,30 @@ internal static class HttpApi
     [Flags]
     public enum CertCheckModes : uint
     {
-	    /// <summary>
-	    ///     Enables the client certificate revocation check.
-	    /// </summary>
-	    None = 0,
+        /// <summary>
+        ///     Enables the client certificate revocation check.
+        /// </summary>
+        None = 0,
 
-	    /// <summary>
-	    ///     Client certificate is not to be verified for revocation.
-	    /// </summary>
-	    DoNotVerifyCertificateRevocation = 1,
+        /// <summary>
+        ///     Client certificate is not to be verified for revocation.
+        /// </summary>
+        DoNotVerifyCertificateRevocation = 1,
 
-	    /// <summary>
-	    ///     Only cached certificate is to be used the revocation check.
-	    /// </summary>
-	    VerifyRevocationWithCachedCertificateOnly = 2,
+        /// <summary>
+        ///     Only cached certificate is to be used the revocation check.
+        /// </summary>
+        VerifyRevocationWithCachedCertificateOnly = 2,
 
-	    /// <summary>
-	    ///     The RevocationFreshnessTime setting is enabled.
-	    /// </summary>
-	    EnableRevocationFreshnessTime = 4,
+        /// <summary>
+        ///     The RevocationFreshnessTime setting is enabled.
+        /// </summary>
+        EnableRevocationFreshnessTime = 4,
 
-	    /// <summary>
-	    ///     No usage check is to be performed.
-	    /// </summary>
-	    NoUsageCheck = 0x10000
+        /// <summary>
+        ///     No usage check is to be performed.
+        /// </summary>
+        NoUsageCheck = 0x10000,
     }
 
     [Flags]
@@ -196,7 +185,7 @@ internal static class HttpApi
         /// <summary>
         ///     Prevents SSL requests from being passed to low-level ISAPI filters.
         /// </summary>
-        NO_RAW_FILTER = 0x00000004
+        NO_RAW_FILTER = 0x00000004,
     }
 
     #endregion

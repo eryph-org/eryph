@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -16,7 +11,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test.Storage;
@@ -24,25 +18,26 @@ namespace Eryph.VmManagement.HyperV.Test.Storage;
 public class VMDriveStorageSettingsTests
 {
     private readonly Mock<Func<string, EitherAsync<Error, Option<VhdInfo>>>> _getVhdInfoMock = new();
-    private readonly Mock<Func<string, EitherAsync<Error, bool>>> _testVhdMock = new();
-
-    private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
-    {
-        Defaults = new()
-        {
-            Vms = @"x:\data",
-            Volumes = @"x:\disks",
-        }
-    };
 
     private readonly VMStorageSettings _storageSettings = new()
     {
         StorageIdentifier = Some("storage-id-vm"),
-        StorageNames = new()
+        StorageNames = new StorageNames
         {
             DataStoreName = Some("default"),
             EnvironmentName = Some("default"),
             ProjectName = Some("default"),
+        },
+    };
+
+    private readonly Mock<Func<string, EitherAsync<Error, bool>>> _testVhdMock = new();
+
+    private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
+    {
+        Defaults = new VmHostAgentDefaultsConfiguration
+        {
+            Vms = @"x:\data",
+            Volumes = @"x:\disks",
         },
     };
 
@@ -74,7 +69,7 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.Dvd,
                     Source = @"x:\dvds\disk2.iso",
-                }
+                },
             ],
         };
 
@@ -136,7 +131,7 @@ public class VMDriveStorageSettingsTests
                     Type = driveType,
                     Name = "sda",
                     Store = EryphConstants.DefaultDataStoreName,
-                }
+                },
             ],
         };
 
@@ -149,17 +144,16 @@ public class VMDriveStorageSettingsTests
             _vmHostAgentConfiguration, config, _storageSettings,
             _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
-        result.Should().BeRight().Which.Should().SatisfyRespectively(
-            dss =>
-            {
-                dss.ControllerNumber.Should().Be(0);
-                dss.ControllerLocation.Should().Be(0);
+        result.Should().BeRight().Which.Should().SatisfyRespectively(dss =>
+        {
+            dss.ControllerNumber.Should().Be(0);
+            dss.ControllerLocation.Should().Be(0);
 
-                var hdss = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                hdss.AttachPath.Should().Be($@"x:\disks\storage-id-vm\sda{expectedExtension}");
-                hdss.DiskSettings.FileName.Should().Be($"sda{expectedExtension}");
-                hdss.DiskSettings.Path.Should().Be(@"x:\disks\storage-id-vm");
-            });
+            var hdss = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
+            hdss.AttachPath.Should().Be($@"x:\disks\storage-id-vm\sda{expectedExtension}");
+            hdss.DiskSettings.FileName.Should().Be($"sda{expectedExtension}");
+            hdss.DiskSettings.Path.Should().Be(@"x:\disks\storage-id-vm");
+        });
     }
 
     [Theory]
@@ -180,7 +174,7 @@ public class VMDriveStorageSettingsTests
                     Name = "sda",
                     Store = EryphConstants.DefaultDataStoreName,
                     Source = "gene:testorg/testset/testtag:sda",
-                }
+                },
             ],
         };
 
@@ -188,7 +182,7 @@ public class VMDriveStorageSettingsTests
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
         _getVhdInfoMock.Setup(m => m(expectedParentPath))
-            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
+            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo
             {
                 Size = 42,
             }));
@@ -207,20 +201,19 @@ public class VMDriveStorageSettingsTests
             _vmHostAgentConfiguration, config, _storageSettings,
             _getVhdInfoMock.Object, _testVhdMock.Object, resolvedGenes);
 
-        result.Should().BeRight().Which.Should().SatisfyRespectively(
-            dss =>
-            {
-                dss.Type.Should().Be(CatletDriveType.Vhd);
-                dss.ControllerNumber.Should().Be(0);
-                dss.ControllerLocation.Should().Be(0);
-                
-                var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
-                settings.DiskSettings.SizeBytes.Should().BeNull();
-                settings.DiskSettings.SizeBytesCreate.Should().Be(42);
+        result.Should().BeRight().Which.Should().SatisfyRespectively(dss =>
+        {
+            dss.Type.Should().Be(CatletDriveType.Vhd);
+            dss.ControllerNumber.Should().Be(0);
+            dss.ControllerLocation.Should().Be(0);
 
-                AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
-            });
+            var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
+            settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
+            settings.DiskSettings.SizeBytes.Should().BeNull();
+            settings.DiskSettings.SizeBytesCreate.Should().Be(42);
+
+            AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
+        });
     }
 
     [Fact]
@@ -235,7 +228,7 @@ public class VMDriveStorageSettingsTests
                     Type = CatletDriveType.Vhd,
                     Name = "sda",
                     Store = EryphConstants.DefaultDataStoreName,
-                }
+                },
             ],
         };
 
@@ -248,20 +241,19 @@ public class VMDriveStorageSettingsTests
             _vmHostAgentConfiguration, config, _storageSettings,
             _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
-        result.Should().BeRight().Which.Should().SatisfyRespectively(
-            dss =>
-            {
-                dss.Type.Should().Be(CatletDriveType.Vhd);
-                dss.ControllerNumber.Should().Be(0);
-                dss.ControllerLocation.Should().Be(0);
+        result.Should().BeRight().Which.Should().SatisfyRespectively(dss =>
+        {
+            dss.Type.Should().Be(CatletDriveType.Vhd);
+            dss.ControllerNumber.Should().Be(0);
+            dss.ControllerLocation.Should().Be(0);
 
-                var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
-                settings.DiskSettings.SizeBytes.Should().BeNull();
-                settings.DiskSettings.SizeBytesCreate.Should().Be(1*1024L*1024*1024);
+            var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
+            settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
+            settings.DiskSettings.SizeBytes.Should().BeNull();
+            settings.DiskSettings.SizeBytesCreate.Should().Be(1 * 1024L * 1024 * 1024);
 
-                settings.DiskSettings.ParentSettings.Should().BeNone();
-            });
+            settings.DiskSettings.ParentSettings.Should().BeNone();
+        });
     }
 
     [Fact]
@@ -277,7 +269,7 @@ public class VMDriveStorageSettingsTests
                     Name = "sda",
                     Store = EryphConstants.DefaultDataStoreName,
                     Size = 42,
-                }
+                },
             ],
         };
 
@@ -290,20 +282,19 @@ public class VMDriveStorageSettingsTests
             _vmHostAgentConfiguration, config, _storageSettings,
             _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
-        result.Should().BeRight().Which.Should().SatisfyRespectively(
-            dss =>
-            {
-                dss.Type.Should().Be(CatletDriveType.Vhd);
-                dss.ControllerNumber.Should().Be(0);
-                dss.ControllerLocation.Should().Be(0);
+        result.Should().BeRight().Which.Should().SatisfyRespectively(dss =>
+        {
+            dss.Type.Should().Be(CatletDriveType.Vhd);
+            dss.ControllerNumber.Should().Be(0);
+            dss.ControllerLocation.Should().Be(0);
 
-                var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
-                settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
-                settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
+            var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
+            settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
+            settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
+            settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
-                settings.DiskSettings.ParentSettings.Should().BeNone();
-            });
+            settings.DiskSettings.ParentSettings.Should().BeNone();
+        });
     }
 
     [Theory]
@@ -325,7 +316,7 @@ public class VMDriveStorageSettingsTests
                     Store = EryphConstants.DefaultDataStoreName,
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
-                }
+                },
             ],
         };
 
@@ -333,7 +324,7 @@ public class VMDriveStorageSettingsTests
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
         _getVhdInfoMock.Setup(m => m(expectedParentPath))
-            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
+            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo
             {
                 Size = 40 * 1024L * 1024 * 1024,
             }));
@@ -352,20 +343,19 @@ public class VMDriveStorageSettingsTests
             _vmHostAgentConfiguration, config, _storageSettings,
             _getVhdInfoMock.Object, _testVhdMock.Object, resolvedGenes);
 
-        result.Should().BeRight().Which.Should().SatisfyRespectively(
-            dss =>
-            {
-                dss.Type.Should().Be(CatletDriveType.Vhd);
-                dss.ControllerNumber.Should().Be(0);
-                dss.ControllerLocation.Should().Be(0);
+        result.Should().BeRight().Which.Should().SatisfyRespectively(dss =>
+        {
+            dss.Type.Should().Be(CatletDriveType.Vhd);
+            dss.ControllerNumber.Should().Be(0);
+            dss.ControllerLocation.Should().Be(0);
 
-                var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
-                settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
-                settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
+            var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
+            settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
+            settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
+            settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
-                AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
-            });
+            AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
+        });
     }
 
     [Fact]
@@ -382,7 +372,7 @@ public class VMDriveStorageSettingsTests
                     Store = EryphConstants.DefaultDataStoreName,
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
-                }
+                },
             ],
         };
 
@@ -392,7 +382,7 @@ public class VMDriveStorageSettingsTests
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
         _getVhdInfoMock.Setup(m => m(parentPath))
-            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
+            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo
             {
                 Size = 50 * 1024L * 1024 * 1024,
             }));
@@ -427,13 +417,13 @@ public class VMDriveStorageSettingsTests
                     Store = EryphConstants.DefaultDataStoreName,
                     Name = "sda",
                     Size = 42,
-                }
+                },
             ],
         };
 
         var parentPath = @"x:\disks\storage-id-vm\sda.vhdx";
         _getVhdInfoMock.Setup(m => m(parentPath))
-            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
+            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo
             {
                 Size = 50 * 1024L * 1024 * 1024,
             }));
@@ -461,13 +451,13 @@ public class VMDriveStorageSettingsTests
                     Name = "sda",
                     Store = EryphConstants.DefaultDataStoreName,
                     Size = 42,
-                }
+                },
             ],
         };
 
         var parentPath = @"x:\disks\storage-id-vm\sda.vhdx";
         _getVhdInfoMock.Setup(m => m(parentPath))
-            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
+            .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo
             {
                 Size = 40 * 1024L * 1024 * 1024,
             }));
@@ -479,23 +469,22 @@ public class VMDriveStorageSettingsTests
             _vmHostAgentConfiguration, config, _storageSettings,
             _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
-        result.Should().BeRight().Which.Should().SatisfyRespectively(
-            dss =>
-            {
-                dss.Type.Should().Be(CatletDriveType.Vhd);
-                dss.ControllerNumber.Should().Be(0);
-                dss.ControllerLocation.Should().Be(0);
+        result.Should().BeRight().Which.Should().SatisfyRespectively(dss =>
+        {
+            dss.Type.Should().Be(CatletDriveType.Vhd);
+            dss.ControllerNumber.Should().Be(0);
+            dss.ControllerLocation.Should().Be(0);
 
-                var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
-                settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
-                settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
+            var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
+            settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
+            settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
+            settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
-                settings.DiskSettings.ParentSettings.Should().BeNone();
-            });
+            settings.DiskSettings.ParentSettings.Should().BeNone();
+        });
     }
 
-    private void AssertParent(
+    private static void AssertParent(
         Option<DiskStorageSettings> parentSettings,
         string expectedParentPath)
     {

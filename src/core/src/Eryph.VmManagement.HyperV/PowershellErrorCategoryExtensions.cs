@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Management.Automation;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Eryph.VmManagement;
 
@@ -47,6 +43,6 @@ internal static class PowershellErrorCategoryExtensions
             ErrorCategory.NotEnabled => PowershellErrorCategory.NotEnabled,
             _ => throw new ArgumentException(
                 $"The Powershell error category {errorCategory} is not supported.",
-                nameof(errorCategory))
+                nameof(errorCategory)),
         };
 }

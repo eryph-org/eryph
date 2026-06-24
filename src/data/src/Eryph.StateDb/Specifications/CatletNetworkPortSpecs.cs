@@ -1,11 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
-using System;
 using LanguageExt;
 
 namespace Eryph.StateDb.Specifications;
@@ -17,7 +14,7 @@ public sealed class CatletNetworkPortSpecs
         public GetByCatletMetadataId(Guid metadataId)
         {
             Query.Where(x => x.CatletMetadataId == metadataId);
-                
+
             Query.Include(x => x.Network)
                 .ThenInclude(x => x.Subnets)
                 .ThenInclude(x => x.IpPools);

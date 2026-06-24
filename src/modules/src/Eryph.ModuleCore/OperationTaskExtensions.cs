@@ -1,10 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Dbosoft.Functional;
-using Eryph.Core;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 // ReSharper disable once CheckNamespace
@@ -41,22 +38,22 @@ public static class OperationTaskExtensions
         IOperationTaskMessage message)
         where TRet : notnull =>
         fin.Match(
-            Succ: ret => ret is Unit
+            ret => ret is Unit
                 ? messaging.CompleteTask(message).ToUnit()
                 : messaging.CompleteTask(message, ret).ToUnit(),
-            Fail: error => messaging.FailTask(message, error).ToUnit());
+            error => messaging.FailTask(message, error).ToUnit());
 
 
     public static Task<Unit> FailOrComplete<TRet>(
         this EitherAsync<Error, TRet> either,
         ITaskMessaging messaging,
         IOperationTaskMessage message)
-        where TRet: notnull
+        where TRet : notnull
     {
         return either.MatchAsync(
             LeftAsync: l => messaging.FailTask(message, l),
-            RightAsync: ret => ret is Unit 
-                ? messaging.CompleteTask(message) 
+            RightAsync: ret => ret is Unit
+                ? messaging.CompleteTask(message)
                 : messaging.CompleteTask(message, ret));
     }
 
@@ -70,18 +67,17 @@ public static class OperationTaskExtensions
             RightAsync: _ => Task.FromResult(unit));
     }
 
-    public static Task FailTask(
-        this ITaskMessaging messaging,
-        IOperationTaskMessage message,
-        Error error)
+    extension(ITaskMessaging messaging)
     {
-        return messaging.FailTask(message, error.Print());
-    }
+        public Task FailTask(IOperationTaskMessage message,
+            Error error)
+        {
+            return messaging.FailTask(message, error.Print());
+        }
 
-    public static Task FailTask<T>(
-        this ITaskMessaging messaging,
-        IOperationTaskMessage message,
-        string errorMessage,
-        Validation<Error, T> validation) =>
-        messaging.FailTask(message, Error.New(errorMessage, Error.Many(validation.FailToSeq())));
+        public Task FailTask<T>(IOperationTaskMessage message,
+            string errorMessage,
+            Validation<Error, T> validation) =>
+            messaging.FailTask(message, Error.New(errorMessage, Error.Many(validation.FailToSeq())));
+    }
 }

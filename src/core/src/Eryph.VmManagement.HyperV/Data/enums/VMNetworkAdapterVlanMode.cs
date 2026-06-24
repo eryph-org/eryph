@@ -1,10 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMNetworkAdapterVlanMode
 {
-    public enum VMNetworkAdapterVlanMode
-    {
-        Untagged,
-        Access,
-        Trunk,
-        Private
-    }
+    Untagged,
+    Access,
+    Trunk,
+    Private,
 }

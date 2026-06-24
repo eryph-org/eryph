@@ -24,10 +24,7 @@ public class CertificateGenerator : ICertificateGenerator
         request.CertificateExtensions.Add(subjectKeyIdentifier);
         request.CertificateExtensions.Add(authorityKeyIdentifier);
 
-        foreach (var extension in extensions)
-        {
-            request.CertificateExtensions.Add(extension);
-        }
+        foreach (var extension in extensions) request.CertificateExtensions.Add(extension);
 
         var certificate = request.CreateSelfSigned(
             DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(1)),
@@ -55,10 +52,7 @@ public class CertificateGenerator : ICertificateGenerator
         request.CertificateExtensions.Add(subjectKeyIdentifier);
         request.CertificateExtensions.Add(authorityKeyIdentifier);
 
-        foreach (var extension in extensions)
-        {
-            request.CertificateExtensions.Add(extension);
-        }
+        foreach (var extension in extensions) request.CertificateExtensions.Add(extension);
 
         return request.CreateSelfSigned(
             DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(1)),
@@ -73,17 +67,15 @@ public class CertificateGenerator : ICertificateGenerator
         int validDays,
         IReadOnlyList<X509Extension> extensions)
     {
-        var request = new CertificateRequest(subjectName, subjectKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request =
+            new CertificateRequest(subjectName, subjectKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
         request.CertificateExtensions.Add(
             new X509SubjectKeyIdentifierExtension(new PublicKey(subjectKey), false));
         request.CertificateExtensions.Add(
             X509AuthorityKeyIdentifierExtension.CreateFromCertificate(issuerCertificate, true, false));
 
-        foreach (var extension in extensions)
-        {
-            request.CertificateExtensions.Add(extension);
-        }
+        foreach (var extension in extensions) request.CertificateExtensions.Add(extension);
 
         // Random positive 128-bit serial number, unique per issued certificate.
         var serialNumber = new byte[16];
@@ -110,7 +102,8 @@ public class CertificateGenerator : ICertificateGenerator
         int validDays,
         IReadOnlyList<X509Extension> extensions)
     {
-        var request = new CertificateRequest(subjectName, subjectKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request =
+            new CertificateRequest(subjectName, subjectKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         // CA=true with path length 0: may sign leaf certificates but not further CA certificates.
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, true, 0, true));
         request.CertificateExtensions.Add(new X509KeyUsageExtension(
@@ -120,10 +113,7 @@ public class CertificateGenerator : ICertificateGenerator
         request.CertificateExtensions.Add(
             X509AuthorityKeyIdentifierExtension.CreateFromCertificate(issuerCertificate, true, false));
 
-        foreach (var extension in extensions)
-        {
-            request.CertificateExtensions.Add(extension);
-        }
+        foreach (var extension in extensions) request.CertificateExtensions.Add(extension);
 
         // Random positive 128-bit serial number, unique per issued certificate.
         var serialNumber = new byte[16];

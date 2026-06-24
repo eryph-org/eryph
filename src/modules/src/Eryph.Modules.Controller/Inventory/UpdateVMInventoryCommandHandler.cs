@@ -36,7 +36,7 @@ internal class UpdateVMInventoryCommandHandler(
         var vmHost = await vmHostDataService.GetVMHostByAgentName(message.AgentName);
         if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
             return;
-        
+
         await UpdateVms(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
     }
 }

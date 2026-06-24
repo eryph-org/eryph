@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
@@ -59,7 +60,7 @@ public class EnrollEndpointTests
     [Fact]
     public async Task HandleAsync_returns_401_problem_when_enrollment_is_rejected()
     {
-        var endpoint = CreateEndpoint(new StubEnrollmentService(rejected: true));
+        var endpoint = CreateEndpoint(new StubEnrollmentService(true));
 
         var action = await endpoint.HandleAsync(ValidRequest());
 
@@ -73,10 +74,10 @@ public class EnrollEndpointTests
     [Fact]
     public async Task HandleAsync_returns_400_for_an_invalid_request_without_calling_the_service()
     {
-        var service = new StubEnrollmentService(rejected: true);
+        var service = new StubEnrollmentService(true);
         var endpoint = CreateEndpoint(service);
         var request = ValidRequest();
-        request.PublicKey = "not-base64!!";   // invalid → validation fails
+        request.PublicKey = "not-base64!!"; // invalid → validation fails
 
         var action = await endpoint.HandleAsync(request);
 
@@ -87,12 +88,12 @@ public class EnrollEndpointTests
 
     private sealed class StubEnrollmentService : IComponentEnrollmentService
     {
-        private readonly ComponentEnrollmentResult? _result;
         private readonly bool _rejected;
-        public bool Called { get; private set; }
+        private readonly ComponentEnrollmentResult? _result;
 
         public StubEnrollmentService(ComponentEnrollmentResult result) => _result = result;
         public StubEnrollmentService(bool rejected) => _rejected = rejected;
+        public bool Called { get; private set; }
 
         public Task<ComponentEnrollmentResult> EnrollAsync(
             ComponentEnrollmentRequest request, CancellationToken cancellationToken = default)
@@ -104,9 +105,9 @@ public class EnrollEndpointTests
         }
 
         public Task<ComponentEnrollmentResult> RenewAsync(
-            System.Security.Cryptography.X509Certificates.X509Certificate2 clientCertificate,
+            X509Certificate2 clientCertificate,
             ComponentEnrollmentRequest request, CancellationToken cancellationToken = default) =>
-            throw new System.NotSupportedException("The enroll endpoint tests do not exercise renewal.");
+            throw new NotSupportedException("The enroll endpoint tests do not exercise renewal.");
     }
 
     private sealed class StubProblemDetailsFactory : ProblemDetailsFactory

@@ -53,7 +53,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
         await WithScope(async stateStore =>
         {
             await stateStore.For<Catlet>().AddAsync(
-                new Catlet()
+                new Catlet
                 {
                     Name = "test-catlet",
                     ProjectId = EryphConstants.DefaultProjectId,
@@ -61,7 +61,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
                     DataStore = EryphConstants.DefaultDataStoreName,
                     Drives =
                     [
-                        new CatletDrive()
+                        new CatletDrive
                         {
                             Id = Guid.NewGuid().ToString(),
                             AttachedDiskId = DiskId,
@@ -77,7 +77,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The disk is attached to a virtual machine and cannot be deleted.");
     }
@@ -88,7 +88,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
         await WithScope(async stateStore =>
         {
             await stateStore.For<VirtualDisk>().AddAsync(
-                new VirtualDisk()
+                new VirtualDisk
                 {
                     Id = Guid.NewGuid(),
                     Name = "child-disk",
@@ -106,7 +106,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The disk has children and cannot be deleted.");
     }
@@ -118,7 +118,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
         await WithScope(async stateStore =>
         {
             await stateStore.For<VirtualDisk>().AddAsync(
-                new VirtualDisk()
+                new VirtualDisk
                 {
                     Id = genePoolDiskId,
                     Name = "sda",
@@ -138,7 +138,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The disk belongs to the gene pool and cannot be deleted.");
     }
@@ -159,7 +159,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The configuration of the disk is frozen. The disk cannot be deleted.");
     }
@@ -172,12 +172,8 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
-        
+
         var messages = Factory.GetPendingRebusMessages<DestroyVirtualDiskCommand>();
-        messages.Should().SatisfyRespectively(
-            m =>
-            {
-                m.DiskId.Should().Be(DiskId);
-            });
+        messages.Should().SatisfyRespectively(m => { m.DiskId.Should().Be(DiskId); });
     }
 }

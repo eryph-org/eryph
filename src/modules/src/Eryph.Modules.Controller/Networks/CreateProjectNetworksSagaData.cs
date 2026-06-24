@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel.Catlets;
+﻿using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Networks;
-using Eryph.Modules.Controller.Operations;
 
-namespace Eryph.Modules.Controller.Networks
+namespace Eryph.Modules.Controller.Networks;
+
+public class CreateProjectNetworksSagaData : TaskWorkflowSagaData
 {
-    public class CreateProjectNetworksSagaData : TaskWorkflowSagaData
-    {
-        public ProjectNetworksConfig? Config { get; set; }
-    }
+    public ProjectNetworksConfig? Config { get; set; }
 }

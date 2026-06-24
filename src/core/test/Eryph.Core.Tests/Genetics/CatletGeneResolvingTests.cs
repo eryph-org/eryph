@@ -4,7 +4,6 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Tests.Genetics;
@@ -13,23 +12,37 @@ public class CatletGeneResolvingTests
 {
     private readonly HashMap<UniqueGeneIdentifier, GeneHash> _genes = HashMap(
         (UniqueGeneIdentifier.New("catlet::gene:acme/acme-os/1.0:catlet[any]"), GeneHash.New(ComputeHash("catlet"))),
-        (UniqueGeneIdentifier.New("catlet::gene:acme/embedded-os/1.0:catlet[any]"), GeneHash.New(ComputeHash("catlet-embedded"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[any]"), GeneHash.New(ComputeHash("first-food-any"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[hyperv/any]"), GeneHash.New(ComputeHash("first-food-hyperv-any"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[hyperv/amd64]"), GeneHash.New(ComputeHash("first-food-hyperv-amd64"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:second-food[any]"), GeneHash.New(ComputeHash("second-food-any"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:second-food[hyperv/any]"), GeneHash.New(ComputeHash("second-food-hyperv-any"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:third-food[any]"), GeneHash.New(ComputeHash("third-food-any"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:fourth-food[hyperv/any]"), GeneHash.New(ComputeHash("fourth-food-hyperv-any"))),
-        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:fifth-food[hyperv/amd64]"), GeneHash.New(ComputeHash("fifth-food-hyperv-amd64"))),
+        (UniqueGeneIdentifier.New("catlet::gene:acme/embedded-os/1.0:catlet[any]"),
+            GeneHash.New(ComputeHash("catlet-embedded"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[any]"),
+            GeneHash.New(ComputeHash("first-food-any"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[hyperv/any]"),
+            GeneHash.New(ComputeHash("first-food-hyperv-any"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:first-food[hyperv/amd64]"),
+            GeneHash.New(ComputeHash("first-food-hyperv-amd64"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:second-food[any]"),
+            GeneHash.New(ComputeHash("second-food-any"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:second-food[hyperv/any]"),
+            GeneHash.New(ComputeHash("second-food-hyperv-any"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:third-food[any]"),
+            GeneHash.New(ComputeHash("third-food-any"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:fourth-food[hyperv/any]"),
+            GeneHash.New(ComputeHash("fourth-food-hyperv-any"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:fifth-food[hyperv/amd64]"),
+            GeneHash.New(ComputeHash("fifth-food-hyperv-amd64"))),
         (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sda[any]"), GeneHash.New(ComputeHash("sda-any"))),
-        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sda[hyperv/any]"), GeneHash.New(ComputeHash("sda-hyperv-any"))),
-        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sda[hyperv/amd64]"), GeneHash.New(ComputeHash("sda-hyperv-amd64"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sda[hyperv/any]"),
+            GeneHash.New(ComputeHash("sda-hyperv-any"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sda[hyperv/amd64]"),
+            GeneHash.New(ComputeHash("sda-hyperv-amd64"))),
         (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdb[any]"), GeneHash.New(ComputeHash("sdb-any"))),
-        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdb[hyperv/any]"), GeneHash.New(ComputeHash("sdb-hyperv-any"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdb[hyperv/any]"),
+            GeneHash.New(ComputeHash("sdb-hyperv-any"))),
         (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdc[any]"), GeneHash.New(ComputeHash("sdc-any"))),
-        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdd[hyperv/any]"), GeneHash.New(ComputeHash("sdd-hyperv-any"))),
-        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sde[hyperv/amd64]"), GeneHash.New(ComputeHash("sde-hyperv-amd64"))));
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdd[hyperv/any]"),
+            GeneHash.New(ComputeHash("sdd-hyperv-any"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sde[hyperv/amd64]"),
+            GeneHash.New(ComputeHash("sde-hyperv-amd64"))));
 
 
     [Theory]
@@ -140,7 +153,8 @@ public class CatletGeneResolvingTests
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve some genes.");
         error.Inner.Should().BeSome().Which.Message
-            .Should().Match($"The gene {geneType.ToString().ToLowerInvariant()}::{geneId} is not compatible with the hypervisor {Architecture.New(architecture).Hypervisor}.");
+            .Should().Match(
+                $"The gene {geneType.ToString().ToLowerInvariant()}::{geneId} is not compatible with the hypervisor {Architecture.New(architecture).Hypervisor}.");
     }
 
     [Theory]
@@ -158,10 +172,12 @@ public class CatletGeneResolvingTests
         var error = either.Should().BeLeft().Subject;
         error.Message.Should().Be("Could not resolve some genes.");
         error.Inner.Should().BeSome().Which.Message
-            .Should().Match($"The gene {geneType.ToString().ToLowerInvariant()}::{geneId} is not compatible with the processor architecture {Architecture.New(architecture).ProcessorArchitecture}.");
+            .Should().Match(
+                $"The gene {geneType.ToString().ToLowerInvariant()}::{geneId} is not compatible with the processor architecture {Architecture.New(architecture).ProcessorArchitecture}.");
     }
 
-    [Theory, PairwiseData]
+    [Theory]
+    [PairwiseData]
     public void ResolveGeneSetIdentifiers_ValidIdentifiers_ResolvesAllIdentifiers(
         [CombinatorialValues("acme/acme-os", "acme/acme-os/latest", "acme/acme-os/1.0")]
         string parentGeneSet,
@@ -178,14 +194,14 @@ public class CatletGeneResolvingTests
                 new CatletDriveConfig
                 {
                     Source = $"gene:{driveGeneSet}:test-image",
-                }
+                },
             ],
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = $"gene:{fodderGeneSet}:test-fodder",
-                }
+                },
             ],
         };
 
@@ -202,10 +218,10 @@ public class CatletGeneResolvingTests
 
         var resultConfig = result.Should().BeRight().Subject;
         resultConfig.Parent.Should().Be("acme/acme-os/1.0");
-        resultConfig.Drives.Should().SatisfyRespectively(
-            drive => drive.Source.Should().Be("gene:acme/acme-images/1.0:test-image"));
-        resultConfig.Fodder.Should().SatisfyRespectively(
-            fodder => fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder"));
+        resultConfig.Drives.Should()
+            .SatisfyRespectively(drive => drive.Source.Should().Be("gene:acme/acme-images/1.0:test-image"));
+        resultConfig.Fodder.Should()
+            .SatisfyRespectively(fodder => fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder"));
     }
 
     [Fact]
@@ -216,7 +232,8 @@ public class CatletGeneResolvingTests
             Parent = "acme/acme-os/latest",
         };
 
-        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+        var result =
+            CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
 
         result.Should().BeLeft().Which.Message
             .Should().Be("The gene set 'acme/acme-os/latest' could not be resolved.");
@@ -232,11 +249,12 @@ public class CatletGeneResolvingTests
                 new CatletDriveConfig
                 {
                     Source = "gene:acme/acme-images/latest:test-image",
-                }
+                },
             ],
         };
 
-        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+        var result =
+            CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
 
         result.Should().BeLeft().Which.Message
             .Should().Be("The gene set 'acme/acme-images/latest' could not be resolved.");
@@ -249,14 +267,15 @@ public class CatletGeneResolvingTests
         {
             Fodder =
             [
-                new FodderConfig()
+                new FodderConfig
                 {
                     Source = "gene:acme/acme-tools/latest:test-fodder",
-                }
+                },
             ],
         };
 
-        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+        var result =
+            CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
 
         result.Should().BeLeft().Which.Message
             .Should().Be("The gene set 'acme/acme-tools/latest' could not be resolved.");
@@ -274,14 +293,14 @@ public class CatletGeneResolvingTests
                 new CatletDriveConfig
                 {
                     Source = source,
-                }
+                },
             ],
         };
 
-        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+        var result =
+            CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
 
-        result.Should().BeRight().Which.Drives.Should().SatisfyRespectively(
-            drive => drive.Source.Should().Be(source));
+        result.Should().BeRight().Which.Drives.Should().SatisfyRespectively(drive => drive.Source.Should().Be(source));
     }
 
 

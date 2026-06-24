@@ -24,10 +24,10 @@ public class AgentControlService : IAgentControlService
     {
         var e = new AgentControlEvent
         {
-            Service = service, RequestedOperation = operation
+            Service = service, RequestedOperation = operation,
         };
 
-        foreach(var recipient in Recipients)
+        foreach (var recipient in Recipients)
         {
             var res = await recipient.Value(e, cancellationToken);
 
@@ -45,7 +45,7 @@ public class AgentControlService : IAgentControlService
 
     public void UnRegister(object recipient)
     {
-        if(Recipients.ContainsKey(recipient))
+        if (Recipients.ContainsKey(recipient))
             Recipients.TryRemove(recipient, out _);
     }
 }

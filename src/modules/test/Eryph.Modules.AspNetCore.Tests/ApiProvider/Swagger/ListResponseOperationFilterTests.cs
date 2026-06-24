@@ -1,4 +1,3 @@
-using System.Reflection;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Swagger;
 using FluentAssertions;
@@ -49,10 +48,14 @@ public class ListResponseOperationFilterTests
         [SwaggerResponse(200, "Success", typeof(string))]
         [SwaggerResponse(400, "Bad request")]
         [SwaggerResponse(401, "Unauthorized")]
-        public void MultipleResponses() { }
+        public void MultipleResponses()
+        {
+        }
 
         [SwaggerResponse(200, "Success", typeof(ListResponse<string>))]
         [SwaggerResponse(400, "Bad request")]
-        public void PagedWithErrorResponses() { }
+        public void PagedWithErrorResponses()
+        {
+        }
     }
 }

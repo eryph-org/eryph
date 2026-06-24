@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider;
 
@@ -18,9 +14,7 @@ public static class ApiJsonSerializerOptions
         this JsonSerializerOptions options)
     {
         if (!options.Converters.OfType<JsonStringEnumConverter>().Any())
-        {
             options.Converters.Add(new JsonStringEnumConverter());
-        }
 
         options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;

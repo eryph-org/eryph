@@ -31,7 +31,7 @@ internal sealed class RenewComponentCertificateCommandHandler(
         {
             await ComponentEnrollment.EnsureEnrolledAsync(
                 context.Store, context.Identity, context.EndpointResolver, context.Options,
-                context.TrustAnchorBundlePath, context.LoggerFactory, CancellationToken.None, force: true);
+                context.TrustAnchorBundlePath, context.LoggerFactory, CancellationToken.None, true);
         }
         finally
         {

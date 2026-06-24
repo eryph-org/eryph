@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
+using System.Threading;
 using AutoMapper;
 using Eryph.Core;
 using Eryph.Resources.Machines;
@@ -10,28 +10,47 @@ using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Data.Planned;
+using Eryph.VmManagement.Data.unused;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Management.Infrastructure;
 
 namespace Eryph.VmManagement;
 
-public class TypedPsObjectMapping : ITypedPsObjectMapping
+public class TypedPsObjectMapping(ILogger logger) : ITypedPsObjectMapping
 {
+    private readonly Lock _syncRoot = new();
     private IMapper _mapper;
-    private readonly ILogger _logger;
-    private object _syncRoot = new();
 
-    public TypedPsObjectMapping(ILogger logger)
+
+    public T Map<T>(PSObject psObject)
     {
-        _logger = logger;
+        EnsureMapper();
+
+        try
+        {
+            // special case for bool as it is not mapped correctly
+            if (typeof(T) == typeof(bool))
+                return psObject.BaseObject is bool b ? (T)(object)b : default;
+
+            // special case for byte array
+            if (typeof(T) == typeof(byte[]))
+                return psObject.BaseObject is byte[] b ? (T)(object)b : default;
+
+            // cast is required to map correctly
+            // ReSharper disable once RedundantCast
+            return _mapper.Map<T>((object)psObject);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to map powershell object {@psObject}", psObject);
+            throw;
+        }
     }
 
     private void EnsureMapper()
     {
         lock (_syncRoot)
         {
-
             if (_mapper != null)
                 return;
 
@@ -43,28 +62,19 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                     where tt != null
                     select hvAssembly).ToArray();
 
-                if (assembliesFound.Length == 0)
-                {
-                    throw new InvalidOperationException("could not find Hyper-V powershell objects");
-                }
-
-                return assembliesFound;
-
+                return assembliesFound.Length == 0 ? throw new InvalidOperationException("could not find Hyper-V powershell objects") : assembliesFound;
             }
 
             var config = new MapperConfiguration(cfg =>
             {
                 cfg.LicenseKey = AutoMapperLicense.Key;
-                cfg.CreateProfile("Powershell", c =>
-                {
-                    c.CreateMap<CommandInfo, PowershellCommand>();
-                });
+                cfg.CreateProfile("Powershell", c => { c.CreateMap<CommandInfo, PowershellCommand>(); });
 
                 cfg.CreateProfile("HyperV", c =>
                 {
                     var hyperVAssemblies = GetHyperVAssemblies();
 
-                    _logger.LogTrace("HyperV assemblies found: {names}",
+                    logger.LogTrace("HyperV assemblies found: {names}",
                         string.Join(',', hyperVAssemblies.Select(x => x.GetName())));
 
                     var assemblyNames = hyperVAssemblies.Select(x => x.GetName().Name).ToArray();
@@ -74,7 +84,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                     if (assemblyNames.Length > 1 && assemblyNames.Contains("Microsoft.HyperV.PowerShell.Objects") &&
                         assemblyNames.Contains("Microsoft.HyperV.PowerShell"))
                     {
-                        _logger.LogTrace(
+                        logger.LogTrace(
                             "Assembly Microsoft.HyperV.PowerShell.Objects found - ignoring Microsoft.HyperV.PowerShell assembly.");
                         hyperVAssemblies = hyperVAssemblies
                             .Where(x => x.GetName().Name != "Microsoft.HyperV.PowerShell")
@@ -109,7 +119,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                         c.AddHyperVMapping<VMSystemSwitchExtension>(hyperVAssembly, "VMSystemSwitchExtension");
                     }
 
-                    c.IgnoreUnmapped(_logger);
+                    c.IgnoreUnmapped(logger);
                 });
 
                 cfg.CreateProfile("Dism", c =>
@@ -121,20 +131,20 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                         return;
 
                     c.CreateMap(assemblyType, typeof(DismDriverInfo));
-                    c.IgnoreUnmapped(_logger);
+                    c.IgnoreUnmapped(logger);
                 });
 
                 cfg.CreateProfile("NetTCPIP", c =>
                 {
                     c.AddCimInstanceMapping<CimNetworkNeighbor>();
-                    c.IgnoreUnmapped(_logger);
+                    c.IgnoreUnmapped(logger);
                 });
 
                 cfg.CreateProfile("HgsClient", c =>
                 {
                     c.AddCimInstanceMapping<CimHgsGuardian>();
                     c.AddCimInstanceMapping<CimHgsKeyProtector>();
-                    c.IgnoreUnmapped(_logger);
+                    c.IgnoreUnmapped(logger);
                 });
             }, NullLoggerFactory.Instance);
 
@@ -144,36 +154,10 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Invalid HyperV mappings found.");
+                logger.LogWarning(ex, "Invalid HyperV mappings found.");
             }
 
             _mapper = new Mapper(config);
-        }
-    }
-
-
-    public T Map<T>(PSObject psObject)
-    {
-        EnsureMapper();
-
-        try
-        {
-            // special case for bool as it is not mapped correctly
-            if (typeof(T) == typeof(bool))
-                return psObject.BaseObject is bool b ? (T)(object)b : default;
-
-            // special case for byte array
-            if (typeof(T) == typeof(byte[]))
-                return psObject.BaseObject is byte[] b ? (T)(object)b : default;
-
-            // cast is required to map correctly
-            // ReSharper disable once RedundantCast
-            return _mapper.Map<T>((object) psObject);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to map powershell object {@psObject}", psObject);
-            throw;
         }
     }
 }

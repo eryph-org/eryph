@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.Genetics;
+﻿using Eryph.Core.Genetics;
 
 namespace Eryph.Core.Tests.Genetics;
 
@@ -38,7 +33,7 @@ public class HypervisorTests
     {
         var result = Hypervisor.NewValidation("qemu");
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            error => error.Message.Should().Be("The hypervisor is invalid."));
+        result.Should().BeFail().Which.Should()
+            .SatisfyRespectively(error => error.Message.Should().Be("The hypervisor is invalid."));
     }
 }

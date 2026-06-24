@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
@@ -19,12 +17,12 @@ public static class ConvergeHelpers
         from _ in RightAsync<Error, Unit>(unit)
         let items = parentInfo.GetList(listProperty, predicateFunc).Strict()
         from result in items.Match(
-            Empty: () => from optionalCreated in creatorFunc()
-                         from created in optionalCreated.ToEitherAsync(Error.New(
-                             "The object was successfully created, but no result was returned."))
-                         select created,
-            Head: item => item,
-            Tail: _ => Error.New("The predicate matched multiple objects."))
+            () => from optionalCreated in creatorFunc()
+                from created in optionalCreated.ToEitherAsync(Error.New(
+                    "The object was successfully created, but no result was returned."))
+                select created,
+            item => item,
+            _ => Error.New("The predicate matched multiple objects."))
         select result;
 
     public static EitherAsync<Error, Seq<TRes>> FindAndApply<T, TSub, TRes>(

@@ -8,7 +8,6 @@ using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Components;
@@ -21,9 +20,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Components;
 /// </summary>
 [Route("v{version:apiVersion}")]
 public class Enroll(IComponentEnrollmentService enrollmentService)
-    : EndpointBaseAsync
-        .WithRequest<EnrollComponentRequest>
-        .WithActionResult<EnrolledComponent>
+    : EndpointBaseAsync.WithRequest<EnrollComponentRequest>.WithActionResult<EnrolledComponent>
 {
     // SECURITY: this anonymous endpoint authenticates only via the enrollment token. Before it is
     // exposed on a reachable interface, the host should rate-limit this route to bound enumeration
@@ -32,10 +29,11 @@ public class Enroll(IComponentEnrollmentService enrollmentService)
     [HttpPost("components/enroll")]
     [SwaggerOperation(
         Summary = "Enroll a component",
-        Description = "Issues mTLS and (optionally) server-TLS certificates for a component after enrollment-token authorization.",
+        Description =
+            "Issues mTLS and (optionally) server-TLS certificates for a component after enrollment-token authorization.",
         OperationId = "Components_Enroll",
         Tags = ["Components"])]
-    [SwaggerResponse(Status200OK, "Success", typeof(EnrolledComponent), ["application/json"])]
+    [SwaggerResponse(Status200OK, "Success", typeof(EnrolledComponent), "application/json")]
     [SwaggerResponse(Status400BadRequest, "The enrollment request is invalid")]
     [SwaggerResponse(Status401Unauthorized, "The enrollment request was not authorized")]
     public override async Task<ActionResult<EnrolledComponent>> HandleAsync(

@@ -16,21 +16,21 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 public class Get(
     IGetRequestHandler<ProjectRoleAssignment, ProjectMemberRole> requestHandler,
     ISingleEntitySpecBuilder<SingleEntityInProjectRequest, ProjectRoleAssignment> specBuilder)
-    : GetEntityEndpoint<SingleEntityInProjectRequest, ProjectMemberRole, ProjectRoleAssignment>(requestHandler, specBuilder)
+    : GetEntityEndpoint<SingleEntityInProjectRequest, ProjectMemberRole, ProjectRoleAssignment>(requestHandler,
+        specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
     [HttpGet("projects/{project_id}/members/{id}")]
     [SwaggerOperation(
-        Summary = "Get a project member",
-        Description = "Get a project member",
-        OperationId = "ProjectMembers_Get",
-        Tags = ["Project Members"])
+            Summary = "Get a project member",
+            Description = "Get a project member",
+            OperationId = "ProjectMembers_Get",
+            Tags = ["Project Members"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(ProjectMemberRole),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(ProjectMemberRole), "application/json"),
     ]
     public override Task<ActionResult<ProjectMemberRole>> HandleAsync(
         [FromRoute] SingleEntityInProjectRequest request,

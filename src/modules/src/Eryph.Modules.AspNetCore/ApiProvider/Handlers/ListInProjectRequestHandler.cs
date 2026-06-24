@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
@@ -16,8 +13,8 @@ public class ListInProjectRequestHandler<TRequest, TResult, TModel>(
     IReadRepositoryBase<TModel> repository,
     IUserRightsProvider userRightsProvider)
     : ListRequestHandler<TRequest, TResult, TModel>(mapper, repository, userRightsProvider),
-        IListInProjectRequestHandler < TRequest, TResult, TModel>
-    where TModel: class
+        IListInProjectRequestHandler<TRequest, TResult, TModel>
+    where TModel : class
     where TRequest : IListInProjectRequest
 {
     public override async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(

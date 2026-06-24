@@ -1,9 +1,8 @@
 ﻿using Eryph.Resources;
 
-namespace Eryph.Messages.Resources
+namespace Eryph.Messages.Resources;
+
+public interface IHasResources
 {
-    public interface IHasResources
-    {
-        Resource[] Resources { get;  }
-    }
+    Resource[] Resources { get; }
 }

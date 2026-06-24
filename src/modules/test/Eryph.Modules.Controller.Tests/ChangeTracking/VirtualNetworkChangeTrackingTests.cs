@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
@@ -47,20 +44,20 @@ public abstract class VirtualNetworkChangeTrackingTests(
         Project = "test-project",
         Networks =
         [
-            new NetworkConfig()
+            new NetworkConfig
             {
                 Name = "virtual-test-network",
                 Environment = "test-environment",
                 Subnets =
                 [
-                    new NetworkSubnetConfig()
+                    new NetworkSubnetConfig
                     {
                         Name = "virtual-test-subnet",
                         Address = "10.0.0.0/20",
                         Mtu = 1400,
                         IpPools =
                         [
-                            new IpPoolConfig()
+                            new IpPoolConfig
                             {
                                 Name = "virtual-test-pool",
                                 FirstIp = "10.0.0.100",
@@ -78,14 +75,14 @@ public abstract class VirtualNetworkChangeTrackingTests(
     {
         CatletNetworkPorts =
         [
-            new CatletNetworkPortConfigModel()
+            new CatletNetworkPortConfigModel
             {
                 CatletMetadataId = CatletMetadataId,
                 Name = "test-catlet-port",
                 VirtualNetworkName = "virtual-test-network",
                 EnvironmentName = "test-environment",
                 MacAddress = "42:00:42:00:00:01",
-                FloatingNetworkPort = new()
+                FloatingNetworkPort = new FloatingNetworkPortReferenceConfigModel
                 {
                     Name = "test-floating-port",
                     ProviderName = "test-provider",
@@ -93,7 +90,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
                 },
                 IpAssignments =
                 [
-                    new IpAssignmentConfigModel()
+                    new IpAssignmentConfigModel
                     {
                         IpAddress = "10.0.0.104",
                         SubnetName = "virtual-test-subnet",
@@ -109,7 +106,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
     {
         await WithHostScope(async stateStore =>
         {
-            await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort()
+            await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort
             {
                 Name = "new-catlet-port",
                 MacAddress = "42:00:42:00:00:02",
@@ -126,7 +123,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
         _expectedPortsConfig.CatletNetworkPorts =
         [
             .._expectedPortsConfig.CatletNetworkPorts,
-            new CatletNetworkPortConfigModel()
+            new CatletNetworkPortConfigModel
             {
                 CatletMetadataId = CatletMetadataId,
                 Name = "new-catlet-port",
@@ -185,7 +182,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
         {
             var catletPort = await stateStore.For<CatletNetworkPort>().GetByIdAsync(CatletPortId);
             await stateStore.LoadCollectionAsync(catletPort!, p => p.IpAssignments);
-            catletPort!.IpAssignments.Add(new IpPoolAssignment()
+            catletPort!.IpAssignments.Add(new IpPoolAssignment
             {
                 IpAddress = "10.0.0.150",
                 SubnetId = VirtualSubnetId,
@@ -201,7 +198,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
         _expectedPortsConfig.CatletNetworkPorts[0].IpAssignments =
         [
             .._expectedPortsConfig.CatletNetworkPorts[0].IpAssignments,
-            new IpAssignmentConfigModel()
+            new IpAssignmentConfigModel
             {
                 IpAddress = "10.0.0.150",
                 SubnetName = "virtual-test-subnet",
@@ -252,7 +249,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
     {
         await WithHostScope(async stateStore =>
         {
-            var network = new VirtualNetwork()
+            var network = new VirtualNetwork
             {
                 Name = "new-network",
                 ProjectId = ProjectId,
@@ -268,7 +265,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
         _expectedNetworksConfig.Networks =
         [
             .._expectedNetworksConfig.Networks!,
-            new NetworkConfig()
+            new NetworkConfig
             {
                 Name = "new-network",
                 Address = "10.1.0.0/20",
@@ -321,7 +318,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
         {
             var subnet = await stateStore.For<VirtualNetworkSubnet>().GetByIdAsync(VirtualSubnetId);
             await stateStore.LoadCollectionAsync(subnet!, s => s.IpPools);
-            subnet!.IpPools!.Add(new IpPool()
+            subnet!.IpPools!.Add(new IpPool
             {
                 Name = "new-pool",
                 FirstIp = "10.0.1.100",
@@ -335,14 +332,14 @@ public abstract class VirtualNetworkChangeTrackingTests(
         var networksConfig = await ReadNetworksConfig();
         _expectedNetworksConfig.Networks![0].Subnets![0].IpPools =
         [
-            .._expectedNetworksConfig.Networks![0].Subnets![0].IpPools,
-            new IpPoolConfig()
+            ..(_expectedNetworksConfig.Networks![0].Subnets![0].IpPools ?? []),
+            new IpPoolConfig
             {
                 Name = "new-pool",
                 FirstIp = "10.0.1.100",
                 NextIp = "10.0.1.110",
                 LastIp = "10.0.1.200",
-            }
+            },
         ];
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
@@ -391,7 +388,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
         {
             var network = await stateStore.For<VirtualNetwork>().GetByIdAsync(VirtualNetworkId);
             await stateStore.LoadCollectionAsync(network!, s => s.Subnets);
-            network!.Subnets!.Add(new VirtualNetworkSubnet()
+            network!.Subnets!.Add(new VirtualNetworkSubnet
             {
                 Name = "new-subnet",
                 IpNetwork = "10.0.100.0/20",
@@ -405,7 +402,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
         _expectedNetworksConfig.Networks![0].Subnets =
         [
             .._expectedNetworksConfig.Networks![0].Subnets!,
-            new NetworkSubnetConfig()
+            new NetworkSubnetConfig
             {
                 Name = "new-subnet",
                 Address = "10.0.100.0/20",
@@ -458,19 +455,19 @@ public abstract class VirtualNetworkChangeTrackingTests(
     {
         await SeedDefaultTenantAndProject();
 
-        await stateStore.For<Project>().AddAsync(new Project()
+        await stateStore.For<Project>().AddAsync(new Project
         {
             Id = ProjectId,
             Name = "test-project",
             TenantId = EryphConstants.DefaultTenantId,
         });
 
-        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata()
+        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
         {
             Id = CatletMetadataId,
         });
 
-        await stateStore.For<VirtualNetwork>().AddAsync(new VirtualNetwork()
+        await stateStore.For<VirtualNetwork>().AddAsync(new VirtualNetwork
         {
             Id = VirtualNetworkId,
             Name = "virtual-test-network",
@@ -479,7 +476,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
             ProjectId = ProjectId,
             Subnets =
             [
-                new VirtualNetworkSubnet()
+                new VirtualNetworkSubnet
                 {
                     Id = VirtualSubnetId,
                     Name = "virtual-test-subnet",
@@ -487,7 +484,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
                     MTU = 1400,
                     IpPools =
                     [
-                        new IpPool()
+                        new IpPool
                         {
                             Id = VirtualIpPoolId,
                             Name = "virtual-test-pool",
@@ -500,7 +497,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
             ],
         });
 
-        await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
+        await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort
         {
             Id = FloatingPortId,
             Name = "test-floating-port",
@@ -510,7 +507,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
             PoolName = "provider-test-pool",
         });
 
-        await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort()
+        await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort
         {
             Id = CatletPortId,
             Name = "test-catlet-port",
@@ -520,7 +517,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
             MacAddress = "42:00:42:00:00:01",
             IpAssignments =
             [
-                new IpPoolAssignment()
+                new IpPoolAssignment
                 {
                     Id = IpAssignmentId,
                     SubnetId = VirtualSubnetId,

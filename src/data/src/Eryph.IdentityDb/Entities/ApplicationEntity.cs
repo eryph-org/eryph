@@ -1,10 +1,5 @@
-﻿using OpenIddict.EntityFrameworkCore.Models;
-using System;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel;
-using OpenIddict.Abstractions;
-using System.Linq;
-using System.Text.Json;
+﻿using System;
+using OpenIddict.EntityFrameworkCore.Models;
 
 namespace Eryph.IdentityDb.Entities;
 
@@ -14,6 +9,4 @@ public class ApplicationEntity : OpenIddictEntityFrameworkCoreApplication<string
     public Guid TenantId { get; set; }
 
     public string AppRoles { get; set; }
-
-
 }

@@ -11,7 +11,6 @@ using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Inventory;
@@ -42,8 +41,8 @@ internal class VirtualMachineRemovedEventHandler(
         // Verify that the VM is really missing
         from vmInfo in VmQueries.GetOptionalVmInfo(powershellEngine, vmId).ToAff()
         select vmInfo.Match<Option<CatletStateChangedEvent>>(
-            Some: _ => None,
-            None: () => new CatletStateChangedEvent
+            _ => None,
+            () => new CatletStateChangedEvent
             {
                 VmId = vmId,
                 Status = VmStatus.Missing,

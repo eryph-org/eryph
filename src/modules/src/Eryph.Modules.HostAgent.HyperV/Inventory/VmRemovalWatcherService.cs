@@ -3,7 +3,6 @@ using System.Management;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
-
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
 using static Eryph.VmManagement.Wmi.WmiEventUtils;

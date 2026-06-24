@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;

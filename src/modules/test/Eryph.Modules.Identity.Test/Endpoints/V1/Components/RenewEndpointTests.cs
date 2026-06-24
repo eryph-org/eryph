@@ -29,7 +29,8 @@ public class RenewEndpointTests
     private static X509Certificate2 NewClientCertificate()
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=agent1.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest("CN=agent1.eryph.local", key, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
         return request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
     }
 
@@ -60,7 +61,7 @@ public class RenewEndpointTests
     public async Task HandleAsync_returns_401_when_no_client_certificate_is_presented()
     {
         var service = new StubRenewalService();
-        var endpoint = CreateEndpoint(service, clientCertificate: null);
+        var endpoint = CreateEndpoint(service, null);
 
         var action = await endpoint.HandleAsync(ValidRequest());
 
@@ -91,7 +92,8 @@ public class RenewEndpointTests
         var componentId = Guid.NewGuid();
         using var cert = NewClientCertificate();
         var endpoint = CreateEndpoint(
-            new StubRenewalService(new ComponentEnrollmentResult { ComponentId = componentId, Certificate = [4, 5, 6] }),
+            new StubRenewalService(new ComponentEnrollmentResult
+                { ComponentId = componentId, Certificate = [4, 5, 6] }),
             cert);
 
         var action = await endpoint.HandleAsync(ValidRequest());
@@ -105,7 +107,7 @@ public class RenewEndpointTests
     public async Task HandleAsync_returns_401_problem_when_renewal_is_rejected()
     {
         using var cert = NewClientCertificate();
-        var endpoint = CreateEndpoint(new StubRenewalService(rejected: true), cert);
+        var endpoint = CreateEndpoint(new StubRenewalService(true), cert);
 
         var action = await endpoint.HandleAsync(ValidRequest());
 
@@ -118,12 +120,12 @@ public class RenewEndpointTests
 
     private sealed class StubRenewalService : IComponentEnrollmentService
     {
-        private readonly ComponentEnrollmentResult? _result;
         private readonly bool _rejected;
-        public bool Called { get; private set; }
+        private readonly ComponentEnrollmentResult? _result;
 
         public StubRenewalService(ComponentEnrollmentResult result) => _result = result;
         public StubRenewalService(bool rejected = false) => _rejected = rejected;
+        public bool Called { get; private set; }
 
         public Task<ComponentEnrollmentResult> RenewAsync(
             X509Certificate2 clientCertificate, ComponentEnrollmentRequest request,

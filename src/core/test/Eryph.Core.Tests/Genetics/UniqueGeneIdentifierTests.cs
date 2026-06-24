@@ -1,13 +1,5 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
-using System;
-using System.Collections.Generic;
-using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using YamlDotNet.Core.Tokens;
 
 namespace Eryph.Core.Tests.Genetics;
 
@@ -30,14 +22,15 @@ public class UniqueGeneIdentifierTests
     {
         var validation = UniqueGeneIdentifier.NewValidation(value);
 
-        var result = validation.Should().BeSuccess().Which.Value.Should().Be(expected);
+        validation.Should().BeSuccess().Which.Value.Should().Be(expected);
     }
 
     [Fact]
     public void NewValidation_ValidData_PopulatesProperties()
     {
-        var validation = UniqueGeneIdentifier.NewValidation("fodder::gene:acme/acme-tools/1.0:test-fodder[hyperv/amd64]");
-        
+        var validation =
+            UniqueGeneIdentifier.NewValidation("fodder::gene:acme/acme-tools/1.0:test-fodder[hyperv/amd64]");
+
         var result = validation.Should().BeSuccess().Subject;
         result.GeneType.Should().Be(GeneType.Fodder);
         result.Id.Should().Be(GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"));

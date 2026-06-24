@@ -10,7 +10,7 @@ public class DestroyCatletSpecificationCommand : ICommandWithName, IHasResource
 
     public bool DestroyCatlet { get; set; }
 
-    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
-
     public string GetCommandName() => "Destroy catlet specification";
+
+    public Resource Resource => new(ResourceType.CatletSpecification, SpecificationId);
 }

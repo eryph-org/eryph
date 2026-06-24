@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
@@ -18,7 +14,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
@@ -45,28 +40,28 @@ public class ExpandNewCatletConfig(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlets/config/expand")]
     [SwaggerOperation(
-        Summary = "Expand new catlet config",
-        Description = "Expand the config for a new catlet",
-        OperationId = "Catlets_ExpandNewConfig",
-        Tags = ["Catlets"])
-]
+            Summary = "Expand new catlet config",
+            Description = "Expand the config for a new catlet",
+            OperationId = "Catlets_ExpandNewConfig",
+            Tags = ["Catlets"]),
+    ]
     public override async Task<ActionResult<Operation>> HandleAsync(
-    [FromBody] ExpandNewCatletConfigRequest request,
-    CancellationToken cancellationToken = default)
+        [FromBody] ExpandNewCatletConfigRequest request,
+        CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
             request.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail: "The catlet configuration is invalid.",
+                "The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(NewCatletRequest.Configuration)));
 
         var config = validation.ToOption().ValueUnsafe();
 
         var projectName = Optional(config.Project).Filter(notEmpty).Match(
-            Some: n => ProjectName.New(n),
-            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
+            n => ProjectName.New(n),
+            () => ProjectName.New(EryphConstants.DefaultProjectName));
 
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)

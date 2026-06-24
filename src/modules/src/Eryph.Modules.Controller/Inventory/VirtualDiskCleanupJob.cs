@@ -30,10 +30,8 @@ internal class VirtualDiskCleanupJob(Container container) : IJob
             // too long or forever in case of weird issues. This job is triggered
             // regularly by the scheduler anyway.
             for (var i = 0; i < MaxRounds; i++)
-            {
                 if (!await CleanupDisks(cutoff))
                     return;
-            }
         }
         catch (Exception ex)
         {
@@ -54,14 +52,11 @@ internal class VirtualDiskCleanupJob(Container container) : IJob
 
         _logger.LogDebug("Removing {Count} deleted disk entries...", disks.Count);
         var diskIdentifiers = disks.Select(d => d.DiskIdentifier).Distinct().Order();
-        foreach (var diskIdentifier in diskIdentifiers)
-        {
-            await lockManager.AcquireVhdLock(diskIdentifier);
-        }
+        foreach (var diskIdentifier in diskIdentifiers) await lockManager.AcquireVhdLock(diskIdentifier);
 
         await stateStore.For<VirtualDisk>().DeleteRangeAsync(disks);
         await stateStore.SaveChangesAsync();
-        
+
         return true;
     }
 }

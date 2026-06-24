@@ -14,7 +14,7 @@ public class GeneHashTests
 
         genePartHash.Value.Should().Be(input.ToLowerInvariant());
         genePartHash.Algorithm.Should().Be("sha256");
-        genePartHash.Hash.Should().Be("a8a2f6ebe286697c527eb35a58b5539532e9b3ae3b64d4eb0a46fb657b41562c");     
+        genePartHash.Hash.Should().Be("a8a2f6ebe286697c527eb35a58b5539532e9b3ae3b64d4eb0a46fb657b41562c");
     }
 
     [Theory]

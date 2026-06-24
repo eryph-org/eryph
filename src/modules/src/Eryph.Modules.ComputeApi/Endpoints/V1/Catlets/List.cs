@@ -20,16 +20,15 @@ public class List(
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlets")]
     [SwaggerOperation(
-        Summary = "List all catlets",
-        Description = "List all catlets",
-        OperationId = "Catlets_List",
-        Tags = ["Catlets"])
+            Summary = "List all catlets",
+            Description = "List all catlets",
+            OperationId = "Catlets_List",
+            Tags = ["Catlets"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(ListResponse<Catlet>),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(ListResponse<Catlet>), "application/json"),
     ]
     public override Task<ActionResult<ListResponse<Catlet>>> HandleAsync(
         [FromRoute] ListFilteredByProjectRequest request,

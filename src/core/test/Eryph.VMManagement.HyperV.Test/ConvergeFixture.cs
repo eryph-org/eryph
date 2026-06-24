@@ -21,7 +21,7 @@ public class ConvergeFixture
         StorageSettings = new VMStorageSettings();
         NetworkSettings = [];
         HostInfo = new VMHostMachineData();
-        VmHostAgentConfiguration = new VmHostAgentConfiguration()
+        VmHostAgentConfiguration = new VmHostAgentConfiguration
         {
             Defaults = new VmHostAgentDefaultsConfiguration
             {
@@ -34,14 +34,14 @@ public class ConvergeFixture
 
     public VMStorageSettings StorageSettings { get; set; }
 
-    public TestPowershellEngine Engine { get;  }
+    public TestPowershellEngine Engine { get; }
 
     public IHyperVOvsPortManager PortManager { get; set; }
 
     public MachineNetworkSettings[] NetworkSettings { get; set; }
-    
+
     public CatletConfig Config { get; set; }
-    
+
     public Guid CatletId { get; set; }
 
     public Guid VmId { get; set; }
@@ -60,5 +60,4 @@ public class ConvergeFixture
             ResolvedGenes.ToSeq(), NullLoggerFactory.Instance);
 
     private static Task ReportProgressCallBack(string _) => Task.CompletedTask;
-
 }

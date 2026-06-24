@@ -14,99 +14,96 @@ using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
-namespace Eryph.Modules.Identity.Endpoints
+namespace Eryph.Modules.Identity.Endpoints;
+
+public class AuthorizationController(
+    IOpenIddictApplicationManager applicationManager,
+    IOpenIddictScopeManager scopeManager)
+    : Controller
 {
-    public class AuthorizationController : Controller
+    [AllowAnonymous]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    [HttpPost("~/connect/token")]
+    [IgnoreAntiforgeryToken]
+    [Produces("application/json")]
+    public async Task<IActionResult> Exchange(CancellationToken cancellationToken)
     {
-        private readonly IOpenIddictApplicationManager _applicationManager;
-        private readonly IOpenIddictScopeManager _scopeManager;
+        var request = HttpContext.GetOpenIddictServerRequest();
 
-        public AuthorizationController(IOpenIddictApplicationManager applicationManager, IOpenIddictScopeManager scopeManager)
+        if (request == null || string.IsNullOrWhiteSpace(request.ClientId))
+            return BadRequest();
+
+        if (request.IsClientCredentialsGrantType())
         {
-            _applicationManager = applicationManager;
-            _scopeManager = scopeManager;
+            // Note: the client credentials are automatically validated by OpenIddict:
+            // if client_id or client_secret are invalid, this action won't be invoked.
+
+            if (await applicationManager.FindByClientIdAsync(request.ClientId, cancellationToken) is not
+                ClientApplicationEntity application)
+                throw new InvalidOperationException("The application details cannot be found in the database.");
+
+            // Create the claims-based identity that will be used by OpenIddict to generate tokens.
+            var identity = new ClaimsIdentity(
+                TokenValidationParameters.DefaultAuthenticationType,
+                Claims.Name,
+                Claims.Role);
+
+            // Add the claims that will be persisted in the tokens (use the client_id as the subject identifier).
+            identity.SetClaim(Claims.Subject,
+                await applicationManager.GetClientIdAsync(application, cancellationToken));
+            identity.SetClaim(Claims.Name,
+                await applicationManager.GetDisplayNameAsync(application, cancellationToken));
+
+            if (application.TenantId != Guid.Empty)
+                identity.SetClaim("tid", application.TenantId.ToString());
+
+            // AppRoles is stored as a comma-separated list of role ids; emit one role claim per
+            // id (consumers parse each role claim value as a single GUID, see UserInfoProvider).
+            if (application.AppRoles is { Length: > 0 })
+                identity.SetClaims(Claims.Role,
+                    [..application.AppRoles.Split(',', StringSplitOptions.RemoveEmptyEntries)]);
+
+            // Note: In the original OAuth 2.0 specification, the client credentials grant
+            // doesn't return an identity token, which is an OpenID Connect concept.
+            //
+            // As a non-standardized extension, OpenIddict allows returning an id_token
+            // to convey information about the client application when the "openid" scope
+            // is granted (i.e specified when calling principal.SetScopes()). When the "openid"
+            // scope is not explicitly set, no identity token is returned to the client application.
+
+            // Set the list of scopes granted to the client application in access_token.
+            var appPermissions = await applicationManager.GetPermissionsAsync(application, cancellationToken);
+            var appScopes = appPermissions.Where(x => x.StartsWith(Permissions.Prefixes.Scope))
+                .Select(x => x[Permissions.Prefixes.Scope.Length..]);
+
+            var requestScopes = request.GetScopes();
+
+            // add all scopes assigned to application if no scopes requested
+            identity.SetScopes(requestScopes.Length() == 0 ? appScopes : requestScopes);
+            identity.SetResources(await scopeManager.ListResourcesAsync(identity.GetScopes(), cancellationToken)
+                .ToListAsync());
+            identity.SetDestinations(GetDestinations);
+
+            return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
-        [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = true)]
-        [HttpPost("~/connect/token"), IgnoreAntiforgeryToken, Produces("application/json")]
-        public async Task<IActionResult> Exchange(CancellationToken cancellationToken)
+        throw new NotImplementedException("The specified grant type is not implemented.");
+    }
+
+    private static IEnumerable<string> GetDestinations(Claim claim)
+    {
+        // Note: by default, claims are NOT automatically included in the access and identity tokens.
+        // To allow OpenIddict to serialize them, you must attach them a destination, that specifies
+        // whether they should be included in access tokens, in identity tokens or in both.
+
+        return claim.Type switch
         {
-            var request = HttpContext.GetOpenIddictServerRequest();
-
-            if (request == null || string.IsNullOrWhiteSpace(request.ClientId) )
-                return BadRequest();
-
-            if (request.IsClientCredentialsGrantType())
-            {
-                // Note: the client credentials are automatically validated by OpenIddict:
-                // if client_id or client_secret are invalid, this action won't be invoked.
-
-                if (await _applicationManager.FindByClientIdAsync(request.ClientId, cancellationToken) is not ClientApplicationEntity application)
-                {
-                    throw new InvalidOperationException("The application details cannot be found in the database.");
-                }
-
-                // Create the claims-based identity that will be used by OpenIddict to generate tokens.
-                var identity = new ClaimsIdentity(
-                    authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-                    nameType: Claims.Name,
-                    roleType: Claims.Role);
-
-                // Add the claims that will be persisted in the tokens (use the client_id as the subject identifier).
-                identity.SetClaim(Claims.Subject, await _applicationManager.GetClientIdAsync(application, cancellationToken));
-                identity.SetClaim(Claims.Name, await _applicationManager.GetDisplayNameAsync(application, cancellationToken));
-                
-                if(application.TenantId != default)
-                    identity.SetClaim("tid", application.TenantId.ToString());
-
-                // AppRoles is stored as a comma-separated list of role ids; emit one role claim per
-                // id (consumers parse each role claim value as a single GUID, see UserInfoProvider).
-                if (application.AppRoles is { Length: > 0 })
-                    identity.SetClaims(Claims.Role,
-                        application.AppRoles.Split(',', StringSplitOptions.RemoveEmptyEntries).ToImmutableArray());
-
-                // Note: In the original OAuth 2.0 specification, the client credentials grant
-                // doesn't return an identity token, which is an OpenID Connect concept.
-                //
-                // As a non-standardized extension, OpenIddict allows returning an id_token
-                // to convey information about the client application when the "openid" scope
-                // is granted (i.e specified when calling principal.SetScopes()). When the "openid"
-                // scope is not explicitly set, no identity token is returned to the client application.
-
-                // Set the list of scopes granted to the client application in access_token.
-                var appPermissions = await _applicationManager.GetPermissionsAsync(application, cancellationToken);
-                var appScopes = appPermissions.Where(x => x.StartsWith(Permissions.Prefixes.Scope))
-                    .Select(x=>x[Permissions.Prefixes.Scope.Length..]);
-
-                var requestScopes = request.GetScopes();
-
-                // add all scopes assigned to application if no scopes requested
-                identity.SetScopes(requestScopes.Length() == 0 ? appScopes: requestScopes);
-                identity.SetResources(await _scopeManager.ListResourcesAsync(identity.GetScopes(), cancellationToken).ToListAsync());
-                identity.SetDestinations(GetDestinations);
-
-                return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            }
-
-            throw new NotImplementedException("The specified grant type is not implemented.");
-        }
-
-        private static IEnumerable<string> GetDestinations(Claim claim)
-        {
-            // Note: by default, claims are NOT automatically included in the access and identity tokens.
-            // To allow OpenIddict to serialize them, you must attach them a destination, that specifies
-            // whether they should be included in access tokens, in identity tokens or in both.
-
-            return claim.Type switch
-            {
-                "tid" or
+            "tid" or
                 Claims.Name or
                 Claims.Subject
-                    => new[] { Destinations.AccessToken, Destinations.IdentityToken },
+                => new[] { Destinations.AccessToken, Destinations.IdentityToken },
 
-                _ => new[] { Destinations.AccessToken },
-            };
-        }
+            _ => new[] { Destinations.AccessToken },
+        };
     }
 }

@@ -7,7 +7,6 @@ using Eryph.Modules.AspNetCore.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-
 using ApiVirtualDisk = Eryph.Modules.ComputeApi.Model.V1.VirtualDisk;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
@@ -39,7 +38,7 @@ public class GetVirtualDiskTests(ITestOutputHelper outputHelper)
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var virtualDisk = await response.Content.ReadFromJsonAsync<ApiVirtualDisk>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         virtualDisk.Id.Should().Be(DiskId.ToString());
         virtualDisk.Project.Should().NotBeNull();
@@ -54,8 +53,8 @@ public class GetVirtualDiskTests(ITestOutputHelper outputHelper)
         virtualDisk.SizeBytes.Should().Be(DiskSize);
         virtualDisk.ParentId.Should().Be(ParentDiskId.ToString());
         virtualDisk.ParentPath.Should().Be(@"Z:\disks\test-parent-disk.vhdx");
-        virtualDisk.AttachedCatlets.Should().SatisfyRespectively(
-            catlet => catlet.CatletId.Should().Be(CatletId.ToString()));
+        virtualDisk.AttachedCatlets.Should()
+            .SatisfyRespectively(catlet => catlet.CatletId.Should().Be(CatletId.ToString()));
     }
 
     [Fact]
@@ -71,7 +70,7 @@ public class GetVirtualDiskTests(ITestOutputHelper outputHelper)
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var virtualDisk = await response.Content.ReadFromJsonAsync<ApiVirtualDisk>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
         virtualDisk.Id.Should().Be(DiskId.ToString());
         virtualDisk.Path.Should().BeNull();
         virtualDisk.ParentPath.Should().BeNull();

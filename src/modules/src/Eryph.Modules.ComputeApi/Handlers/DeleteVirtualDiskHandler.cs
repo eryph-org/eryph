@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
@@ -39,23 +35,23 @@ internal class DeleteVirtualDiskHandler(
     {
         if (model.GeneSet is not null)
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: "The disk belongs to the gene pool and cannot be deleted.");
+                StatusCodes.Status400BadRequest,
+                "The disk belongs to the gene pool and cannot be deleted.");
 
         if (model.Children.Count > 0)
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: "The disk has children and cannot be deleted.");
+                StatusCodes.Status400BadRequest,
+                "The disk has children and cannot be deleted.");
 
         if (model.AttachedDrives.Count > 0)
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: "The disk is attached to a virtual machine and cannot be deleted.");
+                StatusCodes.Status400BadRequest,
+                "The disk is attached to a virtual machine and cannot be deleted.");
 
         if (model.Frozen)
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                detail: "The configuration of the disk is frozen. The disk cannot be deleted.");
+                StatusCodes.Status400BadRequest,
+                "The configuration of the disk is frozen. The disk cannot be deleted.");
 
         return await base.ValidateRequest(model, cancellationToken);
     }

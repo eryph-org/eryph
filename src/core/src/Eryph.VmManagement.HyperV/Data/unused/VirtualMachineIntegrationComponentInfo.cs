@@ -1,57 +1,53 @@
 ﻿using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.enums;
 
-namespace Eryph.VmManagement.Data
+namespace Eryph.VmManagement.Data.unused;
+
+public class VirtualMachineIntegrationComponentInfo : VirtualMachineDeviceInfo
 {
-    public class VirtualMachineIntegrationComponentInfo : VirtualMachineDeviceInfo
+    public bool Enabled { get; set; }
+
+    public VMIntegrationComponentOperationalStatus[] OperationalStatus { get; set; }
+
+    public VMIntegrationComponentOperationalStatus? PrimaryOperationalStatus
     {
-        public bool Enabled { get; set; }
-
-        public VMIntegrationComponentOperationalStatus[] OperationalStatus { get; set; }
-
-        public VMIntegrationComponentOperationalStatus? PrimaryOperationalStatus
+        get
         {
-            get
-            {
-                var operationalStatus = OperationalStatus;
-                return operationalStatus.Length != 0
-                    ? operationalStatus[0]
-                    : new VMIntegrationComponentOperationalStatus?();
-            }
+            var operationalStatus = OperationalStatus;
+            return operationalStatus.Length != 0
+                ? operationalStatus[0]
+                : null;
         }
-
-        public string PrimaryStatusDescription
-        {
-            get
-            {
-                var statusDescription = StatusDescription;
-                if (statusDescription.Length != 0)
-                    return statusDescription[0];
-                return null;
-            }
-        }
-
-        public VMIntegrationComponentOperationalStatus? SecondaryOperationalStatus
-        {
-            get
-            {
-                var operationalStatus = OperationalStatus;
-                if (operationalStatus.Length > 1)
-                    return operationalStatus[1];
-                return new VMIntegrationComponentOperationalStatus?();
-            }
-        }
-
-        public string SecondaryStatusDescription
-        {
-            get
-            {
-                var statusDescription = StatusDescription;
-                if (statusDescription.Length > 1)
-                    return statusDescription[1];
-                return null;
-            }
-        }
-
-        public string[] StatusDescription { get; set; }
     }
+
+    public string PrimaryStatusDescription
+    {
+        get
+        {
+            var statusDescription = StatusDescription;
+            return statusDescription.Length != 0 ? statusDescription[0] : null;
+        }
+    }
+
+    public VMIntegrationComponentOperationalStatus? SecondaryOperationalStatus
+    {
+        get
+        {
+            var operationalStatus = OperationalStatus;
+            return operationalStatus.Length > 1 ? operationalStatus[1] : null;
+        }
+    }
+
+    public string SecondaryStatusDescription
+    {
+        get
+        {
+            var statusDescription = StatusDescription;
+            if (statusDescription.Length > 1)
+                return statusDescription[1];
+            return null;
+        }
+    }
+
+    public string[] StatusDescription { get; set; }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Eryph.AppCore;
+namespace Eryph;
 
 /// <summary>
 /// Resolves the configuration root for a standalone runtime. Unlike eryph-zero's fixed
@@ -33,9 +33,11 @@ public static class AppConfigPaths
 
     public static string GetMetadataConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "vms", "md"));
 
-    public static string GetCatletSpecificationsConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "catlets", "specs"));
+    public static string GetCatletSpecificationsConfigPath() =>
+        Ensure(Path.Combine(GetConfigRoot(), "catlets", "specs"));
 
-    public static string GetCatletSpecificationVersionsConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "catlets", "specversions"));
+    public static string GetCatletSpecificationVersionsConfigPath() =>
+        Ensure(Path.Combine(GetConfigRoot(), "catlets", "specversions"));
 
     private static string Ensure(string path)
     {

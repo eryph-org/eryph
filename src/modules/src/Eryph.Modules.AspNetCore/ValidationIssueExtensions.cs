@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 using Dbosoft.Functional.Validations;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.AspNetCore;
@@ -44,8 +37,8 @@ public static partial class ValidationIssueExtensions
         this Validation<ValidationIssue, T> validation,
         string? pathPrefix = null) =>
         validation.Match(
-            Succ: _ => new ModelStateDictionary(),
-            Fail: errors =>
+            _ => new ModelStateDictionary(),
+            errors =>
             {
                 var modelState = new ModelStateDictionary();
                 var jsonPathPrefix = Optional(pathPrefix)
@@ -53,9 +46,7 @@ public static partial class ValidationIssueExtensions
                     .Map(p => p.ToJsonPath(ApiJsonSerializerOptions.Options.PropertyNamingPolicy));
 
                 foreach (var error in errors.Map(e => e.AddJsonPathPrefix(jsonPathPrefix)))
-                {
                     modelState.AddModelError(error.Member, error.Message);
-                }
 
                 return modelState;
             });

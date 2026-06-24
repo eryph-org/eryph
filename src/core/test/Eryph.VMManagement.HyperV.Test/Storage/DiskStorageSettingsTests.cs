@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
-using Eryph.Core.VmAgent;
+﻿using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using LanguageExt.Common;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test.Storage;
@@ -28,12 +22,12 @@ public class DiskStorageSettingsTests
         },
         Datastores =
         [
-            new VmHostAgentDataStoreConfiguration()
+            new VmHostAgentDataStoreConfiguration
             {
                 Name = "prod",
                 Path = @"x:\prod-disks\",
-            }
-        ]
+            },
+        ],
     };
 
     [Theory]
@@ -121,22 +115,18 @@ public class DiskStorageSettingsTests
                 return Error.New($"Unexpected command: {command}.");
 
             if (command.ToString().Contains("sda_g2"))
-            {
                 return Seq1(psEngine.ToPsObject<object>(new VhdInfo
                 {
                     ParentPath = @"x:\dummy\sda_g1.vhdx",
                     Path = path,
                 }));
-            }
 
             if (command.ToString().Contains("sda_g1"))
-            {
                 return Seq1(psEngine.ToPsObject<object>(new VhdInfo
                 {
                     ParentPath = @"x:\dummy\sda.vhdx",
                     Path = @"x:\dummy\sda_g1.vhdx",
                 }));
-            }
 
             return Seq1(psEngine.ToPsObject<object>(new VhdInfo
             {
@@ -194,7 +184,7 @@ public class DiskStorageSettingsTests
         resultSettings.StorageNames.DataStoreName.Should().BeSome()
             .Which.Should().Be(EryphConstants.DefaultDataStoreName);
         resultSettings.StorageIdentifier.Should().BeNone();
-        
+
         var resultGeneId = resultSettings.Gene.Should().BeSome().Subject;
         resultGeneId.GeneType.Should().Be(GeneType.Volume);
         resultGeneId.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));

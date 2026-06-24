@@ -40,7 +40,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Enroll_issues_certificate_chaining_to_the_ca_with_a_server_derived_id()
     {
-        var sut = CreateService(authorized: true);
+        var sut = CreateService(true);
 
         var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -68,12 +68,14 @@ public class ComponentEnrollmentServiceTests
                 loaded.Add(root);
                 chain.ChainPolicy.CustomTrustStore.Add(root);
             }
+
             foreach (var intermediateDer in result.IssuingChain)
             {
                 var intermediate = X509CertificateLoader.LoadCertificate(intermediateDer);
                 loaded.Add(intermediate);
                 chain.ChainPolicy.ExtraStore.Add(intermediate);
             }
+
             chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
             chain.Build(leaf).Should().BeTrue(
                 "the issued leaf must chain through the intermediate to a root in the returned bundle");
@@ -88,7 +90,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Enroll_also_issues_a_server_certificate_when_a_server_key_is_supplied()
     {
-        var sut = CreateService(authorized: true);
+        var sut = CreateService(true);
 
         var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -108,7 +110,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Enroll_covers_every_requested_server_name_in_the_certificate()
     {
-        var sut = CreateService(authorized: true);
+        var sut = CreateService(true);
 
         var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -128,7 +130,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Enroll_rejects_when_any_requested_server_name_is_invalid()
     {
-        var sut = CreateService(authorized: true);
+        var sut = CreateService(true);
 
         var act = () => sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -145,7 +147,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Enroll_omits_the_server_certificate_when_no_server_key_is_supplied()
     {
-        var sut = CreateService(authorized: true);
+        var sut = CreateService(true);
 
         var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -160,7 +162,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Enroll_throws_when_the_policy_denies_the_request()
     {
-        var sut = CreateService(authorized: false);
+        var sut = CreateService(false);
 
         var act = () => sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -175,7 +177,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Enroll_throws_on_an_invalid_public_key()
     {
-        var sut = CreateService(authorized: true);
+        var sut = CreateService(true);
 
         var act = () => sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -249,7 +251,8 @@ public class ComponentEnrollmentServiceTests
             return new ComponentEnrollmentService(ca, policy, [], NullLogger<ComponentEnrollmentService>.Instance);
         }
 
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, "api.eryph.local", DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, "api.eryph.local",
+            DateTimeOffset.UtcNow.AddMinutes(5));
 
         // A valid token with garbage client-key bytes is rejected WITHOUT burning the token...
         var badKey = () => NewService().EnrollAsync(new ComponentEnrollmentRequest
@@ -313,7 +316,8 @@ public class ComponentEnrollmentServiceTests
         }
 
         // Token is bound to api.eryph.local.
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, "api.eryph.local", DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, "api.eryph.local",
+            DateTimeOffset.UtcNow.AddMinutes(5));
 
         // A host presenting a different FQDN is rejected and does NOT consume the token...
         var wrongHost = () => NewService().EnrollAsync(new ComponentEnrollmentRequest
@@ -342,7 +346,8 @@ public class ComponentEnrollmentServiceTests
     {
         // One CA across both calls so the enrolled leaf chains to the same root the renewal validates against.
         var ca = CreateCa();
-        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), [], NullLogger<ComponentEnrollmentService>.Instance);
+        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), [],
+            NullLogger<ComponentEnrollmentService>.Instance);
 
         var enrolled = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -369,7 +374,8 @@ public class ComponentEnrollmentServiceTests
     public async Task Renew_takes_the_identity_from_the_certificate_not_the_request()
     {
         var ca = CreateCa();
-        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), [], NullLogger<ComponentEnrollmentService>.Instance);
+        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), [],
+            NullLogger<ComponentEnrollmentService>.Instance);
 
         var enrolled = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -395,7 +401,7 @@ public class ComponentEnrollmentServiceTests
     [Fact]
     public async Task Renew_rejects_a_certificate_not_issued_by_the_component_ca()
     {
-        var sut = CreateService(authorized: true);
+        var sut = CreateService(true);
 
         // A self-signed certificate does not chain to the component root, so renewal must refuse it
         // even though it carries a plausible subject — only a CA-issued component cert may renew.
@@ -419,7 +425,7 @@ public class ComponentEnrollmentServiceTests
     public async Task Enroll_provisions_the_broker_user_for_the_issued_identity()
     {
         var broker = new RecordingBrokerProvisioner();
-        var sut = CreateService(authorized: true, brokerProvisioner: broker);
+        var sut = CreateService(true, broker);
 
         var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
         {
@@ -522,14 +528,16 @@ public class ComponentEnrollmentServiceTests
 
     private sealed class StubPolicy(bool authorized) : IComponentEnrollmentPolicy
     {
-        public Task<bool> IsAuthorizedAsync(ComponentEnrollmentRequest request, CancellationToken cancellationToken = default) =>
+        public Task<bool> IsAuthorizedAsync(ComponentEnrollmentRequest request,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(authorized);
     }
 
     private sealed class StubTokenRedeemer(EnrollmentTokenValidationResult result) : IEnrollmentTokenRedeemer
     {
         public Task<EnrollmentTokenValidationResult> RedeemAsync(
-            string token, ComponentType expectedComponentType, string expectedFqdn, CancellationToken cancellationToken = default) =>
+            string token, ComponentType expectedComponentType, string expectedFqdn,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(result);
     }
 }

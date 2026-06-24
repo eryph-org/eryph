@@ -15,7 +15,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
 using SimpleInjector;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
@@ -61,20 +60,20 @@ internal class RemoveVirtualMachineHandler(
 
     private Eff<Unit> RemoveVmFiles(string vmPath) =>
         Eff(() =>
-        {
-            if (!fileSystem.Directory.Exists(vmPath))
+            {
+                if (!fileSystem.Directory.Exists(vmPath))
+                    return unit;
+
+                // The VM files are removed by Hyper-V. We need to remove the
+                // config drive which was created by us.
+                var configDrivePath = Path.Combine(vmPath, "configdrive.iso");
+                if (fileSystem.File.Exists(configDrivePath))
+                    fileSystem.File.Delete(configDrivePath);
+
+                if (fileSystem.Directory.IsFolderTreeEmpty(vmPath))
+                    fileSystem.Directory.Delete(vmPath, true);
+
                 return unit;
-
-            // The VM files are removed by Hyper-V. We need to remove the
-            // config drive which was created by us.
-            var configDrivePath = Path.Combine(vmPath, "configdrive.iso");
-            if (fileSystem.File.Exists(configDrivePath))
-                fileSystem.File.Delete(configDrivePath);
-
-            if (fileSystem.Directory.IsFolderTreeEmpty(vmPath))
-                fileSystem.Directory.Delete(vmPath, true);
-
-            return unit;
-        })
-        .MapFail(e => Error.New("Could not delete VM files.", e));
+            })
+            .MapFail(e => Error.New("Could not delete VM files.", e));
 }

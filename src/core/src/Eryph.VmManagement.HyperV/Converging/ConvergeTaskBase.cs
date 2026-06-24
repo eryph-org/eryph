@@ -3,18 +3,12 @@ using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.VmManagement.Converging
+namespace Eryph.VmManagement.Converging;
+
+public abstract class ConvergeTaskBase(ConvergeContext context)
 {
-    public abstract class ConvergeTaskBase
-    {
-        protected readonly ConvergeContext Context;
+    protected readonly ConvergeContext Context = context;
 
-        protected ConvergeTaskBase(ConvergeContext context)
-        {
-            Context = context;
-        }
-
-        public abstract Task<Either<Error, Unit>> Converge(
-            TypedPsObject<VirtualMachineInfo> vmInfo);
-    }
+    public abstract Task<Either<Error, Unit>> Converge(
+        TypedPsObject<VirtualMachineInfo> vmInfo);
 }

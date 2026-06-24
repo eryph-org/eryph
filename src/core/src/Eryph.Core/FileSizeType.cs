@@ -1,3 +1,7 @@
 ﻿namespace Eryph.Core;
 
-public enum FileSizeType { MB, GB };
+public enum FileSizeType
+{
+    MB,
+    GB,
+}

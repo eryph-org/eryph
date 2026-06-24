@@ -7,8 +7,8 @@ using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.Serializers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.TestBase;
 using Eryph.StateDb.Specifications;
+using Eryph.StateDb.TestBase;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
@@ -32,21 +32,23 @@ public abstract class CatletSpecificationChangeTrackingTests(
     : ChangeTrackingTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid SpecificationId = Guid.NewGuid();
-    private static readonly string Name = "test-specification";
+    private const string Name = "test-specification";
 
     private static readonly Guid SpecificationVersionId = Guid.NewGuid();
     private static readonly DateTimeOffset CreatedAt = DateTimeOffset.Parse("2025-01-01T01:02:03Z");
-    private static readonly string Comment = "Initial version";
+    private const string Comment = "Initial version";
     private static readonly string ContentType = "application/yaml";
     private static readonly string OriginalConfig = "name: test-specification\nparent: acme/acme-os/1.0\n";
 
     private static readonly Guid SpecificationVersionVariantId = Guid.NewGuid();
+
     private static readonly CatletConfig BuiltConfig = new()
     {
         ConfigType = CatletConfigType.Specification,
         Name = "test-specification",
         Parent = "parent: acme/acme-os/1.0",
     };
+
     private static readonly string GeneId = "catlet::gene:acme/acme-os/1.0:catlet[any]";
     private static readonly string GeneHash = "sha256:a8a2f6ebe286697c527eb35a58b5539532e9b3ae3b64d4eb0a46fb657b41562c";
 
@@ -94,7 +96,7 @@ public abstract class CatletSpecificationChangeTrackingTests(
                 Architectures = new HashSet<Architecture>([Architecture.New(EryphConstants.DefaultArchitecture)]),
                 Comment = updatedComment,
                 CreatedAt = updatedCreatedAt,
-                Variants = 
+                Variants =
                 [
                     new CatletSpecificationVersionVariant
                     {
@@ -112,9 +114,9 @@ public abstract class CatletSpecificationChangeTrackingTests(
                                 GeneSet = "acme/acme-unix/2.0",
                                 Name = "catlet",
                                 Hash = updatedGeneHash,
-                            }
-                        ]
-                    }
+                            },
+                        ],
+                    },
                 ],
             };
 
@@ -179,7 +181,7 @@ public abstract class CatletSpecificationChangeTrackingTests(
 
             var dbSpecification = await stateStore.For<CatletSpecification>().GetByIdAsync(SpecificationId);
             await stateStore.For<CatletSpecification>().DeleteAsync(dbSpecification!);
-            
+
             await stateStore.SaveChangesAsync();
         });
 
@@ -207,11 +209,12 @@ public abstract class CatletSpecificationChangeTrackingTests(
                 [
                     new CatletSpecificationVersion
                     {
-                        Id =  SpecificationVersionId,
+                        Id = SpecificationVersionId,
                         SpecificationId = SpecificationId,
                         ContentType = ContentType,
                         Configuration = OriginalConfig,
-                        Architectures = new HashSet<Architecture>([Architecture.New(EryphConstants.DefaultArchitecture)]),
+                        Architectures =
+                            new HashSet<Architecture>([Architecture.New(EryphConstants.DefaultArchitecture)]),
                         Comment = Comment,
                         CreatedAt = CreatedAt,
                         Variants =
@@ -232,13 +235,12 @@ public abstract class CatletSpecificationChangeTrackingTests(
                                         GeneSet = "acme/acme-os/1.0",
                                         Name = "catlet",
                                         Hash = GeneHash,
-                                    }
-                                ]
+                                    },
+                                ],
                             },
                         ],
-
-                    }
-                ]
+                    },
+                ],
             };
 
             await stateStore.For<CatletSpecification>().AddAsync(dbSpecification);
@@ -252,7 +254,7 @@ public abstract class CatletSpecificationChangeTrackingTests(
         specification.ProjectId.Should().Be(EryphConstants.DefaultProjectId);
         specification.Name.Should().Be(Name);
         specification.Architectures.Should().Equal(EryphConstants.DefaultArchitecture);
-        
+
         var version = await ReadSpecificationVersion(SpecificationVersionId);
         version.SpecificationId.Should().Be(SpecificationId);
         version.ContentType.Should().Be(ContentType);
@@ -286,7 +288,8 @@ public abstract class CatletSpecificationChangeTrackingTests(
     private async Task<CatletSpecificationVersionConfigModel> ReadSpecificationVersion(
         Guid specificationVersionId)
     {
-        var json = await MockFileSystem.File.ReadAllTextAsync(GetSpecificationVersionPath(specificationVersionId), Encoding.UTF8);
+        var json = await MockFileSystem.File.ReadAllTextAsync(GetSpecificationVersionPath(specificationVersionId),
+            Encoding.UTF8);
         return CatletSpecificationVersionConfigModelJsonSerializer.Deserialize(json);
     }
 }

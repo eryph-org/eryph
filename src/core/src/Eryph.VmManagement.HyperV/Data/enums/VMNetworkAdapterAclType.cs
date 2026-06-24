@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMNetworkAdapterAclType : byte
 {
-    public enum VMNetworkAdapterAclType : byte
-    {
-        Mac = 1,
-        WildcardBoth = 6,
-        WildcardMac = 7
-    }
+    Mac = 1,
+    WildcardBoth = 6,
+    WildcardMac = 7,
 }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Eryph.Core.Genetics;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Genetics;
@@ -18,6 +17,12 @@ internal sealed class GenePartsState : IDisposable
 {
     private readonly Dictionary<GenePartHash, long> _existingParts = new();
 
+    public void Dispose()
+    {
+        // The IDisposable interface is only implemented to provide
+        // support for the use() function.
+    }
+
     public Aff<Unit> AddPart(GenePartHash partHash, long size)
     {
         _existingParts[partHash] = size;
@@ -27,11 +32,5 @@ internal sealed class GenePartsState : IDisposable
     public Aff<HashMap<GenePartHash, long>> GetExistingParts()
     {
         return SuccessAff(_existingParts.ToHashMap());
-    }
-
-    public void Dispose()
-    {
-        // The IDisposable interface is only implemented to provide
-        // support for the use() function.
     }
 }

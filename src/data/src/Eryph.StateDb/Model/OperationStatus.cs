@@ -1,13 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Eryph.StateDb.Model
+namespace Eryph.StateDb.Model;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum OperationStatus
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum OperationStatus
-    {
-        Queued,
-        Running,
-        Failed,
-        Completed
-    }
+    Queued,
+    Running,
+    Failed,
+    Completed,
 }

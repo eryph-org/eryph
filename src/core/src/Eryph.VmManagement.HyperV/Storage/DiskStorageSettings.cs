@@ -15,11 +15,11 @@ public class DiskStorageSettings
     public string Name { get; set; }
 
     public string Path { get; set; }
-    
+
     public string FileName { get; set; }
-    
+
     public int Generation { get; set; }
-    
+
     public Guid DiskIdentifier { get; set; }
 
     public Option<DiskStorageSettings> ParentSettings { get; set; }
@@ -33,13 +33,13 @@ public class DiskStorageSettings
     public Option<string> ParentPath { get; set; }
 
     public Option<string> StorageIdentifier { get; set; }
-    
+
     public StorageNames StorageNames { get; set; }
 
     public long? UsedSizeBytes { get; set; }
 
     public long? SizeBytes { get; set; }
-    
+
     public long? SizeBytesCreate { get; set; }
 
     /// <summary>
@@ -64,29 +64,29 @@ public class DiskStorageSettings
                 StorageIdentifier = storageIdentifier,
                 Path = System.IO.Path.GetDirectoryName(templateString),
                 FileName = System.IO.Path.GetFileName(templateString),
-                Name = System.IO.Path.GetFileNameWithoutExtension(templateString)
+                Name = System.IO.Path.GetFileNameWithoutExtension(templateString),
             };
         }
 
         return from geneId in GeneIdentifier.NewOption(templateString)
-               let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-               from uniqueId in resolvedGenes.Find(g => g.GeneType == GeneType.Volume && g.Id == geneId)
-               let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, uniqueId)
-               select new DiskStorageSettings
-               {
-                   StorageNames = new StorageNames()
-                   {
-                       ProjectName = EryphConstants.DefaultProjectName,
-                       EnvironmentName = EryphConstants.DefaultEnvironmentName,
-                       DataStoreName = EryphConstants.DefaultDataStoreName,
-                       ProjectId = EryphConstants.DefaultProjectId,
-                   },
-                   Gene = uniqueId,
-                   Path = System.IO.Path.GetDirectoryName(geneDiskPath),
-                   FileName = System.IO.Path.GetFileName(geneDiskPath),
-                   Generation = 0,
-                   Name = System.IO.Path.GetFileNameWithoutExtension(geneDiskPath)
-               };
+            let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+            from uniqueId in resolvedGenes.Find(g => g.GeneType == GeneType.Volume && g.Id == geneId)
+            let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, uniqueId)
+            select new DiskStorageSettings
+            {
+                StorageNames = new StorageNames
+                {
+                    ProjectName = EryphConstants.DefaultProjectName,
+                    EnvironmentName = EryphConstants.DefaultEnvironmentName,
+                    DataStoreName = EryphConstants.DefaultDataStoreName,
+                    ProjectId = EryphConstants.DefaultProjectId,
+                },
+                Gene = uniqueId,
+                Path = System.IO.Path.GetDirectoryName(geneDiskPath),
+                FileName = System.IO.Path.GetFileName(geneDiskPath),
+                Generation = 0,
+                Name = System.IO.Path.GetFileNameWithoutExtension(geneDiskPath),
+            };
     }
 
     public static EitherAsync<Error, DiskStorageSettings> FromVhdPath(

@@ -6,7 +6,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 [SendMessageTo(MessageRecipient.VMHostAgent)]
 public class GetGuestServicesStatusVMCommand : IVMCommand, IHasResource
 {
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
     public Guid CatletId { get; set; }
     public Guid VmId { get; set; }
-    public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

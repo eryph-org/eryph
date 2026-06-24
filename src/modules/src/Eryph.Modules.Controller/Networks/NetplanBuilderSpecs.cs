@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
 
@@ -7,14 +6,12 @@ namespace Eryph.Modules.Controller.Networks;
 
 public static class NetplanBuilderSpecs
 {
-
     public sealed class GetAllProviderSubnets : Specification<ProviderSubnet>
     {
         public GetAllProviderSubnets()
         {
             Query.Include(x => x.IpPools)
                 .ThenInclude(p => p.IpAssignments);
-
         }
     }
 
@@ -27,12 +24,11 @@ public static class NetplanBuilderSpecs
                 .Include(x => x.RouterPort).ThenInclude(x => x.IpAssignments)
                 .Include(x => x.NetworkPorts)
                 .ThenInclude(x => x.IpAssignments)
-                .ThenInclude(x=>x.Subnet);
+                .ThenInclude(x => x.Subnet);
 
             Query.Include(x => x.NetworkPorts)
                 .ThenInclude(x => x.FloatingPort).ThenInclude(x => x!.IpAssignments)
                 .Include(x => x.Subnets);
-
         }
     }
 }

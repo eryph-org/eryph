@@ -19,9 +19,19 @@ namespace Eryph.Modules.Controller.Compute;
 internal class PopulateCatletConfigVariablesSaga(
     IBus bus,
     IWorkflow workflow)
-    : OperationTaskWorkflowSaga<PopulateCatletConfigVariablesCommand, EryphSagaData<PopulateCatletConfigVariablesSagaData>>(workflow),
+    : OperationTaskWorkflowSaga<PopulateCatletConfigVariablesCommand,
+            EryphSagaData<PopulateCatletConfigVariablesSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
 {
+    public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message) =>
+        FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
+        {
+            await Complete(new PopulateCatletConfigVariablesCommandResponse
+            {
+                Config = Data.Data.Config!.CloneWith(c => { c.Variables = response.BuiltConfig.Variables; }),
+            });
+        });
+
     protected override async Task Initiated(PopulateCatletConfigVariablesCommand message)
     {
         Data.Data.Config = message.Config;
@@ -33,25 +43,10 @@ internal class PopulateCatletConfigVariablesSaga(
             AgentName = Data.Data.AgentName,
             ContentType = "application/yaml",
             Configuration = CatletConfigYamlSerializer.Serialize(
-                message.Config.CloneWith(c =>
-                {
-                    c.Project = null;
-                })),
+                message.Config.CloneWith(c => { c.Project = null; })),
             Architecture = Architecture.New(EryphConstants.DefaultArchitecture),
         });
     }
-
-    public Task Handle(OperationTaskStatusEvent<BuildCatletSpecificationCommand> message) =>
-        FailOrRun(message, async (BuildCatletSpecificationCommandResponse response) =>
-        {
-            await Complete(new PopulateCatletConfigVariablesCommandResponse
-            {
-                Config = Data.Data.Config!.CloneWith(c =>
-                {
-                    c.Variables = response.BuiltConfig.Variables;
-                }),
-            });
-        });
 
     protected override void CorrelateMessages(
         ICorrelationConfig<EryphSagaData<PopulateCatletConfigVariablesSagaData>> config)

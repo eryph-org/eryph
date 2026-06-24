@@ -25,16 +25,16 @@ public class Delete(
     [Authorize(Policy = "compute:projects:write")]
     [HttpDelete("projects/{project_id}/members/{id}")]
     [SwaggerOperation(
-        Summary = "Remove a project member",
-        Description = "Removes a project member assignment",
-        OperationId = "ProjectMembers_Remove",
-        Tags = ["Project Members"])
+            Summary = "Remove a project member",
+            Description = "Removes a project member assignment",
+            OperationId = "ProjectMembers_Remove",
+            Tags = ["Project Members"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityInProjectRequest request,
         CancellationToken cancellationToken = default)
     {
-        if(!Guid.TryParse(request.ProjectId, out var projectId))
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
             return NotFound();
 
         var hasAccess = await userRightsProvider.HasProjectAccess(projectId, AccessRight.Admin);
@@ -52,10 +52,10 @@ public class Delete(
     {
         return new RemoveProjectMemberCommand
         {
-            CorrelationId = Guid.NewGuid(), 
+            CorrelationId = Guid.NewGuid(),
             ProjectId = model.ProjectId,
             AssignmentId = model.Id,
-            CurrentIdentityId = userRightsProvider.GetUserId()
+            CurrentIdentityId = userRightsProvider.GetUserId(),
         };
     }
 }

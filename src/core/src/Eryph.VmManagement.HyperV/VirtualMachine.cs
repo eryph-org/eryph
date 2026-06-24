@@ -1,25 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN.Windows;
-using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
-using Eryph.GenePool.Model;
-using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
-using Eryph.VmManagement.Data;
-using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
-using Eryph.VmManagement.Data.Planned;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
@@ -106,7 +95,7 @@ public static class VirtualMachine
         IPowershellEngine engine,
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from optionalSetVmCommand in engine.GetObjectAsync<PowershellCommand>(
-                PsCommandBuilder.Create().AddCommand("Get-Command").AddArgument("Set-VM"))
+            PsCommandBuilder.Create().AddCommand("Get-Command").AddArgument("Set-VM"))
         from setVmCommand in optionalSetVmCommand.ToEitherAsync(
             Error.New("The Powershell command Set-VM was not found."))
         let builder = BuildSetVMCommand(vmInfo, setVmCommand)
@@ -114,7 +103,8 @@ public static class VirtualMachine
         from reloaded in vmInfo.Reload(engine)
         select reloaded;
 
-    private static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo, PowershellCommand commandInfo)
+    private static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
+        PowershellCommand commandInfo)
     {
         var builder = new PsCommandBuilder().AddCommand("Set-VM");
         builder
@@ -149,7 +139,7 @@ public static class VirtualMachine
         let vmId = vmInfo.Value.Id
         // Pass false for SecretDataHidden as we do not touch the config drive
         let convergeContext = new ConvergeContext(
-            vmHostAgentConfig, engine, portManager, reportProgress, machineConfig, 
+            vmHostAgentConfig, engine, portManager, reportProgress, machineConfig,
             catletId, vmId, false, storageSettings, networkSetting, hostInfo, resolvedGenes,
             loggerFactory)
         let convergeTasks = Seq<ConvergeTaskBase>(
@@ -162,8 +152,8 @@ public static class VirtualMachine
             new ConvergeNetworkAdapters(convergeContext))
         from _2 in convergeTasks
             .Map(task => from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
-                         from _ in task.Converge(reloadedVmInfo).ToAsync()
-                         select unit)
+                from _ in task.Converge(reloadedVmInfo).ToAsync()
+                select unit)
             .SequenceSerial()
         from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
         select reloadedVmInfo;

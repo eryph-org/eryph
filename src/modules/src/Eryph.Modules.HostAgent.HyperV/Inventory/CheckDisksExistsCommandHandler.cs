@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,7 +14,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.Inventory;
@@ -54,29 +52,29 @@ public class CheckDisksExistsCommandHandler(
         let fullPath = Path.Combine(diskInfo.Path, diskInfo.FileName)
         from shouldRemove in GetDiskStorageSettings(fullPath, vmHostAgentConfig)
             .BiBind(
-                Right: storageSettings =>
+                storageSettings =>
                     from _ in RightAsync<Error, Unit>(unit)
                     let shouldRemove = storageSettings.Map(s => ShouldRemoveDisk(diskInfo, s)).IfNone(true)
                     select shouldRemove,
-                Left: error =>
+                error =>
                 {
                     logger.LogWarning(error, "Failed to check disk '{Path}'", fullPath);
                     return RightAsync<Error, bool>(false);
                 })
         select Some(diskInfo).Filter(_ => shouldRemove);
 
-    private bool ShouldRemoveDisk(DiskInfo toCheck, DiskStorageSettings storageSettings) =>
+    private static bool ShouldRemoveDisk(DiskInfo toCheck, DiskStorageSettings storageSettings) =>
         storageSettings.DiskIdentifier != toCheck.DiskIdentifier
-           || storageSettings.StorageIdentifier != Optional(toCheck.StorageIdentifier)
-           || storageSettings.Gene != Optional(toCheck.Gene)
-           // check if storage names are different if they could be detected
-           // otherwise saved data was auto assigned to default project and environment
-           || storageSettings.StorageNames is { IsValid: true }
-           && (storageSettings.StorageNames.ProjectId.Match(
-                   Some: projectId => projectId != Optional(toCheck.ProjectId),
-                   None: () => storageSettings.StorageNames.ProjectName != Optional(toCheck.ProjectName))
-               || storageSettings.StorageNames.EnvironmentName != toCheck.Environment
-               || storageSettings.StorageNames.DataStoreName != toCheck.DataStore);
+        || storageSettings.StorageIdentifier != Optional(toCheck.StorageIdentifier)
+        || storageSettings.Gene != Optional(toCheck.Gene)
+        // check if storage names are different if they could be detected
+        // otherwise saved data was auto assigned to default project and environment
+        || (storageSettings.StorageNames is { IsValid: true }
+            && (storageSettings.StorageNames.ProjectId.Match(
+                    projectId => projectId != Optional(toCheck.ProjectId),
+                    () => storageSettings.StorageNames.ProjectName != Optional(toCheck.ProjectName))
+                || storageSettings.StorageNames.EnvironmentName != toCheck.Environment
+                || storageSettings.StorageNames.DataStoreName != toCheck.DataStore));
 
     private EitherAsync<Error, Option<DiskStorageSettings>> GetDiskStorageSettings(
         string path,

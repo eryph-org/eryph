@@ -35,8 +35,8 @@ internal sealed class ComponentRegistryService(
                 Status = ComponentRegistrationStatus.Active,
                 RegisteredAt = DateTimeOffset.UtcNow,
                 LastHeartbeat = DateTimeOffset.UtcNow,
-                AppliedConfigVersions = new(command.KnownConfigVersions),
-                AdvertisedEndpoints = new(command.AdvertisedEndpoints),
+                AppliedConfigVersions = new Dictionary<ConfigDomain, long>(command.KnownConfigVersions),
+                AdvertisedEndpoints = new Dictionary<string, string>(command.AdvertisedEndpoints),
             };
             await repository.AddAsync(registration, cancellationToken);
             return registration;
@@ -51,10 +51,8 @@ internal sealed class ComponentRegistryService(
         existing.LastHeartbeat = DateTimeOffset.UtcNow;
         existing.AdvertisedEndpoints = new Dictionary<string, string>(command.AdvertisedEndpoints);
         foreach (var (domain, version) in command.KnownConfigVersions)
-        {
             if (!existing.AppliedConfigVersions.TryGetValue(domain, out var current) || version > current)
                 existing.AppliedConfigVersions[domain] = version;
-        }
 
         await repository.UpdateAsync(existing, cancellationToken);
         return existing;
@@ -100,7 +98,7 @@ internal sealed class ComponentRegistryService(
         if (registration is null)
             return;
 
-        var current = registration.AppliedConfigVersions.TryGetValue(domain, out var v) ? v : 0;
+        var current = registration.AppliedConfigVersions.GetValueOrDefault(domain, 0);
         if (version <= current)
             return;
 

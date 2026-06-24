@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Dbosoft.Hosuto.Modules;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
@@ -20,7 +18,6 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -52,12 +49,12 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
             .AddApiProvider<TModule>(options =>
             {
                 options.ApiName = ApiName;
-                options.OAuthOptions = new ApiProviderOAuthOptions()
+                options.OAuthOptions = new ApiProviderOAuthOptions
                 {
                     TokenEndpoint = new Uri(authority + "/connect/token"),
                     Scopes = EryphConstants.Authorization.AllScopes
                         .Where(s => s.Resources.Contains(AudienceName))
-                        .ToList()
+                        .ToList(),
                 };
             });
 
@@ -144,7 +141,8 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
             typeof(OperationRequestHandler<>),
             Lifestyle.Scoped,
             c => !c.Handled);
-        container.Register(typeof(ICreateEntityRequestHandler<>), typeof(CreateEntityRequestHandler<>), Lifestyle.Scoped);
+        container.Register(typeof(ICreateEntityRequestHandler<>), typeof(CreateEntityRequestHandler<>),
+            Lifestyle.Scoped);
 
         container.Register(typeof(ISingleEntitySpecBuilder<,>), typeof(TModule).Assembly);
         container.Register(typeof(IListEntitySpecBuilder<>), typeof(TModule).Assembly);

@@ -14,35 +14,38 @@ public abstract class ResourceSpecBuilder<TResource>(IUserRightsProvider userRig
         IListEntitySpecBuilder<ListFilteredByProjectRequest, TResource>
     where TResource : Resource
 {
+    public ISpecification<TResource> GetEntitiesSpec(ListFilteredByProjectRequest request)
+    {
+        Guid? projectId = null;
+        if (request.ProjectId is null)
+            return new ResourceSpecs<TResource>.GetAll(
+                userRightsProvider.GetAuthContext(),
+                userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read),
+                projectId,
+                CustomizeQuery);
+        if (!Guid.TryParse(request.ProjectId, out var pId))
+            throw new ArgumentException("The Project ID is not a GUID.", nameof(request));
+
+        projectId = pId;
+
+        return new ResourceSpecs<TResource>.GetAll(
+            userRightsProvider.GetAuthContext(),
+            userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read),
+            projectId,
+            CustomizeQuery);
+    }
+
     public ISingleResultSpecification<TResource>? GetSingleEntitySpec(
         SingleEntityRequest request,
         AccessRight accessRight)
     {
         if (!Guid.TryParse(request.Id, out var resourceId))
             return null;
-        
+
         return new ResourceSpecs<TResource>.GetById(
             resourceId,
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetResourceRoles<TResource>(accessRight),
-            CustomizeQuery);
-    }
-
-    public ISpecification<TResource> GetEntitiesSpec(ListFilteredByProjectRequest request)
-    {
-        Guid? projectId = null;
-        if (request.ProjectId is not null)
-        { 
-            if (!Guid.TryParse(request.ProjectId, out var pId))
-                throw new ArgumentException("The Project ID is not a GUID.", nameof(request));
-
-            projectId = pId;
-        } 
-        
-        return new ResourceSpecs<TResource>.GetAll(
-            userRightsProvider.GetAuthContext(),
-            userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read),
-            projectId,
             CustomizeQuery);
     }
 

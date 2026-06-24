@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 using static Dbosoft.Functional.Validations.ComplexValidations;
@@ -45,7 +40,7 @@ public static class NetworkProvidersConfigValidations
         NetworkProvidersConfiguration toValidate,
         string path) =>
         from _1 in ValidateList(toValidate, c => c.NetworkProviders,
-            ValidateNetworkProviderConfig, path, minCount: 1, maxCount: EryphConstants.Limits.MaxNetworkProviders)
+            ValidateNetworkProviderConfig, path, 1, EryphConstants.Limits.MaxNetworkProviders)
         from _2 in ValidateProperty(toValidate, c => c.NetworkProviders,
             providers => Validations.ValidateDistinct(
                 providers,
@@ -54,7 +49,7 @@ public static class NetworkProvidersConfigValidations
             path)
         from _3 in ValidateProperty(toValidate, c => c.NetworkProviders,
             providers => Validations.ValidateDistinct(
-                providers.ToSeq().Bind(p =>Optional(p.BridgeName).ToSeq()),
+                providers.ToSeq().Bind(p => Optional(p.BridgeName).ToSeq()),
                 BridgeName.NewValidation,
                 "bridge name"),
             path)
@@ -72,7 +67,7 @@ public static class NetworkProvidersConfigValidations
     private static Validation<ValidationIssue, Unit> ValidateNetworkProviderConfig(
         NetworkProvider toValidate,
         string path) =>
-        ValidateProperty(toValidate, c => c.Name, NetworkProviderName.NewValidation, path, required: true)
+        ValidateProperty(toValidate, c => c.Name, NetworkProviderName.NewValidation, path, true)
         | toValidate.Type switch
         {
             NetworkProviderType.Flat => ValidateFlatProviderConfig(toValidate, path),
@@ -84,7 +79,7 @@ public static class NetworkProvidersConfigValidations
     private static Validation<ValidationIssue, Unit> ValidateFlatProviderConfig(
         NetworkProvider toValidate,
         string path) =>
-        ValidateProperty(toValidate, c => c.SwitchName, ValidateSwitchName, path, required: true)
+        ValidateProperty(toValidate, c => c.SwitchName, ValidateSwitchName, path, true)
         | ValidateProperty(toValidate, c => c.BridgeName,
             NotAllowed<string>("The flat network provider does not use the bridge name."),
             path)
@@ -106,7 +101,7 @@ public static class NetworkProvidersConfigValidations
     private static Validation<ValidationIssue, Unit> ValidateNatOverlayProviderConfig(
         NetworkProvider toValidate,
         string path) =>
-        ValidateProperty(toValidate, c => c.BridgeName, ValidateBridgeName, path, required: true)
+        ValidateProperty(toValidate, c => c.BridgeName, ValidateBridgeName, path, true)
         | ValidateProperty(toValidate, c => c.SwitchName,
             NotAllowed<string>("The NAT overlay network provider does not support custom switch names."),
             path)
@@ -121,26 +116,29 @@ public static class NetworkProvidersConfigValidations
             NotAllowed<int>("The NAT overlay network provider does not support the configuration of a VLAN."),
             path)
         | ValidateProperty(toValidate, c => c.MacAddressSpoofing,
-            NotAllowed<bool>("The NAT overlay network provider does not support the configuration of MAC address spoofing."),
+            NotAllowed<bool>(
+                "The NAT overlay network provider does not support the configuration of MAC address spoofing."),
             path)
         | ValidateProperty(toValidate, c => c.DisableDhcpGuard,
             NotAllowed<bool>("The NAT overlay network provider does not support the configuration of the DHCP guard."),
             path)
         | ValidateProperty(toValidate, c => c.DisableRouterGuard,
-            NotAllowed<bool>("The NAT overlay network provider does not support the configuration of the router guard."),
+            NotAllowed<bool>(
+                "The NAT overlay network provider does not support the configuration of the router guard."),
             path)
-        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, minCount: 1)
+        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, 1)
         | ValidateProperty(toValidate, c => c.Subnets, ValidateNatProviderSubnets, path);
 
     private static Validation<ValidationIssue, Unit> ValidateOverlayProviderConfig(
         NetworkProvider toValidate,
         string path) =>
-        ValidateProperty(toValidate, c => c.BridgeName, ValidateBridgeName, path, required: true)
+        ValidateProperty(toValidate, c => c.BridgeName, ValidateBridgeName, path, true)
         | ValidateProperty(toValidate, c => c.SwitchName,
             NotAllowed<string>("The overlay network provider does not support custom switch names."),
             path)
         | ValidateProperty(toValidate, c => c.MacAddressSpoofing,
-            NotAllowed<bool>("The overlay network provider does not support the configuration of MAC address spoofing."),
+            NotAllowed<bool>(
+                "The overlay network provider does not support the configuration of MAC address spoofing."),
             path)
         | ValidateProperty(toValidate, c => c.DisableDhcpGuard,
             NotAllowed<bool>("The overlay network provider does not support the configuration of the DHCP guard."),
@@ -150,7 +148,7 @@ public static class NetworkProvidersConfigValidations
             path)
         | ValidateProperty(toValidate, c => c.BridgeOptions, ValidateNetworkProviderBridgeOptions, path)
         | ValidateProperty(toValidate, c => c.Vlan, ValidateVlanTag, path)
-        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, minCount: 1);
+        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, 1);
 
     private static Validation<ValidationIssue, Unit> ValidateNetworkProviderBridgeOptions(
         NetworkProviderBridgeOptions toValidate,
@@ -160,12 +158,12 @@ public static class NetworkProvidersConfigValidations
     private static Validation<ValidationIssue, Unit> ValidateSubnet(
         NetworkProviderSubnet toValidate,
         string path) =>
-        from _1 in ValidateProperty(toValidate, c => c.Name, ValidateSubnetName, path, required: true)
-                   | ValidateProperty(toValidate, c => c.Network, ValidateIpNetwork, path, required: true)
+        from _1 in ValidateProperty(toValidate, c => c.Name, ValidateSubnetName, path, true)
+                   | ValidateProperty(toValidate, c => c.Network, ValidateIpNetwork, path, true)
         from ipNetwork in parseIPNetwork2(toValidate.Network).ToValidation(
             new ValidationIssue(path, $"The network '{toValidate.Network}' is invalid."))
-        from _2 in ValidateProperty(toValidate, c => c.Gateway, i => ValidateIpAddress(i, ipNetwork), path, required: true)
-                   | ValidateList(toValidate, c => c.IpPools, (i, p) => ValidateIpPool(i, ipNetwork, p), path, minCount: 1)
+        from _2 in ValidateProperty(toValidate, c => c.Gateway, i => ValidateIpAddress(i, ipNetwork), path, true)
+                   | ValidateList(toValidate, c => c.IpPools, (i, p) => ValidateIpPool(i, ipNetwork, p), path, 1)
                    | ValidateList(toValidate, c => c.DnsServers, ValidateDnsServer, path)
                    | ValidateProperty(toValidate, c => c.Mtu, ValidateMtu, path)
         select unit;
@@ -174,10 +172,10 @@ public static class NetworkProvidersConfigValidations
         NetworkProviderIpPool toValidate,
         IPNetwork2 ipNetwork,
         string path) =>
-        ValidateProperty(toValidate, c => c.Name, ValidateIpPoolName, path, required: true)
-        | ValidateProperty(toValidate, c => c.FirstIp, i => ValidateIpAddress(i, ipNetwork), path, required: true)
-        | ValidateProperty(toValidate, c => c.NextIp, i => ValidateIpAddress(i, ipNetwork), path, required: false)
-        | ValidateProperty(toValidate, c => c.LastIp, i => ValidateIpAddress(i, ipNetwork), path, required: true);
+        ValidateProperty(toValidate, c => c.Name, ValidateIpPoolName, path, true)
+        | ValidateProperty(toValidate, c => c.FirstIp, i => ValidateIpAddress(i, ipNetwork), path, true)
+        | ValidateProperty(toValidate, c => c.NextIp, i => ValidateIpAddress(i, ipNetwork), path)
+        | ValidateProperty(toValidate, c => c.LastIp, i => ValidateIpAddress(i, ipNetwork), path, true);
 
     private static Validation<ValidationIssue, Unit> ValidateDnsServer(
         string ipAddress,
@@ -254,18 +252,18 @@ public static class NetworkProvidersConfigValidations
         from _1 in Success<Error, Unit>(unit)
         let networks = toValidate
             .Filter(p => p.Type is NetworkProviderType.NatOverlay)
-            .Map(p  => p.Subnets.ToSeq()
+            .Map(p => p.Subnets.ToSeq()
                 .Find(s => s.Name == EryphConstants.DefaultSubnetName)
                 .Map(s => s.Network)
                 .Bind(parseIPNetwork2)
                 .Map(n => (p.Name, Network: n)))
             .Somes()
         from _2 in networks.Zip(
-            networks.NonEmptyTails,
-            (n, others) => others
-                .Filter(o => o.Name != n.Name && n.Network.Overlap(o.Network))
-                .Map(o => Fail<Error, Unit>(Error.New(
-                    $"The network '{n.Network}' of provider '{n.Name}' overlaps with the network '{o.Network}' of provider '{o.Name}'."))))
+                networks.NonEmptyTails,
+                (n, others) => others
+                    .Filter(o => o.Name != n.Name && n.Network.Overlap(o.Network))
+                    .Map(o => Fail<Error, Unit>(Error.New(
+                        $"The network '{n.Network}' of provider '{n.Name}' overlaps with the network '{o.Network}' of provider '{o.Name}'."))))
             .Flatten()
             .Sequence()
         select unit;

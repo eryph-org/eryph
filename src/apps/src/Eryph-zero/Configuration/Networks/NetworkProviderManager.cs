@@ -1,10 +1,8 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using Eryph.Core;
 using Eryph.Core.Network;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero.Configuration.Networks;
@@ -20,9 +18,7 @@ public class NetworkProviderManager : INetworkProviderManager
             var configFilePath = Path.Combine(path, "p_networks.yml");
 
             if (!File.Exists(configFilePath))
-            {
                 await File.WriteAllTextAsync(configFilePath, NetworkProvidersConfiguration.DefaultConfig);
-            }
 
             return await File.ReadAllTextAsync(configFilePath);
         }).ToEither();
@@ -52,7 +48,7 @@ public class NetworkProviderManager : INetworkProviderManager
         from _ in SaveConfigurationYaml(yaml)
         select unit;
 
-    public NetworkProviderDefaults Defaults => new NetworkProviderDefaults
+    public NetworkProviderDefaults Defaults => new()
     {
         DisableDhcpGuard = true,
         DisableRouterGuard = true,

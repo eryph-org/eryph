@@ -6,8 +6,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class AddAccessKeyRequest : SingleEntityRequest
 {
-    [FromBody]
-    public required AddAccessKeyRequestBody Body { get; set; }
+    [FromBody] public required AddAccessKeyRequestBody Body { get; set; }
 }
 
 public class AddAccessKeyRequestBody

@@ -1,13 +1,4 @@
-﻿using Microsoft.Management.Infrastructure;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-
-namespace Eryph.VmManagement.Data.Core;
+﻿namespace Eryph.VmManagement.Data.Core;
 
 /// <summary>
 /// Contains information about the processor settings of a Hyper-V VM

@@ -39,7 +39,8 @@ internal class UpdateConfigDriveCommandHandler(
         let fedConfig = command.Config
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
-            .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
+            .MapLeft(issues =>
+                Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
             .ToAsync()
         // We must redact the config after substituting the variables as the placeholder,
         // which is used to replace secret values, is not a valid variable value for some

@@ -1,4 +1,3 @@
-using System;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Eryph.IdentityDb.Sqlite;
@@ -15,5 +14,7 @@ internal class DateTimeOffsetToDateTimeConverter(ConverterMappingHints? mappingH
         t => new DateTimeOffset(t.Ticks, TimeSpan.Zero),
         mappingHints)
 {
-    public DateTimeOffsetToDateTimeConverter() : this(null) { }
+    public DateTimeOffsetToDateTimeConverter() : this(null)
+    {
+    }
 }

@@ -18,7 +18,7 @@ public class EryphSagaDataTests
         var sagaData = new EryphSagaData<TestData>
         {
             Id = id,
-            SagaTaskId = sagaTaskId
+            SagaTaskId = sagaTaskId,
         };
         sagaData.Data.GeneIds =
         [
@@ -44,24 +44,25 @@ public class EryphSagaDataTests
         sagaData.Data.GeneSetMap = new Dictionary<GeneSetIdentifier, GeneSetIdentifier>
         {
             [GeneSetIdentifier.New("acme/acme-parent/latest")] = GeneSetIdentifier.New("acme/acme-parent/1.0"),
-            [GeneSetIdentifier.New("acme/acme-grand-parent/latest")] = GeneSetIdentifier.New("acme/acme-grand-parent/1.0"),
+            [GeneSetIdentifier.New("acme/acme-grand-parent/latest")] =
+                GeneSetIdentifier.New("acme/acme-grand-parent/1.0"),
         };
 
         // The Rebus saga store uses a hardcoded Newtonsoft.Json serializer.
         // Hence, we test the roundtrip with the actual InMemorySagaStorage.
-        var correlationProperty = Mock.Of<ISagaCorrelationProperty>(
-            p => p.SagaDataType == typeof(EryphSagaData<TestData>)
-                 && p.PropertyName == nameof(EryphSagaData<TestData>.SagaTaskId));
+        var correlationProperty = Mock.Of<ISagaCorrelationProperty>(p =>
+            p.SagaDataType == typeof(EryphSagaData<TestData>)
+            && p.PropertyName == nameof(EryphSagaData<>.SagaTaskId));
         var sagaStore = new InMemorySagaStorage();
-        
+
         await sagaStore.Insert(sagaData, [correlationProperty]);
         var result = await sagaStore.Find(
             typeof(EryphSagaData<TestData>),
-            nameof(EryphSagaData<TestData>.SagaTaskId),
+            nameof(EryphSagaData<>.SagaTaskId),
             sagaTaskId);
 
         var resultData = result.Should().BeOfType<EryphSagaData<TestData>>().Subject;
-        
+
         resultData.Data.Should().BeEquivalentTo(sagaData.Data);
     }
 
@@ -74,12 +75,12 @@ public class EryphSagaDataTests
 
     private sealed class TestData
     {
-        public List<GeneIdentifier> GeneIds { get; set; }
+        public List<GeneIdentifier>? GeneIds { get; set; }
 
-        public List<AncestorInfo> Ancestors { get; set; }
+        public List<AncestorInfo>? Ancestors { get; set; }
 
-        public List<GeneIdentifierWithType> GeneIdsWithTypes { get; set; }
+        public List<GeneIdentifierWithType>? GeneIdsWithTypes { get; set; }
 
-        public IReadOnlyDictionary<GeneSetIdentifier, GeneSetIdentifier> GeneSetMap { get; set; }
+        public IReadOnlyDictionary<GeneSetIdentifier, GeneSetIdentifier>? GeneSetMap { get; set; }
     }
 }

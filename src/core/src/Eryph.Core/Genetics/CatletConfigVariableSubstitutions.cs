@@ -5,7 +5,6 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -33,10 +32,7 @@ public static partial class CatletConfigVariableSubstitutions
                 CreateFodderPath(nameof(CatletConfig.Fodder), fodderConfig),
                 valuesMap))
             .Sequence()
-        select config.CloneWith(c =>
-        {
-            c.Fodder = substitutedFodder.ToArray();
-        });
+        select config.CloneWith(c => { c.Fodder = substitutedFodder.ToArray(); });
 
     private static Validation<ValidationIssue, FodderConfig> SubstituteVariables(
         FodderConfig config,
@@ -84,12 +80,12 @@ public static partial class CatletConfigVariableSubstitutions
         var errors = new List<VariableReferenceIssue>();
         var result = VariableReferenceRegex().Replace(input, match =>
             MatchVariable(match, values).Match(
-                Succ: t =>
+                t =>
                 {
                     isSecret |= t.Secret;
                     return t.Value;
                 },
-                Fail: error =>
+                error =>
                 {
                     errors.AddRange(error);
                     return match.Value;
@@ -115,7 +111,7 @@ public static partial class CatletConfigVariableSubstitutions
             VariableType.Number => Optional(matchedVariable.Value)
                 .Filter(notEmpty)
                 .IfNone("0"),
-            _ => matchedVariable.Value
+            _ => matchedVariable.Value,
         }
         select (value, matchedVariable.Secret);
 
@@ -126,12 +122,12 @@ public static partial class CatletConfigVariableSubstitutions
         VariableInfo variableInfo,
         string path) =>
         Optional(variableInfo.Value).Filter(notEmpty).Match(
-            Some: v => VariableConfigValidations.ValidateVariableValue(v, variableInfo.Type)
+            v => VariableConfigValidations.ValidateVariableValue(v, variableInfo.Type)
                 .Map(_ => unit)
                 .MapFail(e => new ValidationIssue(
                     JoinPath(path, nameof(VariableConfig.Value)),
                     $"The value for the catlet variable '{variableInfo.Name}' is invalid. {e.Message}")),
-            None: () => unit)
+            () => unit)
         | guard(notEmpty(variableInfo.Value) || !variableInfo.Required,
                 new ValidationIssue(
                     JoinPath(path, nameof(VariableConfig.Value)),
@@ -143,14 +139,14 @@ public static partial class CatletConfigVariableSubstitutions
         VariableInfo variableInfo,
         string path) =>
         Optional(variableInfo.Value).Filter(notEmpty).Match(
-            Some: v => VariableConfigValidations.ValidateVariableValue(v, variableInfo.Type)
+            v => VariableConfigValidations.ValidateVariableValue(v, variableInfo.Type)
                 .Map(_ => unit)
                 .MapFail(e => new ValidationIssue(
                     JoinPath(path, nameof(VariableConfig.Value)),
                     $"The value for the variable '{variableInfo.Name}' of the food '{fodderConfig.Name}'"
                     + Optional(fodderConfig.Source).Filter(notEmpty).Map(s => $" from '{s}'").IfNone("")
                     + $" is invalid. {e.Message}")),
-            None: () => unit)
+            () => unit)
         | guard(notEmpty(variableInfo.Value) || !variableInfo.Required,
                 new ValidationIssue(
                     JoinPath(path, nameof(VariableConfig.Value)),
@@ -185,7 +181,7 @@ public static partial class CatletConfigVariableSubstitutions
                 path,
                 $"The variable reference '{issue.Reference}' in the food '{fodderConfig.Name}'"
                 + Optional(fodderConfig.Source).Filter(notEmpty).Map(s => $" from '{s}'").IfNone("")
-                + " is invalid.")
+                + " is invalid."),
         };
 
     private sealed record VariableInfo

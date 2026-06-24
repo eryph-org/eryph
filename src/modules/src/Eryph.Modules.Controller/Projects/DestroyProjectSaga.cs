@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
@@ -28,6 +27,15 @@ internal class DestroyProjectSaga(
     : OperationTaskWorkflowSaga<DestroyProjectCommand, DestroyProjectSagaData>(workflow),
         IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
 {
+    public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message)
+    {
+        return FailOrRun(message, async (DestroyResourcesResponse response) =>
+        {
+            await DeleteProject();
+            await Complete(response);
+        });
+    }
+
     protected override void CorrelateMessages(
         ICorrelationConfig<DestroyProjectSagaData> config)
     {
@@ -65,7 +73,7 @@ internal class DestroyProjectSaga(
 
         await StartNewTask(new DestroyResourcesCommand
         {
-            Resources = project.Resources.Select(x=> new Resource(x.ResourceType, x.Id)).ToArray()
+            Resources = project.Resources.Select(x => new Resource(x.ResourceType, x.Id)).ToArray(),
         });
     }
 
@@ -78,25 +86,13 @@ internal class DestroyProjectSaga(
         var disks = await stateStore.For<VirtualDisk>()
             .ListAsync(new VirtualDiskSpecs.FindDeletedInProject(project.Id));
         var diskIdentifiers = disks.Select(d => d.DiskIdentifier).Distinct().Order();
-        foreach (var diskIdentifier in diskIdentifiers)
-        {
-            await lockManager.AcquireVhdLock(diskIdentifier);
-        }
+        foreach (var diskIdentifier in diskIdentifiers) await lockManager.AcquireVhdLock(diskIdentifier);
         await stateStore.For<VirtualDisk>().DeleteRangeAsync(disks);
 
         var roleAssignments = await stateStore.For<ProjectRoleAssignment>()
             .ListAsync(new ProjectRoleAssignmentSpecs.GetByProject(project.Id));
         await stateStore.For<ProjectRoleAssignment>().DeleteRangeAsync(roleAssignments);
-        
-        await stateStore.For<Project>().DeleteAsync(project);
-    }
 
-    public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message)
-    {
-        return FailOrRun(message, async (DestroyResourcesResponse response) =>
-        {
-            await DeleteProject();
-            await Complete(response);
-        });
+        await stateStore.For<Project>().DeleteAsync(project);
     }
 }

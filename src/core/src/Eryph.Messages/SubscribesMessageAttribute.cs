@@ -1,15 +1,9 @@
 ﻿using System;
 
-namespace Eryph.Messages
-{
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-    public class SubscribesMessageAttribute : Attribute
-    {
-        public SubscribesMessageAttribute(MessageSubscriber subscriber)
-        {
-            Subscriber = subscriber;
-        }
+namespace Eryph.Messages;
 
-        public MessageSubscriber Subscriber { get; set; }
-    }
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
+public class SubscribesMessageAttribute(MessageSubscriber subscriber) : Attribute
+{
+    public MessageSubscriber Subscriber { get; set; } = subscriber;
 }

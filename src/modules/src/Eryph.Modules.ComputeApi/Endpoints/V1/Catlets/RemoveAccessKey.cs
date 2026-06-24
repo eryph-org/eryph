@@ -35,17 +35,17 @@ public class RemoveAccessKey(
         {
             CatletId = model.Id,
             OperationName = "Revoking access key",
-            RemoveKeys = new List<string> { GuestServicesKvp.AccessKeySlot(subjectId) },
+            RemoveKeys = [GuestServicesKvp.AccessKeySlot(subjectId)],
         };
     }
 
     [Authorize(Policy = "compute:catlets:remote-access")]
     [HttpDelete("catlets/{id}/guest-services/access-keys")]
     [SwaggerOperation(
-        Summary = "Revoke the caller's guest-services access key on a catlet",
-        Description = "Starts an operation that removes the caller's authorized SSH key from the catlet's guest.",
-        OperationId = "Catlets_RemoveAccessKey",
-        Tags = ["Catlets"])
+            Summary = "Revoke the caller's guest-services access key on a catlet",
+            Description = "Starts an operation that removes the caller's authorized SSH key from the catlet's guest.",
+            OperationId = "Catlets_RemoveAccessKey",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

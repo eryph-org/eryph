@@ -12,52 +12,35 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.VmManagement.Converging;
 
-public class ConvergeContext
+public class ConvergeContext(
+    VmHostAgentConfiguration vmHostAgentConfig,
+    IPowershellEngine engine,
+    IHyperVOvsPortManager portManager,
+    Func<string, Task> reportProgress,
+    CatletConfig config,
+    Guid catletId,
+    Guid vmId,
+    bool secretDataHidden,
+    VMStorageSettings storageSettings,
+    MachineNetworkSettings[] networkSettings,
+    VMHostMachineData hostInfo,
+    Seq<UniqueGeneIdentifier> resolvedGenes,
+    ILoggerFactory loggerFactory)
 {
-    public readonly Guid CatletId;
-    public readonly Guid VmId;
-    public readonly bool SecretDataHidden;
-    public readonly CatletConfig Config;
-    public readonly IPowershellEngine Engine;
-    public readonly IHyperVOvsPortManager PortManager;
-    public readonly VmHostAgentConfiguration VmHostAgentConfig;
-    public readonly Func<string, Task> ReportProgress;
-    public readonly VMStorageSettings StorageSettings;
-    public readonly VMHostMachineData HostInfo;
-    public readonly MachineNetworkSettings[] NetworkSettings;
-    public readonly Seq<UniqueGeneIdentifier> ResolvedGenes;
-    public readonly ILoggerFactory LoggerFactory;
+    public readonly Guid CatletId = catletId;
+    public readonly CatletConfig Config = config;
+    public readonly IPowershellEngine Engine = engine;
+    public readonly VMHostMachineData HostInfo = hostInfo;
+    public readonly ILoggerFactory LoggerFactory = loggerFactory;
+    public readonly MachineNetworkSettings[] NetworkSettings = networkSettings;
+    public readonly IHyperVOvsPortManager PortManager = portManager;
+    public readonly Func<string, Task> ReportProgress = reportProgress;
+    public readonly Seq<UniqueGeneIdentifier> ResolvedGenes = resolvedGenes;
+    public readonly bool SecretDataHidden = secretDataHidden;
+    public readonly VMStorageSettings StorageSettings = storageSettings;
+    public readonly VmHostAgentConfiguration VmHostAgentConfig = vmHostAgentConfig;
+    public readonly Guid VmId = vmId;
 
-
-    public ConvergeContext(
-        VmHostAgentConfiguration vmHostAgentConfig,
-        IPowershellEngine engine,
-        IHyperVOvsPortManager portManager,
-        Func<string, Task> reportProgress,
-        CatletConfig config,
-        Guid catletId,
-        Guid vmId,
-        bool secretDataHidden,
-        VMStorageSettings storageSettings,
-        MachineNetworkSettings[] networkSettings,
-        VMHostMachineData hostInfo,
-        Seq<UniqueGeneIdentifier> resolvedGenes,
-        ILoggerFactory loggerFactory)
-    {
-        CatletId = catletId;
-        VmId = vmId;
-        SecretDataHidden = secretDataHidden;
-        VmHostAgentConfig = vmHostAgentConfig;
-        Engine = engine;
-        PortManager = portManager;
-        ReportProgress = reportProgress;
-        Config = config;
-        StorageSettings = storageSettings;
-        NetworkSettings = networkSettings;
-        HostInfo = hostInfo;
-        ResolvedGenes = resolvedGenes;
-        LoggerFactory = loggerFactory;
-    }
 
     public EitherAsync<Error, Unit> ReportProgressAsync(string message)
     {

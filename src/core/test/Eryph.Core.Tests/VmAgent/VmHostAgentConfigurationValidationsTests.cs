@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.VmAgent;
-
+﻿using Eryph.Core.VmAgent;
 using static Eryph.Core.VmAgent.VmHostAgentConfigurationValidations;
 
 namespace Eryph.Core.Tests.VmAgent;
@@ -24,42 +18,41 @@ public class VmHostAgentConfigurationValidationsTests
     [Fact]
     public void ValidateVmHostAgentConfig_ValidConfig_ReturnsSuccess()
     {
-        var config = new VmHostAgentConfiguration()
+        var config = new VmHostAgentConfiguration
         {
-            Defaults = new()
+            Defaults = new VmHostAgentDefaultsConfiguration
             {
                 Vms = @"z:\default\vms",
                 Volumes = @"z:\default\volumes",
             },
-            Datastores = new[]
-            {
-                new VmHostAgentDataStoreConfiguration()
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store1",
                     Path = @"z:\stores\store1",
                 },
-            },
-            Environments = new[]
-            {
-                new VmHostAgentEnvironmentConfiguration()
+            ],
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "env1",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Vms = @"z:\envs\env1\vms",
                         Volumes = @"z:\envs\env1\volumes",
                     },
-                    Datastores = new[]
-                    {
-
-                        new VmHostAgentDataStoreConfiguration()
+                    Datastores =
+                    [
+                        new VmHostAgentDataStoreConfiguration
                         {
                             Name = "store1",
                             Path = @"z:\envs\env1\store1",
                         },
-                    },
+                    ],
                 },
-            },
+            ],
         };
 
         var result = ValidateVmHostAgentConfig(config);
@@ -70,46 +63,45 @@ public class VmHostAgentConfigurationValidationsTests
     [Fact]
     public void ValidateVmHostAgentConfig_InvalidData_ReturnsFail()
     {
-        var config = new VmHostAgentConfiguration()
+        var config = new VmHostAgentConfiguration
         {
-            Defaults = new()
+            Defaults = new VmHostAgentDefaultsConfiguration
             {
                 Vms = "not|a|path",
             },
-            Datastores = new[]
-            {
-                new VmHostAgentDataStoreConfiguration()
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "invalid store",
                     Path = "not|a|path",
                 },
-            },
-            Environments = new[]
-            {
-                new VmHostAgentEnvironmentConfiguration()
+            ],
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "invalid env",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Vms = "not|a|path",
                         Volumes = @"z:\envs\env1\volumes",
-
                     },
-                    Datastores = new[]
-                    {
-                        new VmHostAgentDataStoreConfiguration()
+                    Datastores =
+                    [
+                        new VmHostAgentDataStoreConfiguration
                         {
                             Name = "invalid env store",
                             Path = "not|a|path",
                         },
-                    },
+                    ],
                 },
-            },
+            ],
         };
 
         var result = ValidateVmHostAgentConfig(config);
 
-        var issues = result.Should().BeFail().Which.ToList();
+        result.Should().BeFail().Which.ToList();
 
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             issue =>
@@ -120,7 +112,9 @@ public class VmHostAgentConfigurationValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("Datastores[0].Name");
-                issue.Message.Should().Be("The data store name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
+                issue.Message.Should()
+                    .Be(
+                        "The data store name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
             },
             issue =>
             {
@@ -130,7 +124,9 @@ public class VmHostAgentConfigurationValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("Environments[0].Name");
-                issue.Message.Should().Be("The environment name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
+                issue.Message.Should()
+                    .Be(
+                        "The environment name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
             },
             issue =>
             {
@@ -140,7 +136,9 @@ public class VmHostAgentConfigurationValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("Environments[0].Datastores[0].Name");
-                issue.Message.Should().Be("The data store name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
+                issue.Message.Should()
+                    .Be(
+                        "The data store name contains invalid characters. Only latin characters, numbers, dots and hyphens are permitted.");
             },
             issue =>
             {
@@ -152,46 +150,46 @@ public class VmHostAgentConfigurationValidationsTests
     [Fact]
     public void ValidateVmHostAgentConfig_DuplicatePaths_ReturnsFail()
     {
-        var config = new VmHostAgentConfiguration()
+        var config = new VmHostAgentConfiguration
         {
-            Defaults = new()
+            Defaults = new VmHostAgentDefaultsConfiguration
             {
                 Vms = @"z:\default",
                 Volumes = @"z:\default",
             },
-            Datastores = new[]
-            {
-                new VmHostAgentDataStoreConfiguration()
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store1",
                     Path = @"z:\stores\store1",
                 },
-                new VmHostAgentDataStoreConfiguration()
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store2",
                     Path = @"z:\stores\store2",
                 },
-            },
-            Environments = new[]
-            {
-                new VmHostAgentEnvironmentConfiguration()
+            ],
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "env1",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Vms = @"z:\envs\env1\vms",
                         Volumes = @"z:\stores\store2",
                     },
-                    Datastores = new[]
-                    {
-                        new VmHostAgentDataStoreConfiguration()
+                    Datastores =
+                    [
+                        new VmHostAgentDataStoreConfiguration
                         {
                             Name = "store1",
                             Path = @"z:\stores\store1",
                         },
-                    },
+                    ],
                 },
-            },
+            ],
         };
 
         var result = ValidateVmHostAgentConfig(config);
@@ -217,31 +215,31 @@ public class VmHostAgentConfigurationValidationsTests
     [Fact]
     public void ValidateVmHostAgentConfig_DuplicatePathsInDifferentRepresentations_ReturnsFail()
     {
-        var config = new VmHostAgentConfiguration()
+        var config = new VmHostAgentConfiguration
         {
-            Datastores = new[]
-            {
-                new VmHostAgentDataStoreConfiguration()
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store1",
                     Path = @"z:\stores\store",
                 },
-                new VmHostAgentDataStoreConfiguration()
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store2",
                     Path = @"z:\stores\store\",
                 },
-                new VmHostAgentDataStoreConfiguration()
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store3",
                     Path = @"Z:\stores\store2",
                 },
-                new VmHostAgentDataStoreConfiguration()
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store4",
                     Path = @"Z:\STORES\STORE2",
                 },
-            },
+            ],
         };
 
         var result = ValidateVmHostAgentConfig(config);
@@ -262,42 +260,42 @@ public class VmHostAgentConfigurationValidationsTests
     [Fact]
     public void ValidateVmHostAgentConfig_DuplicateNames_ReturnsFail()
     {
-        var config = new VmHostAgentConfiguration()
+        var config = new VmHostAgentConfiguration
         {
-            Datastores = new[]
-            {
-                new VmHostAgentDataStoreConfiguration()
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "store1",
                     Path = @"z:\stores\store1",
                 },
-                new VmHostAgentDataStoreConfiguration()
+                new VmHostAgentDataStoreConfiguration
                 {
                     Name = "Store1",
                     Path = @"z:\stores\store2",
                 },
-            },
-            Environments = new[]
-            {
-                new VmHostAgentEnvironmentConfiguration()
+            ],
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "env1",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Vms = @"z:\envs\env1\vms",
                         Volumes = @"z:\envs\env1\volumes",
                     },
                 },
-                new VmHostAgentEnvironmentConfiguration()
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "Env1",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Vms = @"z:\envs\env2\vms",
                         Volumes = @"z:\envs\env2\volumes",
                     },
-                }
-            },
+                },
+            ],
         };
 
         var result = ValidateVmHostAgentConfig(config);
@@ -318,59 +316,57 @@ public class VmHostAgentConfigurationValidationsTests
     [Fact]
     public void ValidateVmHostAgentConfig_DuplicateNamesInEnvironment_ReturnsFail()
     {
-        var config = new VmHostAgentConfiguration()
+        var config = new VmHostAgentConfiguration
         {
-            Environments = new[]
-            {
-                new VmHostAgentEnvironmentConfiguration()
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "env1",
-                    Defaults = new()
+                    Defaults = new VmHostAgentDefaultsConfiguration
                     {
                         Vms = @"z:\envs\env1\vms",
                         Volumes = @"z:\envs\env1\volumes",
                     },
-                    Datastores = new[]
-                    {
-
-                        new VmHostAgentDataStoreConfiguration()
+                    Datastores =
+                    [
+                        new VmHostAgentDataStoreConfiguration
                         {
                             Name = "store1",
                             Path = @"z:\stores\store1",
                         },
-                        new VmHostAgentDataStoreConfiguration()
+                        new VmHostAgentDataStoreConfiguration
                         {
                             Name = "Store1",
                             Path = @"z:\stores\store2",
                         },
-                    },
+                    ],
                 },
-            },
+            ],
         };
 
         var result = ValidateVmHostAgentConfig(config);
 
-        result.Should().BeFail().Which.Should().SatisfyRespectively(
-            issue =>
-            {
-                issue.Member.Should().Be("Environments[0].Datastores");
-                issue.Message.Should().Be("The data store 'store1' is not unique.");
-            });
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("Environments[0].Datastores");
+            issue.Message.Should().Be("The data store 'store1' is not unique.");
+        });
     }
 
     [Fact]
     public void ValidateVmHostAgentConfig_EnvironmentWithEmptyDefaults_ReturnsFail()
     {
-        var config = new VmHostAgentConfiguration()
+        var config = new VmHostAgentConfiguration
         {
-            Environments = new[]
-            {
-                new VmHostAgentEnvironmentConfiguration()
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
                 {
                     Name = "env1",
-                    Defaults = new(),
+                    Defaults = new VmHostAgentDefaultsConfiguration(),
                 },
-            },
+            ],
         };
 
         var result = ValidateVmHostAgentConfig(config);

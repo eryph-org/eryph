@@ -1,5 +1,3 @@
-using System;
-
 namespace Eryph.Modules.HostAgent.Channels;
 
 /// <summary>

@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
@@ -14,60 +13,61 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OpenIddict.Abstractions;
 
-namespace Eryph.Modules.Identity.Models
+namespace Eryph.Modules.Identity.Models;
+
+[UsedImplicitly]
+public static class ClientApiModelExtensions
 {
-    [UsedImplicitly]
-    public static class ClientApiModelExtensions
+    public static string NewClientCertificate(
+        this ClientApplicationDescriptor client,
+        ICertificateGenerator certificateGenerator,
+        ICertificateKeyService certificateKeyService)
     {
-        public static string NewClientCertificate(
-            this ClientApplicationDescriptor client,
-            ICertificateGenerator certificateGenerator,
-            ICertificateKeyService certificateKeyService)
+        if (string.IsNullOrWhiteSpace(client.ClientId))
+            throw new ArgumentException("The client ID is missing", nameof(client));
+
+        using var keyPair = certificateKeyService.GenerateRsaKey(2048);
+        var subjectNameBuilder = new X500DistinguishedNameBuilder();
+        subjectNameBuilder.AddOrganizationName("eryph");
+        subjectNameBuilder.AddOrganizationalUnitName("eryph-identity-client");
+        subjectNameBuilder.AddCommonName(client.ClientId);
+
+        using var certificate = certificateGenerator.GenerateSelfSignedCertificate(
+            subjectNameBuilder.Build(),
+            $"eryph identity client {client.ClientId}",
+            keyPair,
+            5 * 365,
+            [
+                new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true),
+                new X509EnhancedKeyUsageExtension(
+                    [Oid.FromOidValue(Oids.EnhancedKeyUsage.ClientAuthentication, OidGroup.EnhancedKeyUsage)],
+                    true),
+            ]);
+
+        client.Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+
+        return keyPair.ExportRSAPrivateKeyPem();
+    }
+
+    public static ClientApplicationDescriptor ToDescriptor(
+        this NewClientRequestBody client,
+        Guid tenantId)
+    {
+        var descriptor = new ClientApplicationDescriptor
         {
-            if (string.IsNullOrWhiteSpace(client.ClientId))
-                throw new ArgumentException("The client ID is missing", nameof(client));
+            ClientId = Guid.NewGuid().ToString(),
+            TenantId = tenantId,
+            DisplayName = client.Name,
+        };
 
-            using var keyPair = certificateKeyService.GenerateRsaKey(2048);
-            var subjectNameBuilder = new X500DistinguishedNameBuilder();
-            subjectNameBuilder.AddOrganizationName("eryph");
-            subjectNameBuilder.AddOrganizationalUnitName("eryph-identity-client");
-            subjectNameBuilder.AddCommonName(client.ClientId);
+        descriptor.Scopes.UnionWith(client.AllowedScopes);
+        descriptor.AppRoles.UnionWith(client.Roles?.Map(Guid.Parse) ?? []);
+        return descriptor;
+    }
 
-            using var certificate = certificateGenerator.GenerateSelfSignedCertificate(
-                subjectNameBuilder.Build(),
-                $"eryph identity client {client.ClientId}",
-                keyPair,
-                5 * 365,
-                [
-                    new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true),
-                    new X509EnhancedKeyUsageExtension(
-                        [Oid.FromOidValue(Oids.EnhancedKeyUsage.ClientAuthentication, OidGroup.EnhancedKeyUsage)],
-                        true),
-                ]);
-
-            client.Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
-
-            return keyPair.ExportRSAPrivateKeyPem();
-        }
-
-        public static ClientApplicationDescriptor ToDescriptor(
-            this NewClientRequestBody client,
-            Guid tenantId)
-        {
-            var descriptor = new ClientApplicationDescriptor
-            {
-                ClientId = Guid.NewGuid().ToString(),
-                TenantId = tenantId,
-                DisplayName = client.Name
-            };
-
-            descriptor.Scopes.UnionWith(client.AllowedScopes);
-            descriptor.AppRoles.UnionWith(client.Roles?.Map(Guid.Parse) ?? []);
-            return descriptor;
-        }
-
-        public static Client ToClient(
-            this ClientApplicationDescriptor descriptor)
+    extension(ClientApplicationDescriptor descriptor)
+    {
+        public Client ToClient()
         {
             return new Client
             {
@@ -79,9 +79,7 @@ namespace Eryph.Modules.Identity.Models
             };
         }
 
-        public static ClientWithSecret ToClient(
-            this ClientApplicationDescriptor descriptor,
-            string key)
+        public ClientWithSecret ToClient(string key)
         {
             return new ClientWithSecret
             {
@@ -93,41 +91,33 @@ namespace Eryph.Modules.Identity.Models
                 Key = key,
             };
         }
+    }
 
-        public static async ValueTask ValidateScopes<TClient>(
-            this TClient client, 
-            IOpenIddictScopeManager scopeManager,
-            ModelStateDictionary modelState,
-            CancellationToken cancellationToken)
-            where TClient : IAllowedScopesHolder
-        {
-            foreach (var scope in client.AllowedScopes)
-            {
-                if (await scopeManager.FindByNameAsync(scope, cancellationToken) == null)
-                {
-                    modelState.AddModelError(
-                        $"$.{nameof(IAllowedScopesHolder.AllowedScopes)}",
-                        $"The scope {scope} is invalid");
-                }
-            }
-        }
+    public static async ValueTask ValidateScopes<TClient>(
+        this TClient client,
+        IOpenIddictScopeManager scopeManager,
+        ModelStateDictionary modelState,
+        CancellationToken cancellationToken)
+        where TClient : IAllowedScopesHolder
+    {
+        foreach (var scope in client.AllowedScopes)
+            if (await scopeManager.FindByNameAsync(scope, cancellationToken) == null)
+                modelState.AddModelError(
+                    $"$.{nameof(IAllowedScopesHolder.AllowedScopes)}",
+                    $"The scope {scope} is invalid");
+    }
 
-        public static void ValidateRoles(
-            this NewClientRequestBody client,
-            ModelStateDictionary modelState)
-        {
-            if (client.Roles is null)
-                return;
+    public static void ValidateRoles(
+        this NewClientRequestBody client,
+        ModelStateDictionary modelState)
+    {
+        if (client.Roles is null)
+            return;
 
-            foreach (var role in client.Roles)
-            {
-                if (!Guid.TryParse(role, out var guid) || guid != EryphConstants.SuperAdminRole)
-                {
-                    modelState.AddModelError(
-                        $"$.{nameof(NewClientRequestBody.Roles)}",
-                        $"The role {role} is invalid");
-                }
-            }
-        }
+        foreach (var role in client.Roles)
+            if (!Guid.TryParse(role, out var guid) || guid != EryphConstants.SuperAdminRole)
+                modelState.AddModelError(
+                    $"$.{nameof(NewClientRequestBody.Roles)}",
+                    $"The role {role} is invalid");
     }
 }

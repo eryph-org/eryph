@@ -1,10 +1,7 @@
-using System;
-using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Eryph.ModuleCore.Components;
 using FluentAssertions;
-using Xunit;
 
 namespace Eryph.ModuleCore.Tests.Components;
 
@@ -13,12 +10,19 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
     private readonly string _dir =
         Path.Combine(Path.GetTempPath(), "eryph-cert-store-test-" + Guid.NewGuid().ToString("N"));
 
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+            Directory.Delete(_dir, true);
+    }
+
     [Fact]
     public void Save_then_load_reflects_validity_and_renewal_window()
     {
         using var key = RSA.Create(2048);
         // A certificate valid for ~90 days.
-        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
         using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
 
         var result = new ComponentEnrollmentResult
@@ -85,7 +89,8 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         // Drop the PFX so the PEM fallback is exercised, then corrupt the key: loading leaf+key together
         // fails, so the store reports not-usable and forces re-enrollment instead of a later build failure.
         File.Delete(Path.Combine(_dir, "component.pfx"));
-        File.WriteAllText(Path.Combine(_dir, "component.key"), "-----BEGIN PRIVATE KEY-----\nnonsense\n-----END PRIVATE KEY-----");
+        File.WriteAllText(Path.Combine(_dir, "component.key"),
+            "-----BEGIN PRIVATE KEY-----\nnonsense\n-----END PRIVATE KEY-----");
         store.HasValidCertificate().Should().BeFalse();
         store.HasCurrentCertificate().Should().BeFalse();
     }
@@ -93,7 +98,8 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
     private FileComponentCertificateStore SaveSelfSigned()
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
         using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
         var result = new ComponentEnrollmentResult
         {
@@ -112,7 +118,8 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
     public void GetClientCertificatePfxPath_is_null_before_enrollment_and_loadable_after()
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
         using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
         var result = new ComponentEnrollmentResult
         {
@@ -131,7 +138,7 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         pfxPath.Should().NotBeNull();
         File.Exists(pfxPath).Should().BeTrue();
         // The PFX loads and carries the private key (so the TLS stack can present it).
-        using var loaded = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(pfxPath!), password: null);
+        using var loaded = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(pfxPath!), null);
         loaded.HasPrivateKey.Should().BeTrue();
         loaded.Subject.Should().Contain("agent.eryph.local");
 
@@ -145,7 +152,8 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
     public void Server_certificate_is_persisted_and_cleaned_up_on_re_enrollment_without_one()
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
         using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
         var der = cert.Export(X509ContentType.Cert);
 
@@ -163,8 +171,10 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         var serverPfx = store.GetServerCertificatePfxPath();
         serverPfx.Should().Be(Path.Combine(_dir, "server.pfx"));
         File.Exists(serverPfx).Should().BeTrue();
-        using (var loaded = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(serverPfx!), password: null))
+        using (var loaded = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(serverPfx!), null))
+        {
             loaded.HasPrivateKey.Should().BeTrue("the listener must present the server key");
+        }
 
         // Re-enrolling without a server certificate removes the stale server artifacts.
         store.Save(key.ExportPkcs8PrivateKey(), key.ExportPkcs8PrivateKey(), new ComponentEnrollmentResult
@@ -184,7 +194,8 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
     public void Save_rejects_a_server_certificate_without_its_key()
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest("CN=agent.eryph.local", key, HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
         using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(90));
         var der = cert.Export(X509ContentType.Cert);
 
@@ -208,18 +219,14 @@ public sealed class FileComponentCertificateStoreTests : IDisposable
         var store = SaveSelfSigned();
 
         using (var fromPfx = store.LoadClientCertificate())
+        {
             fromPfx!.HasPrivateKey.Should().BeTrue("loaded from the authoritative PFX");
+        }
 
         // Drop the PFX so the PEM fallback (CreateFromPemFile + PKCS#12 round-trip) is exercised.
         File.Delete(Path.Combine(_dir, "component.pfx"));
         using var fromPem = store.LoadClientCertificate();
         fromPem!.HasPrivateKey.Should().BeTrue("rebuilt from the PEM leaf+key");
         fromPem.Subject.Should().Contain("agent.eryph.local");
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir))
-            Directory.Delete(_dir, recursive: true);
     }
 }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core.Genetics;
 
@@ -54,14 +49,13 @@ public class CatletConfigNormalizerTests
 
         var result = CatletConfigNormalizer.Trim(config);
 
-        result.Fodder.Should().SatisfyRespectively(
-            fodder => fodder.Variables.Should().BeNull());
+        result.Fodder.Should().SatisfyRespectively(fodder => fodder.Variables.Should().BeNull());
     }
 
     [Fact]
     public void Normalize_WithoutDefaultValues_AddsDefaultValues()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Drives =
             [
@@ -91,13 +85,12 @@ public class CatletConfigNormalizerTests
         normalizedConfig.Environment.Should().Be(EryphConstants.DefaultEnvironmentName);
         normalizedConfig.Store.Should().Be(EryphConstants.DefaultDataStoreName);
 
-        normalizedConfig.Drives.Should().SatisfyRespectively(
-            drive =>
-            {
-                drive.Type.Should().Be(CatletDriveType.Vhd);
-                drive.Name.Should().Be("sda");
-                drive.Store.Should().Be(EryphConstants.DefaultDataStoreName);
-            });
+        normalizedConfig.Drives.Should().SatisfyRespectively(drive =>
+        {
+            drive.Type.Should().Be(CatletDriveType.Vhd);
+            drive.Name.Should().Be("sda");
+            drive.Store.Should().Be(EryphConstants.DefaultDataStoreName);
+        });
 
         normalizedConfig.Networks.Should().SatisfyRespectively(
             network =>
@@ -119,7 +112,7 @@ public class CatletConfigNormalizerTests
     [Fact]
     public void Normalize_IncorrectCapitalization_NormalizesCapitalization()
     {
-        var config = new CatletConfig()
+        var config = new CatletConfig
         {
             Name = "Test-Catlet",
             Parent = "Acme/Acme-OS",
@@ -159,7 +152,7 @@ public class CatletConfigNormalizerTests
                     {
                         Name = "Test-Subnet",
                         IpPool = "Test-Pool",
-                    }
+                    },
                 },
             ],
             NetworkAdapters =
@@ -204,53 +197,48 @@ public class CatletConfigNormalizerTests
         normalizedConfig.Store.Should().Be("test-store");
         normalizedConfig.Location.Should().Be("test-location");
 
-        normalizedConfig.Capabilities.Should().SatisfyRespectively(
-            capability => capability.Name.Should().Be("test_capability"));
+        normalizedConfig.Capabilities.Should()
+            .SatisfyRespectively(capability => capability.Name.Should().Be("test_capability"));
 
-        normalizedConfig.Drives.Should().SatisfyRespectively(
-            drive =>
-            {
-                drive.Name.Should().Be("test-drive");
-                drive.Store.Should().Be("test-drive-store");
-                drive.Location.Should().Be("test-drive-location");
-                drive.Source.Should().Be("gene:acme/acme-os/latest:sda");
-            });
+        normalizedConfig.Drives.Should().SatisfyRespectively(drive =>
+        {
+            drive.Name.Should().Be("test-drive");
+            drive.Store.Should().Be("test-drive-store");
+            drive.Location.Should().Be("test-drive-location");
+            drive.Source.Should().Be("gene:acme/acme-os/latest:sda");
+        });
 
-        normalizedConfig.Networks.Should().SatisfyRespectively(
-            network =>
-            {
-                network.Name.Should().Be("test-network");
-                network.AdapterName.Should().Be("test-adapter");
-                
-                network.SubnetV4.Should().NotBeNull();
-                network.SubnetV4!.Name.Should().Be("test-subnet");
-                network.SubnetV4.IpPool.Should().Be("test-pool");
-                
-                network.SubnetV6.Should().NotBeNull();
-                network.SubnetV6!.Name.Should().Be("test-subnet");
-                network.SubnetV6.IpPool.Should().Be("test-pool");
-            });
+        normalizedConfig.Networks.Should().SatisfyRespectively(network =>
+        {
+            network.Name.Should().Be("test-network");
+            network.AdapterName.Should().Be("test-adapter");
 
-        normalizedConfig.NetworkAdapters.Should().SatisfyRespectively(
-            adapter => adapter.Name.Should().Be("test-adapter"));
+            network.SubnetV4.Should().NotBeNull();
+            network.SubnetV4!.Name.Should().Be("test-subnet");
+            network.SubnetV4.IpPool.Should().Be("test-pool");
 
-        normalizedConfig.Variables.Should().SatisfyRespectively(
-            variable =>
+            network.SubnetV6.Should().NotBeNull();
+            network.SubnetV6!.Name.Should().Be("test-subnet");
+            network.SubnetV6.IpPool.Should().Be("test-pool");
+        });
+
+        normalizedConfig.NetworkAdapters.Should()
+            .SatisfyRespectively(adapter => adapter.Name.Should().Be("test-adapter"));
+
+        normalizedConfig.Variables.Should().SatisfyRespectively(variable =>
+        {
+            variable.Type.Should().Be(VariableType.String);
+            variable.Name.Should().Be("test_variable");
+        });
+
+        normalizedConfig.Fodder.Should().SatisfyRespectively(fodder =>
+        {
+            fodder.Name.Should().Be("test-fodder");
+            fodder.Variables.Should().SatisfyRespectively(variable =>
             {
                 variable.Type.Should().Be(VariableType.String);
                 variable.Name.Should().Be("test_variable");
             });
-
-        normalizedConfig.Fodder.Should().SatisfyRespectively(
-            fodder =>
-            {
-                fodder.Name.Should().Be("test-fodder");
-                fodder.Variables.Should().SatisfyRespectively(
-                    variable =>
-                    {
-                        variable.Type.Should().Be(VariableType.String);
-                        variable.Name.Should().Be("test_variable");
-                    });
-            });
+        });
     }
 }

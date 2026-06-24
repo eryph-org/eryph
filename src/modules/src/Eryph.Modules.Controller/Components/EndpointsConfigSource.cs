@@ -47,19 +47,15 @@ internal sealed class EndpointsConfigSource(
             // way every build (GetActiveAsync gives no ordering guarantee) — otherwise the payload
             // could flap and bump the version with no real change.
             foreach (var component in components.OrderBy(c => c.ComponentId))
-            {
-                foreach (var endpoint in component.AdvertisedEndpoints)
-                    endpoints[endpoint.Key] = endpoint.Value;
-            }
+            foreach (var endpoint in component.AdvertisedEndpoints)
+                endpoints[endpoint.Key] = endpoint.Value;
         }
 
         // Operator override: the controller's "endpoints" configuration section,
         // e.g. endpoints:identity=https://host/identity. Always wins.
         foreach (var child in configuration.GetSection("endpoints").GetChildren())
-        {
             if (!string.IsNullOrWhiteSpace(child.Value))
                 endpoints[child.Key] = child.Value;
-        }
 
         // The resolvers treat "default" as the fallback base for unknown and for relative
         // endpoints. If nothing set it explicitly, derive it from "base" so consumers always

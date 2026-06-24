@@ -4,7 +4,7 @@ using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider;
 
-public interface ISingleEntitySpecBuilder<in TRequest,T>
+public interface ISingleEntitySpecBuilder<in TRequest, T>
     where T : class
     where TRequest : SingleEntityRequest
 {

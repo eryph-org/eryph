@@ -14,9 +14,9 @@ public class UpdateCatletSagaData
     public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash>? ResolvedGenes { get; set; }
 
     public Guid CatletId { get; set; }
-        
+
     public string? AgentName { get; set; }
-        
+
     public Guid ProjectId { get; set; }
 
     public Architecture? Architecture { get; set; }

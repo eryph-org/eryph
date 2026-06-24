@@ -9,7 +9,7 @@ public class OperationTask
     public string? ParentTaskId { get; set; }
 
     public required string Name { get; set; }
-    
+
     public string? DisplayName { get; set; }
 
     public required int Progress { get; set; }

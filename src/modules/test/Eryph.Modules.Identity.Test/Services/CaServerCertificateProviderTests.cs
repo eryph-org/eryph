@@ -1,5 +1,6 @@
 #nullable enable
 using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
@@ -24,7 +25,7 @@ public class CaServerCertificateProviderTests
         issued.IssuingChain.Should().NotBeEmpty();
 
         issued.Leaf.Extensions.OfType<X509EnhancedKeyUsageExtension>()
-            .Single().EnhancedKeyUsages.Cast<System.Security.Cryptography.Oid>()
+            .Single().EnhancedKeyUsages.Cast<Oid>()
             .Select(o => o.Value).Should().Contain("1.3.6.1.5.5.7.3.1"); // serverAuth
 
         using var chain = new X509Chain();

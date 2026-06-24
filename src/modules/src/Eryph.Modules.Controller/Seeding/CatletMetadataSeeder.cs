@@ -17,28 +17,19 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.Controller.Seeding;
 
-internal class CatletMetadataSeeder : SeederBase
+internal class CatletMetadataSeeder(
+    ChangeTrackingConfig config,
+    IFileSystem fileSystem,
+    IStateStoreRepository<CatletMetadata> metadataRepository,
+    ICatletMetadataService metadataService)
+    : SeederBase(fileSystem, config.VirtualMachinesConfigPath)
 {
-    private readonly IStateStoreRepository<CatletMetadata> _metadataRepository;
-    private readonly ICatletMetadataService _metadataService;
-
-    public CatletMetadataSeeder(
-        ChangeTrackingConfig config,
-        IFileSystem fileSystem,
-        IStateStoreRepository<CatletMetadata> metadataRepository,
-        ICatletMetadataService metadataService)
-        : base(fileSystem, config.VirtualMachinesConfigPath)
-    {
-        _metadataRepository = metadataRepository;
-        _metadataService = metadataService;
-    }
-
     protected override async Task SeedAsync(
         Guid entityId,
         string json,
         CancellationToken cancellationToken = default)
     {
-        bool exists = await _metadataRepository.AnyAsync(
+        var exists = await metadataRepository.AnyAsync(
             new CatletMetadataSpecs.GetByIdReadonly(entityId),
             cancellationToken);
         if (exists)
@@ -46,20 +37,19 @@ internal class CatletMetadataSeeder : SeederBase
 
         var document = JsonDocument.Parse(json);
         var version = CatletMetadataConfigModelJsonSerializer.GetVersion(document);
-        if (version == 1)
+        switch (version)
         {
-            await SeedV1Metadata(document, cancellationToken);
-        }
-        else if (version == 2)
-        {
-            await SeedMetadata(document, cancellationToken);
-        }
-        else
-        {
-            throw new SeederException($"The catlet metadata {entityId} has the unsupported version {version}.");
+            case 1:
+                await SeedV1Metadata(document, cancellationToken);
+                break;
+            case 2:
+                await SeedMetadata(document, cancellationToken);
+                break;
+            default:
+                throw new SeederException($"The catlet metadata {entityId} has the unsupported version {version}.");
         }
 
-        await _metadataRepository.SaveChangesAsync(cancellationToken);
+        await metadataRepository.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedV1Metadata(
@@ -88,7 +78,7 @@ internal class CatletMetadataSeeder : SeederBase
             Metadata = SalvageContent(root),
         };
 
-        await _metadataService.AddMetadata(metadata, cancellationToken);
+        await metadataService.AddMetadata(metadata, cancellationToken);
     }
 
     /// <summary>
@@ -122,8 +112,8 @@ internal class CatletMetadataSeeder : SeederBase
         // The v0.4 metadata may contain an architecture value which the
         // current validation rejects. Fall back to the default rather
         // than aborting the entire seeding pass for a single bad record.
-        return Architecture.NewEither(rawArchitecture).IfLeft(
-            _ => Architecture.New(EryphConstants.DefaultArchitecture));
+        return Architecture.NewEither(rawArchitecture)
+            .IfLeft(_ => Architecture.New(EryphConstants.DefaultArchitecture));
     }
 
     private static string? SalvageString(JsonElement root, string propertyName) =>
@@ -152,6 +142,6 @@ internal class CatletMetadataSeeder : SeederBase
             SpecificationVersionId = metadataConfig.SpecificationVersionId,
         };
 
-        await _metadataService.AddMetadata(metadata, cancellationToken);
+        await metadataService.AddMetadata(metadata, cancellationToken);
     }
 }

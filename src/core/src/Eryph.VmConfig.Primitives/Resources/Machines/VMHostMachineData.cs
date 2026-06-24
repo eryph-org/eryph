@@ -1,11 +1,8 @@
-﻿using Eryph.ConfigModel;
-using Eryph.Core.Network;
+﻿using Eryph.Core.Network;
 
-namespace Eryph.Resources.Machines
+namespace Eryph.Resources.Machines;
+
+public class VMHostMachineData : MachineData
 {
-    public class VMHostMachineData : MachineData
-    {
-
-        public NetworkProvidersConfiguration NetworkProviderConfiguration { get; set; }
-    }
+    public NetworkProvidersConfiguration NetworkProviderConfiguration { get; set; }
 }

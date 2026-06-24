@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Management.Automation;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Management.Automation;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Networking;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
-using LanguageExt;
 using Xunit;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.HyperV.Test.Networking;
@@ -22,23 +15,23 @@ public class NetworkNeighborsUpdateTests
     [Fact]
     public async Task RemoveOutdatedNetworkNeighbors_ValidUpdatedNeighbors_RemovesOutdatedNeighbors()
     {
-        Seq<CimNetworkNeighbor> existingNeighbors = Seq(
-            new CimNetworkNeighbor()
+        var existingNeighbors = Seq(
+            new CimNetworkNeighbor
             {
                 IPAddress = "192.168.1.1",
                 LinkLayerAddress = "02:11:22:33:44:55",
             },
-            new CimNetworkNeighbor()
+            new CimNetworkNeighbor
             {
                 IPAddress = "192.168.1.2",
                 LinkLayerAddress = "02:11:22:33:44:56",
             },
-            new CimNetworkNeighbor()
+            new CimNetworkNeighbor
             {
                 IPAddress = "192.168.1.3",
                 LinkLayerAddress = "02:11:22:33:44:57",
             },
-            new CimNetworkNeighbor()
+            new CimNetworkNeighbor
             {
                 IPAddress = "192.168.1.4",
                 LinkLayerAddress = "02:11:22:33:44:58",
@@ -117,7 +110,7 @@ public class NetworkNeighborsUpdateTests
     {
         _powershellEngine.GetObjectCallback = (_, _) =>
         {
-            return Seq1(new CimNetworkNeighbor()
+            return Seq1(new CimNetworkNeighbor
                 {
                     IPAddress = ipAddress,
                     LinkLayerAddress = macAddress,

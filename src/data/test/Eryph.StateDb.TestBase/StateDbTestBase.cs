@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core;
+﻿using Eryph.Core;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.MySql;
 using Eryph.StateDb.Sqlite;
@@ -26,11 +21,11 @@ namespace Eryph.StateDb.TestBase;
 /// </summary>
 public abstract class StateDbTestBase : IAsyncLifetime
 {
+    private readonly Container _container;
     private readonly IDatabaseFixture _databaseFixture;
     private readonly string _dbConnection;
-    private SqliteConnection? _sqliteConnection;
     private readonly ServiceProvider _provider;
-    private readonly Container _container;
+    private SqliteConnection? _sqliteConnection;
 
     protected StateDbTestBase(
         IDatabaseFixture databaseFixture,
@@ -54,11 +49,6 @@ public abstract class StateDbTestBase : IAsyncLifetime
         _provider.UseSimpleInjector(_container);
     }
 
-    /// <summary>
-    /// This method can be implemented to add additional services to the container.
-    /// </summary>
-    protected virtual void AddSimpleInjector(SimpleInjectorAddOptions options) { }
-
     public virtual async Task InitializeAsync()
     {
         if (_databaseFixture is SqliteFixture)
@@ -71,12 +61,26 @@ public abstract class StateDbTestBase : IAsyncLifetime
         }
 
         await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-        
+
         var context = scope.GetInstance<StateStoreContext>();
         await context.Database.MigrateAsync();
         var stateStore = scope.GetInstance<IStateStore>();
         await SeedAsync(stateStore);
         await stateStore.SaveChangesAsync();
+    }
+
+    public virtual async Task DisposeAsync()
+    {
+        await _container.DisposeAsync();
+        await _provider.DisposeAsync();
+        if (_sqliteConnection is not null) await _sqliteConnection.DisposeAsync();
+    }
+
+    /// <summary>
+    /// This method can be implemented to add additional services to the container.
+    /// </summary>
+    protected virtual void AddSimpleInjector(SimpleInjectorAddOptions options)
+    {
     }
 
     public Scope CreateScope() => AsyncScopedLifestyle.BeginScope(_container);
@@ -110,16 +114,6 @@ public abstract class StateDbTestBase : IAsyncLifetime
     protected void ConfigureDatabase(Container container)
     {
         container.RegisterInstance(GetConfigurer());
-    }
-
-    public virtual async Task DisposeAsync()
-    {
-        await _container.DisposeAsync();
-        await _provider.DisposeAsync();
-        if (_sqliteConnection is not null)
-        {
-            await _sqliteConnection.DisposeAsync();
-        }
     }
 
     private IStateStoreContextConfigurer GetConfigurer() =>

@@ -7,28 +7,20 @@ using Rebus.Pipeline;
 
 namespace Eryph.Modules.HostAgent;
 
-public class TraceDecorator<T> : IHandleMessages<T>
+public class TraceDecorator<T>(IHandleMessages<T> decoratedHandler, ITracer tracer) : IHandleMessages<T>
 {
-    private readonly IHandleMessages<T> _decoratedHandler;
-    private readonly ITracer _tracer;
-
-    public TraceDecorator(IHandleMessages<T> decoratedHandler, ITracer tracer)
-    {
-        _decoratedHandler = decoratedHandler;
-        _tracer = tracer;
-    }
     public async Task Handle(T message)
     {
         var correlationId = MessageContext.Current.GetTraceId();
 
-        var context = new TraceContext(_tracer, Guid.NewGuid(), correlationId);
+        var context = new TraceContext(tracer, Guid.NewGuid(), correlationId);
         TraceContextAccessor.TraceContext = context;
         var messageId = MessageContext.Current.Headers["rbs2-msg-id"];
 
         try
         {
             context.Write(MessageTraceData.FromObject(message, messageId));
-            await _decoratedHandler.Handle(message);
+            await decoratedHandler.Handle(message);
         }
         catch (Exception ex)
         {
@@ -40,6 +32,5 @@ public class TraceDecorator<T> : IHandleMessages<T>
             context.Dispose();
             TraceContextAccessor.TraceContext = TraceContext.Empty;
         }
-            
     }
 }

@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using Eryph.ModuleCore.Components;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
-using Xunit;
 
 namespace Eryph.ModuleCore.Tests.Components;
 
@@ -15,7 +12,7 @@ public class ComponentBrokerProvisioningTests
     [Fact]
     public void CreateRabbitMq_builds_a_provisioner_from_complete_configuration()
     {
-        var provisioner = ComponentBrokerProvisioning.CreateRabbitMq(Config(new()
+        var provisioner = ComponentBrokerProvisioning.CreateRabbitMq(Config(new Dictionary<string, string?>
         {
             ["broker:managementUrl"] = "http://rabbit:15672",
             ["broker:managementUser"] = "guest",
@@ -39,7 +36,7 @@ public class ComponentBrokerProvisioningTests
     public void CreateRabbitMq_throws_when_required_configuration_is_missing(
         string? url, string? user, string? password)
     {
-        var act = () => ComponentBrokerProvisioning.CreateRabbitMq(Config(new()
+        var act = () => ComponentBrokerProvisioning.CreateRabbitMq(Config(new Dictionary<string, string?>
         {
             ["broker:managementUrl"] = url,
             ["broker:managementUser"] = user,

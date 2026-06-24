@@ -32,7 +32,6 @@ internal class RedeemedTokenSeeder(
 
         var added = false;
         foreach (var file in fileSystem.Directory.EnumerateFiles(config.RedeemedTokensConfigPath, "*.json"))
-        {
             try
             {
                 var content = await fileSystem.File.ReadAllTextAsync(file, Encoding.UTF8, stoppingToken);
@@ -54,7 +53,6 @@ internal class RedeemedTokenSeeder(
                 throw new InvalidOperationException(
                     $"Failed to seed redeemed enrollment token from file '{file}'.", ex);
             }
-        }
 
         if (added)
             await repository.SaveChangesAsync(stoppingToken);

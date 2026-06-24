@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
+using LanguageExt;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -22,10 +23,13 @@ internal sealed class GeneRequestRegistry(
     /// a new message is available.
     /// </summary>
     private readonly SemaphoreSlim _availableSemaphore = new(0);
-    
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+    private readonly Dictionary<(UniqueGeneIdentifier Id, GeneHash Hash), ISet<IOperationTaskMessage>> _pendingTasks =
+        new();
+
     private readonly Queue<(UniqueGeneIdentifier Id, GeneHash Hash)> _queue = new();
-    private readonly Dictionary<(UniqueGeneIdentifier Id, GeneHash Hash), ISet<IOperationTaskMessage>> _pendingTasks = new();
+
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     public async Task EnqueueGeneRequest(
         OperationTask<PrepareGeneCommand> task,
@@ -43,20 +47,23 @@ internal sealed class GeneRequestRegistry(
                 // (IndexOf() returns -1), it should currently be processed.
                 position = _queue.ToList().IndexOf(geneInfo) + 1;
                 geneTasks.Add(task);
-                logger.LogDebug("Registering additional task {TaskId}. The gene {GeneId} ({GeneHash}) is already queued at position {Position}.",
+                logger.LogDebug(
+                    "Registering additional task {TaskId}. The gene {GeneId} ({GeneHash}) is already queued at position {Position}.",
                     task.TaskId, task.Command.Id, task.Command.Hash, position);
             }
             else
             {
-                geneTasks = new HashSet<IOperationTaskMessage>(OperationTaskMessageEqualityComparer.Default);
+                geneTasks = new System.Collections.Generic.HashSet<IOperationTaskMessage>(
+                    OperationTaskMessageEqualityComparer.Default);
                 _pendingTasks.Add(geneInfo, geneTasks);
                 geneTasks.Add(task);
-                
+
                 _queue.Enqueue(geneInfo);
                 position = _queue.Count;
                 // Increase the semaphore by one as we have enqueued a new request.
                 _availableSemaphore.Release();
-                logger.LogDebug("Adding gene {GeneId} ({GeneHash}) to the queue at position {Position} for task {TaskId}.",
+                logger.LogDebug(
+                    "Adding gene {GeneId} ({GeneHash}) to the queue at position {Position} for task {TaskId}.",
                     task.Command.Id, task.Command.Hash, position, task.TaskId);
             }
         }
@@ -122,18 +129,16 @@ internal sealed class GeneRequestRegistry(
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var taskMessaging = scope.GetInstance<ITaskMessaging>();
         foreach (var task in tasksToUpdate)
-        {
             await taskMessaging.ProgressMessage(
                 task.OperationId,
                 task.TaskId,
                 new { message, progress });
-        }
     }
 
     public async Task CompleteRequest(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,
-        LanguageExt.Fin<PrepareGeneResponse> result)
+        Fin<PrepareGeneResponse> result)
     {
         List<IOperationTaskMessage> tasksToComplete = [];
         List<List<IOperationTaskMessage>> tasksToUpdate = [];
@@ -175,10 +180,7 @@ internal sealed class GeneRequestRegistry(
         foreach (var (tasks, index) in tasksToUpdate.Select((t, i) => (t, i)))
         {
             var message = $"Waiting for {index + 1} other task(s)...";
-            foreach(var task in tasks)
-            {
-                await taskMessaging.ProgressMessage(task, new { message, progress = 0 });
-            }
+            foreach (var task in tasks) await taskMessaging.ProgressMessage(task, new { message, progress = 0 });
         }
     }
 
@@ -187,8 +189,8 @@ internal sealed class GeneRequestRegistry(
         public static OperationTaskMessageEqualityComparer Default { get; } = new();
 
         public bool Equals(IOperationTaskMessage? x, IOperationTaskMessage? y) =>
-            ReferenceEquals(x, y) || x?.OperationId == y?.OperationId && x?.TaskId == y?.TaskId;
-        
+            ReferenceEquals(x, y) || (x?.OperationId == y?.OperationId && x?.TaskId == y?.TaskId);
+
         public int GetHashCode(IOperationTaskMessage obj) =>
             HashCode.Combine(obj.OperationId, obj.TaskId);
     }

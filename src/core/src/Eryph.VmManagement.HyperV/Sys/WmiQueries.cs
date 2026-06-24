@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.PowerShell.Commands;
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
-using Eryph.VmManagement.Wmi;
 
 namespace Eryph.VmManagement.Sys;
 
-public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
+public static class WmiQueries<RT> where RT : struct, HasWmi<RT>
 {
     public static Eff<RT, Seq<(string Name, bool IsInstalled)>> getFeatures() =>
         from queryResult in Wmi<RT>.executeQuery(
@@ -21,7 +16,7 @@ public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
             "Win32_OptionalFeature",
             None)
         from features in queryResult
-            .Map(f => 
+            .Map(f =>
                 from name in getRequiredValue<string>(f, "Name")
                 from installState in getRequiredValue<uint>(f, "InstallState")
                 let isInstalled = installState == 1

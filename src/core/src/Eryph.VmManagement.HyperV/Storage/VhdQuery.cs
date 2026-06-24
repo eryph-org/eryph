@@ -3,7 +3,6 @@ using System.IO;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Storage;
@@ -62,7 +61,7 @@ public static class VhdQuery
         {
             true => from baseVhd in ResolveActualVhd(engine, vhdInfo, 0)
                     .MapLeft(e => Error.New($"Could not resolve base VHD of snapshot '{vhdInfo.Value.Path}.", e))
-                    select new SnapshotInfo(baseVhd, vhdInfo),
+                select new SnapshotInfo(baseVhd, vhdInfo),
             false => new SnapshotInfo(vhdInfo, None),
         };
 
@@ -73,16 +72,16 @@ public static class VhdQuery
         from result in IsSnapshotVhd(vhdInfo.Value.Path) switch
         {
             true => from _ in guard(depth < MaxSnapshotDepth, Error.New(
-                            "Exceeded maximum search depth when looking for the base VHD of the snapshot. The snapshot chain might be corrupted."))
-                        .ToEitherAsync()
-                    from parentPath in Optional(vhdInfo.Value.ParentPath)
-                        .Filter(notEmpty)
-                        .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent path."))
-                    from parentVhdInfo in GetVhdInfo(engine, parentPath)
-                    from validParentVhdInfo in parentVhdInfo
-                        .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent VHD."))
-                    from baseVhd in ResolveActualVhd(engine, validParentVhdInfo, depth + 1)
-                    select baseVhd,
+                        "Exceeded maximum search depth when looking for the base VHD of the snapshot. The snapshot chain might be corrupted."))
+                    .ToEitherAsync()
+                from parentPath in Optional(vhdInfo.Value.ParentPath)
+                    .Filter(notEmpty)
+                    .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent path."))
+                from parentVhdInfo in GetVhdInfo(engine, parentPath)
+                from validParentVhdInfo in parentVhdInfo
+                    .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent VHD."))
+                from baseVhd in ResolveActualVhd(engine, validParentVhdInfo, depth + 1)
+                select baseVhd,
             false => vhdInfo,
         }
         select result;

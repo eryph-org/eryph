@@ -1,7 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿using Eryph.VmManagement.Data.enums;
+
+namespace Eryph.VmManagement.Data;
+
+public interface IVMWithStateInfo
 {
-    public interface IVMWithStateInfo
-    {
-        VirtualMachineState State { get; }
-    }
+    VirtualMachineState State { get; }
 }

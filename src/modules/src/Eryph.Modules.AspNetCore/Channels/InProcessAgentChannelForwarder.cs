@@ -18,13 +18,6 @@ public sealed class InProcessAgentChannelForwarder
 {
     private volatile IAgentChannelRecipient? _recipient;
 
-    public IDisposable RegisterRecipient(IAgentChannelRecipient recipient)
-    {
-        ArgumentNullException.ThrowIfNull(recipient);
-        _recipient = recipient;
-        return new Registration(this, recipient);
-    }
-
     public async Task ForwardAsync(
         WebSocket operatorSocket,
         string agentName,
@@ -47,7 +40,16 @@ public sealed class InProcessAgentChannelForwarder
         }
 
         await using (guestStream)
+        {
             await WebSocketBridge.PumpAsync(operatorSocket, guestStream, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public IDisposable RegisterRecipient(IAgentChannelRecipient recipient)
+    {
+        ArgumentNullException.ThrowIfNull(recipient);
+        _recipient = recipient;
+        return new Registration(this, recipient);
     }
 
     private static async Task CloseQuietly(WebSocket socket)

@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMNetworkAdapterPortMirroringMode
 {
-    public enum VMNetworkAdapterPortMirroringMode
-    {
-        None,
-        Destination,
-        Source
-    }
+    None,
+    Destination,
+    Source,
 }

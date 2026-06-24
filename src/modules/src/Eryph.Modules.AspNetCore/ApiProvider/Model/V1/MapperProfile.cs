@@ -9,16 +9,16 @@ public class MapperProfile : Profile
 {
     public MapperProfile()
     {
-        CreateMap<StateDb.Model.OperationModel, Operation>()
+        CreateMap<OperationModel, Operation>()
             .ForMember(x => x.Result, m => m.MapFrom<OperationResultValueResolver>());
 
-        CreateMap<StateDb.Model.OperationProjectModel, Project>()
+        CreateMap<OperationProjectModel, Project>()
             .Flatten(x => x.Project);
 
         CreateMap<StateDb.Model.OperationLogEntry, OperationLogEntry>();
-        CreateMap<StateDb.Model.OperationResourceModel, OperationResource>();
+        CreateMap<OperationResourceModel, OperationResource>();
         CreateMap<StateDb.Model.Project, Project>();
-        CreateMap<StateDb.Model.OperationTaskModel, OperationTask>()
+        CreateMap<OperationTaskModel, OperationTask>()
             .ForMember(
                 x => x.Progress,
                 m => m.MapFrom(x => x.Status == OperationTaskStatus.Completed
@@ -29,11 +29,11 @@ public class MapperProfile : Profile
                 {
                     m.PreCondition(x => x.ReferenceType.HasValue);
                     m.MapFrom(s => new OperationTaskReference
-                        {
-                            Id = s.ReferenceId!,
-                            Type = s.ReferenceType!.Value,
-                            ProjectName = s.ReferenceProjectName!
-                        });
+                    {
+                        Id = s.ReferenceId!,
+                        Type = s.ReferenceType!.Value,
+                        ProjectName = s.ReferenceProjectName!,
+                    });
                 });
     }
 }

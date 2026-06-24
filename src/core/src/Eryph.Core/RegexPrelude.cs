@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core;

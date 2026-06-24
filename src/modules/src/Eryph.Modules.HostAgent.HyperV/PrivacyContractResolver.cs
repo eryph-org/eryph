@@ -11,7 +11,6 @@ namespace Eryph.Modules.HostAgent;
 
 public class PrivacyContractResolver : DefaultContractResolver
 {
-
     protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
     {
         var props = base.CreateProperties(type, memberSerialization);
@@ -40,7 +39,7 @@ public class PrivacyContractResolver : DefaultContractResolver
 
             if (!isPii)
                 continue;
-            
+
 
             prop.ValueProvider =
                 new PrivateValueProvider(property, critical);
@@ -50,20 +49,11 @@ public class PrivacyContractResolver : DefaultContractResolver
         return props;
     }
 
-    private class PrivateValueProvider : IValueProvider
+    private class PrivateValueProvider(PropertyInfo targetProperty, bool critical) : IValueProvider
     {
-        private readonly PropertyInfo _targetProperty;
-        private readonly bool _critical;
-
-        public PrivateValueProvider(PropertyInfo targetProperty, bool critical)
+        public object GetValue(object? target)
         {
-            _targetProperty = targetProperty;
-            _critical = critical;
-        }
-
-        public object GetValue([CanBeNull] object target)
-        {
-            var value = _targetProperty.GetValue(target);
+            var value = targetProperty.GetValue(target);
 
             if (value == null) return null;
 
@@ -72,15 +62,13 @@ public class PrivacyContractResolver : DefaultContractResolver
                 Value = new PrivateIdentifierValue
                 {
                     Value = value,
-                    Critical = _critical
-                }
+                    Critical = critical,
+                },
             };
-
         }
 
         public void SetValue(object target, object value)
         {
-            
         }
     }
 }

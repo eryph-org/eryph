@@ -1,5 +1,4 @@
-﻿using Rebus.Persistence.InMem;
-using Rebus.Transport.InMem;
+﻿using Rebus.Transport.InMem;
 
 namespace Eryph.Runtime.Zero;
 

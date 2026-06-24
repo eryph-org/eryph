@@ -1,6 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
+using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
@@ -33,6 +32,6 @@ public static class HostSettingsProvider<RT> where RT : struct, HasWmi<RT>
         {
             DefaultDataPath = dataPath,
             DefaultVirtualHardDiskPath = vhdPath,
-            DefaultNetwork = "nat"
+            DefaultNetwork = "nat",
         };
 }

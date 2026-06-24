@@ -1,11 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Eryph.StateDb.Model
-{
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+namespace Eryph.StateDb.Model;
 
-    public enum DiskType
-    {
-        VirtualDisk
-    }
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum DiskType
+{
+    VirtualDisk,
 }

@@ -6,13 +6,12 @@ namespace Eryph.DistributedLock.Tests;
 
 public class DistributedLockScopeHolderTests
 {
-    private readonly Mock<IDistributedLockProvider> _lockProviderMock;
-
     private readonly IDistributedLockScopeHolder _distributedLockManager;
+    private readonly Mock<IDistributedLockProvider> _lockProviderMock;
 
     public DistributedLockScopeHolderTests()
     {
-        _lockProviderMock = new();
+        _lockProviderMock = new Mock<IDistributedLockProvider>();
         _distributedLockManager = new DistributedLockScopeHolder(_lockProviderMock.Object);
     }
 
@@ -22,7 +21,7 @@ public class DistributedLockScopeHolderTests
         var timeOut = TimeSpan.FromSeconds(1);
         var handleMock = new Mock<IDistributedSynchronizationHandle>();
         var lockMock = new Mock<IDistributedLock>();
-        
+
         _lockProviderMock.Setup(p => p.CreateLock("test-lock"))
             .Returns(lockMock.Object);
 

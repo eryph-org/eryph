@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Net;
-using System.Threading;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.HostAgent.Networks.OVS;
@@ -11,7 +9,6 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
@@ -31,15 +28,15 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
     public NetworkChanges<RT> Build()
     {
-        return new NetworkChanges<RT>() { Operations = _operations };
+        return new NetworkChanges<RT> { Operations = _operations };
     }
 
     public Aff<RT, Unit> CreateOverlaySwitch(Seq<string> adapters) =>
         from _1 in LogMethodTrace(nameof(CreateOverlaySwitch))
         from _2 in AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _ in hostCommands.CreateOverlaySwitch(adapters)
-                  select unit,
+                from _ in hostCommands.CreateOverlaySwitch(adapters)
+                select unit,
             false,
             NetworkChangeOperation.CreateOverlaySwitch)
         from _3 in AddOperation(
@@ -60,15 +57,15 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             .Bind(b => b.Ports.Values.ToSeq()
                 // We assume that the port is a catlet port when the port name
                 // matches the interface ID (iface-id) as this the pattern which
-                // we use and the iface-id should only be set by the hypervisor (i.e us).
+                // we use and the iface-id should only be set by the hypervisor (ie us).
                 .Filter(p => p.Interfaces.Exists(i => i.InterfaceId.Map(iid => iid == p.Name).IfNone(false))))
             .Map(p => p.Name)
             .Strict()
         from _2 in overlayVMAdapters.Match(
-            Empty: () => unitAff,
-            Seq: a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect and reconnect operations.")
-                      from _2 in DisconnectOverlayVmAdapters(a)
-                      select unit)
+            () => unitAff,
+            a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect and reconnect operations.")
+                from _2 in DisconnectOverlayVmAdapters(a)
+                select unit)
         from _3 in AddOperation(
             StopOVN,
             _ => true,
@@ -80,34 +77,34 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             .SequenceSerial()
         from _5 in AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _1 in hostCommands.RemoveOverlaySwitch()
-                  from _2 in hostCommands.CreateOverlaySwitch(newOverlayAdapters)
-                  select unit,
+                from _1 in hostCommands.RemoveOverlaySwitch()
+                from _2 in hostCommands.CreateOverlaySwitch(newOverlayAdapters)
+                select unit,
             false,
             NetworkChangeOperation.RebuildOverLaySwitch)
         from _6 in overlayVMAdapters.Match(
-            Empty: () => unitAff,
-            Seq: ConnectOverlayVmAdapters)
+            () => unitAff,
+            ConnectOverlayVmAdapters)
         // When OVN is started, it automatically creates the integration bridge br-int.
         from _7 in AddOperation(
             StartOVN,
             false,
             NetworkChangeOperation.StartOVN)
         from _8 in vmPortNames.Match(
-            Empty: () => unitAff,
-            Seq: RecreateVmPorts)
+            () => unitAff,
+            RecreateVmPorts)
         select new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>());
 
     private Aff<RT, Unit> DisconnectOverlayVmAdapters(
         Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters) =>
         AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _ in hostCommands.DisconnectNetworkAdapters(overlayVMAdapters)
-                  select unit,
+                from _ in hostCommands.DisconnectNetworkAdapters(overlayVMAdapters)
+                select unit,
             _ => true,
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _ in hostCommands.ReconnectNetworkAdapters(overlayVMAdapters)
-                  select unit,
+                from _ in hostCommands.ReconnectNetworkAdapters(overlayVMAdapters)
+                select unit,
             false,
             NetworkChangeOperation.DisconnectVMAdapters);
 
@@ -115,8 +112,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters) =>
         AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _ in hostCommands.ConnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)
-                  select unit,
+                from _ in hostCommands.ConnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)
+                select unit,
             false,
             NetworkChangeOperation.ConnectVMAdapters);
 
@@ -131,7 +128,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                         from _1 in ovs.AddPortWithIFaceId("br-int", portName, ct).ToAff(e => e)
                         select unit))
                     .SequenceParallel()
-                  select unit,
+                select unit,
             false,
             NetworkChangeOperation.RecreateVmPorts,
             "br-int");
@@ -146,7 +143,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 from _ in ovs.RemoveBridge(bridgeName, ct).ToAff(e => e)
                 select unit),
             false,
-            NetworkChangeOperation.RemoveBridge, 
+            NetworkChangeOperation.RemoveBridge,
             bridgeName)
         select unit;
 
@@ -155,10 +152,10 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgesInfo currentBridges) =>
         from _1 in LogMethodTrace(nameof(RemoveOverlaySwitch))
         from _2 in overlayVMAdapters.Match(
-            Empty: () => unitAff,
-            Seq: a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect operations.")
-                      from _2 in DisconnectOverlayVmAdapters(a)
-                      select unit)
+            () => unitAff,
+            a => from unit1 in LogDebug("Found adapters on overlay switch. Adding disconnect operations.")
+                from _2 in DisconnectOverlayVmAdapters(a)
+                select unit)
         from _3 in AddOperation(
             StopOVN,
             _ => true,
@@ -170,23 +167,23 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             .SequenceSerial()
         from _5 in AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _ in hostCommands.RemoveOverlaySwitch()
-                  select unit,
+                from _ in hostCommands.RemoveOverlaySwitch()
+                select unit,
             false,
             NetworkChangeOperation.RemoveOverlaySwitch)
         select new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>());
-    
+
     public Aff<RT, Unit> EnableSwitchExtension(
         Guid switchId,
         string switchName) =>
         from _1 in LogMethodTrace(nameof(EnableSwitchExtension))
         from _2 in AddOperation(
-                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                      from _ in hostCommands.EnableSwitchExtension(switchId)
-                      select unit,
-                false,
-                NetworkChangeOperation.EnableSwitchExtension,
-                switchName)
+            () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                from _ in hostCommands.EnableSwitchExtension(switchId)
+                select unit,
+            false,
+            NetworkChangeOperation.EnableSwitchExtension,
+            switchName)
         select unit;
 
     public Aff<RT, Unit> DisableSwitchExtension(
@@ -194,12 +191,12 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         string switchName) =>
         from _1 in LogMethodTrace(nameof(DisableSwitchExtension))
         from _2 in AddOperation(
-                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                      from _ in hostCommands.DisableSwitchExtension(switchId)
-                      select unit,
-                false,
-                NetworkChangeOperation.DisableSwitchExtension,
-                switchName)
+            () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                from _ in hostCommands.DisableSwitchExtension(switchId)
+                select unit,
+            false,
+            NetworkChangeOperation.DisableSwitchExtension,
+            switchName)
         select unit;
 
     public Aff<RT, OvsBridgesInfo> RemoveUnusedBridges(
@@ -233,16 +230,16 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
     private static (Option<int> VlanTag, Option<string> VlanMode) GetBridgePortSettings(
         Option<NetworkProviderBridgeOptions> options) =>
-        (
-            options.Bind(o => Optional(o.BridgeVlan)),
-            options.Bind(o => o.VlanMode switch
-            {
-                BridgeVlanMode.Access => Some("access"),
-                BridgeVlanMode.NativeUntagged => Some("native-untagged"),
-                BridgeVlanMode.NativeTagged => Some("native-tagged"),
-                _ => None
-            })
-        );
+    (
+        options.Bind(o => Optional(o.BridgeVlan)),
+        options.Bind(o => o.VlanMode switch
+        {
+            BridgeVlanMode.Access => Some("access"),
+            BridgeVlanMode.NativeUntagged => Some("native-untagged"),
+            BridgeVlanMode.NativeTagged => Some("native-tagged"),
+            _ => None,
+        })
+    );
 
     public Aff<RT, HashSet<string>> AddMissingBridges(
         OvsBridgesInfo ovsBridges,
@@ -265,17 +262,19 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         let enableBridge = defaultIpMode != BridgeHostIpMode.Disabled
         from _2 in AddOperation(
             () => from c in default(RT).HostNetworkCommands
-                  from ovs in default(RT).OVS
-                  from _1 in timeout(
-                      TimeSpan.FromSeconds(30),
-                      from ct in cancelToken<RT>()
-                      from _ in ovs.AddBridge(newBridge.BridgeName, ct).ToAff(e => e)
-                      select unit)
-                  from _2 in timeout(
-                      TimeSpan.FromSeconds(30),
-                      from ct in cancelToken<RT>()
-                      from _ in ovs.UpdateBridgePort(newBridge.BridgeName, portSettings.VlanTag, portSettings.VlanMode, ct).ToAff(e => e)
-                      select unit)
+                from ovs in default(RT).OVS
+                from _1 in timeout(
+                    TimeSpan.FromSeconds(30),
+                    from ct in cancelToken<RT>()
+                    from _ in ovs.AddBridge(newBridge.BridgeName, ct).ToAff(e => e)
+                    select unit)
+                from _2 in timeout(
+                    TimeSpan.FromSeconds(30),
+                    from ct in cancelToken<RT>()
+                    from _ in ovs
+                        .UpdateBridgePort(newBridge.BridgeName, portSettings.VlanTag, portSettings.VlanMode, ct)
+                        .ToAff(e => e)
+                    select unit)
                 from _3 in c.WaitForBridgeAdapter(newBridge.BridgeName)
                 from _4 in enableBridge ? c.EnableBridgeAdapter(newBridge.BridgeName) : unitAff
                 select unit,
@@ -306,14 +305,14 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         from result in isNatValid
             ? SuccessAff(Option<NetNat>.None)
             : from _1 in LogDebug("Removing invalid host NAT '{Nat}'", nat.Name)
-              from _2 in AddOperation(
-                  () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                        from _ in hostCommands.RemoveNetNat(nat.Name)
-                        select unit,
-                  false,
-                  NetworkChangeOperation.RemoveNetNat,
-                  nat.Name)
-              select Some(nat)
+            from _2 in AddOperation(
+                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                    from _ in hostCommands.RemoveNetNat(nat.Name)
+                    select unit,
+                false,
+                NetworkChangeOperation.RemoveNetNat,
+                nat.Name)
+            select Some(nat)
         select result;
 
     public Aff<RT, Unit> AddMissingNats(
@@ -324,45 +323,45 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         let unmanagedNats = netNats
             .Filter(n => !n.Name.StartsWith("eryph_"))
             .Map(n => from network in parseIPNetwork2(n.InternalIPInterfaceAddressPrefix)
-                      select (n.Name, Network: network))
+                select (n.Name, Network: network))
             .Somes()
         from _2 in expectedBridges
             // Any invalid NATs would have been removed earlier. When the NAT
             // still exists at this point, it is valid.
             .Filter(b => b.Nat.Match(
-                Some: newNat => !netNats.Exists(n => n.Name == newNat.NatName),
-                None: () => false))
+                newNat => !netNats.Exists(n => n.Name == newNat.NatName),
+                () => false))
             .Map(b => AddMissingNat(b, unmanagedNats, unmanagedRoutes))
             .SequenceSerial()
         select unit;
 
     private Aff<RT, Unit> AddMissingNat(
         NewBridge expectedBridge,
-        Seq<(string Name, IPNetwork2 Network)> unmanagedNats, 
+        Seq<(string Name, IPNetwork2 Network)> unmanagedNats,
         Seq<HostRouteInfo> unmanagedRoutes) =>
         from newNat in expectedBridge.Nat
             .ToAff(Error.New($"BUG! NAT bridge '{expectedBridge.BridgeName}' has no NAT configuration."))
         from _1 in unmanagedNats.Find(un => un.Network.Overlap(newNat.Network)).Match(
-            Some: un => FailEff<Unit>(Error.New(
+            un => FailEff<Unit>(Error.New(
                 $"The IP range '{newNat.Network}' of the provider '{expectedBridge.ProviderName}' overlaps "
-                    + $"the IP range '{un.Network}' of the NAT '{un.Name}' which is not managed by eryph.")),
-            None: () => unitEff)
+                + $"the IP range '{un.Network}' of the NAT '{un.Name}' which is not managed by eryph.")),
+            () => unitEff)
         from _2 in unmanagedRoutes
             // Skip the default route(s), e.g. 0.0.0.0/0.
             .Filter(ur => ur.Destination.Cidr > 0)
             .Find(ur => ur.Destination.Overlap(newNat.Network)).Match(
-                Some: ur => FailEff<Unit>(Error.New(
+                ur => FailEff<Unit>(Error.New(
                     $"The IP range '{newNat.Network}' of the provider '{expectedBridge.ProviderName}' overlaps "
                     + $"the IP range '{ur.Destination}' of a network route which is not managed by eryph.")),
-                None: () => unitEff)
+                () => unitEff)
         from _3 in AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _1 in hostCommands.AddNetNat(newNat.NatName, newNat.Network)
-                  select unit,
+                from _1 in hostCommands.AddNetNat(newNat.NatName, newNat.Network)
+                select unit,
             _ => true,
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                  from _1 in hostCommands.RemoveNetNat(newNat.NatName)
-                  select unit,
+                from _1 in hostCommands.RemoveNetNat(newNat.NatName)
+                select unit,
             false,
             NetworkChangeOperation.AddNetNat,
             newNat.NatName, newNat.Network)
@@ -375,7 +374,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         from _1 in LogMethodTrace(nameof(RemoveInvalidAdapterPortsFromBridges))
         from changedBridges in expectedBridges
             .Map(newBridge => from ovsBridge in ovsBridges.Bridges.Find(newBridge.BridgeName)
-                              select (NewBridge: newBridge, OvsBridge: ovsBridge))
+                select (NewBridge: newBridge, OvsBridge: ovsBridge))
             .Somes()
             .Map(r => RemoveInvalidAdapterPortsFromBridge(r.NewBridge, r.OvsBridge, adaptersInfo))
             .SequenceSerial()
@@ -392,16 +391,16 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         // There must always be at most one port with external interfaces.
         // When multiple external interfaces should be used, the port should be bonded.
         from portCheckResult in portsWithPhysicalInterfaces.Match(
-            Empty: () => SuccessEff((true, false)),
-            Head: port => IsAdapterPortValid(expectedBridge, port, adaptersInfo),
-            Tail: _ => SuccessEff((false, false)))
+            () => SuccessEff((true, false)),
+            port => IsAdapterPortValid(expectedBridge, port, adaptersInfo),
+            _ => SuccessEff((false, false)))
         from result in portCheckResult.IsValid switch
         {
             true => SuccessAff(ovsBridge),
             false => from _ in portsWithPhysicalInterfaces
-                        .Map(pi => RemoveInvalidAdapterPortFromBridge(pi, portCheckResult.AnyAdapterRenamed))
-                        .SequenceSerial()
-                     select ovsBridge.RemovePorts(portsWithPhysicalInterfaces.Map(p => p.Name)),
+                    .Map(pi => RemoveInvalidAdapterPortFromBridge(pi, portCheckResult.AnyAdapterRenamed))
+                    .SequenceSerial()
+                select ovsBridge.RemovePorts(portsWithPhysicalInterfaces.Map(p => p.Name)),
         }
         select result;
 
@@ -423,7 +422,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     private Aff<RT, Unit> RemoveInvalidAdapterPortFromBridge(
         OvsBridgePortInfo port,
         bool force) =>
-        from _1 in LogDebug("The port {PortName} of bridge {BridgeName} uses unnecessary or invalid external interfaces. Removing the port.",
+        from _1 in LogDebug(
+            "The port {PortName} of bridge {BridgeName} uses unnecessary or invalid external interfaces. Removing the port.",
             port.Name, port.BridgeName)
         from _2 in AddOperation(
             () => timeout(
@@ -446,12 +446,13 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             .Map(newBridge => ConfigureNatAdapter(newBridge, createdBridges))
             .SequenceSerial()
         select unit;
-    
+
     private Aff<RT, Unit> ConfigureNatAdapter(
         NewBridge expectedBridge,
         HashSet<string> createdBridges) =>
         from newNat in expectedBridge.Nat
-            .ToAff(Error.New($"BUG! NAT bridge '{expectedBridge.BridgeName}' of provider '{expectedBridge.ProviderName}' has no NAT configuration."))
+            .ToAff(Error.New(
+                $"BUG! NAT bridge '{expectedBridge.BridgeName}' of provider '{expectedBridge.ProviderName}' has no NAT configuration."))
         // When the bridge is new, we do not need to check the IP address.
         // This check also prevents us from skipping the assignment of the
         // IP address when the bridge is recreated.
@@ -459,7 +460,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             ? SuccessAff(false)
             : IsNatAdapterIpValid(expectedBridge.BridgeName, newNat)
         from _1 in isBridgeAdapterIpValid
-            ? unitAff   
+            ? unitAff
             : AddOperation(
                 () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
                     from _1 in hostCommands.EnableBridgeAdapter(expectedBridge.BridgeName)
@@ -471,26 +472,27 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 expectedBridge.BridgeName)
         select unit;
 
-    private Aff<RT, bool> IsNatAdapterIpValid(
+    private static Aff<RT, bool> IsNatAdapterIpValid(
         string adapterName,
         NewBridgeNat expectedNat) =>
         from hostCommands in default(RT).HostNetworkCommands.ToAff()
         from ipAddresses in hostCommands.GetAdapterIpV4Address(adapterName)
         from isValid in ipAddresses.Match(
-            Empty: () => SuccessAff(false),
-            Head: ip => from _1 in unitAff
-                        let isMatch = ip.PrefixLength == expectedNat.Network.Cidr
-                                      && ip.IPAddress == expectedNat.Gateway.ToString()
-                        from _2 in isMatch
-                            ? unitAff
-                            : LogDebug("The host NAT adapter '{AdapterName}' has an invalid IP address. Expected: {ExpectedIp}/{ExpectedSuffix}, Actual: {ActualIp}/{ActualSuffix}",
-                                adapterName, expectedNat.Gateway, expectedNat.Network.Cidr, ip.IPAddress, ip.PrefixLength)
-                        select isMatch,
-            Tail: _ => from _1 in LogDebug("The host NAT adapter '{AdapterName}' has multiple IP addresses.",
-                           adapterName)
-                       select false)
+            () => SuccessAff(false),
+            ip => from _1 in unitAff
+                let isMatch = ip.PrefixLength == expectedNat.Network.Cidr
+                              && ip.IPAddress == expectedNat.Gateway.ToString()
+                from _2 in isMatch
+                    ? unitAff
+                    : LogDebug(
+                        "The host NAT adapter '{AdapterName}' has an invalid IP address. Expected: {ExpectedIp}/{ExpectedSuffix}, Actual: {ActualIp}/{ActualSuffix}",
+                        adapterName, expectedNat.Gateway, expectedNat.Network.Cidr, ip.IPAddress, ip.PrefixLength)
+                select isMatch,
+            _ => from _1 in LogDebug("The host NAT adapter '{AdapterName}' has multiple IP addresses.",
+                    adapterName)
+                select false)
         select isValid;
-    
+
     /// <summary>
     /// This method removes OVS bridges for which the host network adapter no longer exist.
     /// The bridges will be recreated later.
@@ -551,17 +553,19 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     TimeSpan.FromSeconds(30),
                     from ovs in default(RT).OVS
                     from ct in cancelToken<RT>()
-                    from _ in ovs.UpdateBridgePort(expectedBridge.BridgeName, expectedPortSettings.VlanTag, expectedPortSettings.VlanMode, ct)
-                            .ToAff(e => e)
+                    from _ in ovs.UpdateBridgePort(expectedBridge.BridgeName, expectedPortSettings.VlanTag,
+                            expectedPortSettings.VlanMode, ct)
+                        .ToAff(e => e)
                     select unit),
                 _ => true,
                 () => timeout(
                     TimeSpan.FromSeconds(30),
                     from ovs in default(RT).OVS
                     from ct in cancelToken<RT>()
-                    from _ in ovs.UpdateBridgePort(expectedBridge.BridgeName, currentPortSettings.Tag , currentPortSettings.VlanMode, ct)
+                    from _ in ovs.UpdateBridgePort(expectedBridge.BridgeName, currentPortSettings.Tag,
+                            currentPortSettings.VlanMode, ct)
                         .ToAff(e => e)
-                    select unit), 
+                    select unit),
                 false,
                 NetworkChangeOperation.UpdateBridgePort,
                 expectedBridge.BridgeName)
@@ -584,22 +588,22 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgesInfo ovsBridges,
         HostAdaptersInfo hostAdaptersInfo) =>
         from expectedPortName in expectedBridge.Adapters.Match(
-            Empty: () => FailEff<string>(Error.New("BUG! No adapters configured when trying to add overlay adapters.")),
-            Head: a => from adapterInfo in FindHostAdapter(hostAdaptersInfo, a, expectedBridge.BridgeName)
-                       // When the adapter has been renamed, the config and hence the expected
-                       // bridge will contain the old name. We must look up the current adapter name.
-                       select adapterInfo.Name,
-            Tail: _ => SuccessEff(GetBondPortName(expectedBridge.BridgeName)))
+            () => FailEff<string>(Error.New("BUG! No adapters configured when trying to add overlay adapters.")),
+            a => from adapterInfo in FindHostAdapter(hostAdaptersInfo, a, expectedBridge.BridgeName)
+                // When the adapter has been renamed, the config and hence the expected
+                // bridge will contain the old name. We must look up the current adapter name.
+                select adapterInfo.Name,
+            _ => SuccessEff(GetBondPortName(expectedBridge.BridgeName)))
         // When the port uses the wrong adapters, we already removed the port earlier.
         // Hence, if the port exists, the adapters are correct, and we only need to check the bond setting.
         let existingPort = ovsBridges.Bridges
             .Find(expectedBridge.BridgeName)
             .Bind(b => b.Ports.Find(expectedPortName))
-        from _4 in  existingPort.Match(
+        from _4 in existingPort.Match(
             None: () => AddOverlayAdapterPort(expectedBridge, expectedPortName, hostAdaptersInfo),
             Some: portInfo => UpdateOverlayAdapterPort(expectedBridge, portInfo))
         select unit;
-    
+
     private Aff<RT, Unit> AddOverlayAdapterPort(
         NewBridge expectedBridge,
         string expectedPortName,
@@ -610,9 +614,9 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         let anyAdapterRenamed = expectedAdapters
             .Exists(a => a.ConfiguredName.Map(cn => cn != a.Name).IfNone(false))
         from _2 in expectedAdapters.Match(
-                Empty: () => unitAff,
-                Head: a => AddSimpleOverlayAdapterPort(expectedBridge, expectedPortName, a, anyAdapterRenamed),
-                Tail: (h, t) => AddBondedOverlayAdapterPort(expectedBridge, expectedPortName, h.Cons(t), anyAdapterRenamed))
+            () => unitAff,
+            a => AddSimpleOverlayAdapterPort(expectedBridge, expectedPortName, a, anyAdapterRenamed),
+            (h, t) => AddBondedOverlayAdapterPort(expectedBridge, expectedPortName, h.Cons(t), anyAdapterRenamed))
         select unit;
 
     private static Eff<HostAdapterInfo> FindHostAdapter(
@@ -640,7 +644,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in ovs.AddBond(expectedBridge.BridgeName, expectedPortName, interfaces, ovsBondMode, ct).ToAff(e => e)
+                from _ in ovs.AddBond(expectedBridge.BridgeName, expectedPortName, interfaces, ovsBondMode, ct)
+                    .ToAff(e => e)
                 select unit),
             _ => true,
             () => timeout(
@@ -692,7 +697,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         {
             > 1 => UpdateBondedOverlayAdapterPort(expectedBridge, portInfo),
             // Simple adapter ports (no bond) do not have any settings which can be changed
-            _ => unitAff
+            _ => unitAff,
         };
 
     private Aff<RT, Unit> UpdateBondedOverlayAdapterPort(
@@ -717,7 +722,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     // We force a bond mode during the rollback as no bond mode at all
                     // can break the physical network. When a bond port is configured,
                     // the bond mode should be set anyway.
-                    from _ in ovs.UpdateBondPort(portInfo.Name, portInfo.BondMode.IfNone("active-backup"), ct).ToAff(e => e)
+                    from _ in ovs.UpdateBondPort(portInfo.Name, portInfo.BondMode.IfNone("active-backup"), ct)
+                        .ToAff(e => e)
                     select unit),
                 false,
                 NetworkChangeOperation.UpdateBondPort,

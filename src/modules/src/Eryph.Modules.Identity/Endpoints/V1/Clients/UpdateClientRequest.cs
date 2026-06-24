@@ -1,7 +1,7 @@
-﻿using Eryph.Modules.Identity.Models.V1;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Eryph.Modules.Identity.Models.V1;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 

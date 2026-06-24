@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -23,17 +22,17 @@ public class Delete(
     {
         return new DestroyVirtualDiskCommand
         {
-            DiskId = model.Id
+            DiskId = model.Id,
         };
     }
 
     [Authorize(Policy = "compute:catlets:write")]
     [HttpDelete("virtualdisks/{id}")]
     [SwaggerOperation(
-        Summary = "Delete a virtual disk",
-        Description = "Delete a virtual disk",
-        OperationId = "VirtualDisks_Delete",
-        Tags = ["Virtual Disks"])
+            Summary = "Delete a virtual disk",
+            Description = "Delete a virtual disk",
+            OperationId = "VirtualDisks_Delete",
+            Tags = ["Virtual Disks"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,

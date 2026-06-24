@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.HostAgent.Networks.OVS;
@@ -10,7 +9,6 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
@@ -106,7 +104,6 @@ public static class ProviderNetworkUpdate<RT>
         // Add bridges from config missing in OVS
         from createdBridges in changeBuilder.AddMissingBridges(
             ovsBridges3, expectedBridges)
-
         from _3 in changeBuilder.UpdateBridgePorts(
             expectedBridges, createdBridges, ovsBridges3)
 
@@ -126,12 +123,10 @@ public static class ProviderNetworkUpdate<RT>
         // Create ports for physical adapters in overlay bridges
         from _5 in changeBuilder.ConfigureOverlayAdapterPorts(
             expectedBridges, ovsBridges4, hostStateWithFallback.HostAdapters)
-
         from _6 in changeBuilder.AddMissingNats(expectedBridges, validNats, unmanagedRoutes)
 
         // Update OVS bridge mapping to new network names and bridges
         from _7 in changeBuilder.UpdateBridgeMappings(expectedBridges)
-
         select changeBuilder.Build();
 
     private static Eff<Seq<NewBridge>> prepareExpectedBridges(
@@ -150,7 +145,7 @@ public static class ProviderNetworkUpdate<RT>
             ? prepareNewBridgeNatInfo(providerConfig).Map(Some)
             : SuccessEff(Option<NewBridgeNat>.None)
         select new NewBridge(
-            bridgeName, 
+            bridgeName,
             providerConfig.Name,
             providerConfig.Type,
             nat,
@@ -177,13 +172,13 @@ public static class ProviderNetworkUpdate<RT>
         let overlayInterfaces = toHashSet(hostState.HostAdapters.Adapters.Values
             .ToSeq()
             .Filter(a => a.SwitchId.Match(
-                Some: overlaySwitches.Contains,
-                None: () => false))
+                overlaySwitches.Contains,
+                () => false))
             .Map(a => a.InterfaceId))
         let result = hostState.HostRoutes
             .Filter(r => r.InterfaceId.Match(
-                Some: i => !overlayInterfaces.Contains(i),
-                None: () => true))
+                i => !overlayInterfaces.Contains(i),
+                () => true))
         select result;
 
     private static string getNetNatName(string providerName)
@@ -200,19 +195,19 @@ public static class ProviderNetworkUpdate<RT>
             .Bind(bridgePort => bridgePort.Interfaces)
             .Filter(interfaceInfo => interfaceInfo.IsExternal)
             .Map(interfaceInfo => from configuredName in interfaceInfo.HostInterfaceConfiguredName
-                                  from interfaceId in interfaceInfo.HostInterfaceId
-                                  select (interfaceId, configuredName))
+                from interfaceId in interfaceInfo.HostInterfaceId
+                select (interfaceId, configuredName))
             .Somes()
             .ToHashMap()
         let adapterInfos = hostState.HostAdapters.Adapters.Values.ToSeq()
             .Map(adapterInfo => adapterInfo with
             {
-                ConfiguredName = configuredAdapters.Find(adapterInfo.InterfaceId)
+                ConfiguredName = configuredAdapters.Find(adapterInfo.InterfaceId),
             })
             .Map(adapterInfo => (adapterInfo.Name, AdapterInfo: adapterInfo))
         let fallbackAdapterInfos = adapterInfos
             .Map(t => from fallbackName in t.AdapterInfo.ConfiguredName
-                      select t with { Name = fallbackName })
+                select t with { Name = fallbackName })
             .Somes()
         let adaptersInfoWithFallback = new HostAdaptersInfo(adapterInfos.Concat(fallbackAdapterInfos).ToHashMap())
         select hostState with { HostAdapters = adaptersInfoWithFallback };
@@ -233,47 +228,48 @@ public static class ProviderNetworkUpdate<RT>
         from _ in expectedOverlayAdapters
             .Map(a => allOtherSwitches
                 .Find(s => s.NetAdapterInterfaceGuid.ToSeq().Contains(a.InterfaceId)).Match(
-                    Some: s => Fail<Error, Unit>(Error.New(
+                    s => Fail<Error, Unit>(Error.New(
                         $"The host adapter '{a.Name}' is used by the Hyper-V switch '{s.Name}'.")),
-                    None: () => Success<Error, Unit>(unit)))
+                    () => Success<Error, Unit>(unit)))
             .Sequence()
             .ToEff(errors => Error.New("Some host adapters are used by other Hyper-V switches.", Error.Many(errors)))
         let expectedOverlayAdapterNames = expectedOverlayAdapters.Map(a => a.Name)
         from bridges2 in expectedBridges.Length switch
         {
             > 0 => allOverlaySwitches.Match(
-                Empty: () => from _ in changeBuilder.CreateOverlaySwitch(expectedOverlayAdapterNames)
-                             select hostState.OvsBridges,
-                Head: s => (toHashSet(s.NetAdapterInterfaceGuid.ToSeq()) == toHashSet(expectedOverlayAdapters.Map(a => a.InterfaceId))) switch
+                () => from _ in changeBuilder.CreateOverlaySwitch(expectedOverlayAdapterNames)
+                    select hostState.OvsBridges,
+                s => (toHashSet(s.NetAdapterInterfaceGuid.ToSeq()) ==
+                      toHashSet(expectedOverlayAdapters.Map(a => a.InterfaceId))) switch
                 {
                     // The OVS extension has been enabled earlier for all existing overlay switches.
                     true => SuccessAff(hostState.OvsBridges),
                     // The physical adapters of the overlay switch are not correct. We must rebuild
                     // the overlay switch with the proper adapters.
                     false => from vmAdapters in getAllVmAdapters(Seq1(s))
-                             from bridges in changeBuilder.RebuildOverlaySwitch(
-                                 vmAdapters, hostState.OvsBridges, expectedOverlayAdapterNames)
-                             select bridges,
+                        from bridges in changeBuilder.RebuildOverlaySwitch(
+                            vmAdapters, hostState.OvsBridges, expectedOverlayAdapterNames)
+                        select bridges,
                 },
                 // Multiple overlay switches exist. We must remove all overlay switches and
                 // rebuild a single overlay switch with the proper adapters.
-                Tail: (h, t) => from vmAdapters in getAllVmAdapters(h.Cons(t))
-                                from _ in Logger<RT>.logInformation(
-                                    nameof(ProviderNetworkUpdate<RT>),
-                                    "Multiple overlay switches found. The overlay switch must be completely rebuilt.")
-                                from bridges in changeBuilder.RebuildOverlaySwitch(
-                                    vmAdapters, hostState.OvsBridges, expectedOverlayAdapterNames)
-                                select bridges),
+                (h, t) => from vmAdapters in getAllVmAdapters(h.Cons(t))
+                    from _ in Logger<RT>.logInformation(
+                        nameof(ProviderNetworkUpdate<>),
+                        "Multiple overlay switches found. The overlay switch must be completely rebuilt.")
+                    from bridges in changeBuilder.RebuildOverlaySwitch(
+                        vmAdapters, hostState.OvsBridges, expectedOverlayAdapterNames)
+                    select bridges),
             _ => allOverlaySwitches.Match(
-                Empty: () => SuccessAff(hostState.OvsBridges),
-                Seq: s => from vmAdapters in getAllVmAdapters(s)
-                          from ovsBridges in changeBuilder.RemoveOverlaySwitch(vmAdapters, hostState.OvsBridges)
-                          select ovsBridges),
+                () => SuccessAff(hostState.OvsBridges),
+                s => from vmAdapters in getAllVmAdapters(s)
+                    from ovsBridges in changeBuilder.RemoveOverlaySwitch(vmAdapters, hostState.OvsBridges)
+                    select ovsBridges),
         }
         select bridges2;
 
     private static Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> getAllVmAdapters(
-        Seq<VMSwitch> switches) => 
+        Seq<VMSwitch> switches) =>
         from hostCommands in default(RT).HostNetworkCommands
         from vmAdapters in switches
             .Map(s => hostCommands.GetVmAdaptersBySwitch(s.Id))
@@ -283,8 +279,8 @@ public static class ProviderNetworkUpdate<RT>
     public static Aff<RT, Unit> executeChangesWithRollback(
         NetworkChanges<RT> changes) =>
         changes.Operations.Match(
-            Empty: () => unitAff,
-            Seq: _ => executeExistingChangesWithRollback(changes));
+            () => unitAff,
+            _ => executeExistingChangesWithRollback(changes));
 
     private static Aff<RT, Unit> executeExistingChangesWithRollback(
         NetworkChanges<RT> changes) =>
@@ -330,8 +326,8 @@ public static class ProviderNetworkUpdate<RT>
             .Filter(op => (op.CanRollBack?.Invoke(executedOpCodes)).GetValueOrDefault())
             .Filter(op => op.Rollback is not null)
         from _2 in revertibleOperations.Match(
-                       Empty: () => Logger<RT>.logInformation<NetworkChanges<RT>>("No revertible operations found."),
-                       Seq: rollbackOperations)
+                       () => Logger<RT>.logInformation<NetworkChanges<RT>>("No revertible operations found."),
+                       rollbackOperations)
                    | @catch(e => Logger<RT>.logError<NetworkChanges<RT>>(e, "Rollback failed."))
         select unit;
 

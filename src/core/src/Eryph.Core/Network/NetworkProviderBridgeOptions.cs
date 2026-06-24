@@ -1,7 +1,4 @@
-﻿using JetBrains.Annotations;
-using YamlDotNet.Serialization;
-
-namespace Eryph.Core.Network;
+﻿namespace Eryph.Core.Network;
 
 public class NetworkProviderBridgeOptions
 {

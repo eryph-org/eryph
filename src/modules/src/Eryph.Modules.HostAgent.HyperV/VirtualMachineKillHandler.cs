@@ -13,7 +13,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
 using SimpleInjector;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;

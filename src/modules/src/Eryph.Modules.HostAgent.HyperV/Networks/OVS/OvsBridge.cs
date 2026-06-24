@@ -14,7 +14,7 @@ public record OvsBridge : OVSTableRecord, IOVSEntityWithName
             { "ports", OVSReference.Metadata() },
         };
 
-    public string Name => GetValue<string>("name");
-
     public Seq<Guid> Ports => GetReference("ports");
+
+    public string Name => GetValue<string>("name");
 }

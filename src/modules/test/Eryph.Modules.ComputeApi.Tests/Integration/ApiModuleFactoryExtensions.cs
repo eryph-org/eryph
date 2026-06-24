@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Hosuto.Modules.Testing;
 using Dbosoft.Rebus.Configuration;
@@ -11,7 +10,6 @@ using Dbosoft.Rebus.Operations.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.Channels;
 using Eryph.Rebus;
-using Eryph.StateDb.Sqlite;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -19,8 +17,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Rebus.Sagas;
 using Rebus.Timeouts;
 using Rebus.Transport.InMem;
@@ -32,41 +28,41 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration;
 
 public static class ApiModuleFactoryExtensions
 {
-    public static WebModuleFactory<ComputeApiModule> WithApiHost(
-        this WebModuleFactory<ComputeApiModule> factory,
-        Action<Container> configureContainer,
-        Action<SimpleInjectorAddOptions> configureModuleContainer,
-        IAgentChannelForwarder? channelForwarder = null)
+    extension(WebModuleFactory<ComputeApiModule> factory)
     {
-        // The compute API consumes IAgentChannelForwarder but does not register it — the host wires the
-        // implementation (network dial in the split runtime, in-process in eryph-zero). The test host
-        // does the same; a no-op forwarder is enough unless a test needs to observe the forward call.
-        var forwarder = channelForwarder ?? new NullAgentChannelForwarder();
-
-        return factory.WithModuleHostBuilder(hostBuilder =>
+        public WebModuleFactory<ComputeApiModule> WithApiHost(Action<Container> configureContainer,
+            Action<SimpleInjectorAddOptions> configureModuleContainer,
+            IAgentChannelForwarder channelForwarder = null)
         {
-            Container container = new();
+            // The compute API consumes IAgentChannelForwarder but does not register it — the host wires the
+            // implementation (network dial in the split runtime, in-process in eryph-zero). The test host
+            // does the same; a no-op forwarder is enough unless a test needs to observe the forward call.
+            var forwarder = channelForwarder ?? new NullAgentChannelForwarder();
 
-            container.Options.AllowOverridingRegistrations = true;
-            hostBuilder.UseSimpleInjector(container);
-
-            hostBuilder.UseEnvironment(Environments.Development);
-
-            var endpoints = new Dictionary<string, string>
+            return factory.WithModuleHostBuilder(hostBuilder =>
             {
-                { "identity", "http://localhost/identity/" },
-                { "compute", "http://localhost/compute/" },
-            };
+                Container container = new();
 
-            hostBuilder.ConfigureAppConfiguration(cfg =>
-            {
-                cfg.AddInMemoryCollection(new Dictionary<string, string>
+                container.Options.AllowOverridingRegistrations = true;
+                hostBuilder.UseSimpleInjector(container);
+
+                hostBuilder.UseEnvironment(Environments.Development);
+
+                var endpoints = new Dictionary<string, string>
                 {
-                    { "bus:type", "inmemory" },
-                    { "databus:type", "inmemory" },
-                    { "store:type", "inmemory" }
+                    { "identity", "http://localhost/identity/" },
+                    { "compute", "http://localhost/compute/" },
+                };
+
+                hostBuilder.ConfigureAppConfiguration(cfg =>
+                {
+                    cfg.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { "bus:type", "inmemory" },
+                        { "databus:type", "inmemory" },
+                        { "store:type", "inmemory" },
+                    });
                 });
-            });
 
                 container.RegisterInstance(new WorkflowOptions
                 {
@@ -76,40 +72,39 @@ public static class ApiModuleFactoryExtensions
                     JsonSerializerOptions = EryphJsonSerializerOptions.Options,
                 });
 
-            container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
+                container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
-            container.RegisterInstance(new InMemNetwork());
+                container.RegisterInstance(new InMemNetwork());
 
-            container.RegisterInstance(new InMemoryDatabaseRoot());
-            configureContainer(container);
+                container.RegisterInstance(new InMemoryDatabaseRoot());
+                configureContainer(container);
 
-            hostBuilder.ConfigureFrameworkServices((_, services) =>
-            {
-                services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>>(
-                    _ => new ModuleFilters(configureModuleContainer, forwarder));
-                services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>(
-                    _ => new ModuleFilters(configureModuleContainer, forwarder));
-            });
-        }).WithWebHostBuilder(webBuilder =>
-        {
-            webBuilder
-                .Configure(app => app.UseDeveloperExceptionPage())
-                .ConfigureTestServices(services =>
+                hostBuilder.ConfigureFrameworkServices((_, services) =>
                 {
-                    services.AddAuthentication(FakeJwtBearerDefaults.AuthenticationScheme).AddFakeJwtBearer();
-                    services.AddAuthorization(opts => ComputeApiModule.ConfigureScopes(opts, "fake"));
+                    services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>>(_ =>
+                        new ModuleFilters(configureModuleContainer, forwarder));
+                    services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>(_ =>
+                        new ModuleFilters(configureModuleContainer, forwarder));
                 });
-        });
-    }
+            }).WithWebHostBuilder(webBuilder =>
+            {
+                webBuilder
+                    .Configure(app => app.UseDeveloperExceptionPage())
+                    .ConfigureTestServices(services =>
+                    {
+                        services.AddAuthentication(FakeJwtBearerDefaults.AuthenticationScheme).AddFakeJwtBearer();
+                        services.AddAuthorization(opts => ComputeApiModule.ConfigureScopes(opts, "fake"));
+                    });
+            });
+        }
 
-    public static List<T> GetPendingRebusMessages<T>(
-        this WebModuleFactory<ComputeApiModule> factory)
-    {
-        var container = factory.Services.GetRequiredService<Container>();
-        var inMemNetwork = container.GetInstance<InMemNetwork>();
-        var transportMessages = inMemNetwork.GetMessages(QueueNames.Controllers);
+        public List<T> GetPendingRebusMessages<T>()
+        {
+            var container = factory.Services.GetRequiredService<Container>();
+            var inMemNetwork = container.GetInstance<InMemNetwork>();
+            var transportMessages = inMemNetwork.GetMessages(QueueNames.Controllers);
 
-        var workflowOptions = container.GetInstance<WorkflowOptions>();
+            var workflowOptions = container.GetInstance<WorkflowOptions>();
 
             return transportMessages
                 .Map(m => m.ToTransportMessage())
@@ -128,6 +123,7 @@ public static class ApiModuleFactoryExtensions
                 .OfType<T>()
                 .ToList();
         }
+    }
 
     private class ModuleFilters(
         Action<SimpleInjectorAddOptions> configureModuleContainer,

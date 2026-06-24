@@ -1,4 +1,3 @@
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
@@ -26,19 +25,17 @@ public class OpenSshChannelConnect(
     ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder,
     IAgentChannelForwarder channelForwarder,
     IApiResultFactory resultFactory)
-    : EndpointBaseAsync
-        .WithRequest<SshChannelConnectRequest>
-        .WithActionResult
+    : EndpointBaseAsync.WithRequest<SshChannelConnectRequest>.WithActionResult
 {
     [Authorize(Policy = "compute:catlets:remote-access")]
     [HttpGet("catlets/{id}/guest-services/ssh-channel/connect")]
     [SwaggerOperation(
-        Summary = "Connect the SSH channel data plane",
-        Description =
-            "WebSocket endpoint that reverse-proxies an SSH channel to a catlet's guest services. "
-            + "Requires the one-time token from a completed OpenSshChannel operation.",
-        OperationId = "Catlets_ConnectSshChannel",
-        Tags = ["Catlets"])
+            Summary = "Connect the SSH channel data plane",
+            Description =
+                "WebSocket endpoint that reverse-proxies an SSH channel to a catlet's guest services. "
+                + "Requires the one-time token from a completed OpenSshChannel operation.",
+            OperationId = "Catlets_ConnectSshChannel",
+            Tags = ["Catlets"]),
     ]
     public override async Task<ActionResult> HandleAsync(
         [FromRoute] SshChannelConnectRequest request,

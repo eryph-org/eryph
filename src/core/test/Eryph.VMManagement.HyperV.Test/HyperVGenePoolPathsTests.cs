@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core.VmAgent;
+﻿using Eryph.Core.VmAgent;
 using FluentAssertions;
 using Xunit;
 
@@ -20,7 +15,7 @@ public class HyperVGenePoolPathsTests
             {
                 Vms = @"Z:\vms",
                 Volumes = @"Z:\volumes",
-            }
+            },
         };
 
         var result = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig);

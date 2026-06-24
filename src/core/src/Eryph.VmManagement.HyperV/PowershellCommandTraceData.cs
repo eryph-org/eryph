@@ -8,11 +8,9 @@ public class PowershellCommandTraceData : TraceData
 
     public static PowershellCommandTraceData FromObject(PsCommandBuilder builder)
     {
-
         return new PowershellCommandTraceData
         {
-            Data = builder.ToDictionary()
+            Data = builder.ToDictionary(),
         };
-
     }
 }

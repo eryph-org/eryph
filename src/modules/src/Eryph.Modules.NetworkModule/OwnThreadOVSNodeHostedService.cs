@@ -11,8 +11,8 @@ namespace Eryph.Modules.Network;
 public class OwnThreadOVSNodeHostedService<TNode> : IHostedService
     where TNode : IOVSNode
 {
-    private readonly IOVSService<TNode> _ovsNodeService;
     private readonly ILogger<OwnThreadOVSNodeHostedService<TNode>> _logger;
+    private readonly IOVSService<TNode> _ovsNodeService;
 
     /// <summary>
     /// Creates a new hosted service for <typeparamref name="TNode"/>.
@@ -28,9 +28,14 @@ public class OwnThreadOVSNodeHostedService<TNode> : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-
         StartOnOwnThread();
         return Task.CompletedTask;
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await StopWitchCatch(_ovsNodeService, true,
+            $"Failed to stop OVN service {_ovsNodeService.GetType()}", cancellationToken);
     }
 
     private void StartOnOwnThread()
@@ -40,24 +45,13 @@ public class OwnThreadOVSNodeHostedService<TNode> : IHostedService
             try
             {
                 await _ovsNodeService.StartAsync(CancellationToken.None);
-
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Failed to start ovn service {serviceType}", _ovsNodeService.GetType());
                 throw;
             }
-
         }, TaskCreationOptions.LongRunning);
-
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await StopWitchCatch(_ovsNodeService, true, 
-            $"Failed to stop OVN service {_ovsNodeService.GetType()}", cancellationToken);
-
-
     }
 
     private async Task StopWitchCatch(IOVSService<TNode> service, bool ensureNodeStopped, string errorMessage
@@ -72,8 +66,4 @@ public class OwnThreadOVSNodeHostedService<TNode> : IHostedService
             _logger.LogDebug(ex, errorMessage);
         }
     }
-
-
-
-
 }

@@ -8,7 +8,6 @@ using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Components;
@@ -21,18 +20,17 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Components;
 /// </summary>
 [Route("v{version:apiVersion}")]
 public class Renew(IComponentEnrollmentService enrollmentService)
-    : EndpointBaseAsync
-        .WithRequest<EnrollComponentRequest>
-        .WithActionResult<EnrolledComponent>
+    : EndpointBaseAsync.WithRequest<EnrollComponentRequest>.WithActionResult<EnrolledComponent>
 {
     [AllowAnonymous]
     [HttpPost("components/renew")]
     [SwaggerOperation(
         Summary = "Renew a component certificate",
-        Description = "Issues fresh mTLS and (optionally) server-TLS certificates for the component identified by the presented client certificate.",
+        Description =
+            "Issues fresh mTLS and (optionally) server-TLS certificates for the component identified by the presented client certificate.",
         OperationId = "Components_Renew",
         Tags = ["Components"])]
-    [SwaggerResponse(Status200OK, "Success", typeof(EnrolledComponent), ["application/json"])]
+    [SwaggerResponse(Status200OK, "Success", typeof(EnrolledComponent), "application/json")]
     [SwaggerResponse(Status400BadRequest, "The renewal request is invalid")]
     [SwaggerResponse(Status401Unauthorized, "The renewal request was not authorized")]
     public override async Task<ActionResult<EnrolledComponent>> HandleAsync(

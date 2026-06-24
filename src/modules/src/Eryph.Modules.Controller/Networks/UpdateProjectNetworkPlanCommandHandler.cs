@@ -12,7 +12,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -30,7 +29,7 @@ internal class UpdateProjectNetworkPlanCommandHandler(
     public async Task Handle(OperationTask<UpdateProjectNetworkPlanCommand> message)
     {
         await messaging.ProgressMessage(message.OperationId, message.TaskId, "Rebuilding project network settings");
-        
+
         await UpdateProjectNetwork(message.Command.ProjectId)
             .FailOrComplete(messaging, message);
     }
@@ -57,9 +56,9 @@ internal class UpdateProjectNetworkPlanCommandHandler(
                 .Values.Map(port => new NetworkNeighborRecord
                 {
                     IpAddress = port.ExternalIP,
-                    MacAddress = port.ExternalMAC
+                    MacAddress = port.ExternalMAC,
                 })
-                .ToArray()
+                .ToArray(),
         }
         select response;
 }

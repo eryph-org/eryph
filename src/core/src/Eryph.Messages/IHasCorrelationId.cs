@@ -1,9 +1,8 @@
 ﻿using System;
 
-namespace Eryph.Messages
+namespace Eryph.Messages;
+
+public interface IHasCorrelationId
 {
-    public interface IHasCorrelationId
-    {
-        Guid CorrelationId { get; set; }
-    }
+    Guid CorrelationId { get; set; }
 }

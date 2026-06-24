@@ -1,5 +1,5 @@
-﻿using System.Security.Cryptography;
-using System;
+﻿using System;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
@@ -22,23 +22,20 @@ public class NewKey(
     ICertificateGenerator certificateGenerator,
     ICertificateKeyService certificateKeyService,
     IUserInfoProvider userInfoProvider)
-    : EndpointBaseAsync
-        .WithRequest<NewClientKeyRequest>
-        .WithActionResult<ClientWithSecret>
+    : EndpointBaseAsync.WithRequest<NewClientKeyRequest>.WithActionResult<ClientWithSecret>
 {
     [Authorize(Policy = "identity:clients:write")]
     [HttpPost("clients/{id}/key")]
     [SwaggerOperation(
-        Summary = "Create or replace the client key",
-        Description = "Create or replace the client key",
-        OperationId = "Clients_NewKey",
-        Tags = ["Clients"])
+            Summary = "Create or replace the client key",
+            Description = "Create or replace the client key",
+            OperationId = "Clients_NewKey",
+            Tags = ["Clients"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(ClientWithSecret),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(ClientWithSecret), "application/json"),
     ]
     public override async Task<ActionResult<ClientWithSecret>> HandleAsync(
         [FromRoute] NewClientKeyRequest request,
@@ -54,7 +51,7 @@ public class NewKey(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: "The system client cannot be modified.");
 
-        var sharedSecret = (request.Body.SharedSecret).GetValueOrDefault(false);
+        var sharedSecret = request.Body.SharedSecret.GetValueOrDefault(false);
         string key;
         if (sharedSecret)
         {
@@ -64,7 +61,6 @@ public class NewKey(
                 .Replace('=', '0');
             descriptor.ClientSecret = key;
             descriptor = await clientService.Update(descriptor, cancellationToken);
-                
         }
         else
         {

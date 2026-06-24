@@ -5,7 +5,6 @@ using Eryph.Core.Network;
 using Eryph.Modules.HostAgent.Networks;
 using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.Modules.HostAgent.Networks.Powershell;
-using Eryph.StateDb.Specifications;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -13,22 +12,22 @@ using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using Xunit.Abstractions;
-
 using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
-using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
-using ChangeOp = Eryph.Modules.HostAgent.Networks.NetworkChangeOperation<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
-
+using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdateInConsole<
+    Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
+using ChangeOp =
+    Eryph.Modules.HostAgent.Networks.NetworkChangeOperation<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.HyperV.Test;
 
 public class ProviderNetworkConsoleTests
 {
-    private readonly Mock<IOVSControl> _ovsControlMock = new();
-    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
     private readonly Mock<IHostNetworkCommands<TestRuntime>> _hostNetworkCommandsMock = new();
-    private readonly Mock<ISyncClient> _syncClientMock = new();
+    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
+    private readonly Mock<IOVSControl> _ovsControlMock = new();
     private readonly TestRuntime _runtime;
+    private readonly Mock<ISyncClient> _syncClientMock = new();
     private readonly ITestOutputHelper _testOutput;
 
     public ProviderNetworkConsoleTests(ITestOutputHelper testOutput)
@@ -46,15 +45,15 @@ public class ProviderNetworkConsoleTests
     {
         var hostState = CreateHostState();
         AddMocks();
-            
+
         var changes = new NetworkChanges<TestRuntime>
         {
             Operations = new[]
             {
                 new ChangeOp(
                     NetworkChangeOperation.AddBridge,
-                    () => unitAff, null, null, false)
-            }.ToSeq()
+                    () => unitAff, null, null, false),
+            }.ToSeq(),
         };
 
         _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
@@ -87,7 +86,7 @@ public class ProviderNetworkConsoleTests
             {
                 new ChangeOp(
                     NetworkChangeOperation.AddBridge,
-                    () => unitAff, _ => true , () =>
+                    () => unitAff, _ => true, () =>
                     {
                         rolledBack = true;
                         return unitAff;
@@ -98,8 +97,8 @@ public class ProviderNetworkConsoleTests
                     () => unitAff, null, null, false),
                 new ChangeOp(
                     NetworkChangeOperation.AddNetNat,
-                    () => FailAff<Unit>(Errors.TimedOut), null, null, false)
-            }.ToSeq()
+                    () => FailAff<Unit>(Errors.TimedOut), null, null, false),
+            }.ToSeq(),
         };
 
         _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
@@ -131,8 +130,8 @@ public class ProviderNetworkConsoleTests
             {
                 new ChangeOp(
                     NetworkChangeOperation.AddBridge,
-                    () => unitAff, null, null, false)
-            }.ToSeq()
+                    () => unitAff, null, null, false),
+            }.ToSeq(),
         };
 
         _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
@@ -165,7 +164,7 @@ public class ProviderNetworkConsoleTests
             {
                 new ChangeOp(
                     NetworkChangeOperation.AddBridge,
-                    () => unitAff, _ => true , () =>
+                    () => unitAff, _ => true, () =>
                     {
                         rolledBack = true;
                         return unitAff;
@@ -176,15 +175,15 @@ public class ProviderNetworkConsoleTests
                     () => unitAff, null, null, false),
                 new ChangeOp(
                     NetworkChangeOperation.AddNetNat,
-                    () => FailAff<Unit>(Errors.TimedOut), null, null, false)
-            }.ToSeq()
+                    () => FailAff<Unit>(Errors.TimedOut), null, null, false),
+            }.ToSeq(),
         };
 
         _runtime.Env.AnsiConsole.Input.PushTextWithEnter("a");
 
         var fin = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                .Bind(c => applyChangesInConsole(changes, () => SuccessAff(hostState), false, c))
-                .Run(_runtime);
+            .Bind(c => applyChangesInConsole(changes, () => SuccessAff(hostState), false, c))
+            .Run(_runtime);
 
         fin.Should().BeFail().Which.Should().Be(Errors.TimedOut);
         rolledBack.Should().BeTrue();
@@ -209,13 +208,13 @@ public class ProviderNetworkConsoleTests
                 Enabled = true,
                 Id = Guid.NewGuid().ToString(),
                 SwitchId = switchId,
-                SwitchName = EryphConstants.OverlaySwitchName
+                SwitchName = EryphConstants.OverlaySwitchName,
             }),
             Seq1(new VMSwitch
             {
                 Id = switchId,
                 Name = EryphConstants.OverlaySwitchName,
-                NetAdapterInterfaceGuid = null
+                NetAdapterInterfaceGuid = null,
             }),
             new HostAdaptersInfo(HashMap(
                 ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), None, true, None)))),

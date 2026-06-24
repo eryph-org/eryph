@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
 using Eryph.Modules.HostAgent.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -9,12 +6,12 @@ namespace Eryph.Modules.HostAgent.HyperV.Test.Channels;
 
 public class ChannelServiceTests
 {
-    private static readonly Guid VmId = Guid.Parse("2fe70974-c81a-4f3a-bf4e-7be405b88c97");
     private const string Slot = "eryph:guest-services:client-public-key:client-123";
     private const string KeyLine = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOperatorKey operator@host";
+    private static readonly Guid VmId = Guid.Parse("2fe70974-c81a-4f3a-bf4e-7be405b88c97");
+    private readonly Mock<IChannelEndpointProvider> _endpointProvider = new();
 
     private readonly Mock<IGuestDataWriter> _writer = new();
-    private readonly Mock<IChannelEndpointProvider> _endpointProvider = new();
 
     public ChannelServiceTests()
     {

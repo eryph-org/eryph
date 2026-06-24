@@ -11,26 +11,17 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 
 [Route("v{version:apiVersion}")]
-public abstract class NewOperationRequestEndpoint<TRequest, TModel> : EndpointBaseAsync
-    .WithRequest<TRequest>
-    .WithActionResult<Operation>
+public abstract class
+    NewOperationRequestEndpoint<TRequest, TModel>(ICreateEntityRequestHandler<TModel> operationHandler)
+    : EndpointBaseAsync.WithRequest<TRequest>.WithActionResult<Operation>
     where TRequest : RequestBase
 {
-    private readonly ICreateEntityRequestHandler<TModel> _operationHandler;
-
-    protected NewOperationRequestEndpoint(
-        ICreateEntityRequestHandler<TModel> operationHandler)
-    {
-        _operationHandler = operationHandler;
-    }
-
     protected abstract object CreateOperationMessage(TRequest request);
 
     [SwaggerResponse(
-        statusCode: StatusCodes.Status202Accepted,
-        description: "Success",
-        type: typeof(Operation),
-        contentTypes: ["application/json"])
+            StatusCodes.Status202Accepted,
+            "Success",
+            typeof(Operation), "application/json"),
     ]
 #pragma warning disable S6965
     public override Task<ActionResult<Operation>> HandleAsync(
@@ -38,6 +29,6 @@ public abstract class NewOperationRequestEndpoint<TRequest, TModel> : EndpointBa
         TRequest request,
         CancellationToken cancellationToken = default)
     {
-        return _operationHandler.HandleOperationRequest(() => CreateOperationMessage(request), cancellationToken);
+        return operationHandler.HandleOperationRequest(() => CreateOperationMessage(request), cancellationToken);
     }
 }

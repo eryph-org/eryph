@@ -3,7 +3,6 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
@@ -15,7 +14,7 @@ public static class CatletSpecificationConfigValidator
         CatletConfig catletConfig,
         string path = "") =>
         ValidateProperty(catletConfig, c => c.ConfigType, ValidateConfigType, path)
-        | ValidateProperty(catletConfig, c => c.Name, CatletName.NewValidation, path, required: true)
+        | ValidateProperty(catletConfig, c => c.Name, CatletName.NewValidation, path, true)
         | ValidateProperty(catletConfig, c => c.Project, ValidateProjectName, path);
 
     private static Validation<Error, Unit> ValidateConfigType(CatletConfigType configType) =>

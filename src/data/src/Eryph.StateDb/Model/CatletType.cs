@@ -1,11 +1,10 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Eryph.StateDb.Model
+namespace Eryph.StateDb.Model;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum CatletType
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum CatletType
-    {
-        VMHost,
-        VM
-    }
+    VMHost,
+    VM,
 }

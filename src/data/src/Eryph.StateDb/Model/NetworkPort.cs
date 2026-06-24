@@ -8,7 +8,7 @@ public abstract class NetworkPort
     public string? ProviderName { get; set; }
 
     public Guid Id { get; set; }
-    
+
     public required string MacAddress { get; set; }
 
     public string? AddressName { get; set; }

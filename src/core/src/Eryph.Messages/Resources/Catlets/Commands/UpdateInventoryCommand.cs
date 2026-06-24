@@ -2,16 +2,14 @@
 using Eryph.ConfigModel;
 using Eryph.Resources.Machines;
 
-namespace Eryph.Messages.Resources.Catlets.Commands
+namespace Eryph.Messages.Resources.Catlets.Commands;
+
+[SendMessageTo(MessageRecipient.Controllers)]
+public class UpdateInventoryCommand
 {
-    [SendMessageTo(MessageRecipient.Controllers)]
-    public class UpdateInventoryCommand
-    {
-        [PrivateIdentifier]
-        public string AgentName { get; set; }
+    [PrivateIdentifier] public string AgentName { get; set; }
 
-        public VirtualMachineData Inventory { get; set; }
+    public VirtualMachineData Inventory { get; set; }
 
-        public DateTimeOffset Timestamp { get; set; }
-    }
+    public DateTimeOffset Timestamp { get; set; }
 }

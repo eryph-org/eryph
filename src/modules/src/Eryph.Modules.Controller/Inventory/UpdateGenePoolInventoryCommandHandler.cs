@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using Eryph.GenePool;
 using Eryph.Messages.Genes.Commands;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;

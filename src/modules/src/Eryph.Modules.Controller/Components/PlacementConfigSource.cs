@@ -3,9 +3,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
-using Eryph.Core.Settings;
 using Eryph.Messages.Components;
-using LanguageExt;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Components;
@@ -24,8 +22,8 @@ internal sealed class PlacementConfigSource(
     public Task<string> BuildPayloadAsync(CancellationToken cancellationToken) =>
         settingsManager.GetCurrentConfiguration()
             .Match(
-                Right: settings => JsonSerializer.Serialize(settings.Placement),
-                Left: error =>
+                settings => JsonSerializer.Serialize(settings.Placement),
+                error =>
                 {
                     // Never distribute a silently-empty placement vocabulary — that would make
                     // agents reject every non-default datastore/environment. Fail the round

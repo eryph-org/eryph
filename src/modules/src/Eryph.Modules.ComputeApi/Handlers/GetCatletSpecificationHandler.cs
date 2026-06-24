@@ -6,6 +6,7 @@ using AutoMapper;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Mvc;
 using CatletSpecification = Eryph.Modules.ComputeApi.Model.V1.CatletSpecification;
@@ -14,7 +15,7 @@ namespace Eryph.Modules.ComputeApi.Handlers;
 
 internal class GetCatletSpecificationHandler(
     IMapper mapper,
-    IReadRepositoryBase<StateDb.Model.Catlet> catletRepository,
+    IReadRepositoryBase<Catlet> catletRepository,
     IReadRepositoryBase<StateDb.Model.CatletSpecification> specificationRepository,
     IUserRightsProvider userRightsProvider)
     : IGetRequestHandler<StateDb.Model.CatletSpecification, CatletSpecification>

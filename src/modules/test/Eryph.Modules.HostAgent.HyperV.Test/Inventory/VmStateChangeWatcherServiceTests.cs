@@ -1,6 +1,7 @@
 ﻿using Eryph.Modules.HostAgent.Inventory;
 using Eryph.VmManagement.Data;
-using Eryph.VmManagement.TestBase;
+using Eryph.VmManagement.Data.enums;
+using Eryph.VmManagement.HyperV.TestBase;
 using Eryph.VmManagement.Wmi;
 using Microsoft.Extensions.Logging.Abstractions;
 using static LanguageExt.Prelude;
@@ -19,7 +20,7 @@ public class VmStateChangeWatcherServiceTests
             ("OtherEnabledState", Optional<object>(null)),
             ("HealthState", Optional<object>(MsvmConstants.HealthState.Ok)),
             ("OnTimeInMilliseconds", Optional<object>(42000uL))
-            ));
+        ));
 
         var timestamp = DateTimeOffset.UtcNow;
         var wmiEvent = new WmiEvent(timestamp, wmiObject);

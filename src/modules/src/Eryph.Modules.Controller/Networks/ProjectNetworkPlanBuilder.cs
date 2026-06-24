@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -11,7 +10,6 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
@@ -21,23 +19,6 @@ internal class ProjectNetworkPlanBuilder(
     IStateStore stateStore)
     : IProjectNetworkPlanBuilder
 {
-    private sealed record FloatingPortInfo(FloatingNetworkPort Port);
-
-    private sealed record ProviderRouterPortInfo(
-        ProviderRouterPort Port,
-        VirtualNetwork Network,
-        ProviderSubnetInfo Subnet);
-
-    private sealed record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
-
-    private sealed record CatletDnsInfo(string CatletMetadataId, Map<string, string> Addresses);
-
-    private sealed record ProviderRouterIpInfo(
-        string ProviderName,
-        IPAddress ProjectRouterIp,
-        IPAddress ProviderRouterIp,
-        IPNetwork2 Network);
-
     public EitherAsync<Error, NetworkPlan> GenerateNetworkPlan(
         Guid projectId,
         NetworkProvidersConfiguration providerConfig) =>
@@ -45,19 +26,15 @@ internal class ProjectNetworkPlanBuilder(
         let networkPlan = new NetworkPlan(projectId.ToString())
         let overLayProviders = providerConfig.NetworkProviders.ToSeq()
             .Filter(x => x.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
-        
         from networks in GetAllOverlayNetworks(projectId, overLayProviders)
-
         from providerSubnets in GetProviderSubnetInfos(networks, overLayProviders)
         from providerRouterPorts in GetProviderRouterPortInfos(networks, providerSubnets)
         from providerRouterIpInfos in PrepareProviderRouterIpInfos(providerConfig)
-
         let catletPorts = networks.ToSeq()
             .Bind(n => n.NetworkPorts.OfType<CatletNetworkPort>().ToSeq())
         from floatingPorts in GetFloatingPortInfos(catletPorts, providerSubnets)
         let dnsInfo = MapCatletPortsToDnsInfos(catletPorts)
         let dnsNames = dnsInfo.Map(info => info.CatletMetadataId)
-
         from p1 in AddProjectRouterAndPorts(networkPlan, networks, providerRouterIpInfos)
         from p2 in AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
         from p3 in AddProviderRouterPorts(p2, providerRouterPorts, providerRouterIpInfos)
@@ -210,6 +187,9 @@ internal class ProjectNetworkPlanBuilder(
         from gatewayIp in parseIPAddress(portInfo.Subnet.Config.Gateway)
             .ToEitherAsync(Error.New(
                 $"Network '{portInfo.Network.Name}' configuration error: the subnet '{subnetName}' of the provider '{providerName}' has an invalid gateway IP address assigned."))
+        from logicalIpNetwork in Optional(portInfo.Network.IpNetwork)
+            .ToEitherAsync(Error.New(
+                $"Network '{portInfo.Network.Name}' configuration error: the network has no IP network assigned."))
         let updatedPlan = networkPlan
             .AddRouterPort(
                 $"externalNet-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
@@ -217,20 +197,20 @@ internal class ProjectNetworkPlanBuilder(
                 portInfo.Port.MacAddress,
                 parsedExternalIp,
                 externalNetwork,
-                chassisGroup: EryphConstants.Networking.LocalChassisGroupName)
+                EryphConstants.Networking.LocalChassisGroupName)
             .AddNATRule(
                 $"project-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
                 "snat",
                 parsedExternalIp,
                 "",
-                portInfo.Network.IpNetwork)
+                logicalIpNetwork)
             .AddStaticRoute(
                 $"project-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
                 "0.0.0.0/0",
                 gatewayIp)
             .AddStaticRoute(
                 $"project-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
-                portInfo.Network.IpNetwork,
+                logicalIpNetwork,
                 providerRouterIpInfo.ProjectRouterIp)
         select updatedPlan;
 
@@ -276,8 +256,8 @@ internal class ProjectNetworkPlanBuilder(
                 Options = Map(("network_name", externalNetwork)),
                 Addresses = Seq1("unknown"),
                 ExternalIds = Map(("network_plan", plan.Id)),
-                Tag = tag
-            })
+                Tag = tag,
+            }),
         };
     }
 
@@ -341,7 +321,7 @@ internal class ProjectNetworkPlanBuilder(
     private static NetworkPlan AddCatletPorts(NetworkPlan networkPlan, Seq<CatletNetworkPort> ports) =>
         ports.Map(port => networkPlan.AddNetworkPort(
                 port.Network.Id.ToString(), port.OvsName, port.MacAddress,
-                port.IpAssignments.HeadOrNone().Map(h => IPAddress.Parse(h.IpAddress))
+                port.IpAssignments.HeadOrNone().Bind(h => Optional(h.IpAddress)).Map(IPAddress.Parse)
                     .IfNone(IPAddress.None),
                 port.IpAssignments?.FirstOrDefault()?.SubnetId?.ToString() ?? ""))
             .Apply(s => JoinPlans(s, networkPlan));
@@ -351,9 +331,11 @@ internal class ProjectNetworkPlanBuilder(
         ports.Where(x => !string.IsNullOrWhiteSpace(x.AddressName))
             .Map(port => new CatletDnsInfo(
                 port.CatletMetadataId.ToString(),
-                port.IpAssignments.SelectMany(a => Seq(
-                        (Name: $"{port.AddressName}.{a.Subnet.DnsDomain}", Value: a.IpAddress),
-                        (Name: GetPTRFromAddress(a.IpAddress), Value: $"{port.AddressName}.{a.Subnet.DnsDomain}")))
+                port.IpAssignments.SelectMany(a => a.Subnet is { } subnet && a.IpAddress is { } ip
+                        ? Seq(
+                            (Name: $"{port.AddressName}.{subnet.DnsDomain}", Value: ip),
+                            (Name: GetPTRFromAddress(ip), Value: $"{port.AddressName}.{subnet.DnsDomain}"))
+                        : Seq<(string Name, string Value)>())
                     .GroupBy(x => x.Name)
                     .Map(g => (g.Key, string.Join(' ', g.Map(gi => gi.Value))))
                     .ToMap()));
@@ -381,16 +363,23 @@ internal class ProjectNetworkPlanBuilder(
             .Where(x => x.Port.AssignedPort?.IpAssignments?.Count > 0)
             .Map(portInfo =>
             {
-                var externalIpAddress = portInfo.Port.IpAssignments.First().IpAddress.Apply(IPAddress.Parse);
-                var internalIp = portInfo.Port.AssignedPort.IpAssignments.First().IpAddress;
+                var assignedPort = portInfo.Port.AssignedPort;
+                var externalIp = portInfo.Port.IpAssignments.First().IpAddress;
+                if (assignedPort is null || externalIp is null)
+                    throw new InvalidOperationException(
+                        $"BUG! Floating port '{portInfo.Port.Name}' is missing its assigned port or external IP.");
+
+                var internalIp = assignedPort.IpAssignments.First().IpAddress;
+                if (internalIp is null)
+                    throw new InvalidOperationException(
+                        $"BUG! The port assigned to floating port '{portInfo.Port.Name}' has no internal IP.");
 
                 return networkPlan.AddNATRule(
-                    $"project-{networkPlan.Id}-{portInfo.Port.AssignedPort.Network.NetworkProvider}",
+                    $"project-{networkPlan.Id}-{assignedPort.Network.NetworkProvider}",
                     "dnat_and_snat",
-                    externalIpAddress, portInfo.Port.MacAddress,
+                    IPAddress.Parse(externalIp), portInfo.Port.MacAddress,
                     internalIp,
-                    portInfo.Port.AssignedPort.OvsName);
-
+                    assignedPort.OvsName);
             })
             .Apply(s => JoinPlans(s, networkPlan));
 
@@ -453,18 +442,20 @@ internal class ProjectNetworkPlanBuilder(
         from ipNetwork in parseIPNetwork2(network.IpNetwork)
             .ToEitherAsync(Error.New(
                 $"Network '{network.Name}' configuration error: the IP network '{network.IpNetwork}' is invalid."))
-        from _1 in guardnot(network.RouterPort is null,
-            Error.New($"BUG! The network '{network.Name}' has no router port."))
-        from _2 in guard(network.RouterPort.IpAssignments is { Count: > 0 },
-            Error.New($"Network '{network.Name}' configuration error: the router port has no IP assigned."))
-        from routerIp in parseIPAddress(network.RouterPort.IpAssignments![0].IpAddress)
+        from routerPort in Optional(network.RouterPort)
+            .ToEitherAsync(Error.New($"BUG! The network '{network.Name}' has no router port."))
+        from routerAssignment in Optional(routerPort.IpAssignments)
+            .Bind(assignments => assignments.ToSeq().HeadOrNone())
             .ToEitherAsync(Error.New(
-                $"Network '{network.Name}' configuration error: the router port IP '{network.RouterPort.IpAssignments![0].IpAddress}' is invalid."))
+                $"Network '{network.Name}' configuration error: the router port has no IP assigned."))
+        from routerIp in parseIPAddress(routerAssignment.IpAddress)
+            .ToEitherAsync(Error.New(
+                $"Network '{network.Name}' configuration error: the router port IP '{routerAssignment.IpAddress}' is invalid."))
         let result = networkPlan
             .AddRouterPort(
                 network.Id.ToString(),
                 $"project-{networkPlan.Id}",
-                network.RouterPort.MacAddress,
+                routerPort.MacAddress,
                 routerIp,
                 ipNetwork,
                 routeTable: network.Id.ToString())
@@ -472,7 +463,7 @@ internal class ProjectNetworkPlanBuilder(
                 $"project-{networkPlan.Id}",
                 "0.0.0.0/0",
                 providerRouterIpInfo.ProviderRouterIp,
-                routeTable: network.Id.ToString())
+                network.Id.ToString())
         select result;
 
     private static NetworkPlan JoinPlans(Seq<NetworkPlan> plans, NetworkPlan basePlan)
@@ -491,4 +482,21 @@ internal class ProjectNetworkPlanBuilder(
             PlannedSwitches = current.PlannedSwitches + networkPlan.PlannedSwitches,
         });
     }
+
+    private sealed record FloatingPortInfo(FloatingNetworkPort Port);
+
+    private sealed record ProviderRouterPortInfo(
+        ProviderRouterPort Port,
+        VirtualNetwork Network,
+        ProviderSubnetInfo Subnet);
+
+    private sealed record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
+
+    private sealed record CatletDnsInfo(string CatletMetadataId, Map<string, string> Addresses);
+
+    private sealed record ProviderRouterIpInfo(
+        string ProviderName,
+        IPAddress ProjectRouterIp,
+        IPAddress ProviderRouterIp,
+        IPNetwork2 Network);
 }

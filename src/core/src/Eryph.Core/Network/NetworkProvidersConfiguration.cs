@@ -4,10 +4,6 @@ namespace Eryph.Core.Network;
 
 public class NetworkProvidersConfiguration
 {
-    [CanBeNull] public string EastWestNetwork { get; set; }
-
-    public NetworkProvider[] NetworkProviders { get; set; }
-
     public const string DefaultConfig =
         """
         network_providers:
@@ -24,4 +20,8 @@ public class NetworkProvidersConfiguration
               next_ip: 10.249.248.10
               last_ip: 10.249.251.241
         """;
+
+    [CanBeNull] public string EastWestNetwork { get; set; }
+
+    public NetworkProvider[] NetworkProviders { get; set; }
 }

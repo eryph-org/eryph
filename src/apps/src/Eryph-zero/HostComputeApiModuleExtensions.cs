@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Eryph.Modules.AspNetCore.Channels;
 using Eryph.Modules.ComputeApi;
-using Eryph.Modules.Identity;
 using Eryph.StateDb.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
@@ -52,9 +48,9 @@ public static class HostComputeApiModuleExtensions
 
                 // The compute API consumes the channel rendezvous; the host owns the single in-process
                 // forwarder and the agent registers its recipient with that same instance.
-                container.RegisterInstance<Eryph.Modules.AspNetCore.Channels.IAgentChannelForwarder>(
+                container.RegisterInstance<IAgentChannelForwarder>(
                     context.ModulesHostServices
-                        .GetRequiredService<Eryph.Modules.AspNetCore.Channels.InProcessAgentChannelForwarder>());
+                        .GetRequiredService<InProcessAgentChannelForwarder>());
             };
         }
     }

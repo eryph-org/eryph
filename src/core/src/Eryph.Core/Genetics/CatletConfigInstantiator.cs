@@ -1,7 +1,6 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Network;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
@@ -18,10 +17,8 @@ public static class CatletConfigInstantiator
     /// a unique storage path for the catlet instance.
     /// </remarks>
     public static CatletConfig Instantiate(CatletConfig config, string location) =>
-        InstantiateUpdate(config.CloneWith(c =>
-        {
-            c.Location = Optional(c.Location).Filter(notEmpty).IfNone(location);
-        }));
+        InstantiateUpdate(
+            config.CloneWith(c => { c.Location = Optional(c.Location).Filter(notEmpty).IfNone(location); }));
 
     /// <summary>
     /// This method ensures that the <see cref="CatletConfig"/> for an update is
@@ -34,7 +31,7 @@ public static class CatletConfigInstantiator
             c.ConfigType = CatletConfigType.Instance;
             c.Drives = c.Drives.ToSeq()
                 .Map(d => ApplyStorageIdentifier(d, c.Location))
-                .ToArray(); ;
+                .ToArray();
             c.NetworkAdapters = c.NetworkAdapters.ToSeq()
                 .Map(GenerateMacAddress)
                 .ToArray();
@@ -43,10 +40,7 @@ public static class CatletConfigInstantiator
     private static CatletDriveConfig ApplyStorageIdentifier(
         CatletDriveConfig driveConfig,
         string storageIdentifier) =>
-        driveConfig.CloneWith(d =>
-        {
-            d.Location = Optional(d.Location).Filter(notEmpty).IfNone(storageIdentifier);
-        });
+        driveConfig.CloneWith(d => { d.Location = Optional(d.Location).Filter(notEmpty).IfNone(storageIdentifier); });
 
     private static CatletNetworkAdapterConfig GenerateMacAddress(
         CatletNetworkAdapterConfig adapterConfig) =>

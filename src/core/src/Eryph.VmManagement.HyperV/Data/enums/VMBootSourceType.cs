@@ -1,10 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VMBootSourceType
 {
-    public enum VMBootSourceType
-    {
-        Unknown,
-        Drive,
-        Network,
-        File
-    }
+    Unknown,
+    Drive,
+    Network,
+    File,
 }

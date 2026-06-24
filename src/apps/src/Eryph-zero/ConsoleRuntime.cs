@@ -14,7 +14,6 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
@@ -33,9 +32,10 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     HasRegistry<ConsoleRuntime>,
     HasDism<ConsoleRuntime>
 {
-    private readonly ConsoleRuntimeEnv? _env = env;
-
-    public ConsoleRuntimeEnv Env => _env ?? throw new InvalidOperationException("Runtime env is not set");
+    public ConsoleRuntimeEnv Env
+    {
+        get => field ?? throw new InvalidOperationException("Runtime env is not set");
+    } = env;
 
     public Eff<ConsoleRuntime, IPowershellEngine> Powershell =>
         Eff<ConsoleRuntime, IPowershellEngine>(rt => rt.Env.PowershellEngine);
@@ -55,7 +55,7 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
         new CancellationTokenSource()));
 
     public CancellationToken CancellationToken => Env.Token;
-    
+
     public CancellationTokenSource CancellationTokenSource => Env.TokenSource;
 
     public Eff<ConsoleRuntime, ISyncClient> AgentSync =>
@@ -64,7 +64,7 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     public Eff<ConsoleRuntime, INetworkProviderManager> NetworkProviderManager =>
         Eff<ConsoleRuntime, INetworkProviderManager>(_ => new NetworkProviderManager());
 
-    public Eff<ConsoleRuntime, ILogger> Logger(string category) => 
+    public Eff<ConsoleRuntime, ILogger> Logger(string category) =>
         Eff<ConsoleRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
 
     public Eff<ConsoleRuntime, ILogger<T>> Logger<T>() =>

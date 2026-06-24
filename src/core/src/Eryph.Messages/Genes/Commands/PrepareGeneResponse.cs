@@ -1,9 +1,6 @@
 ﻿using System;
-using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.GenePool;
-using Eryph.GenePool.Model;
-using Eryph.Resources;
 
 namespace Eryph.Messages.Genes.Commands;
 

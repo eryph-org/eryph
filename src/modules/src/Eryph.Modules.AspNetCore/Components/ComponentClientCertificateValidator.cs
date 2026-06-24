@@ -1,4 +1,3 @@
-#nullable enable
 using System.Security.Cryptography.X509Certificates;
 
 namespace Eryph.Modules.AspNetCore.Components;
@@ -32,10 +31,8 @@ public static class ComponentClientCertificateValidator
         // has no source to build leaf -> intermediate -> root.
         var intermediates = new X509Certificate2Collection();
         if (presentedChain is not null)
-        {
             foreach (var element in presentedChain.ChainElements)
                 intermediates.Add(element.Certificate);
-        }
 
         return IsTrustedComponentClient(clientCertificate, intermediates, trustedRoots);
     }
@@ -68,16 +65,10 @@ public static class ComponentClientCertificateValidator
     private static bool HasClientAuthEku(X509Certificate2 certificate)
     {
         foreach (var extension in certificate.Extensions)
-        {
             if (extension is X509EnhancedKeyUsageExtension eku)
-            {
                 foreach (var oid in eku.EnhancedKeyUsages)
-                {
                     if (oid.Value == ClientAuthOid)
                         return true;
-                }
-            }
-        }
 
         return false;
     }

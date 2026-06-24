@@ -14,7 +14,7 @@ public class ProblemDetailsOperationFilter : IOperationFilter
         AddProblemDetails(operation, context);
     }
 
-    private void AddProblemDetails(OpenApiOperation operation, OperationFilterContext context)
+    private static void AddProblemDetails(OpenApiOperation operation, OperationFilterContext context)
     {
         var errorSchema = context.EnsureSchemaPresentAndGetRef<ProblemDetails>();
 
@@ -26,10 +26,10 @@ public class ProblemDetailsOperationFilter : IOperationFilter
                 {
                     "application/problem+json", new OpenApiMediaType
                     {
-                        Schema = errorSchema
+                        Schema = errorSchema,
                     }
-                }
-            }
+                },
+            },
         };
 
         operation.Responses.Add("default", response);

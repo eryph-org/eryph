@@ -1,33 +1,32 @@
 ﻿using System.Windows;
+using Wpf.Ui.Controls;
 
-namespace Eryph.Runtime.Uninstaller
+namespace Eryph.Runtime.Uninstaller;
+
+/// <summary>
+/// Interaction logic for TechnicalIssuesPage.xaml
+/// </summary>
+public partial class TechnicalIssuesPage
 {
-    /// <summary>
-    /// Interaction logic for TechnicalIssuesPage.xaml
-    /// </summary>
-    public partial class TechnicalIssuesPage
+    private readonly UninstallReason _uninstallReason;
+
+    public TechnicalIssuesPage(UninstallReason uninstallReason)
     {
-        private readonly UninstallReason _uninstallReason;
+        InitializeComponent();
+        _uninstallReason = uninstallReason;
+    }
 
-        public TechnicalIssuesPage(UninstallReason uninstallReason)
-        {
-            InitializeComponent();
-            _uninstallReason = uninstallReason;
-        }
+    private void IssueButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string issueType })
+            return;
 
-        private void IssueButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not Wpf.Ui.Controls.Button { Tag: string issueType })
-                return;
+        // Navigate directly to details page with selected issue type
+        NavigationService!.Navigate(new TechnicalIssuesDetailsPage(_uninstallReason, issueType));
+    }
 
-            // Navigate directly to details page with selected issue type
-            NavigationService!.Navigate(new TechnicalIssuesDetailsPage(_uninstallReason, issueType));
-        }
-
-        private void BackButton_Click(object sender, RoutedEventArgs e)
-        {
-            NavigationService?.GoBack();
-        }
-
+    private void BackButton_Click(object sender, RoutedEventArgs e)
+    {
+        NavigationService?.GoBack();
     }
 }

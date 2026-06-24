@@ -1,9 +1,8 @@
 ﻿using System;
 
-namespace Eryph.ModuleCore
+namespace Eryph.ModuleCore;
+
+public interface IEndpointResolver
 {
-    public interface IEndpointResolver
-    {
-        Uri GetEndpoint(string name);
-    }
+    Uri GetEndpoint(string name);
 }

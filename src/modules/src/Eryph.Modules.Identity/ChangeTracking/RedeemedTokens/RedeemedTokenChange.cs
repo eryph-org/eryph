@@ -1,3 +1,5 @@
+using System;
+
 namespace Eryph.Modules.Identity.ChangeTracking.RedeemedTokens;
 
 /// <summary>A change to a redeemed enrollment-token record, identified by its <c>jti</c>.</summary>
@@ -8,5 +10,5 @@ internal record RedeemedTokenConfigModel
 {
     public string Jti { get; init; } = "";
 
-    public System.DateTimeOffset ExpiresAt { get; init; }
+    public DateTimeOffset ExpiresAt { get; init; }
 }

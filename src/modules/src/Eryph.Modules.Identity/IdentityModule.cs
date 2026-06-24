@@ -1,40 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Linq;
 using Asp.Versioning;
 using Dbosoft.Hosuto.Modules;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Eryph.Core;
-using Eryph.Messages.Components;
-using Eryph.ModuleCore.Authorization;
-using Eryph.ModuleCore.Components;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
+using Eryph.Messages.Components;
 using Eryph.ModuleCore;
-using Eryph.ModuleCore.Startup;
-using Eryph.Rebus;
-using Microsoft.Extensions.Logging;
-using Rebus.Config;
-using Rebus.Handlers;
-using Rebus.Subscriptions;
-using System.IO.Abstractions;
+using Eryph.ModuleCore.Authorization;
+using Eryph.ModuleCore.Components;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.Identity.ChangeTracking;
 using Eryph.Modules.Identity.Events;
 using Eryph.Modules.Identity.Events.Validations;
 using Eryph.Modules.Identity.Services;
+using Eryph.Rebus;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenIddict.EntityFrameworkCore.Models;
+using Rebus.Config;
+using Rebus.Handlers;
+using Rebus.Subscriptions;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using static OpenIddict.Server.OpenIddictServerHandlers.Exchange;
@@ -46,14 +44,14 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
 {
     private readonly IdentityChangeTrackingConfig _changeTrackingConfig = BindChangeTracking(configuration);
 
+    public override string Path => endpointResolver.GetEndpoint("identity").ToString();
+
     private static IdentityChangeTrackingConfig BindChangeTracking(IConfiguration configuration)
     {
         var config = new IdentityChangeTrackingConfig();
         configuration.GetSection("IdentityChangeTracking").Bind(config);
         return config;
     }
-
-    public override string Path => endpointResolver.GetEndpoint("identity").ToString();
 
 #pragma warning disable S2325
     // ReSharper disable once UnusedMember.Global
@@ -119,12 +117,12 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
             .AddApiProvider<IdentityModule>(options =>
             {
                 options.ApiName = "Eryph Identity Api";
-                options.OAuthOptions = new ApiProviderOAuthOptions()
+                options.OAuthOptions = new ApiProviderOAuthOptions
                 {
                     TokenEndpoint = new Uri(authority + "/connect/token"),
                     Scopes = EryphConstants.Authorization.AllScopes
                         .Where(s => s.Resources.Contains(EryphConstants.Authorization.Audiences.IdentityApi))
-                        .ToList()
+                        .ToList(),
                 };
             });
 
@@ -140,10 +138,7 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
             });
 
 
-        services.AddAuthorization(options =>
-        {
-            ConfigureIdentityScopes(options, authority);
-        });
+        services.AddAuthorization(options => { ConfigureIdentityScopes(options, authority); });
 
         services.AddOpenIddict()
 
@@ -194,7 +189,6 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
                 // replace built-in scope permission validation with hierarchy-aware validation
                 options.RemoveEventHandler(ValidateScopePermissions.Descriptor);
                 options.AddEventHandler(ValidateScopePermissionsHandler.Descriptor);
-
             })
 
             // Register the OpenIddict validation components.
@@ -205,7 +199,6 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
 
                 // Register the ASP.NET Core host.
                 options.UseAspNetCore();
-
             });
     }
 
@@ -278,10 +271,7 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
     public static void ConfigureIdentityScopes(AuthorizationOptions options, string authority)
     {
         // Create policies for each scope using hierarchy-aware scope resolution
-        foreach (var scope in ScopeDefinitions.IdentityApiScopes)
-        {
-            CreateIdentityScopePolicy(options, authority, scope);
-        }
+        foreach (var scope in ScopeDefinitions.IdentityApiScopes) CreateIdentityScopePolicy(options, authority, scope);
     }
 
     private static void CreateIdentityScopePolicy(AuthorizationOptions options, string authority, string requiredScope)

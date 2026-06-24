@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using Dbosoft.OVN.Model;
 using LanguageExt;
 using LanguageExt.Common;
@@ -53,13 +52,13 @@ public interface IOVSControl
     EitherAsync<Error, Unit> UpdateBridgeMapping(
         string bridgeMappings,
         CancellationToken cancellationToken);
-    
+
     EitherAsync<Error, Unit> UpdateBridgePort(
         string bridgeName,
         Option<int> tag,
-        Option<string> vlanMode, 
+        Option<string> vlanMode,
         CancellationToken cancellationToken);
-    
+
     EitherAsync<Error, Unit> UpdateBondPort(
         string portName,
         string bondMode,

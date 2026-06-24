@@ -1,16 +1,9 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
+﻿using System.Diagnostics;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement;
-using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Networking;
 using JetBrains.Annotations;
-using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 

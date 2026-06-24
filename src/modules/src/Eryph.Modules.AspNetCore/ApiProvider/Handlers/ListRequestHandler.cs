@@ -45,7 +45,7 @@ public class ListRequestHandler<TRequest, TResult, TModel>(
         var queryResult = await repository.ListAsync(createSpecificationFunc(request), cancellationToken);
 
         var authContext = userRightsProvider.GetAuthContext();
-        var result = mapper.Map<IReadOnlyList<TResult>>(queryResult,  o => o.SetAuthContext(authContext));
+        var result = mapper.Map<IReadOnlyList<TResult>>(queryResult, o => o.SetAuthContext(authContext));
 
         return new JsonResult(new ListResponse<TResult> { Value = result });
     }

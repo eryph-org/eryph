@@ -8,7 +8,6 @@ using Eryph.Modules.AspNetCore.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-
 using ApiVirtualDisk = Eryph.Modules.ComputeApi.Model.V1.VirtualDisk;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
@@ -23,12 +22,12 @@ public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
 
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:read", false)
-            .GetAsync($"v1/virtualdisks/");
+            .GetAsync("v1/virtualdisks/");
 
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var virtualDisks = await response.Content.ReadFromJsonAsync<ListResponse<ApiVirtualDisk>>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         virtualDisks.Value.Should().BeEmpty();
     }
@@ -45,7 +44,7 @@ public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var virtualDisks = await response.Content.ReadFromJsonAsync<ListResponse<ApiVirtualDisk>>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         virtualDisks.Value.Should().HaveCount(2);
 
@@ -62,8 +61,8 @@ public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
         virtualDisk.Location.Should().Be(LocationName);
         virtualDisk.SizeBytes.Should().Be(DiskSize);
         virtualDisk.ParentId.Should().Be(ParentDiskId.ToString());
-        virtualDisk.AttachedCatlets.Should().SatisfyRespectively(
-            catlet => catlet.CatletId.Should().Be(CatletId.ToString()));
+        virtualDisk.AttachedCatlets.Should()
+            .SatisfyRespectively(catlet => catlet.CatletId.Should().Be(CatletId.ToString()));
 
         var parentDisk = virtualDisks.Value.Should().ContainSingle(d => d.Id == ParentDiskId.ToString()).Subject;
         parentDisk.Id.Should().Be(ParentDiskId.ToString());
@@ -90,12 +89,12 @@ public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
 
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:read", false)
-            .GetAsync($"v1/virtualdisks/");
+            .GetAsync("v1/virtualdisks/");
 
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var virtualDisks = await response.Content.ReadFromJsonAsync<ListResponse<ApiVirtualDisk>>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         var virtualDisk = virtualDisks.Value.Should().ContainSingle(d => d.Id == DiskId.ToString()).Subject;
         virtualDisk.Id.Should().Be(DiskId.ToString());

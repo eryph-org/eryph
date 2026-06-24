@@ -13,7 +13,7 @@ public class CatletSpecificationVersionVariantConfigModel
 
     public required string Architecture { get; set; }
 
-    public required JsonElement BuiltConfig { get; set; } 
-    
+    public required JsonElement BuiltConfig { get; set; }
+
     [MaybeNull] public IReadOnlyDictionary<string, string> PinnedGenes { get; set; }
 }

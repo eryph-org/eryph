@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Versioning;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 
@@ -53,15 +48,15 @@ public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, Ha
         from existingValue in Registry<RT>.getRegistryValue(
             @"HKEY_LOCAL_MACHINE\SOFTWARE\dbosoft\Eryph", "HardwareId")
         let existingGuid = from v in existingValue
-                           from s in Optional(v as string)
-                           from g in parseGuid(s)
-                           select g
+            from s in Optional(v as string)
+            from g in parseGuid(s)
+            select g
         from guid in existingGuid.Match(
-            Some: SuccessEff<RT, Guid>,
-            None: from newGuid in SuccessEff<RT, Guid>(Guid.NewGuid())
-                  from _ in Registry<RT>.writeRegistryValue(
-                      @"HKEY_LOCAL_MACHINE\SOFTWARE\dbosoft\Eryph", "HardwareId",
-                      newGuid.ToString())
-                  select newGuid)
+            SuccessEff<RT, Guid>,
+            from newGuid in SuccessEff<RT, Guid>(Guid.NewGuid())
+            from _ in Registry<RT>.writeRegistryValue(
+                @"HKEY_LOCAL_MACHINE\SOFTWARE\dbosoft\Eryph", "HardwareId",
+                newGuid.ToString())
+            select newGuid)
         select guid;
 }

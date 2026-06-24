@@ -12,7 +12,6 @@ public static class ProjectRoleAssignmentSpecs
     public sealed class GetById : Specification<ProjectRoleAssignment>,
         ISingleResultSpecification<ProjectRoleAssignment>
     {
-
         public GetById(Guid id, Guid projectId, AuthContext authContext, IEnumerable<Guid> sufficientRoles)
         {
             Query.Include(x => x.Project);
@@ -25,14 +24,12 @@ public static class ProjectRoleAssignmentSpecs
                 Query.Where(x => x.Project.ProjectRoles
                     .Any(y => authContext.Identities.Contains(y.IdentityId)
                               && sufficientRoles.Contains(y.RoleId)));
-
         }
 
         public GetById(Guid id, Guid projectId)
         {
             Query.Where(x => x.Id == id && x.ProjectId == projectId)
                 .Include(x => x.Project);
-
         }
     }
 
@@ -41,8 +38,8 @@ public static class ProjectRoleAssignmentSpecs
     {
         public GetByMemberAndRole(Guid projectId, string memberId, Guid roleId)
         {
-            Query.Where(x => x.ProjectId == projectId 
-                             && x.IdentityId == memberId  && x.RoleId == roleId);
+            Query.Where(x => x.ProjectId == projectId
+                             && x.IdentityId == memberId && x.RoleId == roleId);
         }
     }
 
@@ -52,33 +49,24 @@ public static class ProjectRoleAssignmentSpecs
         {
             Query.Include(x => x.Project);
 
-            Query.Where(x => x.Project.TenantId == authContext.TenantId 
+            Query.Where(x => x.Project.TenantId == authContext.TenantId
                              && x.ProjectId == projectId);
 
             if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
                 Query.Where(x => x.Project.ProjectRoles
                     .Any(y => authContext.Identities.Contains(y.IdentityId)
                               && sufficientRoles.Contains(y.RoleId)));
-
-
         }
 
         public GetByProject(Guid projectId, IEnumerable<string> identities)
         {
-            Query.Where(x => x.ProjectId == projectId 
+            Query.Where(x => x.ProjectId == projectId
                              && identities.Contains(x.IdentityId));
-
         }
 
         public GetByProject(Guid projectId)
         {
             Query.Where(x => x.ProjectId == projectId);
-
         }
-
     }
-
-
-
-
 }

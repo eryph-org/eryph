@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Eryph.Resources;
-using Eryph.StateDb.Workflows;
 
 namespace Eryph.StateDb.Model;
 
@@ -12,24 +11,24 @@ public class OperationTaskModel
     public Guid ParentTaskId { get; set; }
 
     public Guid OperationId { get; set; }
-        
+
     public OperationModel Operation { get; set; } = null!;
-    
+
     public OperationTaskStatus Status { get; set; }
-    
+
     public string? AgentName { get; set; }
-    
+
     public string? Name { get; set; }
-    
+
     public string? DisplayName { get; set; }
 
     public TaskReferenceType? ReferenceType { get; set; }
-    
+
     public string? ReferenceId { get; set; }
-    
+
     public string? ReferenceProjectName { get; set; }
 
     public DateTimeOffset LastUpdated { get; set; }
-    
+
     public List<TaskProgressEntry> Progress { get; set; } = null!;
 }

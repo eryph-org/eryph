@@ -26,7 +26,7 @@ public class GuestServicesSettingsTests(ITestOutputHelper outputHelper)
             .PatchAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/settings",
                 new { shell = "/bin/bash" },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
@@ -46,7 +46,7 @@ public class GuestServicesSettingsTests(ITestOutputHelper outputHelper)
             .PatchAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/settings",
                 new { shell = "" },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
@@ -62,7 +62,7 @@ public class GuestServicesSettingsTests(ITestOutputHelper outputHelper)
             .PatchAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/settings",
                 new { },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();
@@ -78,7 +78,7 @@ public class GuestServicesSettingsTests(ITestOutputHelper outputHelper)
             .PatchAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/settings",
                 new { shell = "/bin/bash" },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();
@@ -92,7 +92,7 @@ public class GuestServicesSettingsTests(ITestOutputHelper outputHelper)
             .PatchAsJsonAsync(
                 $"v1/catlets/{CatletId}/guest-services/settings",
                 new { shell = "/bin/bash" },
-                options: ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         Factory.GetPendingRebusMessages<SetGuestServicesDataCommand>().Should().BeEmpty();

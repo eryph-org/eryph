@@ -1,9 +1,8 @@
-﻿namespace Eryph.Messages
+﻿namespace Eryph.Messages;
+
+public enum MessageRecipient
 {
-    public enum MessageRecipient
-    {
-        VMHostAgent,
-        GenePoolAgent,
-        Controllers
-    }
+    VMHostAgent,
+    GenePoolAgent,
+    Controllers,
 }

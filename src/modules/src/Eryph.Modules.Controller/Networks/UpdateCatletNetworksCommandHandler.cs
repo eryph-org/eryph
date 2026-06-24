@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
@@ -19,7 +17,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -39,7 +36,7 @@ public class UpdateCatletNetworksCommandHandler(
         await UpdateNetworks(message.Command)
             .Map(settings => new UpdateCatletNetworksCommandResponse
             {
-                NetworkSettings = settings.ToArray()
+                NetworkSettings = settings.ToArray(),
             })
             .FailOrComplete(messaging, message);
     }
@@ -73,18 +70,19 @@ public class UpdateCatletNetworksCommandHandler(
             .Map(EryphNetworkName.NewEither)
             .Sequence().ToAsync()
             .Map(n => n.IfNone(EryphNetworkName.New(EryphConstants.DefaultNetworkName)))
-        
         from network in stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
             new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value, environmentName.Value))
         // It is optional to have an environment specific network. Therefore,
         // we fall back to the network in the default environment.
-        from validNetwork in network.IsNone && environmentName != EnvironmentName.New(EryphConstants.DefaultEnvironmentName)
+        from validNetwork in network.IsNone &&
+                             environmentName != EnvironmentName.New(EryphConstants.DefaultEnvironmentName)
             ? stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
-                    new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value, EryphConstants.DefaultEnvironmentName))
+                    new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value,
+                        EryphConstants.DefaultEnvironmentName))
                 .Bind(o => o.ToEitherAsync(
-                    Error.New($"Network '{networkName}' not found in environment '{environmentName}' and default environment.")))
+                    Error.New(
+                        $"Network '{networkName}' not found in environment '{environmentName}' and default environment.")))
             : network.ToEitherAsync(Error.New($"Network '{networkName}' not found in environment '{environmentName}'."))
-
         from networkProviders in providerManager.GetCurrentConfiguration()
         from networkProvider in networkProviders.NetworkProviders
             .Find(x => x.Name == validNetwork.NetworkProvider)
@@ -94,7 +92,6 @@ public class UpdateCatletNetworksCommandHandler(
         let networkAdapterConfig = command.Config.NetworkAdapters
             .ToSeq()
             .Find(x => x.Name == networkConfig.AdapterName)
-
         let allowMacAddressSpoofing = Optional(networkProvider.MacAddressSpoofing)
             .IfNone(providerManager.Defaults.MacAddressSpoofing)
         let enableMacAddressSpoofing = networkAdapterConfig
@@ -106,7 +103,6 @@ public class UpdateCatletNetworksCommandHandler(
         from _2 in guardnot(enableMacAddressSpoofing && !allowMacAddressSpoofing,
             Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
                       + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow MAC address spoofing."))
-
         let allowDisableDhcpGuard = Optional(networkProvider.DisableDhcpGuard)
             .IfNone(providerManager.Defaults.DisableDhcpGuard)
         let enableDhcpGuard = networkAdapterConfig
@@ -118,7 +114,6 @@ public class UpdateCatletNetworksCommandHandler(
         from _4 in guardnot(isFlatNetwork && !enableDhcpGuard && !allowDisableDhcpGuard,
             Error.New($"DHCP guard cannot be disabled for adapter '{networkConfig.AdapterName}': "
                       + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow the deactivation of the DHCP guard."))
-
         let allowDisableRouterGuard = Optional(networkProvider.DisableRouterGuard)
             .IfNone(providerManager.Defaults.DisableRouterGuard)
         let enableRouterGuard = networkAdapterConfig
@@ -130,15 +125,13 @@ public class UpdateCatletNetworksCommandHandler(
         from _6 in guardnot(isFlatNetwork && !enableRouterGuard && !allowDisableRouterGuard,
             Error.New($"Router guard cannot be disabled for adapter '{networkConfig.AdapterName}': "
                       + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow the deactivation of the router guard."))
-
         let fixedMacAddress = networkAdapterConfig.Bind(x => Optional(x.MacAddress))
         let hostname = Optional(command.Config.Hostname).Filter(notEmpty)
-            | Optional(command.Config.Name).Filter(notEmpty)
-
+                       | Optional(command.Config.Name).Filter(notEmpty)
         from networkPort in AddOrUpdateAdapterPort(
             validNetwork, command.CatletId, catletMetadataId,
             networkConfig.AdapterName, hostname.IfNoneUnsafe((string?)null), fixedMacAddress)
-        
+
         // For flat networks, look up the (optional) default provider subnet. When the flat
         // provider has a subnet configured, eryph assigns a static IP from its pool and
         // pushes the network configuration into the guest. Otherwise the catlet relies on
@@ -147,13 +140,12 @@ public class UpdateCatletNetworksCommandHandler(
             ? stateStore.For<ProviderSubnet>().IO.GetBySpecAsync(
                 new ProviderSubnetSpecs.GetByName(networkProvider.Name, EryphConstants.DefaultSubnetName))
             : RightAsync<Error, Option<ProviderSubnet>>(None)
-
         from ips in isFlatNetwork
             ? flatSubnet.Match(
-                Some: _ => providerIpManager.ConfigureProviderPortIps(
+                _ => providerIpManager.ConfigureProviderPortIps(
                     networkProvider.Name, EryphConstants.DefaultSubnetName,
                     EryphConstants.DefaultIpPoolName, networkPort),
-                None: () =>
+                () =>
                     from existingAssignments in stateStore.For<IpAssignment>().IO.ListAsync(
                         new IPAssignmentSpecs.GetByPort(networkPort.Id))
                     from _ in existingAssignments
@@ -161,22 +153,20 @@ public class UpdateCatletNetworksCommandHandler(
                         .SequenceSerial()
                     select Seq<IPAddress>())
             : ipManager.ConfigurePortIps(validNetwork, networkPort, networkConfig)
-
         from floatingIps in isFlatNetwork
             ? from _ in Optional(networkPort.FloatingPort)
-                  .Map(fp => stateStore.For<FloatingNetworkPort>().IO.DeleteAsync(fp))
-                  .Sequence()
-              select Seq<IPAddress>()
+                .Map(fp => stateStore.For<FloatingNetworkPort>().IO.DeleteAsync(fp))
+                .Sequence()
+            select Seq<IPAddress>()
             : from providerPort in stateStore.For<ProviderRouterPort>().IO.GetBySpecAsync(
-                  new ProviderRouterPortSpecs.GetByNetworkId(validNetwork.Id))
-              from validProviderPort in providerPort.ToEitherAsync(
-                  Error.New($"The overlay network '{validNetwork.Name}' has no provider port."))
-              let providerSubnetName = validProviderPort.SubnetName
-              let providerPoolName = validProviderPort.PoolName
-              from fp in UpdateFloatingPort(networkPort, networkProvider.Name, providerSubnetName, providerPoolName)
-              from ips in providerIpManager.ConfigureFloatingPortIps(networkProvider.Name, fp)
-              select ips
-
+                new ProviderRouterPortSpecs.GetByNetworkId(validNetwork.Id))
+            from validProviderPort in providerPort.ToEitherAsync(
+                Error.New($"The overlay network '{validNetwork.Name}' has no provider port."))
+            let providerSubnetName = validProviderPort.SubnetName
+            let providerPoolName = validProviderPort.PoolName
+            from fp in UpdateFloatingPort(networkPort, networkProvider.Name, providerSubnetName, providerPoolName)
+            from ips in providerIpManager.ConfigureFloatingPortIps(networkProvider.Name, fp)
+            select ips
         select new MachineNetworkSettings
         {
             NetworkProviderName = validNetwork.NetworkProvider,
@@ -227,8 +217,8 @@ public class UpdateCatletNetworksCommandHandler(
         VirtualNetwork network,
         Guid catletId,
         Guid catletMetadataId,
-        string adapterName,
-        string addressName,
+        string? adapterName,
+        string? addressName,
         Option<string> fixedMacAddress) =>
         from _ in RightAsync<Error, Unit>(unit)
         let portName = GetPortName(catletId, adapterName)
@@ -241,16 +231,16 @@ public class UpdateCatletNetworksCommandHandler(
         from existingPort in stateStore.For<CatletNetworkPort>().IO.GetBySpecAsync(
             new CatletNetworkPortSpecs.GetByCatletMetadataIdAndName(catletMetadataId, portName))
         from updatedPort in existingPort.Match(
-            Some: p =>
+            p =>
                 from _ in RightAsync<Error, Unit>(unit)
-                let __ =  fun(() =>
+                let __ = fun(() =>
                 {
                     p.AddressName = addressName;
                     p.MacAddress = macAddress.Value;
                     p.Network = network;
                 })()
                 select p,
-            None: () =>
+            () =>
                 from _ in RightAsync<Error, Unit>(unit)
                 let newPort = new CatletNetworkPort
                 {
@@ -266,7 +256,6 @@ public class UpdateCatletNetworksCommandHandler(
                 select addedPort)
         select updatedPort;
 
-    
 
     private EitherAsync<Error, FloatingNetworkPort> UpdateFloatingPort(
         CatletNetworkPort adapterPort,
@@ -305,6 +294,6 @@ public class UpdateCatletNetworksCommandHandler(
         from __ in stateStore.For<CatletNetworkPort>().IO.DeleteAsync(port)
         select unit;
 
-    private static string GetPortName(Guid catletId, string adapterName) =>
+    private static string GetPortName(Guid catletId, string? adapterName) =>
         $"{catletId}_{adapterName}";
 }

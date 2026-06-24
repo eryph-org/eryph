@@ -36,8 +36,9 @@ public class SerializationTests
             GeneSetMap = new Dictionary<GeneSetIdentifier, GeneSetIdentifier>
             {
                 [GeneSetIdentifier.New("acme/acme-parent/latest")] = GeneSetIdentifier.New("acme/acme-parent/1.0"),
-                [GeneSetIdentifier.New("acme/acme-grand-parent/latest")] = GeneSetIdentifier.New("acme/acme-grand-parent/1.0"),
-            }
+                [GeneSetIdentifier.New("acme/acme-grand-parent/latest")] =
+                    GeneSetIdentifier.New("acme/acme-grand-parent/1.0"),
+            },
         };
 
         var json = JsonSerializer.Serialize(data, EryphJsonSerializerOptions.Options);

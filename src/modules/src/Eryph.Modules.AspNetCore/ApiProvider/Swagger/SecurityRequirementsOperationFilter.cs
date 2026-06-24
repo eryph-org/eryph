@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger;
@@ -27,15 +22,15 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
 
         var oAuthScheme = new OpenApiSecurityScheme
         {
-            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" }
+            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" },
         };
 
         operation.Security =
         [
             new OpenApiSecurityRequirement
             {
-                [oAuthScheme] = scopes.ToList()
-            }
+                [oAuthScheme] = scopes.ToList(),
+            },
         ];
     }
 }

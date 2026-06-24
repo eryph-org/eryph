@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
@@ -17,10 +14,11 @@ internal class InventoryTimerJob(Container container) : IJob
 {
     public static readonly JobKey Key = new(nameof(InventoryTimerJob));
 
-    private readonly IBus _bus = container.GetInstance<IBus>();
-    private readonly ILogger _logger = container.GetInstance<ILogger<InventoryTimerJob>>();
     private readonly IStorageManagementAgentLocator _agentLocator
         = container.GetInstance<IStorageManagementAgentLocator>();
+
+    private readonly IBus _bus = container.GetInstance<IBus>();
+    private readonly ILogger _logger = container.GetInstance<ILogger<InventoryTimerJob>>();
 
     public async Task Execute(IJobExecutionContext context)
     {
@@ -31,7 +29,7 @@ internal class InventoryTimerJob(Container container) : IJob
             // the controller will need to pick a responsible agent.
             var agentName = _agentLocator.FindAgentForGenePool();
             await _bus.Advanced.Routing.Send($"{QueueNames.GenePool}.{agentName}",
-                new InventorizeGenePoolCommand()
+                new InventorizeGenePoolCommand
                 {
                     AgentName = agentName,
                 });

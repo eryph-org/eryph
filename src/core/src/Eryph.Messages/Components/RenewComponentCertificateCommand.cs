@@ -7,6 +7,4 @@ namespace Eryph.Messages.Components;
 /// endpoint using its current certificate. It carries no payload — the recipient queue identifies the
 /// component, and the renewed identity is taken from the presented certificate.
 /// </summary>
-public class RenewComponentCertificateCommand
-{
-}
+public class RenewComponentCertificateCommand;

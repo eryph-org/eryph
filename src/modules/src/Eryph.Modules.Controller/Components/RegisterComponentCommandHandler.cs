@@ -31,10 +31,8 @@ internal sealed class RegisterComponentCommandHandler(
         // Re-evaluate and push so already-registered components pick up the new
         // advertiser; the refresh is a no-op when the aggregated content is unchanged.
         if (message.AdvertisedEndpoints.Count > 0)
-        {
             await bus.Advanced.Routing.Send(
                 QueueNames.Controllers,
                 new RefreshConfigDomainCommand { Domain = ConfigDomain.Endpoints });
-        }
     }
 }

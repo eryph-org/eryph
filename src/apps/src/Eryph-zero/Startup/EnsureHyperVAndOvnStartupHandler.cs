@@ -9,7 +9,6 @@ using LanguageExt.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Logging;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero.Startup;

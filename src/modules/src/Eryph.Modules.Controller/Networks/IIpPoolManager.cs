@@ -12,5 +12,4 @@ public interface IIpPoolManager
         Guid subnetId,
         string poolName,
         CancellationToken cancellationToken = default);
-
 }

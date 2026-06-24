@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
@@ -12,14 +8,12 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
@@ -45,28 +39,28 @@ public class PopulateCatletConfigVariables(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlets/config/populate-variables")]
     [SwaggerOperation(
-        Summary = "Populate catlet config variables",
-        Description = "Populates the variables in a config for a new catlet based on the parent.",
-        OperationId = "Catlets_PopulateConfigVariables",
-        Tags = ["Catlets"])
-]
+            Summary = "Populate catlet config variables",
+            Description = "Populates the variables in a config for a new catlet based on the parent.",
+            OperationId = "Catlets_PopulateConfigVariables",
+            Tags = ["Catlets"]),
+    ]
     public override async Task<ActionResult<Operation>> HandleAsync(
-    [FromBody] PopulateCatletConfigVariablesRequest request,
-    CancellationToken cancellationToken = default)
+        [FromBody] PopulateCatletConfigVariablesRequest request,
+        CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
             request.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail: "The catlet configuration is invalid.",
+                "The catlet configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(NewCatletRequest.Configuration)));
 
         var config = validation.ToOption().ValueUnsafe();
 
         var projectName = Optional(config.Project).Filter(notEmpty).Match(
-            Some: n => ProjectName.New(n),
-            None: () => ProjectName.New(EryphConstants.DefaultProjectName));
+            n => ProjectName.New(n),
+            () => ProjectName.New(EryphConstants.DefaultProjectName));
 
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)

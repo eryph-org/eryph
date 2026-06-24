@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Management.Automation;
 using Eryph.ConfigModel;
@@ -9,8 +8,8 @@ namespace Eryph.VmManagement;
 
 public class PsCommandBuilder
 {
-    private readonly List<object> _input = [];
     private readonly List<BasePart> _dataChain = [];
+    private readonly List<object> _input = [];
 
     public static PsCommandBuilder Create()
     {
@@ -19,13 +18,13 @@ public class PsCommandBuilder
 
     public PsCommandBuilder AddCommand(string command)
     {
-        _dataChain.Add(new CommandPart{ Command = command });
+        _dataChain.Add(new CommandPart { Command = command });
         return this;
     }
 
     public PsCommandBuilder AddParameter(string parameter, object value)
     {
-        _dataChain.Add(new ParameterPart{ Parameter = parameter, Value = value });
+        _dataChain.Add(new ParameterPart { Parameter = parameter, Value = value });
         return this;
     }
 
@@ -37,21 +36,21 @@ public class PsCommandBuilder
 
     public PsCommandBuilder AddArgument(object statement)
     {
-        _dataChain.Add(new ArgumentPart{ Value = statement });
+        _dataChain.Add(new ArgumentPart { Value = statement });
         return this;
     }
 
     public PsCommandBuilder Script(string script)
     {
-        _dataChain.Add(new ScriptPart{ Script = script });
+        _dataChain.Add(new ScriptPart { Script = script });
         return this;
     }
 
-    public Dictionary<string,object> ToDictionary()
+    public Dictionary<string, object> ToDictionary()
     {
         var data = new Dictionary<string, object>
         {
-            {"chain", _dataChain.ToArray() }
+            { "chain", _dataChain.ToArray() },
         };
 
         return data;
@@ -67,7 +66,6 @@ public class PsCommandBuilder
         TraceContext.Current.Write(PowershellCommandTraceData.FromObject(this));
 
         foreach (var data in _dataChain)
-        {
             switch (data)
             {
                 case CommandPart part:
@@ -88,7 +86,6 @@ public class PsCommandBuilder
                 default:
                     throw new InvalidOperationException($"Parts of type {data.GetType().Name} are not supported.");
             }
-        }
 
         return [.._input];
     }
@@ -99,21 +96,16 @@ public class PsCommandBuilder
         return this;
     }
 
-    public abstract class BasePart
-    {
-
-    }
+    public abstract class BasePart;
 
     public class ArgumentPart : BasePart
     {
-        [PrivateIdentifier]
-        public object Value { get; init; }
+        [PrivateIdentifier] public object Value { get; init; }
     }
 
     public class ScriptPart : BasePart
     {
-        [PrivateIdentifier]
-        public string Script { get; init; }
+        [PrivateIdentifier] public string Script { get; init; }
     }
 
     public class CommandPart : BasePart
@@ -130,7 +122,6 @@ public class PsCommandBuilder
     {
         public string Parameter { get; init; }
 
-        [PrivateIdentifier]
-        public object Value { get; init; }
+        [PrivateIdentifier] public object Value { get; init; }
     }
 }

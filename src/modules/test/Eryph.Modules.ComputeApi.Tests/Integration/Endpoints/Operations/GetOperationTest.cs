@@ -17,7 +17,6 @@ using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-
 using ApiCatletConfigOperationResult = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.CatletConfigOperationResult;
 using ApiOperation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
@@ -53,14 +52,14 @@ public class GetOperationTest : InMemoryStateDbTestBase,
 
         var projectRepo = stateStore.For<Project>();
         await projectRepo.AddAsync(
-            new Project()
+            new Project
             {
                 Id = ProjectId,
                 TenantId = TenantId,
                 Name = "test-project",
                 ProjectRoles =
                 [
-                    new ProjectRoleAssignment()
+                    new ProjectRoleAssignment
                     {
                         Id = Guid.NewGuid(),
                         RoleId = EryphConstants.BuildInRoles.Reader,
@@ -70,7 +69,7 @@ public class GetOperationTest : InMemoryStateDbTestBase,
             });
         var otherProjectId = Guid.NewGuid();
         await projectRepo.AddAsync(
-            new Project()
+            new Project
             {
                 Id = otherProjectId,
                 TenantId = TenantId,
@@ -96,7 +95,7 @@ public class GetOperationTest : InMemoryStateDbTestBase,
             });
 
         await operationRepo.AddAsync(
-            new OperationModel()
+            new OperationModel
             {
                 Id = CrossOperationId,
                 TenantId = TenantId,
@@ -127,7 +126,7 @@ public class GetOperationTest : InMemoryStateDbTestBase,
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var operation = await response.Content.ReadFromJsonAsync<ApiOperation>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         operation.Should().NotBeNull();
         operation!.Id.Should().Be(ExistingOperationId.ToString());
@@ -151,10 +150,10 @@ public class GetOperationTest : InMemoryStateDbTestBase,
                     {
                         Config = new CatletConfig
                         {
-                            Name = "test-catlet"
+                            Name = "test-catlet",
                         },
                     },
-                    EryphJsonSerializerOptions.Options)
+                    EryphJsonSerializerOptions.Options),
             });
             await stateStore.SaveChangesAsync();
         }
@@ -166,7 +165,7 @@ public class GetOperationTest : InMemoryStateDbTestBase,
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var operation = await response.Content.ReadFromJsonAsync<ApiOperation>(
-            options: ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options);
 
         operation.Should().NotBeNull();
         operation!.Id.Should().Be(operationId.ToString());
@@ -194,7 +193,7 @@ public class GetOperationTest : InMemoryStateDbTestBase,
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(TenantId, UserId, "compute:project:read", false)
             .GetAsync($"v1/operations/{CrossOperationId}");
-        
+
         response.Should().HaveStatusCode(HttpStatusCode.NotFound);
     }
 
@@ -207,8 +206,8 @@ public class GetOperationTest : InMemoryStateDbTestBase,
 
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
-        var operation =  await response.Content.ReadFromJsonAsync<ApiOperation>(
-            options: ApiJsonSerializerOptions.Options);
+        var operation = await response.Content.ReadFromJsonAsync<ApiOperation>(
+            ApiJsonSerializerOptions.Options);
 
         operation.Should().NotBeNull();
         operation!.Id.Should().Be(CrossOperationId.ToString());

@@ -4,7 +4,6 @@ using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
@@ -92,7 +91,9 @@ public static class GenePoolPaths
             GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet),
             geneFolder,
             uniqueGeneId.Architecture.Hypervisor.IsAny ? "" : uniqueGeneId.Architecture.Hypervisor.Value,
-            uniqueGeneId.Architecture.ProcessorArchitecture.IsAny ? "" : uniqueGeneId.Architecture.ProcessorArchitecture.Value);
+            uniqueGeneId.Architecture.ProcessorArchitecture.IsAny
+                ? ""
+                : uniqueGeneId.Architecture.ProcessorArchitecture.Value);
     }
 
     public static Either<Error, GeneSetIdentifier> GetGeneSetIdFromPath(
@@ -121,7 +122,9 @@ public static class GenePoolPaths
                     StringComparison.OrdinalIgnoreCase),
                 Error.New("The gene set manifest path does not point to a gene set manifest."))
             .ToEither()
-        from geneSetId in GetGeneSetIdFromPath(genePoolPath, Path.GetDirectoryName(geneSetManifestPath))
+        from geneSetDirectory in Optional(Path.GetDirectoryName(geneSetManifestPath))
+            .ToEither(Error.New("The gene set manifest path does not have a parent directory."))
+        from geneSetId in GetGeneSetIdFromPath(genePoolPath, geneSetDirectory)
         select geneSetId;
 
     public static Either<Error, UniqueGeneIdentifier> GetUniqueGeneIdFromPath(
@@ -145,7 +148,7 @@ public static class GenePoolPaths
             "catlet.json" => Right<Error, GeneType>(GeneType.Catlet),
             "volumes" => Right(GeneType.Volume),
             "fodder" => Right(GeneType.Fodder),
-            _ => Error.New(InvalidGenePathError)
+            _ => Error.New(InvalidGenePathError),
         }
         from uniqueGeneId in geneType switch
         {
@@ -154,7 +157,7 @@ public static class GenePoolPaths
                 new GeneIdentifier(geneSetId, GeneName.New("catlet")),
                 Architecture.New("any")),
             GeneType.Volume or GeneType.Fodder => GetUniqueGeneIdFromSegments(geneType, geneSetId, parts[4..]),
-            _ => Error.New(InvalidGenePathError)
+            _ => Error.New(InvalidGenePathError),
         }
         select uniqueGeneId;
 
@@ -169,8 +172,8 @@ public static class GenePoolPaths
         let fileName = segments[^1]
         from __ in guard(Path.HasExtension(fileName), Error.New(InvalidGenePathError))
         let extension = Path.GetExtension(fileName)?.ToLowerInvariant()
-        from _3 in guard(geneType is GeneType.Fodder && extension == ".json"
-                         || geneType is GeneType.Volume && extension == ".vhdx",
+        from _3 in guard((geneType is GeneType.Fodder && extension == ".json")
+                         || (geneType is GeneType.Volume && extension == ".vhdx"),
             Error.New("The gene path is invalid"))
         from geneName in GeneName.NewEither(Path.GetFileNameWithoutExtension(fileName))
         select new UniqueGeneIdentifier(
@@ -189,7 +192,7 @@ public static class GenePoolPaths
             2 => from hypervisor in Hypervisor.NewEither(segments[0])
                 from processorArchitecture in ProcessorArchitecture.NewEither(segments[1])
                 select new Architecture(hypervisor, processorArchitecture),
-            _ => Error.New("The gene architecture is invalid.")
+            _ => Error.New("The gene architecture is invalid."),
         }
         select result;
 }

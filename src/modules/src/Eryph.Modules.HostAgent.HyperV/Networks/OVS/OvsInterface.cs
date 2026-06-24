@@ -14,11 +14,11 @@ public record OvsInterface : OVSTableRecord, IOVSEntityWithName
             { "type", OVSValue<string>.Metadata() },
         };
 
-    public string Name => GetValue<string>("name");
-
     public string? Error => GetValue<string?>("error");
-    
+
     public string? LinkState => GetValue<string?>("link_state");
 
     public string Type => GetValue<string>("type");
+
+    public string Name => GetValue<string>("name");
 }

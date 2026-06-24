@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Eryph.GuestServices.Core;
 using Eryph.GuestServices.HvDataExchange.Host;
 using Moq;

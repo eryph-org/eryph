@@ -1,14 +1,10 @@
-using System;
 using System.Net;
-using System.Net.Http;
 using System.Security.Authentication;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Security.Cryptography.X509Certificates;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace Eryph.ModuleCore.Tests.Components;
 
@@ -28,7 +24,7 @@ public class ComponentEnrollmentClientTests
     [Fact]
     public async Task EnsureEnrolledAsync_retries_until_the_identity_service_is_available()
     {
-        var transport = new FakeTransport(failuresBeforeSuccess: 2);
+        var transport = new FakeTransport(2);
         var store = new FakeStore();
 
         await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
@@ -45,7 +41,7 @@ public class ComponentEnrollmentClientTests
     [Fact]
     public async Task EnsureEnrolledAsync_does_not_enroll_when_a_current_certificate_exists()
     {
-        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var transport = new FakeTransport(0);
         var store = new FakeStore { Current = true };
 
         await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
@@ -55,11 +51,12 @@ public class ComponentEnrollmentClientTests
     }
 
     [Fact]
-    public async Task EnsureEnrolledAsync_makes_a_single_non_blocking_attempt_when_a_valid_cert_is_in_its_renewal_window()
+    public async Task
+        EnsureEnrolledAsync_makes_a_single_non_blocking_attempt_when_a_valid_cert_is_in_its_renewal_window()
     {
         // Valid but not current (renewal window): the component can keep running, so a failed renewal
         // must not block/retry — it is left for the next check.
-        var transport = new FakeTransport(failuresBeforeSuccess: 1);
+        var transport = new FakeTransport(1);
         var store = new FakeStore { Valid = true, Current = false };
 
         await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
@@ -71,7 +68,7 @@ public class ComponentEnrollmentClientTests
     [Fact]
     public async Task EnsureEnrolledAsync_renews_a_certificate_in_its_renewal_window()
     {
-        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var transport = new FakeTransport(0);
         var store = new FakeStore { Valid = true, Current = false };
 
         await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
@@ -89,10 +86,10 @@ public class ComponentEnrollmentClientTests
     {
         // An operator-forced refresh: the certificate is current (no scheduled renewal due), but force
         // renews it anyway via the renew endpoint (not the token), and persists the result.
-        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var transport = new FakeTransport(0);
         var store = new FakeStore { Current = true, Valid = true };
 
-        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, true);
 
         transport.RenewCalls.Should().Be(1);
         transport.EnrollCalls.Should().Be(0);
@@ -105,10 +102,10 @@ public class ComponentEnrollmentClientTests
         // A forced renewal of a still-current certificate is non-blocking: a failed attempt must be
         // swallowed (logged), not thrown, and must not persist anything — the component keeps the
         // certificate it already has. (Operator feedback is the target component's log.)
-        var transport = new FakeTransport(failuresBeforeSuccess: int.MaxValue);
+        var transport = new FakeTransport(int.MaxValue);
         var store = new FakeStore { Current = true, Valid = true };
 
-        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, true);
 
         transport.RenewCalls.Should().Be(1);
         store.SaveCount.Should().Be(0);
@@ -120,10 +117,10 @@ public class ComponentEnrollmentClientTests
         // A forced renewal of an expired/absent certificate cannot succeed (nothing to authenticate the
         // renew endpoint, and the one-time token is already spent), so it must NOT fall through to a
         // doomed token-enroll attempt — it surfaces the problem (logged) and makes no transport call.
-        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var transport = new FakeTransport(0);
         var store = new FakeStore { Current = false, Valid = false };
 
-        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, true);
 
         transport.Calls.Should().Be(0);
         store.SaveCount.Should().Be(0);
@@ -135,8 +132,8 @@ public class ComponentEnrollmentClientTests
         // No valid certificate (blocking), but the failure is non-transient (a 401 from a used/expired
         // token): it must surface immediately rather than wedge startup in an infinite retry loop.
         var transport = new FakeTransport(
-            failuresBeforeSuccess: int.MaxValue,
-            failureFactory: () => new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized));
+            int.MaxValue,
+            () => new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized));
         var store = new FakeStore();
 
         var act = () => Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
@@ -153,8 +150,8 @@ public class ComponentEnrollmentClientTests
         // was already used) must NOT throw — the component keeps running on its current certificate. It
         // is logged at Error, but a single non-blocking attempt is made and no retry loop runs.
         var transport = new FakeTransport(
-            failuresBeforeSuccess: int.MaxValue,
-            failureFactory: () => new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized));
+            int.MaxValue,
+            () => new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized));
         var store = new FakeStore { Valid = true, Current = false };
 
         await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None);
@@ -170,8 +167,8 @@ public class ComponentEnrollmentClientTests
         // AuthenticationException. It is a misconfiguration retrying cannot fix, so blocking startup must
         // abort rather than loop forever.
         var transport = new FakeTransport(
-            failuresBeforeSuccess: int.MaxValue,
-            failureFactory: () => new HttpRequestException(
+            int.MaxValue,
+            () => new HttpRequestException(
                 "TLS failure", new AuthenticationException("the remote certificate is invalid")));
         var store = new FakeStore();
 
@@ -208,7 +205,7 @@ public class ComponentEnrollmentClientTests
             Calls++;
             if (Calls <= failuresBeforeSuccess)
                 throw failureFactory?.Invoke()
-                    ?? new InvalidOperationException("the identity service is not ready");
+                      ?? new InvalidOperationException("the identity service is not ready");
 
             return Task.FromResult(new ComponentEnrollmentResult
             {
@@ -231,17 +228,19 @@ public class ComponentEnrollmentClientTests
 
         public bool HasCurrentCertificate() => Current;
         public bool HasValidCertificate() => Current || Valid;
-        public void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey, ComponentEnrollmentResult result) => SaveCount++;
 
-        public System.Security.Cryptography.X509Certificates.X509Certificate2? LoadClientCertificate() => null;
+        public void Save(byte[] clientPkcs8PrivateKey, byte[] serverPkcs8PrivateKey,
+            ComponentEnrollmentResult result) => SaveCount++;
+
+        public X509Certificate2? LoadClientCertificate() => null;
 
         public string? GetClientCertificatePfxPath() => Current ? "fake.pfx" : null;
 
-        public System.Security.Cryptography.X509Certificates.X509Certificate2Collection LoadCaTrustBundle() => [];
+        public X509Certificate2Collection LoadCaTrustBundle() => [];
 
-        public (System.Security.Cryptography.X509Certificates.X509Certificate2 Leaf,
-            System.Security.Cryptography.X509Certificates.X509Certificate2Collection Chain) LoadServerCertificate() =>
-            throw new System.NotSupportedException("The enrollment client tests do not use the server certificate.");
+        public (X509Certificate2 Leaf,
+            X509Certificate2Collection Chain) LoadServerCertificate() =>
+            throw new NotSupportedException("The enrollment client tests do not use the server certificate.");
 
         public ComponentCertificatePem? ReadClientCertificatePem() => null;
     }

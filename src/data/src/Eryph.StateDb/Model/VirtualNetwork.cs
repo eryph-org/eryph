@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using Eryph.Resources;
-using JetBrains.Annotations;
 
 namespace Eryph.StateDb.Model;
 
@@ -15,10 +14,10 @@ public class VirtualNetwork : Resource
     public required string NetworkProvider { get; set; }
 
     public string? IpNetwork { get; set; }
-    
+
     public NetworkRouterPort? RouterPort { get; set; } = null!;
 
     public List<VirtualNetworkPort> NetworkPorts { get; set; } = null!;
-    
+
     public List<VirtualNetworkSubnet> Subnets { get; set; } = null!;
 }

@@ -22,17 +22,6 @@ public sealed class HttpEnrollmentTransport(HttpClient httpClient, IEndpointReso
     // do not bind on the server and the request is rejected.
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
-    private static JsonSerializerOptions CreateJsonOptions()
-    {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        };
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
-
     public Task<ComponentEnrollmentResult> EnrollAsync(
         ComponentEnrollmentRequest request,
         CancellationToken cancellationToken) =>
@@ -45,6 +34,17 @@ public sealed class HttpEnrollmentTransport(HttpClient httpClient, IEndpointReso
         // HttpClient's handler presents at the TLS layer; the request body (new public keys) is the same
         // shape as enrollment, only the endpoint and the credential differ.
         PostAsync("renew", request, cancellationToken);
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
 
     private async Task<ComponentEnrollmentResult> PostAsync(
         string action, ComponentEnrollmentRequest request, CancellationToken cancellationToken)
@@ -64,6 +64,6 @@ public sealed class HttpEnrollmentTransport(HttpClient httpClient, IEndpointReso
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         return JsonSerializer.Deserialize<ComponentEnrollmentResult>(body, JsonOptions)
-            ?? throw new InvalidOperationException("The enrollment response was empty.");
+               ?? throw new InvalidOperationException("The enrollment response was empty.");
     }
 }

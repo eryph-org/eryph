@@ -1,5 +1,4 @@
-﻿using System;
-using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.Modules.ComputeApi.Model.V1;
 

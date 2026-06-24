@@ -36,7 +36,8 @@ public class EnrollmentTokenCodecTests
     public void Issue_normalises_the_bound_fqdn_to_lower_case()
     {
         var ca = CreateCa();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, "Agent1.Eryph.LOCAL", DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, "Agent1.Eryph.LOCAL",
+            DateTimeOffset.UtcNow.AddMinutes(5));
 
         EnrollmentTokenCodec.TryRead(ca, token)!.Fqdn.Should().Be("agent1.eryph.local");
     }
@@ -45,7 +46,8 @@ public class EnrollmentTokenCodecTests
     public void TryRead_does_not_enforce_expiry_that_is_the_redeemers_job()
     {
         var ca = CreateCa();
-        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddSeconds(-5));
+        var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host,
+            DateTimeOffset.UtcNow.AddSeconds(-5));
 
         var content = EnrollmentTokenCodec.TryRead(ca, token);
 
@@ -76,7 +78,8 @@ public class EnrollmentTokenCodecTests
     [Fact]
     public void TryRead_rejects_a_token_from_a_different_ca()
     {
-        var token = EnrollmentTokenCodec.Issue(CreateCa(), ComponentType.Controller, Host, DateTimeOffset.UtcNow.AddMinutes(5));
+        var token = EnrollmentTokenCodec.Issue(CreateCa(), ComponentType.Controller, Host,
+            DateTimeOffset.UtcNow.AddMinutes(5));
 
         // A different identity (different CA root) must not accept the token.
         EnrollmentTokenCodec.TryRead(CreateCa(), token).Should().BeNull();
@@ -95,7 +98,8 @@ public class EnrollmentTokenCodecTests
     public void Issue_rejects_a_missing_fqdn()
     {
         var ca = CreateCa();
-        var act = () => EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, "", DateTimeOffset.UtcNow.AddMinutes(5));
+        var act = () =>
+            EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, "", DateTimeOffset.UtcNow.AddMinutes(5));
         act.Should().Throw<ArgumentException>();
     }
 

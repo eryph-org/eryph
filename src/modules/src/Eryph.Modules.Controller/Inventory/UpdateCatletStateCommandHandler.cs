@@ -34,7 +34,8 @@ internal class UpdateCatletStateCommandHandler(
         }
         else
         {
-            logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent state information is dated {LastSeen:O}.",
+            logger.LogDebug(
+                "Skipping state update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent state information is dated {LastSeen:O}.",
                 catlet.Id, message.Command.Timestamp, catlet.LastSeenState);
         }
 

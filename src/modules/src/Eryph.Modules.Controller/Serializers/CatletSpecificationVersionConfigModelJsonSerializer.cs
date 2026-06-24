@@ -17,7 +17,7 @@ internal static class CatletSpecificationVersionConfigModelJsonSerializer
             Converters =
             {
                 new JsonStringEnumConverter(),
-                new NewTypeJsonConverter()
+                new NewTypeJsonConverter(),
             },
             WriteIndented = true,
         });

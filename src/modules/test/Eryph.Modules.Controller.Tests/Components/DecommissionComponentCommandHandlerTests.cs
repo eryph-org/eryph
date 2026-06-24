@@ -1,14 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb.Model;
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace Eryph.Modules.Controller.Tests.Components;
 
@@ -20,7 +14,7 @@ public class DecommissionComponentCommandHandlerTests
     public async Task Decommission_removes_the_broker_user_and_the_registration()
     {
         var broker = new RecordingBrokerProvisioner();
-        var registry = new StubRegistry(revokeResult: true);
+        var registry = new StubRegistry(true);
         var handler = new DecommissionComponentCommandHandler(
             registry, [broker], NullLogger<DecommissionComponentCommandHandler>.Instance);
 
@@ -36,7 +30,7 @@ public class DecommissionComponentCommandHandlerTests
         // A component that already aged out of the catalog must still be revocable: the broker-user
         // deletion is the actual cutoff and must happen regardless of whether a row was found.
         var broker = new RecordingBrokerProvisioner();
-        var registry = new StubRegistry(revokeResult: false);
+        var registry = new StubRegistry(false);
         var handler = new DecommissionComponentCommandHandler(
             registry, [broker], NullLogger<DecommissionComponentCommandHandler>.Instance);
 
@@ -50,7 +44,7 @@ public class DecommissionComponentCommandHandlerTests
     {
         // eryph-zero (no managed broker) resolves an empty provisioner collection; decommission then
         // just removes the registration without any broker call.
-        var registry = new StubRegistry(revokeResult: true);
+        var registry = new StubRegistry(true);
         var handler = new DecommissionComponentCommandHandler(
             registry, [], NullLogger<DecommissionComponentCommandHandler>.Instance);
 
@@ -83,14 +77,16 @@ public class DecommissionComponentCommandHandlerTests
             return Task.FromResult(revokeResult);
         }
 
-        public Task<ComponentRegistration> UpsertAsync(RegisterComponentCommand command, CancellationToken cancellationToken)
+        public Task<ComponentRegistration> UpsertAsync(RegisterComponentCommand command,
+            CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task RecordHeartbeatAsync(Guid componentId, Guid instanceId,
             IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
-        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version, CancellationToken cancellationToken)
+        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version,
+            CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<bool> DeregisterAsync(Guid componentId, Guid instanceId, CancellationToken cancellationToken)

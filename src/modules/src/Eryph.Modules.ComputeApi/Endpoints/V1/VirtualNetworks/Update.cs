@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
-using Eryph.ConfigModel.Networks;
 using Eryph.Core;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.AspNetCore;
@@ -11,21 +9,18 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
-using LanguageExt.UnsafeValueAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
-using static LanguageExt.Prelude;
+using Project = Eryph.StateDb.Model.Project;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class Update(
-    ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler,
+    ICreateEntityRequestHandler<Project> operationHandler,
     IUserRightsProvider userRightsProvider)
-    : NewOperationRequestEndpoint<UpdateProjectNetworksRequest, StateDb.Model.Project>(operationHandler)
+    : NewOperationRequestEndpoint<UpdateProjectNetworksRequest, Project>(operationHandler)
 {
     protected override object CreateOperationMessage(UpdateProjectNetworksRequest request)
     {
@@ -35,7 +30,7 @@ public class Update(
         var config = ProjectNetworksConfigJsonSerializer.Deserialize(request.Body.Configuration);
 
         return new CreateNetworksCommand
-        { 
+        {
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             Config = config,
             TenantId = userRightsProvider.GetUserTenantId(),
@@ -47,10 +42,10 @@ public class Update(
     // ReSharper disable once StringLiteralTypo
     [HttpPut("projects/{project_id}/virtualnetworks/config")]
     [SwaggerOperation(
-        Summary = "Update the virtual network configuration of a project",
-        Description = "Update the virtual network configuration of a project",
-        OperationId = "VirtualNetworks_UpdateConfig",
-        Tags = ["Virtual Networks"])
+            Summary = "Update the virtual network configuration of a project",
+            Description = "Update the virtual network configuration of a project",
+            OperationId = "VirtualNetworks_UpdateConfig",
+            Tags = ["Virtual Networks"]),
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] UpdateProjectNetworksRequest request,
@@ -69,7 +64,7 @@ public class Update(
             request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
-                detail: "The network configuration is invalid.",
+                "The network configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(UpdateProjectNetworksRequestBody.Configuration)));
 

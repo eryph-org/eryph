@@ -1,9 +1,8 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum VrssQueueSchedulingModeType
 {
-    public enum VrssQueueSchedulingModeType
-    {
-        Dynamic,
-        StaticVmq,
-        StaticVrss
-    }
+    Dynamic,
+    StaticVmq,
+    StaticVrss,
 }

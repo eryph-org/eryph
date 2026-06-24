@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.VmManagement.Wmi;
+﻿using Eryph.VmManagement.Wmi;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
-using LanguageExt;
-using LanguageExt.SomeHelp;
 using Xunit;
-
 using static Eryph.VmManagement.Wmi.WmiUtils;
 using static LanguageExt.Prelude;
 
@@ -26,7 +18,7 @@ public class WmiUtilsTests
             (PropertyName, Optional<object>(42))));
 
         var result = getRequiredValue<int>(wmiObject, PropertyName).Run();
-        
+
         result.Should().BeSuccess().Which.Should().Be(42);
     }
 
@@ -37,7 +29,7 @@ public class WmiUtilsTests
             (PropertyName, Optional<object>(null))));
 
         var result = getRequiredValue<string>(wmiObject, PropertyName).Run();
-        
+
         result.Should().BeFail()
             .Which.Message.Should().Be($"The property '{PropertyName} is null.");
     }
@@ -49,7 +41,7 @@ public class WmiUtilsTests
             (PropertyName, Optional<object>(42))));
 
         var result = getValue<int>(wmiObject, PropertyName).Run();
-        
+
         result.Should().BeSuccess()
             .Which.Should().BeSome()
             .Which.Should().Be(42);
@@ -62,7 +54,7 @@ public class WmiUtilsTests
             (PropertyName, Optional<object>(100))));
 
         var result = getValue<TestEnum>(wmiObject, PropertyName).Run();
-        
+
         result.Should().BeSuccess()
             .Which.Should().BeSome()
             .Which.Should().Be(TestEnum.TestValue);
@@ -75,7 +67,7 @@ public class WmiUtilsTests
             (PropertyName, Optional<object>("TestValue"))));
 
         var result = getValue<TestEnum>(wmiObject, PropertyName).Run();
-        
+
         result.Should().BeSuccess()
             .Which.Should().BeSome()
             .Which.Should().Be(TestEnum.TestValue);

@@ -1,5 +1,5 @@
-﻿using Eryph.Resources;
-using System;
+﻿using System;
+using Eryph.Resources;
 using Eryph.Resources.Machines;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
@@ -9,12 +9,12 @@ public class StopCatletCommand : IHasResource, ICommandWithName
 {
     public Guid CatletId { get; set; }
 
-    public Resource Resource => new(ResourceType.Catlet, CatletId);
-
     public CatletStopMode Mode { get; set; }
 
     public string GetCommandName()
     {
         return "Stopping Catlet";
     }
+
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

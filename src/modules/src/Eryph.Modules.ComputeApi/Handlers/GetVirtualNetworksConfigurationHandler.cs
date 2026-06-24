@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -34,14 +29,14 @@ internal class GetVirtualNetworksConfigurationHandler(
         var project = await stateStore.Read<Project>().GetBySpecAsync(projectSpec, cancellationToken);
         if (project is null)
             return new NotFoundResult();
-            
+
         var networks = await stateStore.For<VirtualNetwork>().ListAsync(
             new VirtualNetworkSpecs.GetForProjectConfig(project.Id),
             cancellationToken);
 
         var projectConfig = networks.ToNetworksConfig(project.Name);
 
-        var result = new VirtualNetworkConfiguration()
+        var result = new VirtualNetworkConfiguration
         {
             Configuration = ProjectNetworksConfigJsonSerializer.SerializeToElement(projectConfig),
         };

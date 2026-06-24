@@ -21,25 +21,18 @@ namespace Eryph.Runtime.Zero;
 /// instead. Revisit when the split-runtime network-sync flow is designed (see the related
 /// AgentControlService cross-wire in NetworkModule, the same accepted-workaround category).
 /// </summary>
-internal class NetworkSyncServiceBridgeService : INetworkSyncService
+internal class NetworkSyncServiceBridgeService(IModuleHost<ControllerModule> controllerModule) : INetworkSyncService
 {
-    private readonly IModuleHost<ControllerModule> _controllerModule;
-
-    public NetworkSyncServiceBridgeService(IModuleHost<ControllerModule> controllerModule)
-    {
-        _controllerModule = controllerModule;
-    }
-
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken)
     {
-        return _controllerModule.Services.GetRequiredService<Container>()
+        return controllerModule.Services.GetRequiredService<Container>()
             .GetInstance<INetworkSyncService>()
             .SyncNetworks(cancellationToken);
     }
 
     public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders)
     {
-        return _controllerModule.Services.GetRequiredService<Container>()
+        return controllerModule.Services.GetRequiredService<Container>()
             .GetInstance<INetworkSyncService>()
             .ValidateChanges(networkProviders);
     }

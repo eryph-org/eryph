@@ -7,6 +7,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 public class GetGuestServicesStatusCommand : IHasResource, ICommandWithName
 {
     public Guid CatletId { get; set; }
-    public Resource Resource => new(ResourceType.Catlet, CatletId);
     public string GetCommandName() => "Reading guest services status";
+    public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

@@ -6,13 +6,12 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.ModuleCore.Networks;
-using Eryph.Modules.Identity.Services;
 using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.HostAgent;
+using Eryph.Modules.Identity.Services;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
-using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Configuration.Settings;
 using Eryph.Security.Cryptography;
@@ -20,24 +19,24 @@ using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
 using Eryph.VmManagement;
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Rebus.Sagas;
-using Rebus.Subscriptions;
 using Rebus.Timeouts;
 using Rebus.Transport.InMem;
 using SimpleInjector;
 
-namespace Eryph.Runtime.Zero
+namespace Eryph.Runtime.Zero;
+
+internal static class ZeroContainerExtensions
 {
-    internal static class ZeroContainerExtensions
+    extension(Container container)
     {
-        public static void Bootstrap(this Container container)
+        public void Bootstrap()
         {
             container.RegisterInstance(Info.Network);
-            
+
             container.UseSqlLite();
 
             container.RegisterSingleton<ICertificateKeyService, WindowsCertificateKeyService>();
@@ -65,7 +64,7 @@ namespace Eryph.Runtime.Zero
 
             container.RegisterInstance(new WorkflowOptions
             {
-                DispatchMode = WorkflowEventDispatchMode.Publish, 
+                DispatchMode = WorkflowEventDispatchMode.Publish,
                 EventDestination = QueueNames.Controllers,
                 OperationsDestination = QueueNames.Controllers,
                 DeferCompletion = TimeSpan.FromMinutes(1),
@@ -73,7 +72,7 @@ namespace Eryph.Runtime.Zero
             });
         }
 
-        public static Container UseInMemoryBus(this Container container, IServiceProvider serviceProvider)
+        public Container UseInMemoryBus(IServiceProvider serviceProvider)
         {
             container.RegisterInstance(serviceProvider.GetRequiredService<InMemNetwork>());
             container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
@@ -83,7 +82,7 @@ namespace Eryph.Runtime.Zero
             return container;
         }
 
-        public static Container UseOvn(this Container container, IServiceProvider serviceProvider)
+        public Container UseOvn(IServiceProvider serviceProvider)
         {
             container.RegisterInstance(serviceProvider.GetRequiredService<IEryphOvnPathProvider>());
 
@@ -98,7 +97,7 @@ namespace Eryph.Runtime.Zero
             return container;
         }
 
-        public static Container UseSqlLite(this Container container)
+        public Container UseSqlLite()
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
             var builder = new SqliteConnectionStringBuilder

@@ -19,23 +19,20 @@ public class Update(
     IClientService clientService,
     IOpenIddictScopeManager scopeManager,
     IUserInfoProvider userInfoProvider)
-    : EndpointBaseAsync
-        .WithRequest<UpdateClientRequest>
-        .WithActionResult<Client>
+    : EndpointBaseAsync.WithRequest<UpdateClientRequest>.WithActionResult<Client>
 {
     [Authorize(Policy = "identity:clients:write")]
     [HttpPut("clients/{id}")]
     [SwaggerOperation(
-        Summary = "Update a client",
-        Description = "Update a client",
-        OperationId = "Clients_Update",
-        Tags = ["Clients"])
+            Summary = "Update a client",
+            Description = "Update a client",
+            OperationId = "Clients_Update",
+            Tags = ["Clients"]),
     ]
     [SwaggerResponse(
-        statusCode: StatusCodes.Status200OK,
-        description: "Success",
-        type: typeof(Client),
-        contentTypes: ["application/json"])
+            StatusCodes.Status200OK,
+            "Success",
+            typeof(Client), "application/json"),
     ]
     public override async Task<ActionResult<Client>> HandleAsync(
         [FromRoute] UpdateClientRequest request,
@@ -43,7 +40,7 @@ public class Update(
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
-        
+
         await request.Client.ValidateScopes(scopeManager, ModelState, cancellationToken);
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);

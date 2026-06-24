@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Threading;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;

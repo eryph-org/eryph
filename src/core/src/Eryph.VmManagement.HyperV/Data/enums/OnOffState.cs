@@ -1,8 +1,7 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data.enums;
+
+public enum OnOffState
 {
-    public enum OnOffState
-    {
-        On,
-        Off
-    }
+    On,
+    Off,
 }

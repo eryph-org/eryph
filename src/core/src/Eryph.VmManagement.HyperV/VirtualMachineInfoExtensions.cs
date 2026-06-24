@@ -1,5 +1,4 @@
-﻿using Eryph.VmManagement.Data;
-using Eryph.VmManagement.Data.Full;
+﻿using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;

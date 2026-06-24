@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Eryph.Modules.Controller.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
@@ -34,6 +29,7 @@ internal static class ChangeTrackingTestHelpers
                 if (queues.All(q => q.GetCount() == 0))
                     return;
             }
+
             await Task.Delay(10);
         }
 

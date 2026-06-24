@@ -1,9 +1,8 @@
 ﻿using Eryph.ConfigModel.Catlets;
 
-namespace Eryph.Modules.Controller
+namespace Eryph.Modules.Controller;
+
+public interface IPlacementCalculator
 {
-    public interface IPlacementCalculator
-    {
-        string CalculateVMPlacement(CatletConfig? dataConfig);
-    }
+    string CalculateVMPlacement(CatletConfig? dataConfig);
 }

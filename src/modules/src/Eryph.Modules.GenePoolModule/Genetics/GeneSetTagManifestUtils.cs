@@ -4,7 +4,6 @@ using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 using GeneType = Eryph.Core.Genetics.GeneType;
 
@@ -18,9 +17,11 @@ public static class GeneSetTagManifestUtils
             .MapLeft(e => Error.New($"The gene set ID '{manifest.Geneset}' in the manifest is invalid.", e))
         from catletGenes in GetCatletGene(geneSetId, manifest.CatletGene)
         from fodderGenes in GetGenes(geneSetId, GeneType.Fodder, manifest.FodderGenes.ToSeq())
-            .MapLeft(e => Error.New($"The fodder genes in the manifest of the gene set '{manifest.Geneset}' are invalid.", e))
+            .MapLeft(e =>
+                Error.New($"The fodder genes in the manifest of the gene set '{manifest.Geneset}' are invalid.", e))
         from volumeGenes in GetGenes(geneSetId, GeneType.Volume, manifest.VolumeGenes.ToSeq())
-            .MapLeft(e => Error.New($"The volume genes in the manifest of the gene set '{manifest.Geneset}' are invalid.", e))
+            .MapLeft(e =>
+                Error.New($"The volume genes in the manifest of the gene set '{manifest.Geneset}' are invalid.", e))
         select catletGenes + fodderGenes + volumeGenes;
 
     private static Either<Error, HashMap<UniqueGeneIdentifier, GeneHash>> GetCatletGene(
@@ -59,8 +60,8 @@ public static class GeneSetTagManifestUtils
 
         return
             from architecture in Optional(geneReference.Architecture).Match(
-                    Some: Architecture.NewEither,
-                    None: () => Architecture.New(EryphConstants.AnyArchitecture))
+                    Architecture.NewEither,
+                    () => Architecture.New(EryphConstants.AnyArchitecture))
                 .MapLeft(e => Error.New(
                     $"The architecture '{geneReference.Architecture}' of a {geneType} gene of the gene set {geneSetId} is invalid.",
                     e))

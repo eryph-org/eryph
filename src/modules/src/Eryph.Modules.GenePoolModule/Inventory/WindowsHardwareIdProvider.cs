@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.Core.Sys;
-using Eryph.Modules.GenePool;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
-
+using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.GenePool.Inventory;
@@ -20,12 +15,12 @@ namespace Eryph.Modules.GenePool.Inventory;
 public class WindowsHardwareIdProvider : IHardwareIdProvider
 {
     public WindowsHardwareIdProvider(
-        Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory)
     {
         var result = WindowsHardwareIdProvider<WindowsGenePoolRuntime>
             .EnsureHardwareId()
             .Run(WindowsGenePoolRuntime.New(loggerFactory));
-        
+
         // We cache the hardware ID as it should obviously not change
         // and the lookup requires WMI and registry queries.
         HardwareId = result.ThrowIfFail();
@@ -58,6 +53,6 @@ internal static class WindowsHardwareIdProvider<RT> where RT : struct,
         select guid;
 
     private static EffCatch<RT, Guid> logAndContinue(string message) =>
-        @catch(ex => Logger<RT>.logWarning<WindowsHardwareIdProvider>(ex, message)
+        @catch(ex => VmManagement.Sys.Logger<RT>.logWarning<WindowsHardwareIdProvider>(ex, message)
             .Bind(_ => FailEff<Guid>(ex)));
 }

@@ -11,116 +11,113 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.VmManagement
+namespace Eryph.VmManagement;
+
+public sealed record TypedPsObject<T> : ITypedPsObject
 {
+    private readonly ITypedPsObjectMapping _mapping;
+    private readonly IPsObjectRegistry _registry;
 
-    public sealed record TypedPsObject<T> : ITypedPsObject
+    public TypedPsObject(PSObject psObject, IPsObjectRegistry registry, ITypedPsObjectMapping mapping)
     {
-        private readonly IPsObjectRegistry _registry;
-        private readonly ITypedPsObjectMapping _mapping;
+        _registry = registry;
+        _mapping = mapping;
+        PsObject = psObject;
+        registry.AddPsObject(PsObject);
+        Value = mapping.Map<T>(psObject);
+        TraceContext.Current.Write(TypedPsObjectTraceData.FromObject(this));
+    }
 
-        public TypedPsObject(PSObject psObject, IPsObjectRegistry registry, ITypedPsObjectMapping mapping )
-        {
-            _registry = registry;
-            _mapping = mapping;
-            PsObject = psObject; 
-            registry.AddPsObject(PsObject);
-            Value = mapping.Map<T>(psObject);
-            TraceContext.Current.Write(TypedPsObjectTraceData.FromObject(this));
-        }
+    public T Value { get; }
 
-        public T Value { get; }
+    [PrivateIdentifier] [CanBeNull] public PSObject PsObject { get; }
 
-        [PrivateIdentifier]
-        [CanBeNull]
-        public PSObject PsObject { get;  }
+    object ITypedPsObject.Value => Value;
 
-        object ITypedPsObject.Value => Value;
+    public void Dispose()
+    {
+        ReleaseUnmanagedResources();
+        GC.SuppressFinalize(this);
+    }
 
-        public static implicit operator T(TypedPsObject<T> typed)
-        {
-            return typed.Value;
-        }
+    public static implicit operator T(TypedPsObject<T> typed)
+    {
+        return typed.Value;
+    }
 
-        public TypedPsObject<TNew> Cast<TNew>()
-        {
-            return new TypedPsObject<TNew>(PsObject, _registry, _mapping);
-        }
+    public TypedPsObject<TNew> Cast<TNew>()
+    {
+        return new TypedPsObject<TNew>(PsObject, _registry, _mapping);
+    }
 
-        public TR Map<TR>(Func<T, TR> mapperFunc)
-        {
-            return mapperFunc(Value);
-        }
+    public TR Map<TR>(Func<T, TR> mapperFunc)
+    {
+        return mapperFunc(Value);
+    }
 
-        public TR Map<TR>(Func<TypedPsObject<T>, TR> mapperFunc)
-        {
-            return mapperFunc(this);
-        }
+    public TR Map<TR>(Func<TypedPsObject<T>, TR> mapperFunc)
+    {
+        return mapperFunc(this);
+    }
 
-        public Either<Error, TypedPsObject<TNew>> CastSafe<TNew>()
-        {
-            return Prelude.Try(() => new TypedPsObject<TNew>(PsObject, _registry, _mapping))
-                .ToEither(ex => Error.New($"Failed to cast Powershell object to type {typeof(TNew).Name}.", Error.New(ex)));
-        }
+    public Either<Error, TypedPsObject<TNew>> CastSafe<TNew>()
+    {
+        return Prelude.Try(() => new TypedPsObject<TNew>(PsObject, _registry, _mapping))
+            .ToEither(ex =>
+                Error.New($"Failed to cast Powershell object to type {typeof(TNew).Name}.", Error.New(ex)));
+    }
 
-        public Task<Either<Error, TypedPsObject<TNew>>> CastSafeAsync<TNew>()
-        {
-            return CastSafe<TNew>().ToAsync().ToEither();
-        }
+    public Task<Either<Error, TypedPsObject<TNew>>> CastSafeAsync<TNew>()
+    {
+        return CastSafe<TNew>().ToAsync().ToEither();
+    }
 
-        public TypedPsObject<TProp> GetProperty<TProp>(Expression<Func<T, TProp>> property)
-        {
-            var paramType = property.Parameters[0].Type; // first parameter of expression
+    public TypedPsObject<TProp> GetProperty<TProp>(Expression<Func<T, TProp>> property)
+    {
+        var paramType = property.Parameters[0].Type; // first parameter of expression
 
-            var propertyMemberInfo = paramType.GetMember((property.Body as MemberExpression)?.Member.Name)[0];
-            var propertyValue = PsObject?.Properties[propertyMemberInfo.Name].Value;
+        var propertyMemberInfo = paramType.GetMember((property.Body as MemberExpression)?.Member.Name)[0];
+        var propertyValue = PsObject?.Properties[propertyMemberInfo.Name].Value;
 
-            return new TypedPsObject<TProp>(new PSObject(propertyValue), _registry, _mapping);
-        }
+        return new TypedPsObject<TProp>(new PSObject(propertyValue), _registry, _mapping);
+    }
 
-        public Seq<TypedPsObject<TSub>> GetList<TSub>(
-            Expression<Func<T, IList<TSub>>> listProperty,
-            Func<TypedPsObject<TSub>, bool> predicateFunc)
-        {
-            return GetList(listProperty).Where(predicateFunc);
-        }
+    public Seq<TypedPsObject<TSub>> GetList<TSub>(
+        Expression<Func<T, IList<TSub>>> listProperty,
+        Func<TypedPsObject<TSub>, bool> predicateFunc)
+    {
+        return GetList(listProperty).Where(predicateFunc);
+    }
 
-        public Seq<TypedPsObject<TSub>> GetList<TSub>(
-            Expression<Func<T, IList<TSub>>> listProperty)
-        {
-            var paramType = listProperty.Parameters[0].Type; // first parameter of expression
-            var property = paramType.GetMember((listProperty.Body as MemberExpression)?.Member.Name)[0];
+    public Seq<TypedPsObject<TSub>> GetList<TSub>(
+        Expression<Func<T, IList<TSub>>> listProperty)
+    {
+        var paramType = listProperty.Parameters[0].Type; // first parameter of expression
+        var property = paramType.GetMember((listProperty.Body as MemberExpression)?.Member.Name)[0];
 
-            return
-                Prelude.TryOption((PsObject?.Properties[property.Name].Value as IEnumerable)?.Cast<object>()
-                        .Map(x => new TypedPsObject<TSub>(new PSObject(x), _registry,_mapping)))
-                    .Match(
-                        Fail: () => new TypedPsObject<TSub>[] { },
-                        Some: x => x
-                    ).ToSeq();
-        }
-
-
-        public T ToValue()
-        {
-            return Value;
-        }
+        return
+            Prelude.TryOption((PsObject?.Properties[property.Name].Value as IEnumerable)?.Cast<object>()
+                    .Map(x => new TypedPsObject<TSub>(new PSObject(x), _registry, _mapping)))
+                .Match(
+                    Fail: () => new TypedPsObject<TSub>[] { },
+                    Some: x => x
+                ).ToSeq();
+    }
 
 
-        private void ReleaseUnmanagedResources()
-        {
-            PsObject.DisposeObject();
-        }
+    public T ToValue()
+    {
+        return Value;
+    }
 
-        public void Dispose()
-        {
-            ReleaseUnmanagedResources();
-            GC.SuppressFinalize(this);
-        }
 
-        ~TypedPsObject()
-        {
-            ReleaseUnmanagedResources();
-        }
+    private void ReleaseUnmanagedResources()
+    {
+        PsObject.DisposeObject();
+    }
+
+    ~TypedPsObject()
+    {
+        ReleaseUnmanagedResources();
     }
 }

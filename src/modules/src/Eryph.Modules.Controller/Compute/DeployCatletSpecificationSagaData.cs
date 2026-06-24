@@ -27,5 +27,6 @@ public class DeployCatletSpecificationSagaData
 
     public CatletConfig? BuiltConfig { get; set; }
 
-    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } = new Dictionary<UniqueGeneIdentifier, GeneHash>();
+    public IReadOnlyDictionary<UniqueGeneIdentifier, GeneHash> ResolvedGenes { get; set; } =
+        new Dictionary<UniqueGeneIdentifier, GeneHash>();
 }

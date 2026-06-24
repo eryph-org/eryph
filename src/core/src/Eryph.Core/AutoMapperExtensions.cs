@@ -20,10 +20,12 @@ public static class AutoMapperExtensions
             select sp;
         foreach (var innerSourceProperty in innerSourceProperties)
         {
-            var innerProperty = Expression.Convert(Expression.Property(source.Body, innerSourceProperty), typeof(object));
+            var innerProperty =
+                Expression.Convert(Expression.Property(source.Body, innerSourceProperty), typeof(object));
             var mapFrom = Expression.Lambda<Func<TSource, object>>(innerProperty, source.Parameters);
             map.ForMember(innerSourceProperty.Name, c => c.MapFrom(mapFrom));
         }
+
         return map;
     }
 }

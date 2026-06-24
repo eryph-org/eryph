@@ -3,5 +3,5 @@
 public enum BridgeHostIpMode
 {
     Disabled,
-    Dhcp
+    Dhcp,
 }

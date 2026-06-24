@@ -39,11 +39,10 @@ public class GenePoolModule
     [UsedImplicitly]
     public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
     {
-        services.Configure<HostOptions>(
-            opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+        services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
         services.AddHttpClient(GenePoolConstants.PartClientName)
-            .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
+            .SetHandlerLifetime(TimeSpan.FromMinutes(5)) //Set lifetime to five minutes
             .AddPolicyHandler(GetRetryPolicy());
     }
 
@@ -75,17 +74,14 @@ public class GenePoolModule
         container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolApiKeyStore>());
         container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolPathProvider>());
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
-       // container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
-       // container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
-       // container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
-       
-       if (OperatingSystem.IsWindows())
-       {
-           container.RegisterSingleton<IHardwareIdProvider, WindowsHardwareIdProvider>();
-        }
+        // container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
+        // container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
+        // container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
+
+        if (OperatingSystem.IsWindows()) container.RegisterSingleton<IHardwareIdProvider, WindowsHardwareIdProvider>();
 
         var genePoolFactory = new GenePoolFactory(container);
-        
+
         genePoolFactory.Register<RepositoryGenePool>(serviceProvider.GetRequiredService<GenePoolSettings>());
         container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
         container.RegisterSingleton<IGeneRequestRegistry, GeneRequestRegistry>();
@@ -110,7 +106,7 @@ public class GenePoolModule
                     .Configure(t, container.GetInstance<ComponentIdentity>().InboundQueue))
             .Options(x =>
             {
-                x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength:5);
+                x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                 x.SetNumberOfWorkers(5);
                 x.EnableSynchronousRequestReply();
             })
@@ -121,7 +117,7 @@ public class GenePoolModule
 
     private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
     {
-        var delay = Backoff.DecorrelatedJitterBackoffV2(
+        Backoff.DecorrelatedJitterBackoffV2(
             TimeSpan.FromSeconds(1), 5);
 
         return HttpPolicyExtensions

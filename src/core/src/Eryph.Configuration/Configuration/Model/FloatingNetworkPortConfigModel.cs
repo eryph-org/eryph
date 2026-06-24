@@ -1,21 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Eryph.Configuration.Model;
 
-namespace Eryph.Configuration.Model
+public class FloatingNetworkPortConfigModel
 {
-    public class FloatingNetworkPortConfigModel
-    {
-        public string Name { get; set; }
+    public string Name { get; set; }
 
-        public string MacAddress { get; set; }
+    public string MacAddress { get; set; }
 
-        public string ProviderName { get; set; }
+    public string ProviderName { get; set; }
 
-        public string SubnetName { get; set; }
+    public string SubnetName { get; set; }
 
-        public string PoolName { get; set; }
+    public string PoolName { get; set; }
 
-        public IpAssignmentConfigModel[] IpAssignments { get; set; }
-    }
+    public IpAssignmentConfigModel[] IpAssignments { get; set; }
 }
