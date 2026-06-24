@@ -76,7 +76,7 @@ public class VirtualMachineInventory(
             AdapterName = adapter.Value.Name,
             VirtualSwitchName = adapter.Value.SwitchName,
             VirtualSwitchId = adapter.Value.SwitchId,
-            MacAddress = macAddress.Map(a => a.Value).IfNoneUnsafe((string)null),
+            MacAddress = macAddress.Map(a => a.Value).IfNoneUnsafe((string?)null),
         };
 
     private EitherAsync<Error, VirtualMachineCpuData> GetCpuData(

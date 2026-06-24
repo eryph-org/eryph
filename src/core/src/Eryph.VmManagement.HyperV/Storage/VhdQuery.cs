@@ -57,7 +57,7 @@ public static class VhdQuery
     public static EitherAsync<Error, SnapshotInfo> GetSnapshotAndActualVhd(
         IPowershellEngine engine,
         TypedPsObject<VhdInfo> vhdInfo) =>
-        IsSnapshotVhd(vhdInfo.Value.Path) switch
+        IsSnapshotVhd(vhdInfo.Value.Path ?? "") switch
         {
             true => from baseVhd in ResolveActualVhd(engine, vhdInfo, 0)
                     .MapLeft(e => Error.New($"Could not resolve base VHD of snapshot '{vhdInfo.Value.Path}.", e))
@@ -69,7 +69,7 @@ public static class VhdQuery
         IPowershellEngine engine,
         TypedPsObject<VhdInfo> vhdInfo,
         int depth) =>
-        from result in IsSnapshotVhd(vhdInfo.Value.Path) switch
+        from result in IsSnapshotVhd(vhdInfo.Value.Path ?? "") switch
         {
             true => from _ in guard(depth < MaxSnapshotDepth, Error.New(
                         "Exceeded maximum search depth when looking for the base VHD of the snapshot. The snapshot chain might be corrupted."))

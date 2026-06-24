@@ -7,5 +7,5 @@ public abstract class TraceData
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public abstract string Type { get; }
-    public Dictionary<string, object> Data { get; init; }
+    public Dictionary<string, object>? Data { get; init; }
 }

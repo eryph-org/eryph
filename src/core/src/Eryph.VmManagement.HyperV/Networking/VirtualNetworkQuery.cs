@@ -1,4 +1,5 @@
-﻿using Dbosoft.OVN.Windows;
+﻿using System;
+using Dbosoft.OVN.Windows;
 using Eryph.ConfigModel;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
@@ -39,7 +40,7 @@ public static class VirtualNetworkQuery
     private static EitherAsync<Error, MachineNetworkData> GetNetworkByAdapter(
         VMNetworkAdapter networkAdapter,
         IHyperVOvsPortManager portManager) =>
-        from portName in portManager.GetConfiguredPortName(networkAdapter.Id)
+        from portName in portManager.GetConfiguredPortName(networkAdapter.Id ?? throw new InvalidOperationException("Network adapter has no ID."))
         from networkData in VirtualNetworkQuery<WmiRuntime>
             .getNetworkByAdapter(networkAdapter, portName)
             .MapFail(e => Error.New($"Failed to query network information for adapter '{networkAdapter.Id}'.", e))
@@ -53,7 +54,7 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
         VMNetworkAdapter adapter,
         Option<string> portName) =>
         from _ in SuccessEff<RT, Unit>(unit)
-        let guestNetworkId = adapter.Id.Replace("Microsoft:", @"Microsoft:GuestNetwork\")
+        let guestNetworkId = (adapter.Id ?? throw new InvalidOperationException("Network adapter has no ID.")).Replace("Microsoft:", @"Microsoft:GuestNetwork\")
         from wmiObjects in Wmi<RT>.executeQuery(
             @"root\virtualization\v2",
             Seq("DefaultGateways", "DHCPEnabled", "DNSServers", "IPAddresses", "Subnets"),
@@ -75,9 +76,9 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
             .ToEff()
         select new MachineNetworkData
         {
-            PortName = portName.IfNoneUnsafe((string)null),
+            PortName = portName.IfNoneUnsafe((string?)null),
             AdapterName = adapter.Name,
-            MacAddress = macAddress.Map(a => a.Value).IfNoneUnsafe((string)null),
+            MacAddress = macAddress.Map(a => a.Value).IfNoneUnsafe((string?)null),
             IPAddresses = ipAddresses,
             DefaultGateways = defaultGateways,
             DnsServers = dnsServers,

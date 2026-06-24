@@ -79,7 +79,7 @@ public sealed class VirtualMachineInfo :
     public TimeSpan Uptime { get; init; }
 
 
-    public VirtualMachineOperationalStatus[] OperationalStatus { get; init; }
+    public VirtualMachineOperationalStatus[]? OperationalStatus { get; init; }
 
 
     //public VirtualMachineOperationalStatus? PrimaryOperationalStatus
@@ -146,7 +146,7 @@ public sealed class VirtualMachineInfo :
 
     //public bool IsClustered { get; init; }
 
-    [PrivateIdentifier] public string Notes { get; init; }
+    [PrivateIdentifier] public string? Notes { get; init; }
 
     //public VMGroupInfo[] Groups { get; init; }
 
@@ -161,7 +161,7 @@ public sealed class VirtualMachineInfo :
 
     //public VMComPortInfo ComPort2 { get; init; }
 
-    public VirtualMachineDeviceInfo[] DVDDrives { get; init; }
+    public VirtualMachineDeviceInfo[] DVDDrives { get; init; } = [];
 
 
     //public VMFibreChannelHbaInfo[] FibreChannelHostBusAdapters { get; init; }
@@ -170,7 +170,7 @@ public sealed class VirtualMachineInfo :
     //public VMFloppyDiskDriveInfo FloppyDrive { get; init; }
 
 
-    public VirtualMachineDeviceInfo[] HardDrives { get; init; }
+    public VirtualMachineDeviceInfo[] HardDrives { get; init; } = [];
 
 
     //public VMRemoteFx3DVideoAdapterInfo RemoteFxAdapter { get; init; }
@@ -178,7 +178,7 @@ public sealed class VirtualMachineInfo :
 
     //public VirtualMachineIntegrationComponentInfo[] VMIntegrationService { get; init; }
 
-    public VirtualMachineDeviceInfo[] NetworkAdapters { get; init; }
+    public VirtualMachineDeviceInfo[] NetworkAdapters { get; init; } = [];
 
 
     //public long SizeOfSystemFiles { get; init; }
@@ -190,7 +190,7 @@ public sealed class VirtualMachineInfo :
 
     [PrivateIdentifier] public Guid Id { get; init; }
 
-    [PrivateIdentifier] public string Name { get; init; }
+    [PrivateIdentifier] public string? Name { get; init; }
 
 
     public long MemoryStartup { get; init; }
@@ -209,7 +209,7 @@ public sealed class VirtualMachineInfo :
 
     //public string ParentSnapshotName { get; init; }
 
-    [PrivateIdentifier] public string Path { get; init; }
+    [PrivateIdentifier] public string? Path { get; init; }
 
     //public string Version { get; init; }
 

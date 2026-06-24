@@ -7,7 +7,6 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using static LanguageExt.Prelude;
@@ -40,7 +39,7 @@ public class ConvergeCloudInitDisk(ConvergeContext context) : ConvergeTaskBase(c
                     from _ in GenerateConfigDriveDisk(configDriveIsoPath,
                         Context.SecretDataHidden,
                         string.IsNullOrWhiteSpace(Context.Config.Hostname)
-                            ? Context.Config.Name
+                            ? Context.Config.Name ?? ""
                             : Context.Config.Hostname,
                         networkData,
                         Context.Config.Fodder)
@@ -68,7 +67,7 @@ public class ConvergeCloudInitDisk(ConvergeContext context) : ConvergeTaskBase(c
         TypedPsObject<VMNetworkAdapter> adapter) =>
         from macAddress in EryphMacAddress.NewEither(adapter.Value.MacAddress).ToAsync()
         select CloudInitNetworkData.CreateAdapterConfig(
-            adapter.Value.Name,
+            adapter.Value.Name ?? "",
             macAddress.Value,
             Context.Config.Networks.ToSeq(),
             Context.NetworkSettings.ToSeq());
@@ -78,7 +77,7 @@ public class ConvergeCloudInitDisk(ConvergeContext context) : ConvergeTaskBase(c
         bool withoutSensitive,
         string hostname,
         NetworkData networkData,
-        [CanBeNull] FodderConfig[] config) =>
+        FodderConfig[]? config) =>
         TryAsync(async () =>
         {
             var configDrive = new ConfigDriveBuilder()

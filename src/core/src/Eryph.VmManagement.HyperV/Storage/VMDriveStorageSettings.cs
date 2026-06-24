@@ -96,7 +96,7 @@ public class VMDriveStorageSettings
                     .ToEitherAsync(Error.New($"The catlet drive source '{driveConfig.Source}' is invalid."))
                 select dss)
             .Sequence()
-        let parentPath = parentOptions.Map(p => Path.Combine(p.Path, p.FileName))
+        let parentPath = parentOptions.Map(p => Path.Combine(p.Path ?? "", p.FileName ?? ""))
         let generation = parentOptions.Map(p => p.Generation + 1).IfNone(0)
         from identifier in storageIdentifier.ToEitherAsync(
             Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))

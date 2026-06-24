@@ -2,7 +2,7 @@
 
 public class NetNat
 {
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
-    public string InternalIPInterfaceAddressPrefix { get; init; }
+    public string? InternalIPInterfaceAddressPrefix { get; init; }
 }

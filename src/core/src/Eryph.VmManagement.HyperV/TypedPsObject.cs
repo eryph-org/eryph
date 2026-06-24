@@ -24,7 +24,11 @@ public sealed record TypedPsObject<T> : ITypedPsObject
         _mapping = mapping;
         PsObject = psObject;
         registry.AddPsObject(PsObject);
-        Value = mapping.Map<T>(psObject);
+        var value = mapping.Map<T>(psObject);
+        if (value is null)
+            throw new InvalidOperationException(
+                $"The PowerShell object could not be mapped to {typeof(T).Name}.");
+        Value = value;
         TraceContext.Current.Write(TypedPsObjectTraceData.FromObject(this));
     }
 
@@ -32,7 +36,7 @@ public sealed record TypedPsObject<T> : ITypedPsObject
 
     [PrivateIdentifier] [CanBeNull] public PSObject PsObject { get; }
 
-    object ITypedPsObject.Value => Value;
+    object? ITypedPsObject.Value => Value;
 
     public void Dispose()
     {
@@ -76,24 +80,26 @@ public sealed record TypedPsObject<T> : ITypedPsObject
     {
         var paramType = property.Parameters[0].Type; // first parameter of expression
 
-        var propertyMemberInfo = paramType.GetMember((property.Body as MemberExpression)?.Member.Name)[0];
+        var memberName = (property.Body as MemberExpression)?.Member.Name ?? throw new InvalidOperationException("Property expression body must be a valid member expression.");
+        var propertyMemberInfo = paramType.GetMember(memberName)[0];
         var propertyValue = PsObject?.Properties[propertyMemberInfo.Name].Value;
 
         return new TypedPsObject<TProp>(new PSObject(propertyValue), _registry, _mapping);
     }
 
     public Seq<TypedPsObject<TSub>> GetList<TSub>(
-        Expression<Func<T, IList<TSub>>> listProperty,
+        Expression<Func<T, IList<TSub>?>> listProperty,
         Func<TypedPsObject<TSub>, bool> predicateFunc)
     {
         return GetList(listProperty).Where(predicateFunc);
     }
 
     public Seq<TypedPsObject<TSub>> GetList<TSub>(
-        Expression<Func<T, IList<TSub>>> listProperty)
+        Expression<Func<T, IList<TSub>?>> listProperty)
     {
         var paramType = listProperty.Parameters[0].Type; // first parameter of expression
-        var property = paramType.GetMember((listProperty.Body as MemberExpression)?.Member.Name)[0];
+        var memberName = (listProperty.Body as MemberExpression)?.Member.Name ?? throw new InvalidOperationException("List property expression body must be a valid member expression.");
+        var property = paramType.GetMember(memberName)[0];
 
         return
             Prelude.TryOption((PsObject?.Properties[property.Name].Value as IEnumerable)?.Cast<object>()

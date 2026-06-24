@@ -13,7 +13,7 @@ public class ExceptionTraceData : TraceData
         {
             { "type", ex.GetType().ToString() },
             { "message", ex.Message },
-            { "stackTrace", ex.StackTrace },
+            { "stackTrace", ex.StackTrace ?? "" },
         };
 
         return new ExceptionTraceData

@@ -121,7 +121,7 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
 
                 var detach = plannedDiskAtControllerPos == null;
 
-                if (!detach && plannedDiskAtControllerPos.AttachPath.IsSome)
+                if (plannedDiskAtControllerPos != null && plannedDiskAtControllerPos.AttachPath.IsSome)
                 {
                     var plannedAttachPath = plannedDiskAtControllerPos.AttachPath.IfNone("");
                     if (hd.Path == null || !hd.Path.Equals(plannedAttachPath,
@@ -197,7 +197,7 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
         from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
             .AddCommand("Set-VMDvdDrive")
             .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-            .AddParameter("Path", dvdSettings.Path))
+            .AddParameter("Path", dvdSettings.Path ?? ""))
         from vmInfoRecreated in vmInfo.Reload(Context.Engine)
         select vmInfoRecreated;
 
@@ -209,14 +209,14 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
             $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
         let currentSettings = currentStorageSettings.Find(x =>
             // The attach path might point to a snapshot, so we need to compare the actual VHD path.
-            string.Equals(vhdPath, Path.Combine(x.DiskSettings.Path, x.DiskSettings.FileName),
+            x.DiskSettings != null && string.Equals(vhdPath, Path.Combine(x.DiskSettings.Path ?? "", x.DiskSettings.FileName ?? ""),
                 StringComparison.OrdinalIgnoreCase))
         let isFrozen = currentSettings.Map(s => s.Frozen).IfNone(false)
         from reloadedVmInfo in isFrozen switch
         {
             true =>
                 from _ in Context.ReportProgressAsync(
-                    $"Skipping HD Drive '{driveSettings.DiskSettings.Name}': storage management is disabled for this disk.")
+                    $"Skipping HD Drive '{driveSettings.DiskSettings?.Name}': storage management is disabled for this disk.")
                 select vmInfo,
             false =>
                 from testPathResult in Context.Engine.GetObjectValueAsync<bool>(
@@ -231,7 +231,7 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
                     device => device.Cast<HardDiskDriveInfo>()
                         .Map(disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id),
                     () => from _ in Context.ReportProgressAsync(
-                            $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
+                            $"Attaching HD Drive {driveSettings.DiskSettings?.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
                         from result in Context.Engine.GetObjectAsync<VirtualMachineDeviceInfo>(
                             BuildAttachCommand(vmInfo, vhdPath, driveSettings))
                         select result)
@@ -245,16 +245,17 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
         HardDiskDriveStorageSettings driveSettings) =>
         from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
             $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
-        from p1 in Context.ReportProgressAsync($"Creating HD Drive: {driveSettings.DiskSettings.Name}")
+        let diskSettings = driveSettings.DiskSettings ?? throw new InvalidOperationException("DiskSettings is required.")
+        from p1 in Context.ReportProgressAsync($"Creating HD Drive: {diskSettings.Name}")
         from uCreate in driveSettings.Type switch
         {
             CatletDriveType.SharedVhd or CatletDriveType.VhdSet =>
-                driveSettings.DiskSettings.ParentSettings.Match(
+                diskSettings.ParentSettings.Match(
                     parentSettings =>
                         from _ in RightAsync<Error, Unit>(unit)
                         // Shared VHDs and VHD sets don't support differencing disks.
                         // Hence, we need to copy the parent disk (and then convert it to .vhds in case of a VHD set)
-                        let parentFilePath = Path.Combine(parentSettings.Path, parentSettings.FileName)
+                        let parentFilePath = Path.Combine(parentSettings.Path ?? "", parentSettings.FileName ?? "")
                         // For shared VHD this doesn't change the path, but for a VHD set it does.
                         let copyToPath = Path.ChangeExtension(vhdPath, "vhdx")
                         from __ in Context.Engine.RunAsync(PsCommandBuilder.Create()
@@ -275,18 +276,18 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
                             .AddCommand("New-VHD")
                             .AddParameter("Path", vhdPath)
                             .AddParameter("Dynamic")
-                            .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate))
+                            .AddParameter("SizeBytes", diskSettings.SizeBytesCreate ?? throw new InvalidOperationException("SizeBytesCreate is required.")))
                         select unit),
-            _ => driveSettings.DiskSettings.ParentSettings.Match(
+            _ => diskSettings.ParentSettings.Match(
                 parentSettings =>
                     from _ in RightAsync<Error, Unit>(unit)
-                    let parentFilePath = Path.Combine(parentSettings.Path, parentSettings.FileName)
+                    let parentFilePath = Path.Combine(parentSettings.Path ?? "", parentSettings.FileName ?? "")
                     let newCommand = PsCommandBuilder.Create()
                         .AddCommand("New-VHD")
                         .AddParameter("Path", vhdPath)
                         .AddParameter("ParentPath", parentFilePath)
                         .AddParameter("Differencing")
-                        .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)
+                        .AddParameter("SizeBytes", diskSettings.SizeBytesCreate ?? throw new InvalidOperationException("SizeBytesCreate is required."))
                     from __ in Context.Engine.RunAsync(newCommand)
                     from ___ in ResetDiskIdentifier(vhdPath)
                     select unit,
@@ -295,7 +296,7 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
                         .AddCommand("New-VHD")
                         .AddParameter("Path", vhdPath)
                         .AddParameter("Dynamic")
-                        .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate))
+                        .AddParameter("SizeBytes", diskSettings.SizeBytesCreate ?? throw new InvalidOperationException("SizeBytesCreate is required.")))
                     select unit),
         }
         select unit;
@@ -312,24 +313,25 @@ public class ConvergeDrives(ConvergeContext context) : ConvergeTaskBase(context)
         HardDiskDriveStorageSettings driveSettings) =>
         from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
             $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
+        let diskSettings = driveSettings.DiskSettings ?? throw new InvalidOperationException("DiskSettings is required.")
         // get disk
         from optionalVhdInfo in Context.Engine.GetObjectAsync<VhdInfo>(new PsCommandBuilder()
             .AddCommand("Get-VHD").AddArgument(vhdPath))
         from vhdInfo in optionalVhdInfo.ToEitherAsync(Error.New(
             $"Could not find the virtual disk '{vhdPath}'."))
         // resize if necessary
-        let newSize = driveSettings.DiskSettings.SizeBytes.GetValueOrDefault()
+        let newSize = diskSettings.SizeBytes.GetValueOrDefault()
         let hasCorrectSize = newSize == 0 || vhdInfo.Value.Size == newSize
         from _ in hasCorrectSize
             ? RightAsync<Error, Unit>(unit)
             : from _ in RightAsync<Error, Unit>(unit)
             let diskSizeUpdateInGb = Math.Round(newSize / 1024d / 1024 / 1024, 1)
             from pS in Context.ReportProgressAsync(
-                $"Resizing disk {driveSettings.DiskSettings.Name} to {diskSizeUpdateInGb} GB")
+                $"Resizing disk {diskSettings.Name} to {diskSizeUpdateInGb} GB")
             from uResize in Context.Engine.RunAsync(PsCommandBuilder.Create()
                 .AddCommand("Resize-VHD")
                 .AddParameter("Path", vhdPath)
-                .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytes))
+                .AddParameter("SizeBytes", diskSettings.SizeBytes ?? throw new InvalidOperationException("SizeBytes is required for resize.")))
             select unit
         select unit;
 

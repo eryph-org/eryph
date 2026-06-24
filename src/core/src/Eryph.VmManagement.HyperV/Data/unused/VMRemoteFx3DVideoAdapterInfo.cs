@@ -4,7 +4,7 @@ namespace Eryph.VmManagement.Data.unused;
 
 public sealed class VMRemoteFx3DVideoAdapterInfo : VirtualMachineDeviceInfo
 {
-    public string MaximumScreenResolution { get; set; }
+    public string? MaximumScreenResolution { get; set; }
 
     public byte MaximumMonitors { get; set; }
 

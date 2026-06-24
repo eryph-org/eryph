@@ -25,7 +25,7 @@ public sealed class PowershellEngine(
 {
     private readonly IList<PSObject> _createdObjects = new List<PSObject>();
     private readonly SemaphoreSlim _runspaceSemaphore = new(1, 1);
-    private RunspacePool _runspacePool;
+    private RunspacePool? _runspacePool;
 
     /// <summary>
     /// Indicates whether to skip the Powershell edition check when loading modules.
@@ -48,7 +48,7 @@ public sealed class PowershellEngine(
 
     public EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null,
+        Func<int, Task>? reportProgress = null,
         bool withoutLock = false,
         CancellationToken cancellationToken = default) =>
         from results in TryAsync(async () =>
@@ -74,7 +74,7 @@ public sealed class PowershellEngine(
 
     public EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null,
+        Func<int, Task>? reportProgress = null,
         bool withoutLock = false,
         CancellationToken cancellationToken = default) =>
         from objects in GetObjectsAsync<T>(builder, reportProgress, withoutLock, cancellationToken)
@@ -83,7 +83,7 @@ public sealed class PowershellEngine(
 
     public EitherAsync<Error, Unit> RunAsync(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null,
+        Func<int, Task>? reportProgress = null,
         bool withoutLock = false,
         CancellationToken cancellationToken = default) =>
         TryAsync(async () =>
@@ -96,7 +96,7 @@ public sealed class PowershellEngine(
 
     public EitherAsync<Error, Unit> RunOutOfProcessAsync(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null,
+        Func<int, Task>? reportProgress = null,
         bool withoutLock = false,
         CancellationToken cancellationToken = default) =>
         from _ in TryAsync(async () =>
@@ -141,7 +141,7 @@ public sealed class PowershellEngine(
 
     private async Task<IList<PSObject>> ExecuteAsync(
         PsCommandBuilder builder,
-        [CanBeNull] Func<int, Task> reportProgress,
+        Func<int, Task>? reportProgress,
         bool withoutLock,
         CancellationToken cancellationToken)
     {
@@ -163,7 +163,7 @@ public sealed class PowershellEngine(
     private async Task<IList<PSObject>> ExecuteAsync(
         PowerShell powerShell,
         PsCommandBuilder builder,
-        [CanBeNull] Func<int, Task> reportProgress,
+        Func<int, Task>? reportProgress,
         CancellationToken cancellationToken)
     {
         using var _ = InitializeProgressReporting(powerShell, reportProgress);
@@ -269,7 +269,7 @@ public sealed class PowershellEngine(
 
     private IDisposable InitializeProgressReporting(
         PowerShell ps,
-        [CanBeNull] Func<int, Task> reportProgress) =>
+        Func<int, Task>? reportProgress) =>
         reportProgress switch
         {
             not null => Observable
@@ -281,7 +281,7 @@ public sealed class PowershellEngine(
                     if (progress is not { ParentActivityId: < 0, PercentComplete: > 0 and < 100 })
                         return;
 
-                    await reportProgress!(progress.PercentComplete).ConfigureAwait(false);
+                    await reportProgress(progress.PercentComplete).ConfigureAwait(false);
                 }))
                 .Subscribe(
                     _ => { },

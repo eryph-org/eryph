@@ -28,8 +28,9 @@ public readonly struct VMStorageSettings
         VmHostAgentConfiguration vmHostAgentConfig,
         TypedPsObject<VirtualMachineInfo> vm) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let storageNames = StorageNames.FromVmPath(vm.Value.Path, vmHostAgentConfig)
-        from settings in FromStorageNames(storageNames.Names, storageNames.StorageIdentifier, vm.Value.Path,
+        let vmPath = vm.Value.Path ?? throw new InvalidOperationException("The VM path is null.")
+        let storageNames = StorageNames.FromVmPath(vmPath, vmHostAgentConfig)
+        from settings in FromStorageNames(storageNames.Names, storageNames.StorageIdentifier, vmPath,
                 vmHostAgentConfig)
             .BiBind(
                 RightAsync<Error, VMStorageSettings>,
@@ -37,8 +38,8 @@ public readonly struct VMStorageSettings
                 {
                     StorageNames = storageNames.Names,
                     StorageIdentifier = storageNames.StorageIdentifier,
-                    VMPath = vm.Value.Path,
-                    DefaultVhdPath = vm.Value.Path,
+                    VMPath = vmPath,
+                    DefaultVhdPath = vmPath,
                     Frozen = true,
                 }))
         select settings;

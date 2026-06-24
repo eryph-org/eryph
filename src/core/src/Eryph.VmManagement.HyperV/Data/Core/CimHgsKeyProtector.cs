@@ -6,7 +6,7 @@
 /// </summary>
 public class CimHgsKeyProtector
 {
-    public CimHgsGuardian Owner { get; init; }
+    public CimHgsGuardian? Owner { get; init; }
 
-    public byte[] RawData { get; init; }
+    public byte[]? RawData { get; init; }
 }

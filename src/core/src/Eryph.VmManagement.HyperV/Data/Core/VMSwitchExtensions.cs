@@ -6,7 +6,7 @@ namespace Eryph.VmManagement.Data.Core;
 
 public static class VMSwitchExtensions
 {
-    public static Guid[] GetNetAdapterInterfaceGuid(this TypedPsObject<VMSwitch> vmSwitch)
+    public static Guid[]? GetNetAdapterInterfaceGuid(this TypedPsObject<VMSwitch> vmSwitch)
     {
         // It is possible that Hyper-V report a switch embedded team without interfaces.
         // We need to handle this situation gracefully.
@@ -37,7 +37,7 @@ public static class VMSwitchExtensions
                     .GetField("m_ExternalNetworkAdapters",
                         BindingFlags.Instance | BindingFlags.NonPublic);
 
-                object[] externalAdapters = null;
+                object[]? externalAdapters = null;
                 if (externalAdapterAccessorField != null)
                 {
                     // there is either a list of external network adapters 
@@ -46,7 +46,7 @@ public static class VMSwitchExtensions
                         .GetField("m_Value", BindingFlags.Instance | BindingFlags.NonPublic);
 
                     externalAdapters =
-                        externalAdapterAccessorDataField?.GetValue(externalAdapterAccessor) as object[];
+                        (object[]?)externalAdapterAccessorDataField?.GetValue(externalAdapterAccessor);
                 }
                 else
                 {

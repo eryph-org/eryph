@@ -14,7 +14,7 @@ public static partial class DiskGenerationNames
     private static partial Regex GenerationSuffixRegex();
 
     public static Either<Error, string> AddGenerationSuffix(string diskPath, int generation) =>
-        from directoryPath in Try(() => Path.GetDirectoryName(diskPath))
+        from directoryPath in Try(() => Path.GetDirectoryName(diskPath) ?? "")
             .ToOption()
             .Filter(notEmpty)
             .ToInvalidPathError(diskPath)
@@ -32,9 +32,9 @@ public static partial class DiskGenerationNames
         select result;
 
     public static Either<Error, string> GetFileNameWithoutSuffix(
-        string path,
+        string? path,
         Option<string> parentPath) =>
-        from nameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(path))
+        from nameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(path) ?? "")
             .ToOption()
             .Filter(notEmpty)
             .ToInvalidPathError(path)
@@ -72,6 +72,6 @@ public static partial class DiskGenerationNames
 
     private static Either<Error, string> ToInvalidPathError(
         this Option<string> value,
-        string path) =>
+        string? path) =>
         value.ToEither(Error.New($"The disk path '{path}' is invalid."));
 }

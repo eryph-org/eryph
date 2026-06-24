@@ -6,7 +6,7 @@
 /// </summary>
 public class VMProcessorInfo
 {
-    public string ResourcePoolName { get; init; }
+    public string? ResourcePoolName { get; init; }
 
     public long Count { get; init; }
 
@@ -32,7 +32,7 @@ public class VMProcessorInfo
 
     public bool AllowACountMCount { get; init; }
 
-    public string CpuBrandString { get; init; }
+    public string? CpuBrandString { get; init; }
 
     public int PerfCpuFreqCapMhz { get; init; }
 
@@ -50,5 +50,5 @@ public class VMProcessorInfo
 
     public bool EnableHostResourceProtection { get; init; }
 
-    public string Id { get; init; }
+    public string? Id { get; init; }
 }

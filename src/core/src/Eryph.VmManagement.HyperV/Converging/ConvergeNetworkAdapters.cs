@@ -64,12 +64,12 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
     private Either<Error, PhysicalAdapterConfig> PrepareConnectedAdapterConfig(
         CatletNetworkAdapterName adapterName,
         MachineNetworkSettings settings) =>
-        from switchName in Context.HostInfo.FindSwitchName(settings.NetworkProviderName)
+        from switchName in Context.HostInfo.FindSwitchName(settings.NetworkProviderName ?? "")
             .ToEither(Error.New($"Could not find network provider '{settings.NetworkProviderName}' on host."))
         select new PhysicalAdapterConfig(
             adapterName.Value,
             switchName,
-            settings.MacAddress,
+            settings.MacAddress ?? "",
             settings.PortName,
             settings.NetworkName,
             settings.MacAddressSpoofing,
@@ -182,8 +182,8 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             // from a newly created adapter. In the end, we need to access the
             // Msvm_EthernetPortAllocationSettingData for that adapter via WMI.
             portName =>
-                from __ in WaitForPortName(createdAdapter.Value.Id).Run().ToEitherAsync()
-                from ___ in Context.PortManager.SetPortName(createdAdapter.Value.Id, portName)
+                from __ in WaitForPortName(createdAdapter.Value.Id ?? throw new InvalidOperationException("The created network adapter has no ID.")).Run().ToEitherAsync()
+                from ___ in Context.PortManager.SetPortName(createdAdapter.Value.Id ?? throw new InvalidOperationException("The created network adapter has no ID."), portName)
                 select unit,
             () => RightAsync<Error, Unit>(unit))
         from _3 in ConvergeSecuritySettings(createdAdapter, adapterConfig)
@@ -199,7 +199,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         // the leftover name is inert.
         from _1 in adapterConfig.PortName.Match(
             portName =>
-                from currentPortName in Context.PortManager.GetPortName(adapter.Value.Id)
+                from currentPortName in Context.PortManager.GetPortName(adapter.Value.Id ?? throw new InvalidOperationException("The network adapter has no ID."))
                 from __ in currentPortName == portName
                     ? RightAsync<Error, Unit>(unit)
                     : Context.PortManager.SetPortName(adapter.Value.Id, portName)

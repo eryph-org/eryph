@@ -9,7 +9,7 @@ namespace Eryph.VmManagement.Data.Core;
 /// </summary>
 public class VhdInfo
 {
-    [PrivateIdentifier] public string Path { get; set; }
+    [PrivateIdentifier] public string? Path { get; set; }
 
     public long Size { get; set; }
 
@@ -17,7 +17,7 @@ public class VhdInfo
 
     public long FileSize { get; set; }
 
-    [PrivateIdentifier] public string ParentPath { get; set; }
+    [PrivateIdentifier] public string? ParentPath { get; set; }
 
     public Guid DiskIdentifier { get; set; }
 }

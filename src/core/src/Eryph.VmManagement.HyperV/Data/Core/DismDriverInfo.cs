@@ -6,11 +6,11 @@
 /// </summary>
 public class DismDriverInfo
 {
-    public string Driver { get; init; }
+    public string? Driver { get; init; }
 
-    public string OriginalFileName { get; init; }
+    public string? OriginalFileName { get; init; }
 
-    public string ProviderName { get; init; }
+    public string? ProviderName { get; init; }
 
     public uint MajorVersion { get; init; }
 

@@ -51,7 +51,7 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
 
     //public bool ClusterMonitored { get; private set; }
 
-    [PrivateIdentifier] public string MacAddress { get; init; }
+    [PrivateIdentifier] public string? MacAddress { get; init; }
 
     //public string TestReplicaPoolName { get; private set; }
 
@@ -82,9 +82,9 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
     //public VMNetworkAdapterRoutingDomainSetting[] RoutingDomainList { get; private set; }
 
 
-    public VMNetworkAdapterVlanSetting VlanSetting { get; init; }
+    public VMNetworkAdapterVlanSetting? VlanSetting { get; init; }
 
-    [PrivateIdentifier] public string SwitchName { get; init; }
+    [PrivateIdentifier] public string? SwitchName { get; init; }
 
     /// <summary>
     /// The name of the VM to which this adapter belongs. Only populated

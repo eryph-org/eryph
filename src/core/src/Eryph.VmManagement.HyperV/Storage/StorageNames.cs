@@ -30,13 +30,13 @@ public readonly record struct StorageNames
         string path,
         VmHostAgentConfiguration vmHostAgentConfig)
     {
-        return FromPath(path, vmHostAgentConfig, defaults => defaults.Vms);
+        return FromPath(path, vmHostAgentConfig, defaults => defaults.Vms ?? throw new InvalidOperationException("VM path configuration is missing"));
     }
 
     public static (StorageNames Names, Option<string> StorageIdentifier) FromVhdPath(
         string path,
         VmHostAgentConfiguration vmHostAgentConfig) =>
-        FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes);
+        FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes ?? throw new InvalidOperationException("Volume path configuration is missing"));
 
     private static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
         string path,

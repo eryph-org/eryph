@@ -18,18 +18,18 @@ public sealed class PlannedVirtualMachineInfo : Record<PlannedVirtualMachineInfo
     public long MemoryMinimum { get; private set; }
 
 
-    public VirtualMachineDeviceInfo[] DVDDrives { get; private set; }
-    public VirtualMachineDeviceInfo[] HardDrives { get; private set; }
+    public VirtualMachineDeviceInfo[] DVDDrives { get; private set; } = [];
+    public VirtualMachineDeviceInfo[] HardDrives { get; private set; } = [];
 
-    public VirtualMachineDeviceInfo[] NetworkAdapters { get; private set; }
+    public VirtualMachineDeviceInfo[] NetworkAdapters { get; private set; } = [];
     public Guid Id { get; private set; }
 
-    public string Name { get; private set; }
+    public string? Name { get; private set; }
 
     public long ProcessorCount { get; private set; }
     public int Generation { get; private set; }
 
-    [PrivateIdentifier] public string Path { get; private set; }
+    [PrivateIdentifier] public string? Path { get; private set; }
 
     public long MemoryStartup { get; private set; }
 }

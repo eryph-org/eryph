@@ -97,7 +97,7 @@ public class AssertCommand(int position, PsCommandBuilder.BasePart[] chain)
                     sb.Append(' ');
                     break;
                 case PsCommandBuilder.ArgumentPart argument:
-                    sb.Append($"[{argument.Value.ToString()}]");
+                    sb.Append($"[{argument.Value}]");
                     sb.Append(' ');
                     break;
                 case PsCommandBuilder.ParameterPart parameter:

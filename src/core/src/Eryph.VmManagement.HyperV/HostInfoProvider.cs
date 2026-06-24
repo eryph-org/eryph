@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Inventory;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -17,7 +16,7 @@ public class HostInfoProvider(
 {
     private readonly HostInventory _hostInventory = new(log, networkProviderManager);
     private readonly SemaphoreSlim _lock = new(1, 1);
-    [CanBeNull] private VMHostMachineData _cachedData;
+    private VMHostMachineData? _cachedData;
 
     public EitherAsync<Error, VMHostMachineData> GetHostInfoAsync(bool refresh = false)
     {

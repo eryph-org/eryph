@@ -7,7 +7,7 @@ namespace Eryph.VmManagement.Data.unused;
 
 public sealed class VMGroupInfo
 {
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
 
     public Guid InstanceId { get; set; }
@@ -16,8 +16,8 @@ public sealed class VMGroupInfo
     public GroupType GroupType { get; set; }
 
 
-    public IReadOnlyList<VirtualMachineInfo> VMMembers { get; set; }
+    public IReadOnlyList<VirtualMachineInfo>? VMMembers { get; set; }
 
 
-    public IReadOnlyList<VMGroupInfo> VMGroupMembers { get; set; }
+    public IReadOnlyList<VMGroupInfo>? VMGroupMembers { get; set; }
 }

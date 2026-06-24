@@ -7,24 +7,24 @@ public class VirtualMachineIntegrationComponentInfo : VirtualMachineDeviceInfo
 {
     public bool Enabled { get; set; }
 
-    public VMIntegrationComponentOperationalStatus[] OperationalStatus { get; set; }
+    public VMIntegrationComponentOperationalStatus[]? OperationalStatus { get; set; }
 
     public VMIntegrationComponentOperationalStatus? PrimaryOperationalStatus
     {
         get
         {
-            var operationalStatus = OperationalStatus;
+            var operationalStatus = OperationalStatus ?? [];
             return operationalStatus.Length != 0
                 ? operationalStatus[0]
                 : null;
         }
     }
 
-    public string PrimaryStatusDescription
+    public string? PrimaryStatusDescription
     {
         get
         {
-            var statusDescription = StatusDescription;
+            var statusDescription = StatusDescription ?? [];
             return statusDescription.Length != 0 ? statusDescription[0] : null;
         }
     }
@@ -33,21 +33,21 @@ public class VirtualMachineIntegrationComponentInfo : VirtualMachineDeviceInfo
     {
         get
         {
-            var operationalStatus = OperationalStatus;
+            var operationalStatus = OperationalStatus ?? [];
             return operationalStatus.Length > 1 ? operationalStatus[1] : null;
         }
     }
 
-    public string SecondaryStatusDescription
+    public string? SecondaryStatusDescription
     {
         get
         {
-            var statusDescription = StatusDescription;
+            var statusDescription = StatusDescription ?? [];
             if (statusDescription.Length > 1)
                 return statusDescription[1];
             return null;
         }
     }
 
-    public string[] StatusDescription { get; set; }
+    public string[]? StatusDescription { get; set; }
 }

@@ -46,8 +46,8 @@ public static class NetworkNeighborsUpdate
     private static Fin<bool> IsOutdated(
         CimNetworkNeighbor psNeighbor,
         Seq<(IPAddress IpAddress, Option<PhysicalAddress> MacAddress)> updatedNeighbors) =>
-        from ipAddress in ParseIpAddress(psNeighbor.IPAddress)
-        from macAddress in ParseMacAddress(psNeighbor.LinkLayerAddress)
+        from ipAddress in ParseIpAddress(psNeighbor.IPAddress ?? "")
+        from macAddress in ParseMacAddress(psNeighbor.LinkLayerAddress ?? "")
         select updatedNeighbors
             .Find(updatedNeighbor => updatedNeighbor.IpAddress.Equals(ipAddress))
             .Map(updatedNeighbor => !updatedNeighbor.MacAddress.Equals(Some(macAddress)))

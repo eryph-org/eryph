@@ -71,7 +71,8 @@ public static class VirtualMachine
                 var result = await VmQueries.GetVmInfo(engine, vmId, cts.Token);
                 result.IfLeft(e => e.Throw());
                 var vmInfo = result.ValueUnsafe();
-                if (vmInfo.Value.NetworkAdapters.Length == 0)
+                var vmInfoValue = vmInfo.Value ?? throw new InvalidOperationException("VM info value should not be null");
+                if (vmInfoValue.NetworkAdapters.Length == 0)
                     return unit;
 
                 await Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
@@ -113,10 +114,11 @@ public static class VirtualMachine
             .AddParameter("AutomaticStartAction", "Nothing")
             .AddParameter("AutomaticStopAction", "Save");
 
-        if (commandInfo.Parameters.ContainsKey("AutomaticCheckpointsEnabled"))
+        var parameters = commandInfo.Parameters ?? [];
+        if (parameters.ContainsKey("AutomaticCheckpointsEnabled"))
             builder.AddParameter("AutomaticCheckpointsEnabled", false);
 
-        if (commandInfo.Parameters.ContainsKey("EnhancedSessionTransportType"))
+        if (parameters.ContainsKey("EnhancedSessionTransportType"))
             builder.AddParameter("EnhancedSessionTransportType", "VMBus");
 
         return builder;

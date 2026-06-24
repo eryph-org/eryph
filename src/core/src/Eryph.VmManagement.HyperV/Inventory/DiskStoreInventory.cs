@@ -22,10 +22,10 @@ public static class DiskStoreInventory
                 .Bind(e => e.Datastores.ToSeq())
                 .Map(ds => ds.Path),
             vmHostAgentConfig.Environments.ToSeq()
-                .Map(e => e.Defaults.Volumes),
+                .Map(e => e.Defaults.Volumes ?? ""),
             vmHostAgentConfig.Datastores.ToSeq()
                 .Map(ds => ds.Path),
-            Seq1(vmHostAgentConfig.Defaults.Volumes))
+            Seq1(vmHostAgentConfig.Defaults.Volumes ?? ""))
         from diskInfos in storePaths
             .Map(storePath => InventoryStore(fileSystemService, powershellEngine, vmHostAgentConfig, storePath))
             .SequenceSerial()

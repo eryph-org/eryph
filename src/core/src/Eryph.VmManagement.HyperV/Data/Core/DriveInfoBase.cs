@@ -4,7 +4,7 @@ namespace Eryph.VmManagement.Data.Core;
 
 public abstract class DriveInfoBase : VirtualMachineDeviceInfo
 {
-    [PrivateIdentifier] public virtual string Path { get; set; }
+    [PrivateIdentifier] public virtual string? Path { get; set; }
 
-    public string PoolName { get; set; }
+    public string? PoolName { get; set; }
 }

@@ -23,7 +23,7 @@ public static class MapperExtensions
         }
 
         public IProfileExpression AddHyperVMapping<TDestination>(Assembly assembly,
-            string name, Action<IMappingExpression> configure = null)
+            string name, Action<IMappingExpression>? configure = null)
         {
             var sourceType = assembly.GetType($"Microsoft.HyperV.PowerShell.{name}", false);
             if (sourceType == null) return profile;

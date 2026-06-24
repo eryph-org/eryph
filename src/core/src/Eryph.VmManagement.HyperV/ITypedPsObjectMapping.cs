@@ -4,5 +4,5 @@ namespace Eryph.VmManagement;
 
 public interface ITypedPsObjectMapping
 {
-    T Map<T>(PSObject psObject);
+    T? Map<T>(PSObject psObject);
 }

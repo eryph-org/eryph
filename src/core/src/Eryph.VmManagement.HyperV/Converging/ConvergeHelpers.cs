@@ -11,7 +11,7 @@ public static class ConvergeHelpers
 {
     public static EitherAsync<Error, TypedPsObject<TSub>> GetOrCreateInfoAsync<T, TSub>(
         TypedPsObject<T> parentInfo,
-        Expression<Func<T, IList<TSub>>> listProperty,
+        Expression<Func<T, IList<TSub>?>> listProperty,
         Func<TypedPsObject<TSub>, bool> predicateFunc,
         Func<EitherAsync<Error, Option<TypedPsObject<TSub>>>> creatorFunc) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -27,7 +27,7 @@ public static class ConvergeHelpers
 
     public static EitherAsync<Error, Seq<TRes>> FindAndApply<T, TSub, TRes>(
         TypedPsObject<T> parentInfo,
-        Expression<Func<T, IList<TSub>>> listProperty,
+        Expression<Func<T, IList<TSub>?>> listProperty,
         Func<TypedPsObject<TSub>, bool> predicateFunc,
         Func<TypedPsObject<TSub>, EitherAsync<Error, TRes>> applyFunc) =>
         from _ in RightAsync<Error, Unit>(unit)

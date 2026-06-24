@@ -12,11 +12,11 @@ namespace Eryph.VmManagement.Storage;
 
 public class DiskStorageSettings
 {
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
-    public string Path { get; set; }
+    public string? Path { get; set; }
 
-    public string FileName { get; set; }
+    public string? FileName { get; set; }
 
     public int Generation { get; set; }
 
@@ -103,7 +103,7 @@ public class DiskStorageSettings
         IPowershellEngine engine,
         VmHostAgentConfiguration vmHostAgentConfig,
         TypedPsObject<VhdInfo> vhdInfo) =>
-        from isUsable in VhdQuery.TestVhd(engine, vhdInfo.Value.Path)
+        from isUsable in VhdQuery.TestVhd(engine, vhdInfo.Value.Path ?? throw new InvalidOperationException("VhdInfo.Path is required"))
         let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let vhdPath = vhdInfo.Value.Path
         from result in GenePoolPaths.IsPathInGenePool(genePoolPath, vhdPath)
@@ -143,7 +143,7 @@ public class DiskStorageSettings
         string genePoolPath,
         VhdInfo vhdInfo,
         bool isUsable) =>
-        from uniqueGeneId in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path)
+        from uniqueGeneId in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path ?? throw new InvalidOperationException("VhdInfo.Path is required"))
             .ToAsync()
         select new DiskStorageSettings
         {

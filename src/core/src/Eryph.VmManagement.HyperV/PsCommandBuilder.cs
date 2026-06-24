@@ -22,7 +22,7 @@ public class PsCommandBuilder
         return this;
     }
 
-    public PsCommandBuilder AddParameter(string parameter, object value)
+    public PsCommandBuilder AddParameter(string parameter, object? value)
     {
         _dataChain.Add(new ParameterPart { Parameter = parameter, Value = value });
         return this;
@@ -100,28 +100,28 @@ public class PsCommandBuilder
 
     public class ArgumentPart : BasePart
     {
-        [PrivateIdentifier] public object Value { get; init; }
+        [PrivateIdentifier] public object? Value { get; init; }
     }
 
     public class ScriptPart : BasePart
     {
-        [PrivateIdentifier] public string Script { get; init; }
+        [PrivateIdentifier] public string? Script { get; init; }
     }
 
     public class CommandPart : BasePart
     {
-        public string Command { get; init; }
+        public string? Command { get; init; }
     }
 
     public class SwitchParameterPart : BasePart
     {
-        public string Parameter { get; init; }
+        public string? Parameter { get; init; }
     }
 
     public class ParameterPart : BasePart
     {
-        public string Parameter { get; init; }
+        public string? Parameter { get; init; }
 
-        [PrivateIdentifier] public object Value { get; init; }
+        [PrivateIdentifier] public object? Value { get; init; }
     }
 }

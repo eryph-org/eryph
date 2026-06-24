@@ -111,10 +111,11 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from optionalProtector in Context.Engine.GetObjectAsync<CimHgsKeyProtector>(createCommand)
         from protector in optionalProtector
             .ToEitherAsync(Error.New("Failed to create HGS key protector."))
+        let rawData = protector.Value.RawData ?? throw new InvalidOperationException("HGS key protector RawData must not be null.")
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
-            .AddParameter("KeyProtector", protector.Value.RawData)
+            .AddParameter("KeyProtector", rawData)
         from _ in Context.Engine.RunAsync(command)
         select unit;
 

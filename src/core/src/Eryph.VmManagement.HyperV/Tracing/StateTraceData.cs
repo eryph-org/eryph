@@ -7,15 +7,15 @@ public class StateTraceData : TraceData
 {
     public override string Type => "State";
 
-    public static StateTraceData FromObject<T>(T state, [CallerArgumentExpression("state")] string name = null)
+    public static StateTraceData FromObject<T>(T? state, [CallerArgumentExpression("state")] string? name = null)
     {
-        name = name?.ReplaceLineEndings("");
+        name = name?.ReplaceLineEndings("") ?? "";
 
         var data = new Dictionary<string, object>
         {
             { "caller", name },
-            { "stateType", typeof(T).FullName },
-            { "state", state },
+            { "stateType", typeof(T).FullName ?? "" },
+            { "state", state ?? new object() },
         };
 
         return new StateTraceData

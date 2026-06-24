@@ -17,7 +17,7 @@ public readonly struct TraceContext(ITracer tracer, Guid traceContext, string co
         tracer?.CloseTrace(ContextId);
     }
 
-    public void Write(TraceData data, string message = null)
+    public void Write(TraceData data, string? message = null)
     {
         tracer?.Write(ContextId, CorrelationId, data, message);
     }

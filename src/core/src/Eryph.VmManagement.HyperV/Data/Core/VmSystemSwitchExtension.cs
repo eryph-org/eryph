@@ -6,11 +6,11 @@
 /// </summary>
 public class VMSystemSwitchExtension
 {
-    public string Id { get; init; }
+    public string? Id { get; init; }
 
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
-    public string Vendor { get; set; }
+    public string? Vendor { get; set; }
 
-    public string Version { get; set; }
+    public string? Version { get; set; }
 }

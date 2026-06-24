@@ -9,7 +9,7 @@ public class VMFirmwareInfo
 
     public OnOffState SecureBoot { get; init; }
 
-    public string SecureBootTemplate { get; init; }
+    public string? SecureBootTemplate { get; init; }
 
     public Guid? SecureBootTemplateId { get; init; }
 

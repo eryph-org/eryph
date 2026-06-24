@@ -6,7 +6,7 @@
 /// </summary>
 public class CimNetworkNeighbor
 {
-    public string IPAddress { get; set; }
+    public string? IPAddress { get; set; }
 
-    public string LinkLayerAddress { get; set; }
+    public string? LinkLayerAddress { get; set; }
 }

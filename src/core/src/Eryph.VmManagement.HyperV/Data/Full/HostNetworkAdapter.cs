@@ -8,7 +8,7 @@ public class HostNetworkAdapter
 
     public int InterfaceIndex { get; init; }
 
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
     public bool Virtual { get; init; }
 }

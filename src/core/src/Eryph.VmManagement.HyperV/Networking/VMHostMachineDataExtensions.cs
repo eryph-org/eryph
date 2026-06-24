@@ -2,6 +2,7 @@
 using Eryph.Core.Network;
 using Eryph.Resources.Machines;
 using LanguageExt;
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Networking;
 
@@ -10,9 +11,9 @@ public static class VMHostMachineDataExtensions
     public static Option<string> FindSwitchName(
         this VMHostMachineData hostInfo,
         string providerName) =>
-        hostInfo.NetworkProviderConfiguration.NetworkProviders.ToSeq()
+        (hostInfo.NetworkProviderConfiguration?.NetworkProviders ?? []).ToSeq()
             .Find(p => p.Name == providerName)
-            .Map(p => p.Type == NetworkProviderType.Flat
-                ? p.SwitchName
-                : EryphConstants.OverlaySwitchName);
+            .Bind(p => p.Type == NetworkProviderType.Flat
+                ? Optional(p.SwitchName)
+                : Some(EryphConstants.OverlaySwitchName));
 }

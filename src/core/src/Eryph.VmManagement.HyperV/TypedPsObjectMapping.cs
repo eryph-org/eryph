@@ -19,10 +19,10 @@ namespace Eryph.VmManagement;
 public class TypedPsObjectMapping(ILogger logger) : ITypedPsObjectMapping
 {
     private readonly Lock _syncRoot = new();
-    private IMapper _mapper;
+    private IMapper? _mapper;
 
 
-    public T Map<T>(PSObject psObject)
+    public T? Map<T>(PSObject psObject)
     {
         EnsureMapper();
 
@@ -38,7 +38,8 @@ public class TypedPsObjectMapping(ILogger logger) : ITypedPsObjectMapping
 
             // cast is required to map correctly
             // ReSharper disable once RedundantCast
-            return _mapper.Map<T>((object)psObject);
+            var mapper = _mapper ?? throw new InvalidOperationException("Mapper not initialized");
+            return mapper.Map<T>((object)psObject);
         }
         catch (Exception ex)
         {

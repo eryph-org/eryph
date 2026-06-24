@@ -2,11 +2,11 @@
 
 public class NetRoute
 {
-    public string DestinationPrefix { get; init; }
+    public string? DestinationPrefix { get; init; }
 
-    public string NextHop { get; init; }
+    public string? NextHop { get; init; }
 
-    public string InterfaceAlias { get; init; }
+    public string? InterfaceAlias { get; init; }
 
     public int InterfaceIndex { get; set; }
 }

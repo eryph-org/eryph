@@ -6,5 +6,5 @@ public class HardDiskDriveStorageSettings : VMDriveStorageSettings
 {
     public Option<string> AttachPath { get; set; }
 
-    public DiskStorageSettings DiskSettings { get; set; }
+    public DiskStorageSettings? DiskSettings { get; set; }
 }

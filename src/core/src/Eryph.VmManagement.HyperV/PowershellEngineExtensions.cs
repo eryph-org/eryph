@@ -12,7 +12,7 @@ public static class PowershellEngineExtensions
     extension(IPowershellEngine engine)
     {
         public EitherAsync<Error, Option<TypedPsObject<T>>> GetObjectAsync<T>(PsCommandBuilder builder,
-            Func<int, Task> reportProgress = null,
+            Func<int, Task>? reportProgress = null,
             bool withoutLock = false,
             CancellationToken cancellationToken = default) =>
             from results in engine.GetObjectsAsync<T>(builder, reportProgress, withoutLock, cancellationToken)
@@ -21,7 +21,7 @@ public static class PowershellEngineExtensions
             select results.HeadOrNone();
 
         public EitherAsync<Error, Option<T>> GetObjectValueAsync<T>(PsCommandBuilder builder,
-            Func<int, Task> reportProgress = null,
+            Func<int, Task>? reportProgress = null,
             bool withoutLock = false,
             CancellationToken cancellationToken = default) =>
             from results in engine.GetObjectValuesAsync<T>(builder, reportProgress, withoutLock, cancellationToken)

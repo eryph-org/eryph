@@ -11,8 +11,8 @@ public class MessageTraceData : TraceData
         var data = new Dictionary<string, object>
         {
             { "messageId", messageId },
-            { "messageType", typeof(T).FullName },
-            { "message", message },
+            { "messageType", typeof(T).FullName ?? "" },
+            { "message", (object?)message ?? "" },
         };
 
         return new MessageTraceData

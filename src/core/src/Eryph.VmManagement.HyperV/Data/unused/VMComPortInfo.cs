@@ -4,7 +4,7 @@ namespace Eryph.VmManagement.Data.unused;
 
 public sealed class VMComPortInfo : VirtualMachineDeviceInfo
 {
-    public string Path { get; set; }
+    public string? Path { get; set; }
 
     //public OnOffState DebuggerMode { get; set; }
 }

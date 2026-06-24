@@ -9,7 +9,7 @@ public static class TraceContextEitherExtensions
 {
     public static Task<Either<Error, T>> WriteTrace<T>(
         this Task<Either<Error, T>> either,
-        [CallerArgumentExpression("either")] string name = null)
+        [CallerArgumentExpression("either")] string? name = null)
     {
         return either.MapT(r =>
         {
@@ -20,7 +20,7 @@ public static class TraceContextEitherExtensions
 
     public static EitherAsync<Error, T> WriteTrace<T>(
         this EitherAsync<Error, T> either,
-        [CallerArgumentExpression("either")] string name = null)
+        [CallerArgumentExpression("either")] string? name = null)
     {
         return either.Map(r =>
         {

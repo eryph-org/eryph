@@ -1,4 +1,5 @@
-﻿using Eryph.ConfigModel;
+﻿using System;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -88,8 +89,9 @@ public class VMDriveStorageSettingsTests
             {
                 dss.ControllerNumber.Should().Be(0);
                 dss.ControllerLocation.Should().Be(0);
-                dss.Should().BeOfType<HardDiskDriveStorageSettings>()
-                    .Which.DiskSettings.FileName.Should().Be("sda.vhdx");
+                (dss.Should().BeOfType<HardDiskDriveStorageSettings>()
+                    .Which.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set."))
+                    .FileName.Should().Be("sda.vhdx");
             },
             dss =>
             {
@@ -102,8 +104,9 @@ public class VMDriveStorageSettingsTests
             {
                 dss.ControllerNumber.Should().Be(0);
                 dss.ControllerLocation.Should().Be(2);
-                dss.Should().BeOfType<HardDiskDriveStorageSettings>()
-                    .Which.DiskSettings.FileName.Should().Be("sdb.vhdx");
+                (dss.Should().BeOfType<HardDiskDriveStorageSettings>()
+                    .Which.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set."))
+                    .FileName.Should().Be("sdb.vhdx");
             },
             dss =>
             {
@@ -151,8 +154,9 @@ public class VMDriveStorageSettingsTests
 
             var hdss = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
             hdss.AttachPath.Should().Be($@"x:\disks\storage-id-vm\sda{expectedExtension}");
-            hdss.DiskSettings.FileName.Should().Be($"sda{expectedExtension}");
-            hdss.DiskSettings.Path.Should().Be(@"x:\disks\storage-id-vm");
+            var diskSettings = hdss.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set.");
+            diskSettings.FileName.Should().Be($"sda{expectedExtension}");
+            diskSettings.Path.Should().Be(@"x:\disks\storage-id-vm");
         });
     }
 
@@ -209,10 +213,11 @@ public class VMDriveStorageSettingsTests
 
             var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
             settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
-            settings.DiskSettings.SizeBytes.Should().BeNull();
-            settings.DiskSettings.SizeBytesCreate.Should().Be(42);
+            var diskSettings = settings.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set.");
+            diskSettings.SizeBytes.Should().BeNull();
+            diskSettings.SizeBytesCreate.Should().Be(42);
 
-            AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
+            AssertParent(diskSettings.ParentSettings, expectedParentPath);
         });
     }
 
@@ -249,10 +254,11 @@ public class VMDriveStorageSettingsTests
 
             var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
             settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
-            settings.DiskSettings.SizeBytes.Should().BeNull();
-            settings.DiskSettings.SizeBytesCreate.Should().Be(1 * 1024L * 1024 * 1024);
+            var diskSettings = settings.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set.");
+            diskSettings.SizeBytes.Should().BeNull();
+            diskSettings.SizeBytesCreate.Should().Be(1 * 1024L * 1024 * 1024);
 
-            settings.DiskSettings.ParentSettings.Should().BeNone();
+            diskSettings.ParentSettings.Should().BeNone();
         });
     }
 
@@ -290,10 +296,11 @@ public class VMDriveStorageSettingsTests
 
             var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
             settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
-            settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
-            settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
+            var diskSettings = settings.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set.");
+            diskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
+            diskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
-            settings.DiskSettings.ParentSettings.Should().BeNone();
+            diskSettings.ParentSettings.Should().BeNone();
         });
     }
 
@@ -351,10 +358,11 @@ public class VMDriveStorageSettingsTests
 
             var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
             settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
-            settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
-            settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
+            var diskSettings = settings.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set.");
+            diskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
+            diskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
-            AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
+            AssertParent(diskSettings.ParentSettings, expectedParentPath);
         });
     }
 
@@ -477,10 +485,11 @@ public class VMDriveStorageSettingsTests
 
             var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
             settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
-            settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
-            settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
+            var diskSettings = settings.DiskSettings ?? throw new InvalidOperationException("DiskSettings should be set.");
+            diskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
+            diskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
-            settings.DiskSettings.ParentSettings.Should().BeNone();
+            diskSettings.ParentSettings.Should().BeNone();
         });
     }
 

@@ -11,7 +11,7 @@ public class CurrentHardDiskDriveStorageSettings : HardDiskDriveStorageSettings
 {
     public bool Frozen { get; set; }
 
-    public string AttachedVMId { get; set; }
+    public string? AttachedVMId { get; set; }
 
     public static EitherAsync<Error, Seq<CurrentHardDiskDriveStorageSettings>> Detect(
         IPowershellEngine engine,
@@ -55,6 +55,6 @@ public class CurrentHardDiskDriveStorageSettings : HardDiskDriveStorageSettings
             AttachedVMId = hdInfo.Id,
             ControllerNumber = hdInfo.ControllerNumber,
             ControllerLocation = hdInfo.ControllerLocation,
-            DiskSettings = diskSettings.IfNoneUnsafe((DiskStorageSettings)null),
+            DiskSettings = diskSettings.IfNoneUnsafe((DiskStorageSettings?)null),
         };
 }
