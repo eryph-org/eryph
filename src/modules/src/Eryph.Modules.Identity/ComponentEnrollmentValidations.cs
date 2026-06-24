@@ -83,10 +83,10 @@ public static class ComponentEnrollmentValidations
             var names = request.ServerDnsNames ?? [];
             // Bound the count on this anonymous endpoint before validating/issuing each name — a real
             // component lists a handful of SANs, so a large array is only an attempt to force work.
-            if (names.Count > MaxServerDnsNames)
+            if (names.Count > ComponentEnrollmentLimits.MaxServerDnsNames)
                 issues.Add(new ValidationIssue(
                     "$.server_dns_names",
-                    $"At most {MaxServerDnsNames} server DNS names may be requested."));
+                    $"At most {ComponentEnrollmentLimits.MaxServerDnsNames} server DNS names may be requested."));
             else
                 for (var i = 0; i < names.Count; i++)
                 {
@@ -115,9 +115,9 @@ public static class ComponentEnrollmentValidations
     // we issue against yet bounds the decode/import work an anonymous caller can force with oversized input.
     private const int MaxPublicKeyBase64Length = 4 * 1024;
 
-    // A component requests its own FQDN plus a small number of aliases; cap the list so an anonymous
-    // caller cannot force thousands of regex validations / SAN entries.
-    private const int MaxServerDnsNames = 16;
+    // The server-DNS-name count cap (ComponentEnrollmentLimits.MaxServerDnsNames) is shared with the
+    // enrollment service so the two cannot drift; a component requests its own FQDN plus a small number
+    // of aliases, so the cap stops an anonymous caller forcing thousands of regex validations / SAN entries.
 
     private static bool IsValidPublicKey(string base64)
     {

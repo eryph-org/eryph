@@ -166,11 +166,6 @@ public sealed class ComponentEnrollmentService(
             await provisioner.EnsureComponentAsync(componentId, cancellationToken);
     }
 
-    // The most server DNS names a single request may carry (a real component lists a handful); a larger
-    // array is only an attempt to force per-name validation/issuance work. Mirrors the enroll endpoint's
-    // ComponentEnrollmentValidations cap, enforced here too so the (anonymous) renew path is bounded.
-    private const int MaxServerDnsNames = 16;
-
     // Imports and validates the public keys + server DNS names a request carries. Held in a disposable
     // so both the enroll (token) and renew (certificate) paths free the key handles the same way.
     // <paramref name="defaultServerDnsName"/> is the trusted host name to cover when the request lists no
@@ -199,11 +194,13 @@ public sealed class ComponentEnrollmentService(
         IReadOnlyList<string>? serverDnsNames = null;
         if (request.ServerPublicKey is { Length: > 0 })
         {
-            if (request.ServerDnsNames is { Count: > MaxServerDnsNames })
+            // Defense-in-depth: the (anonymous) renew path enforces the shared cap too, not just the
+            // enroll endpoint's validation, so neither path can drift to accept an unbounded list.
+            if (request.ServerDnsNames is { Count: > ComponentEnrollmentLimits.MaxServerDnsNames })
             {
                 subjectKey.Dispose();
                 throw new ComponentEnrollmentException(
-                    $"At most {MaxServerDnsNames} server DNS names may be requested.");
+                    $"At most {ComponentEnrollmentLimits.MaxServerDnsNames} server DNS names may be requested.");
             }
 
             var dnsNames = request.ServerDnsNames is { Count: > 0 }
