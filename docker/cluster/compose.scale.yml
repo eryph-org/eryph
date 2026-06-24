@@ -1,0 +1,80 @@
+# Scale-out overlay: a second instance of identity, controller and compute API (not the network module,
+# which hosts the single OVN northbound). Used to test the component lifecycle — scale out / tier down.
+#
+#   podman compose -f compose.yml -f compose.scale.yml up -d identity2 controller2 apiendpoint2
+#   podman compose -f compose.yml -f compose.scale.yml stop identity2 controller2 apiendpoint2   # tier down
+#
+# Each replica needs a distinct hostname (its identity is FQDN-derived) and its own enrollment file
+# (mint controller2/apiendpoint2 enrollment first; identity self-issues). In production the replicas of
+# identity and the compute API sit behind a load balancer — components still point at the single
+# 'identity'/endpoint URL here, so this overlay exercises registration/liveness, not LB request spread.
+
+volumes:
+  identity2-certs:
+  controller2-certs:
+  apiendpoint2-certs:
+
+services:
+  identity2:
+    image: eryph-cluster/identity
+    hostname: identity2
+    depends_on:
+      mariadb: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: https://+:8080
+      ERYPH_IDENTITY_BASEURL: https://identity-lb:8080/
+      ERYPH_IDENTITYDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph_identity;User Id=root;Password=eryph"
+      RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
+      ERYPH_PKI_KEYSTORE: file
+      ERYPH_PKI_DIRECTORY: /pki
+      componentMtls__certificateDirectory: /identity2-certs
+    volumes:
+      - pki:/pki
+      - identity2-certs:/identity2-certs
+      - trust:/trust:ro
+    networks: [eryph]
+    restart: "no"
+
+  controller2:
+    image: eryph-cluster/controller
+    hostname: controller2
+    depends_on:
+      mariadb: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+      identity: { condition: service_started }
+    environment:
+      ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
+      RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
+      componentMtls__enrollmentFile: /enroll/controller2.json
+      componentMtls__certificateDirectory: /controller2-certs
+    volumes:
+      - controller2-certs:/controller2-certs
+      - enroll:/enroll:ro
+      - trust:/trust:ro
+    networks: [eryph]
+    restart: "no"
+
+  apiendpoint2:
+    image: eryph-cluster/apiendpoint
+    hostname: apiendpoint2
+    depends_on:
+      mariadb: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+      identity: { condition: service_started }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: https://+:8000
+      ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
+      ERYPH_IDENTITY_URL: "https://identity-lb:8080/identity"
+      RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
+      componentMtls__enrollmentFile: /enroll/apiendpoint2.json
+      componentMtls__certificateDirectory: /apiendpoint2-certs
+      componentMtls__serverDnsNames: compute-lb
+    volumes:
+      - apiendpoint2-certs:/apiendpoint2-certs
+      - enroll:/enroll:ro
+      - trust:/trust:ro
+    networks: [eryph]
+    restart: "no"

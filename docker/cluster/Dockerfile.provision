@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1
+#
+# The provisioning ("configuration") container: bundles the cross-platform ClusterProvision harness
+# (creates the CA + broker TLS material) and the identity binaries (mints enrollment files via its
+# new-enrollment command). Runs once, writes into shared volumes, exits. In production this is the job
+# of the orchestration tooling; this image is the reproducible reference for it.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+
+WORKDIR /app
+COPY publish/Eryph.ClusterProvision/ /app/provision/
+COPY publish/Eryph.Identity/ /app/identity/
+COPY provision-entrypoint.sh /app/provision-entrypoint.sh
+RUN chmod +x /app/provision-entrypoint.sh
+
+ENTRYPOINT ["/app/provision-entrypoint.sh"]
