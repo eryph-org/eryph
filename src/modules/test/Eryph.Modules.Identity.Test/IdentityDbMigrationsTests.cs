@@ -36,8 +36,8 @@ public class IdentityDbMigrationsTests
     public void Sqlite_configured_context_discovers_the_initial_migration()
     {
         // Same guard for the eryph-zero SQLite store: migrations that did not compile into
-        // Eryph.IdentityDb.Sqlite, or a [DbContext] attribute mismatch, would make MigrateIdentityDbHandler
-        // a silent no-op and leave eryph-zero with an empty identity DB.
+        // Eryph.IdentityDb.Sqlite, or a [DbContext] attribute mismatch, would make the warmup migration
+        // (IdentityDatabaseResetHandler) a silent no-op and leave eryph-zero with an empty identity DB.
         var options = new DbContextOptionsBuilder<SqliteIdentityDbContext>();
         new SqliteIdentityDbContextConfigurer("Data Source=:memory:").Configure(options);
         IdentityDbModel.ApplyOpenIddict(options);

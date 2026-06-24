@@ -3,7 +3,6 @@ using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
 using Eryph.IdentityDb.Sqlite;
-using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Identity;
 using Eryph.Runtime.Zero.Configuration;
@@ -67,12 +66,9 @@ namespace Eryph.Runtime.Zero
                     }.ToString();
                     options.RegisterSqliteIdentityStore(connectionString);
 
-                    // eryph-zero owns its disposable SQLite identity database, so it migrates it
-                    // in-process. The module no longer registers this (the split runtime sets its schema
-                    // up out of band); register it here, before next() so it runs before the module's
-                    // seeders.
-                    options.AddStartupHandler<MigrateIdentityDbHandler>();
-
+                    // No startup migration here: eryph-zero migrates the identity database in its warmup
+                    // phase (IdentityDatabaseResetHandler in Program.cs), exactly like the state database
+                    // (DatabaseResetHandler) — the main host just uses the already-migrated database.
                     next(context, options);
                 };
             }

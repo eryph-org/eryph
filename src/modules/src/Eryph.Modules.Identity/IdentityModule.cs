@@ -73,10 +73,10 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
                 ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),
             });
 
-        // The identity-database schema is created out of band, not migrated here: eryph-zero's host adds
-        // MigrateIdentityDbHandler (it owns its disposable SQLite database in-process), while the split
+        // The identity-database schema is created out of band, not migrated here: eryph-zero migrates it
+        // in its warmup phase (IdentityDatabaseResetHandler, like the state store), while the split
         // runtime sets the schema up before startup (the `create-db` command / SQL setup scripts), like
-        // the controller's state database — so the module no longer migrates unconditionally.
+        // the controller's state database — so the module never migrates at startup.
 
         // Mirror the state store's change-tracking/export pipeline for the identity database. Register
         // change tracking BEFORE seeding so the export queues are enabled before the seeders save (and

@@ -29,8 +29,9 @@ namespace Eryph.Identity
             // controller/compute StateDb, because identity is its own authority. eryph-zero uses a disposable
             // SQLite store instead. The store (configurer + DbContext) is registered by
             // HostIdentityModuleExtensions via RegisterMySqlIdentityStore so the configurer lands on the
-            // module container alongside the change-tracking pipeline; the schema is migrated in-process at
-            // startup by MigrateIdentityDbHandler.
+            // module container alongside the change-tracking pipeline. The schema is set up out of band
+            // (the `create-db` command in dev, the generated SQL setup script in production), not migrated
+            // at startup — like the controller's state database.
 
             // The identity process owns its own endpoint; it is told its public address via
             // config so it can both host on it and (later) advertise it to the controller.
