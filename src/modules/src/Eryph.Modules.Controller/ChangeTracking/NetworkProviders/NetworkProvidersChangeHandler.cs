@@ -47,17 +47,17 @@ internal class NetworkProvidersChangeHandler(
 
         foreach (var subnet in providerSubnets)
         {
-            var providerConfig = config.NetworkProviders
+            var providerConfig = (config.NetworkProviders ?? [])
                 .FirstOrDefault(p => p.Name == subnet.ProviderName);
 
-            var subnetConfig = providerConfig?.Subnets
+            var subnetConfig = providerConfig?.Subnets?
                 .FirstOrDefault(s => s.Name == subnet.Name);
             if (subnetConfig is null)
                 continue;
 
             foreach (var ipPool in subnet.IpPools)
             {
-                var poolConfig = subnetConfig.IpPools
+                var poolConfig = subnetConfig.IpPools?
                     .FirstOrDefault(p => p.Name == ipPool.Name);
 
                 poolConfig?.NextIp = ipPool.NextIp;

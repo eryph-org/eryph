@@ -86,7 +86,9 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         });
 
         var expectedConfig = GetProvidersConfig();
-        expectedConfig.NetworkProviders[0].Subnets[0].IpPools[0].NextIp = "10.0.0.150";
+        var expectedPool = expectedConfig.NetworkProviders?[0].Subnets?[0].IpPools?[0]
+            ?? throw new InvalidOperationException("The expected provider configuration is incomplete.");
+        expectedPool.NextIp = "10.0.0.150";
         _savedProvidersConfig.Should().BeEquivalentTo(expectedConfig);
         var portsConfig = await ReadPortsConfig();
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);

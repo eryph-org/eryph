@@ -20,9 +20,9 @@ public static class EnumerableExtensions
     private sealed class DynamicEqualityComparer<T>(Func<T, T, bool> func) : IEqualityComparer<T>
         where T : class
     {
-        public bool Equals(T x, T y)
+        public bool Equals(T? x, T? y)
         {
-            return func(x, y);
+            return x == null ? y == null : y != null && func(x, y);
         }
 
         public int GetHashCode(T obj)

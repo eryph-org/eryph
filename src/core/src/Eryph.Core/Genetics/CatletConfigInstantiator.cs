@@ -39,8 +39,8 @@ public static class CatletConfigInstantiator
 
     private static CatletDriveConfig ApplyStorageIdentifier(
         CatletDriveConfig driveConfig,
-        string storageIdentifier) =>
-        driveConfig.CloneWith(d => { d.Location = Optional(d.Location).Filter(notEmpty).IfNone(storageIdentifier); });
+        string? storageIdentifier) =>
+        driveConfig.CloneWith(d => { d.Location = Optional(d.Location).Filter(notEmpty).IfNoneUnsafe(storageIdentifier); });
 
     private static CatletNetworkAdapterConfig GenerateMacAddress(
         CatletNetworkAdapterConfig adapterConfig) =>

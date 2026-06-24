@@ -41,10 +41,10 @@ public static class CatletBreeding
 
             // Bred configuration
             Capabilities = capabilities.ToArray(),
-            Cpu = cpu.IfNoneUnsafe((CatletCpuConfig)null),
+            Cpu = cpu.IfNoneUnsafe((CatletCpuConfig?)null),
             Drives = drives.ToArray(),
             Fodder = fodder.ToArray(),
-            Memory = memory.IfNoneUnsafe((CatletMemoryConfig)null),
+            Memory = memory.IfNoneUnsafe((CatletMemoryConfig?)null),
             Networks = networks.ToArray(),
             NetworkAdapters = networkAdapters.ToArray(),
             Variables = variables.ToArray(),
@@ -92,10 +92,10 @@ public static class CatletBreeding
                     Mutation = child.Mutation,
 
                     Type = diskType,
-                    Location = location.IfNoneUnsafe((string)null),
+                    Location = location.IfNoneUnsafe((string?)null),
                     Size = size.Map(s => (int?)s).IfNoneUnsafe((int?)null),
-                    Store = store.IfNoneUnsafe((string)null),
-                    Source = source.IfNoneUnsafe((string)null),
+                    Store = store.IfNoneUnsafe((string?)null),
+                    Source = source.IfNoneUnsafe((string?)null),
                 });
 
     private static Either<Error, Seq<CatletNetworkAdapterConfig>> BreedNetworkAdapters(
@@ -250,11 +250,11 @@ public static class CatletBreeding
         where TConfig : IMutateableConfig<TConfig>
         where TName : EryphName<TName> =>
         from parentsWithNames in parentConfigs
-            .Map(c => from name in parseName(c.Name)
+            .Map(c => from name in parseName(c.Name ?? "")
                 select new ConfigWithName<TConfig, TName>(name, c))
             .Sequence()
         from childrenWithNames in childConfigs
-            .Map(c => from name in parseName(c.Name)
+            .Map(c => from name in parseName(c.Name ?? "")
                 select new ConfigWithName<TConfig, TName>(name, c))
             .Sequence()
         // Validate that there are no duplicate names as it would break the breeding.

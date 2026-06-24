@@ -65,13 +65,13 @@ public static class VmHostAgentConfigurationValidations
         VmHostAgentConfiguration toValidate) =>
         append(
                 toValidate.Environments.ToSeq().Bind(e => append(
-                    Seq1(e.Defaults?.Vms),
-                    Seq1(e.Defaults?.Volumes),
+                    Optional(e.Defaults?.Vms).ToSeq(),
+                    Optional(e.Defaults?.Volumes).ToSeq(),
                     e.Datastores.ToSeq().Map(ds => ds.Path))
                 ),
                 toValidate.Datastores.ToSeq().Map(ds => ds.Path),
-                Seq1(toValidate.Defaults?.Vms),
-                Seq1(toValidate.Defaults?.Volumes)
+                Optional(toValidate.Defaults?.Vms).ToSeq(),
+                Optional(toValidate.Defaults?.Volumes).ToSeq()
             )
             .Filter(notEmpty)
             .Map(p => Path.TrimEndingDirectorySeparator(p).ToLowerInvariant())

@@ -270,7 +270,9 @@ public class NetworkProvidersConfigRealizerTests(
 
         await WithScope(async (realizer, _) =>
         {
-            _simpleConfig.NetworkProviders[0].Subnets[0].IpPools[0].LastIp = "10.249.248.100";
+            var simplePool = _simpleConfig.NetworkProviders?[0].Subnets?[0].IpPools?[0]
+                ?? throw new InvalidOperationException("The simple provider configuration is incomplete.");
+            simplePool.LastIp = "10.249.248.100";
             await realizer.RealizeConfigAsync(_simpleConfig, CancellationToken.None);
         });
 

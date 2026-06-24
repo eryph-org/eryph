@@ -36,6 +36,6 @@ public static class CatletConfigVariableApplier
         from name in VariableName.NewValidation(config.Name)
         from value in valuesByName.Find(name).Match(
             v => VariableConfigValidations.ValidateVariableValue(v, config.Type),
-            () => Success<Error, string>(config.Value))
+            () => Success<Error, string>(config.Value ?? ""))
         select config.CloneWith(c => { c.Value = value; });
 }

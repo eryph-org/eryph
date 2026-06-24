@@ -68,11 +68,11 @@ internal class CreateProjectNetworksSaga(
                     return new NetworkProvidersConfiguration();
                 });
 
-        var messages = validator.ValidateConfig(Data.Config, providerConfig.NetworkProviders).ToArray();
+        var messages = validator.ValidateConfig(Data.Config, providerConfig.NetworkProviders ?? []).ToArray();
 
         if (messages.Length == 0)
             messages = await AsyncToArray(validator.ValidateChanges(project.Id, Data.Config,
-                providerConfig.NetworkProviders));
+                providerConfig.NetworkProviders ?? []));
 
         if (messages.Length == 0)
         {

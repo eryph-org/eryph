@@ -26,12 +26,17 @@ public class NetworkProvidersConfigRealizer(IStateStore stateStore) : INetworkPr
         // Flat providers are included so that static IP support for flat networks works.
         // Their subnets are optional: a flat provider without subnets relies on an external
         // DHCP server, a flat provider with subnets has eryph assign static IPs from the pool.
-        foreach (var networkProvider in config.NetworkProviders
+        foreach (var networkProvider in (config.NetworkProviders ?? [])
                      .Where(x => x.Type is NetworkProviderType.NatOverlay
                          or NetworkProviderType.Overlay
                          or NetworkProviderType.Flat))
         foreach (var subnet in networkProvider.Subnets ?? [])
         {
+            if (subnet.Name is null || subnet.Network is null)
+                throw new InvalidOperationException(
+                    $"The subnet configuration of provider '{networkProvider.Name}' is incomplete; "
+                    + "the network provider configuration must be validated before realization.");
+
             var subnetEntity = existingSubnets.FirstOrDefault(e =>
                 e.ProviderName == networkProvider.Name && e.Name == subnet.Name);
 
@@ -63,8 +68,13 @@ public class NetworkProvidersConfigRealizer(IStateStore stateStore) : INetworkPr
             subnetEntity.DnsDomain = subnet.DnsDomain;
             subnetEntity.MTU = subnet.Mtu.GetValueOrDefault();
 
-            foreach (var ipPool in subnet.IpPools)
+            foreach (var ipPool in subnet.IpPools ?? [])
             {
+                if (ipPool.Name is null || ipPool.FirstIp is null || ipPool.LastIp is null)
+                    throw new InvalidOperationException(
+                        $"The IP pool configuration of provider '{networkProvider.Name}' is incomplete; "
+                        + "the network provider configuration must be validated before realization.");
+
                 var ipPoolEntity = subnetEntity.IpPools.FirstOrDefault(x =>
                     x.Name == ipPool.Name && x.IpNetwork == subnetEntity.IpNetwork);
 

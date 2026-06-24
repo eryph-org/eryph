@@ -54,7 +54,7 @@ internal class ProjectNetworkPlanBuilder(
     /// </remarks>
     private static EitherAsync<Error, HashMap<string, ProviderRouterIpInfo>> PrepareProviderRouterIpInfos(
         NetworkProvidersConfiguration providersConfig) =>
-        from _1 in guard(providersConfig.NetworkProviders.Length <= EryphConstants.Limits.MaxNetworkProviders,
+        from _1 in guard((providersConfig.NetworkProviders?.Length ?? 0) <= EryphConstants.Limits.MaxNetworkProviders,
                 Error.New("Too many network providers are configured."))
             .ToEitherAsync()
         from optionalEastWestNetwork in Optional(providersConfig.EastWestNetwork)
@@ -181,7 +181,7 @@ internal class ProjectNetworkPlanBuilder(
         from parsedExternalIp in parseIPAddress(externalIpAssignment.IpAddress)
             .ToEitherAsync(Error.New(
                 $"Network '{portInfo.Network.Name}' configuration error: the port for provider '{providerName}' has an invalid IP address assigned."))
-        from externalNetwork in parseIPNetwork2(portInfo.Subnet.Subnet.IpNetwork)
+        from externalNetwork in parseIPNetwork2(portInfo.Subnet.Subnet.IpNetwork ?? "")
             .ToEitherAsync(Error.New(
                 $"Network '{portInfo.Network.Name}' configuration error: the subnet '{subnetName}' of the provider '{providerName}' has an invalid IP network assigned."))
         from gatewayIp in parseIPAddress(portInfo.Subnet.Config.Gateway)
@@ -239,7 +239,7 @@ internal class ProjectNetworkPlanBuilder(
         NetworkPlan plan,
         string switchName,
         string externalNetwork,
-        string bridgeName,
+        string? bridgeName,
         int? tag)
     {
         // Include the bridge name in the port name. This ensures that the patch port
@@ -283,7 +283,7 @@ internal class ProjectNetworkPlanBuilder(
         NetworkPlan networkPlan,
         VirtualNetworkSubnet subnet,
         Seq<ProviderRouterPortInfo> providerPortInfos) =>
-        from subnetNetwork in parseIPNetwork2(subnet.IpNetwork)
+        from subnetNetwork in parseIPNetwork2(subnet.IpNetwork ?? "")
             .ToEitherAsync(Error.New($"The network '{subnet.IpNetwork}' of subnet {subnet.Id} is invalid."))
         from routerPort in Optional(subnet.Network.RouterPort)
             .ToEitherAsync(Error.New($"The network {subnet.NetworkId} has no router port assigned."))
@@ -439,7 +439,7 @@ internal class ProjectNetworkPlanBuilder(
             .Find(network.NetworkProvider)
             .ToEitherAsync(Error.New(
                 $"BUG! Could not find the IP information for provider '{network.NetworkProvider}'."))
-        from ipNetwork in parseIPNetwork2(network.IpNetwork)
+        from ipNetwork in parseIPNetwork2(network.IpNetwork ?? "")
             .ToEitherAsync(Error.New(
                 $"Network '{network.Name}' configuration error: the IP network '{network.IpNetwork}' is invalid."))
         from routerPort in Optional(network.RouterPort)

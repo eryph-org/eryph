@@ -84,7 +84,7 @@ public class NetworkConfigRealizer(
             log.LogDebug("Environment {Environment}: Updating network {Network}", savedNetwork.Environment,
                 savedNetwork.Name);
 
-            var networkProvider = providerConfig.NetworkProviders.FirstOrDefault(x => x.Name == providerName)
+            var networkProvider = (providerConfig.NetworkProviders ?? []).FirstOrDefault(x => x.Name == providerName)
                                   ?? throw new InconsistentNetworkConfigException(
                                       $"Network provider {providerName} not found.");
             var isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat;

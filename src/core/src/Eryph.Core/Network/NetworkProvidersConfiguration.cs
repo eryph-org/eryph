@@ -1,6 +1,4 @@
-﻿using JetBrains.Annotations;
-
-namespace Eryph.Core.Network;
+﻿namespace Eryph.Core.Network;
 
 public class NetworkProvidersConfiguration
 {
@@ -21,7 +19,7 @@ public class NetworkProvidersConfiguration
               last_ip: 10.249.251.241
         """;
 
-    [CanBeNull] public string EastWestNetwork { get; set; }
+    public string? EastWestNetwork { get; set; }
 
-    public NetworkProvider[] NetworkProviders { get; set; }
+    public NetworkProvider[]? NetworkProviders { get; set; }
 }

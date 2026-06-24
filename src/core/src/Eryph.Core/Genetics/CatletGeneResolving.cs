@@ -28,7 +28,7 @@ public static class CatletGeneResolving
             .Sequence()
         select catletConfig.CloneWith(c =>
         {
-            c.Parent = resolvedParent.Map(id => id.Value).IfNoneUnsafe((string)null);
+            c.Parent = resolvedParent.Map(id => id.Value).IfNoneUnsafe((string?)null);
             c.Drives = resolvedDrives.ToArray();
             c.Fodder = resolvedFodder.ToArray();
         });
@@ -43,7 +43,7 @@ public static class CatletGeneResolving
         select fodderConfig.CloneWith(c =>
         {
             c.Source = resolvedGeneIdentifier.Map(id => id.Value)
-                .IfNoneUnsafe((string)null);
+                .IfNoneUnsafe((string?)null);
         });
 
     private static Either<Error, CatletDriveConfig> ResolveGeneSetIdentifiers(

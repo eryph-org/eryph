@@ -288,7 +288,7 @@ public class NetworkConfigValidator(IStateStore stateStore, ILogger log) : INetw
             }
             else
             {
-                var providerSubnet = networkProvider.Subnets
+                var providerSubnet = (networkProvider.Subnets ?? [])
                     .FirstOrDefault(x => x.Name == providerSubnetName);
 
                 if (providerSubnet == null)
@@ -298,7 +298,7 @@ public class NetworkConfigValidator(IStateStore stateStore, ILogger log) : INetw
                     continue;
                 }
 
-                if (providerSubnet.IpPools.All(x => x.Name != providerIpPoolName))
+                if ((providerSubnet.IpPools ?? []).All(x => x.Name != providerIpPoolName))
                 {
                     yield return
                         $"{environmentMessage}network '{networkConfig.Name}': provider ip pool '{providerName}/{providerSubnetName}/{providerIpPoolName}' not found";

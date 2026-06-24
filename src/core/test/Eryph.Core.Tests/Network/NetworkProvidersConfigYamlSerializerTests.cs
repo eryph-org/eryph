@@ -58,9 +58,11 @@ public class NetworkProvidersConfigYamlSerializerTests
         // Round-trip: re-serializing and deserializing must preserve the new settings.
         var roundTripped = NetworkProvidersConfigYamlSerializer.Deserialize(
             NetworkProvidersConfigYamlSerializer.Serialize(config));
-        roundTripped.NetworkProviders[0].Subnets[0].DnsServers.Should().Equal("9.9.9.9", "8.8.8.8");
-        roundTripped.NetworkProviders[0].Subnets[0].DnsDomain.Should().Be("example.com");
-        roundTripped.NetworkProviders[0].Subnets[0].Mtu.Should().Be(1400);
+        var roundTrippedSubnet = roundTripped.NetworkProviders?[0].Subnets?[0]
+            ?? throw new InvalidOperationException("The round-tripped configuration is incomplete.");
+        roundTrippedSubnet.DnsServers.Should().Equal("9.9.9.9", "8.8.8.8");
+        roundTrippedSubnet.DnsDomain.Should().Be("example.com");
+        roundTrippedSubnet.Mtu.Should().Be(1400);
     }
 
     [Fact]

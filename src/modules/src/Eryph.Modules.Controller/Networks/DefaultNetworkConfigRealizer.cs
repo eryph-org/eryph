@@ -17,7 +17,7 @@ internal class DefaultNetworkConfigRealizer(
         var providerConfig = await networkProviderManager.GetCurrentConfiguration()
             .IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
-        var defaultProvider = providerConfig.NetworkProviders.FirstOrDefault(x => x.Name == "default");
+        var defaultProvider = (providerConfig.NetworkProviders ?? []).FirstOrDefault(x => x.Name == "default");
         if (defaultProvider is null)
             throw new Exception("Default network provider not found");
 

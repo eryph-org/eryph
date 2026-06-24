@@ -160,7 +160,7 @@ public static class NetworkProvidersConfigValidations
         string path) =>
         from _1 in ValidateProperty(toValidate, c => c.Name, ValidateSubnetName, path, true)
                    | ValidateProperty(toValidate, c => c.Network, ValidateIpNetwork, path, true)
-        from ipNetwork in parseIPNetwork2(toValidate.Network).ToValidation(
+        from ipNetwork in parseIPNetwork2(toValidate.Network ?? "").ToValidation(
             new ValidationIssue(path, $"The network '{toValidate.Network}' is invalid."))
         from _2 in ValidateProperty(toValidate, c => c.Gateway, i => ValidateIpAddress(i, ipNetwork), path, true)
                    | ValidateList(toValidate, c => c.IpPools, (i, p) => ValidateIpPool(i, ipNetwork, p), path, 1)
@@ -254,7 +254,7 @@ public static class NetworkProvidersConfigValidations
             .Filter(p => p.Type is NetworkProviderType.NatOverlay)
             .Map(p => p.Subnets.ToSeq()
                 .Find(s => s.Name == EryphConstants.DefaultSubnetName)
-                .Map(s => s.Network)
+                .Bind(s => Optional(s.Network))
                 .Bind(parseIPNetwork2)
                 .Map(n => (p.Name, Network: n)))
             .Somes()

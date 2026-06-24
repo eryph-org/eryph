@@ -96,7 +96,9 @@ internal class DeployCatletSaga(
                 CatletId = Data.Data.CatletId,
                 CatletMetadataId = Data.Data.MetadataId,
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
-                    Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
+                    Data.Data.Config ?? throw new InvalidOperationException(
+                        "The catlet configuration is missing from the deployment saga state."),
+                    Data.Data.CatletId, Data.Data.VmId),
                 ProjectId = Data.Data.ProjectId,
             });
         });
@@ -155,7 +157,9 @@ internal class DeployCatletSaga(
                 VmId = catlet.VmId,
                 MetadataId = Data.Data.MetadataId,
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
-                    Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
+                    Data.Data.Config ?? throw new InvalidOperationException(
+                        "The catlet configuration is missing from the deployment saga state."),
+                    Data.Data.CatletId, Data.Data.VmId),
                 AgentName = Data.Data.AgentName,
                 MachineNetworkSettings = r.NetworkSettings,
                 ResolvedGenes = Data.Data.ResolvedGenes.Keys.ToList(),
@@ -189,7 +193,9 @@ internal class DeployCatletSaga(
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
-                    Data.Data.Config, Data.Data.CatletId, Data.Data.VmId),
+                    Data.Data.Config ?? throw new InvalidOperationException(
+                        "The catlet configuration is missing from the deployment saga state."),
+                    Data.Data.CatletId, Data.Data.VmId),
                 VmId = response.Inventory.VmId,
                 CatletId = Data.Data.CatletId,
                 MetadataId = Data.Data.MetadataId,

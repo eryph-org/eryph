@@ -34,7 +34,7 @@ public class UniqueGeneIdentifier : EryphName<UniqueGeneIdentifier>
         Optional(value)
             .Bind(s => Validate(s).ToOption())
             .Map(t => Format(t.GeneType, t.Id, t.Architecture))
-            .IfNoneUnsafe(value);
+            .IfNone(value);
 
     private static string Format(GeneType geneType, GeneIdentifier id, Architecture architecture) =>
         $"{geneType}::{id}[{architecture}]";
