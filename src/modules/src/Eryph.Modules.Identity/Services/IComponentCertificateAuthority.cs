@@ -26,6 +26,45 @@ public interface IComponentCertificateAuthority
     IReadOnlyList<X509Certificate2> GetTrustedCaCertificates();
 
     /// <summary>
+    /// The issuing intermediate CA certificate(s) (client + server), as public-only copies. Needed to
+    /// build a chain from a presented leaf to the trusted root when the leaf is surfaced <b>without</b>
+    /// its chain — notably the renewal endpoint, which reads only
+    /// <c>HttpContext.Connection.ClientCertificate</c> (the leaf) after the handshake, so the
+    /// intermediate cannot ride along and must be supplied by the CA that issued it.
+    /// <para>
+    /// The returned certificates are fresh, <b>caller-owned</b> instances; the caller must dispose them.
+    /// </para>
+    /// </summary>
+    IReadOnlyList<X509Certificate2> GetIssuingCaCertificates();
+
+    /// <summary>
+    /// Begins a CA rotation: generates a new root and new issuing intermediates and switches signing to
+    /// them, while keeping the previous generation in the trust bundle (as public-only certificates) so
+    /// leaves issued under it still validate during the overlap. New leaves chain to the new root.
+    /// <para>
+    /// The new trust bundle (which now contains both roots) must be distributed to and trusted by every
+    /// component <b>before</b> they are served anything signed only by the new root; that ordering is the
+    /// orchestration layer's responsibility. Call <see cref="RetireSupersededCertificateAuthorities"/>
+    /// once every component has rotated to complete the overlap.
+    /// </para>
+    /// <para>
+    /// This is not crash-atomic against a file-based store: it demotes the current generation, then mints
+    /// the new one, so an interruption between those steps can leave a tier without signing material that
+    /// the next <see cref="IssueComponentCertificate"/> re-creates (losing the overlap). The caller that
+    /// drives rotation must therefore run it to completion (it is a single in-process operation, not a
+    /// multi-step protocol) and treat an interrupted rotation as "re-run from a known generation".
+    /// </para>
+    /// </summary>
+    void RotateRootCertificateAuthority();
+
+    /// <summary>
+    /// Completes a rotation by removing the superseded (public-only) CA generations, leaving only the
+    /// current signing generation trusted. Only safe once every component has rotated to a leaf issued
+    /// under the new generation — removing a still-in-use generation breaks not-yet-rotated leaves.
+    /// </summary>
+    void RetireSupersededCertificateAuthorities();
+
+    /// <summary>
     /// Issues a component mTLS client certificate (clientAuth) for the given identity, signed by
     /// the client intermediate. Returns the leaf plus the intermediate(s) the component must
     /// present alongside it to chain to the trusted root. The returned <see cref="IssuedCertificate"/>

@@ -40,6 +40,23 @@ internal sealed class ComponentHeartbeatService(
             catch (OperationCanceledException) { }
         }
 
+        // Graceful shutdown: tell the controller we are leaving so the registration is removed now
+        // rather than aged out after the heartbeat timeout. Best-effort — if the bus is already
+        // shutting down the send fails and the liveness timeout drops the component instead.
+        try
+        {
+            await bus.Advanced.Routing.Send(QueueNames.Controllers, new DeregisterComponentCommand
+            {
+                ComponentId = identity.ComponentId,
+                InstanceId = identity.InstanceId,
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex, "Could not send deregistration on shutdown; the controller will age the component out.");
+        }
+
         // The loop has finished; dispose the CTS so its wait handle is not leaked for the
         // remainder of the process lifetime.
         _stopping.Dispose();

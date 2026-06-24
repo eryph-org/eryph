@@ -1,0 +1,5 @@
+# These shell scripts are COPYed into Linux container images and exec'd directly, so they must keep
+# LF line endings regardless of the host's autocrlf setting — a CRLF shebang makes the kernel look for
+# "/bin/sh\r" and the container fails with "No such file or directory".
+*.sh text eol=lf
+enabled_plugins text eol=lf

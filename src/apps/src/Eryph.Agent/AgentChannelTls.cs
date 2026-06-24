@@ -1,8 +1,7 @@
 using System;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
+using Eryph.ModuleCore.Components;
+using Eryph.Modules.AspNetCore.Components;
 using Eryph.Modules.HostAgent.Channels;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -15,7 +14,9 @@ namespace Eryph.Agent
     /// address serving the <c>/v1/channels/{token}</c> WebSocket. It presents the enrolled component
     /// server certificate and requires a client certificate signed by the component client CA, so only a
     /// valid component (the compute API) can connect. The explicit <c>Listen</c> overrides the host's
-    /// default URLs so no unauthenticated default port is bound.
+    /// default URLs so no unauthenticated default port is bound. Certificate load and the mutual-TLS
+    /// wiring are shared (the component certificate store + <see cref="ComponentTls.ConfigureHttps"/>);
+    /// only the bind endpoint is agent-specific.
     /// </summary>
     internal static class AgentChannelTls
     {
@@ -43,74 +44,18 @@ namespace Eryph.Agent
 
                 var port = int.TryParse(channel["port"], out var configuredPort) ? configuredPort : 9700;
 
-                var (serverCertificate, serverCertificateChain) = LoadServerCertificate(certificateDirectory);
-                var trustedRoots = LoadTrustedRoots(certificateDirectory);
+                var store = new FileComponentCertificateStore(
+                    certificateDirectory, ComponentCertificateDefaults.RenewalLeadTime);
+                var (leaf, chain) = store.LoadServerCertificate();
+                var trustedRoots = store.LoadCaTrustBundle();
+                if (trustedRoots.Count == 0)
+                    throw new InvalidOperationException(
+                        "The component CA trust bundle is empty; cannot validate the compute API's client certificate.");
 
                 options.Listen(ip, port, listenOptions =>
-                {
                     listenOptions.UseHttps(https =>
-                    {
-                        https.ServerCertificate = serverCertificate;
-                        // Present the issuing intermediate alongside the leaf so the compute API can build
-                        // leaf -> intermediate -> root against the root it pins (its validator chains via
-                        // the presented intermediates, exactly like the bus transport).
-                        https.ServerCertificateChain = serverCertificateChain;
-                        // Require a client certificate; the per-request validation against the component
-                        // CA happens below so we bind to the deployment PKI rather than the OS trust store.
-                        https.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
-                        https.ClientCertificateValidation = (clientCertificate, chain, _) =>
-                            ComponentClientCertificateValidator.IsTrustedComponentClient(
-                                clientCertificate, chain, trustedRoots);
-                    });
-                });
+                        ComponentTls.ConfigureHttps(https, leaf, chain, trustedRoots)));
             });
-        }
-
-        private static (X509Certificate2 Leaf, X509Certificate2Collection Chain) LoadServerCertificate(
-            string certificateDirectory)
-        {
-            // Mirror ComponentServerTls (the compute API's loader): server.pfx bundles the leaf with its
-            // private key plus the issuing chain in one atomic file. The leaf is presented together with
-            // its intermediate so the peer can build a chain to the root it pins.
-            var pfxPath = Path.Combine(certificateDirectory, "server.pfx");
-            if (!File.Exists(pfxPath))
-                throw new InvalidOperationException(
-                    $"The EGS channel listener is enabled but the enrolled server certificate '{pfxPath}' is "
-                    + "missing; refusing to start without TLS.");
-
-            var bundle = X509CertificateLoader.LoadPkcs12Collection(
-                File.ReadAllBytes(pfxPath), password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
-            var leaf = bundle.OfType<X509Certificate2>().FirstOrDefault(c => c.HasPrivateKey)
-                ?? throw new InvalidOperationException(
-                    $"The enrolled server certificate '{pfxPath}' does not contain a private key.");
-
-            var chain = new X509Certificate2Collection();
-            foreach (var certificate in bundle)
-                if (!ReferenceEquals(certificate, leaf))
-                    chain.Add(certificate);
-
-            return (leaf, chain);
-        }
-
-        private static X509Certificate2Collection LoadTrustedRoots(string certificateDirectory)
-        {
-            // The component CA trust bundle written at enrollment (ca-bundle.pem) holds the single root
-            // that anchors both the server-TLS and client intermediates; validating the incoming client
-            // certificate against it is the same trust anchor the bus transport and the compute-API
-            // dialer use — no divergent trust path.
-            var bundlePath = Path.Combine(certificateDirectory, "ca-bundle.pem");
-            if (!File.Exists(bundlePath))
-                throw new InvalidOperationException(
-                    $"The EGS channel listener is enabled but the component CA trust bundle '{bundlePath}' is "
-                    + "missing; cannot validate the compute API's client certificate.");
-
-            var roots = new X509Certificate2Collection();
-            roots.ImportFromPemFile(bundlePath);
-            if (roots.Count == 0)
-                throw new InvalidOperationException(
-                    $"The component CA trust bundle '{bundlePath}' contains no certificates.");
-
-            return roots;
         }
     }
 }

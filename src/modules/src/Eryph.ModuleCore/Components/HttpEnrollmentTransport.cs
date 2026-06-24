@@ -33,21 +33,33 @@ public sealed class HttpEnrollmentTransport(HttpClient httpClient, IEndpointReso
         return options;
     }
 
-    public async Task<ComponentEnrollmentResult> EnrollAsync(
+    public Task<ComponentEnrollmentResult> EnrollAsync(
         ComponentEnrollmentRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        PostAsync("enroll", request, cancellationToken);
+
+    public Task<ComponentEnrollmentResult> RenewAsync(
+        ComponentEnrollmentRequest request,
+        CancellationToken cancellationToken) =>
+        // Renewal authenticates with the component's current client certificate, which the underlying
+        // HttpClient's handler presents at the TLS layer; the request body (new public keys) is the same
+        // shape as enrollment, only the endpoint and the credential differ.
+        PostAsync("renew", request, cancellationToken);
+
+    private async Task<ComponentEnrollmentResult> PostAsync(
+        string action, ComponentEnrollmentRequest request, CancellationToken cancellationToken)
     {
         var identity = endpointResolver.GetEndpoint("identity");
         // Preserve the identity endpoint's path base (e.g. "/identity"): the whole identity API,
-        // including this versioned endpoint, is hosted under it. Appending to the authority alone would
+        // including these versioned endpoints, is hosted under it. Appending to the authority alone would
         // drop the base and 404. GetLeftPart(Path) strips any query/fragment; TrimEnd avoids a double
         // slash so a base with or without a trailing slash both compose correctly.
         var identityBase = identity.GetLeftPart(UriPartial.Path).TrimEnd('/');
-        var enrollUri = new Uri(identityBase + "/v1/components/enroll");
+        var requestUri = new Uri(identityBase + "/v1/components/" + action);
 
         var payload = JsonSerializer.Serialize(request, JsonOptions);
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-        using var response = await httpClient.PostAsync(enrollUri, content, cancellationToken);
+        using var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);

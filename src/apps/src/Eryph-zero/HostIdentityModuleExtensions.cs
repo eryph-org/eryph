@@ -65,6 +65,10 @@ namespace Eryph.Runtime.Zero
                         DataSource = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "identity.db"),
                     }.ToString();
                     options.RegisterSqliteIdentityStore(connectionString);
+
+                    // No startup migration here: eryph-zero migrates the identity database in its warmup
+                    // phase (IdentityDatabaseResetHandler in Program.cs), exactly like the state database
+                    // (DatabaseResetHandler) — the main host just uses the already-migrated database.
                     next(context, options);
                 };
             }

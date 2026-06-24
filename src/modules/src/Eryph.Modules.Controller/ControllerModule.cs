@@ -10,6 +10,7 @@ using Eryph.Configuration;
 using Eryph.Core;
 using Eryph.DistributedLock;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Configuration;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller.ChangeTracking;
@@ -145,6 +146,10 @@ namespace Eryph.Modules.Controller
 
             // Component registration + configuration distribution (controller is the authority).
             container.Register<IComponentRegistryService, ComponentRegistryService>(Lifestyle.Scoped);
+            // Broker user management is host-supplied: empty here (no managed broker, e.g. eryph-zero),
+            // the split-runtime controller host appends a RabbitMQ provisioner so decommissioning a
+            // component deletes its broker user. The decommission handler resolves whatever is registered.
+            container.Collection.Register<IComponentBrokerProvisioner>(Array.Empty<Type>());
             container.Register<ConfigDistributionService>(Lifestyle.Scoped);
             // Controller settings (incl. the Placement section) are owned by the host.
             container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());

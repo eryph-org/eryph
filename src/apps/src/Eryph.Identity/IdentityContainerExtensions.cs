@@ -29,34 +29,28 @@ namespace Eryph.Identity
             // controller/compute StateDb, because identity is its own authority. eryph-zero uses a disposable
             // SQLite store instead. The store (configurer + DbContext) is registered by
             // HostIdentityModuleExtensions via RegisterMySqlIdentityStore so the configurer lands on the
-            // module container alongside the change-tracking pipeline; the schema is migrated in-process at
-            // startup by MigrateIdentityDbHandler.
+            // module container alongside the change-tracking pipeline. The schema is set up out of band
+            // (the `create-db` command in dev, the generated SQL setup script in production), not migrated
+            // at startup — like the controller's state database.
 
             // The identity process owns its own endpoint; it is told its public address via
             // config so it can both host on it and (later) advertise it to the controller.
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(GetOwnEndpoints()));
         }
 
-        // Registers the platform certificate/key backend. Selection is the DI registration's job;
-        // every consumer (TokenCertificateManager, ComponentCertificateAuthority, the TLS listeners)
-        // resolves ICertificateKeyService/ICertificateStoreService/ICertificateGenerator through DI.
+        // Registers the platform certificate/key backend for the module container. In-container
+        // consumers (TokenCertificateManager, ComponentCertificateAuthority) resolve
+        // ICertificateKeyService/ICertificateStoreService/ICertificateGenerator through DI. The Kestrel
+        // TLS listener runs outside this container, so it builds the same backend directly via
+        // PkiOptions.CreateServices (see RegisterCertificateServices' body), not through DI.
         private static void RegisterCertificateServices(Container container)
         {
-            var (useFile, directory) = PkiOptions.Resolve();
-            if (useFile)
-            {
-                container.RegisterSingleton<ICertificateKeyService>(
-                    () => new FileCertificateKeyService(PkiOptions.KeyDirectory(directory)));
-                container.RegisterSingleton<ICertificateStoreService>(
-                    () => new FileCertificateStoreService(directory));
-                container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
-            }
-            else
-            {
-                container.RegisterSingleton<ICertificateKeyService, WindowsCertificateKeyService>();
-                container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
-                container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
-            }
+            // The backend switch lives once in PkiOptions.CreateServices, shared with the Kestrel TLS
+            // listeners (which build the services outside this container) so both pick the same CA.
+            var (keys, store, generator) = PkiOptions.CreateServices();
+            container.RegisterInstance(keys);
+            container.RegisterInstance(store);
+            container.RegisterInstance(generator);
         }
 
         /// <summary>

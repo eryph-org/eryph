@@ -44,6 +44,14 @@ public interface IComponentCertificateStore
     X509Certificate2Collection LoadCaTrustBundle();
 
     /// <summary>
+    /// The component's server-TLS certificate (leaf with private key) plus its issuing chain, for a
+    /// Kestrel HTTPS listener. The leaf is presented together with the chain so a peer that pins only
+    /// the root can build leaf -&gt; intermediate -&gt; root. Throws when no server certificate is
+    /// available (fail closed — never start a listener without TLS).
+    /// </summary>
+    (X509Certificate2 Leaf, X509Certificate2Collection Chain) LoadServerCertificate();
+
+    /// <summary>
     /// The enrolled client PEM material (private key, leaf-with-issuing-chain certificate and CA trust
     /// bundle) as strings, or <see langword="null"/> when not enrolled. For consumers that configure
     /// PEM-based TLS directly (e.g. OVN's <c>set-ssl</c>, which takes PEM strings, not a PKCS#12 file).

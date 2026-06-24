@@ -10,7 +10,20 @@ namespace Eryph.ModuleCore.Components;
 /// </summary>
 public interface IEnrollmentTransport
 {
+    /// <summary>
+    /// Enrolls a not-yet-enrolled component: authenticates with the one-time token in the request and
+    /// returns the issued certificate material.
+    /// </summary>
     Task<ComponentEnrollmentResult> EnrollAsync(
+        ComponentEnrollmentRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Renews an already-enrolled component: authenticates with the component's CURRENT mTLS client
+    /// certificate (presented at the TLS layer, not via the request) rather than the one-time token,
+    /// which cannot be reused. The token field of the request is ignored by the renew endpoint.
+    /// </summary>
+    Task<ComponentEnrollmentResult> RenewAsync(
         ComponentEnrollmentRequest request,
         CancellationToken cancellationToken);
 }

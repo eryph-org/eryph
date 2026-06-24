@@ -1,6 +1,9 @@
 using System;
 using System.IO;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Rebus.Configuration;
 using Eryph.IdentityDb.MySql;
@@ -63,8 +66,53 @@ namespace Eryph.Identity
                     // The module configures and starts its bus inside ConfigureContainer, so the
                     // transport must be registered first.
                     RegisterTransport(context, container);
+
+                    // The split runtime manages a real broker, so provision a per-component RabbitMQ
+                    // user at enrollment (SASL EXTERNAL); eryph-zero registers none. The module resolves
+                    // the provisioner collection, so appending here is the host's decision to manage it.
+                    ComponentBrokerProvisioning.AppendRabbitMq(
+                        container, context.ModulesHostServices.GetRequiredService<IConfiguration>());
+
                     next(context, container);
                 };
+            }
+
+            // Provisions identity's own broker user, retrying transient connection failures: the broker
+            // node can report healthy a moment before its management HTTP listener accepts connections,
+            // and a one-shot attempt would crash startup on that race.
+            private static void EnsureIdentityBrokerUser(
+                IConfiguration configuration, Guid componentId, ILogger logger)
+            {
+                // This is a one-off provisioner (not the registered singleton), so dispose it — and its
+                // HttpClient — when done rather than leaking the handler.
+                using var provisioner = ComponentBrokerProvisioning.CreateRabbitMq(configuration);
+                var deadline = DateTime.UtcNow + TimeSpan.FromMinutes(2);
+                while (true)
+                {
+                    try
+                    {
+                        provisioner.EnsureComponentAsync(componentId).GetAwaiter().GetResult();
+                        return;
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+                    {
+                        // Retry both connection failures (HttpRequestException — the management listener
+                        // not up yet) and timeouts (TaskCanceledException — the API hanging). Fail fast
+                        // once the deadline passes (identity cannot join the bus without its own broker
+                        // user) with an actionable message rather than letting the raw transport exception
+                        // bubble out of host startup.
+                        if (DateTime.UtcNow >= deadline)
+                            throw new InvalidOperationException(
+                                "The RabbitMQ management API was unreachable after 2 minutes; cannot "
+                                + "provision the identity broker user, so the identity host cannot start. "
+                                + "Check broker:managementUrl and that the broker is running.", ex);
+
+                        logger.LogInformation(
+                            "Broker management API not ready yet ({Message}); retrying identity broker-user "
+                            + "provisioning.", ex.Message);
+                        Thread.Sleep(TimeSpan.FromSeconds(2));
+                    }
+                }
             }
 
             // Identity hosts the component CA, so for bus mTLS it self-issues its own client
@@ -74,15 +122,8 @@ namespace Eryph.Identity
                 var services = context.ModulesHostServices;
                 var configuration = services.GetRequiredService<IConfiguration>();
                 var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Eryph.Identity.Transport");
-                var enabledRaw = configuration.GetSection("componentMtls")["enabled"];
-                if (!bool.TryParse(enabledRaw, out var enabled) || !enabled)
-                {
-                    logger.LogInformation("componentMtls disabled (enabled='{Raw}') — using plaintext bus transport.", enabledRaw);
-                    container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
-                    return;
-                }
 
-                logger.LogInformation("componentMtls enabled — self-issuing identity client certificate from the component CA.");
+                logger.LogInformation("Self-issuing identity client certificate from the component CA for the bus.");
 
                 var certificateAuthority = new ComponentCertificateAuthority(
                     services.GetRequiredService<ICertificateStoreService>(),
@@ -111,7 +152,7 @@ namespace Eryph.Identity
                 // unpredictable ACLs would be insecure. Fail fast so the operator configures a protected one.
                 if (string.IsNullOrWhiteSpace(certificateDirectory))
                     throw new InvalidOperationException(
-                        "componentMtls is enabled but componentMtls:certificateDirectory is not configured. "
+                        "componentMtls:certificateDirectory is not configured. "
                         + "Set it to an ACL-restricted directory for the identity client certificate.");
                 // Export leaf + issuing chain so the component presents the full chain (a broker that
                 // trusts only the root can then build it). The PKCS#12 holds the private key — write it
@@ -126,6 +167,14 @@ namespace Eryph.Identity
                 logger.LogInformation(
                     "Self-issued identity client certificate '{Thumbprint}' (component {ComponentId}) to '{PfxPath}'.",
                     bound.Thumbprint, componentId, pfxPath);
+
+                // Identity authenticates to the bus with SASL EXTERNAL like every other component, so its
+                // own broker user must exist before it connects. It enrolls no one for itself (it self-
+                // issues), so it provisions its own user here, at startup, before the bus is configured.
+                // The broker's management HTTP API may not be accepting connections the instant the node
+                // reports healthy, so retry transient connection failures rather than crash startup.
+                EnsureIdentityBrokerUser(configuration, componentId, logger);
+                logger.LogInformation("Ensured identity broker user for component {ComponentId}.", componentId);
 
                 container.RegisterInstance<IRebusTransportConfigurer>(
                     new RabbitMqRebusTransportConfigurer(pfxPath));

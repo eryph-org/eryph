@@ -36,6 +36,22 @@ internal interface IComponentRegistryService
     /// </summary>
     Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Removes a component's registration on its graceful shutdown, so it leaves the catalog
+    /// immediately instead of being aged out after the heartbeat timeout. Guarded by
+    /// <paramref name="instanceId"/>: a late message from a previous run does not remove the
+    /// registration a restarted instance already replaced. Returns whether a row was removed.
+    /// </summary>
+    Task<bool> DeregisterAsync(Guid componentId, Guid instanceId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes a component's registration unconditionally on an operator decommission — the explicit
+    /// "this component is gone for good" action, as opposed to the instance-guarded graceful
+    /// <see cref="DeregisterAsync"/>. Not instance-scoped: decommissioning revokes the identity
+    /// regardless of which run last registered it. Returns whether a row was removed.
+    /// </summary>
+    Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken);
+
     /// <summary>The components currently considered alive (status Active).</summary>
     Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken);
 }

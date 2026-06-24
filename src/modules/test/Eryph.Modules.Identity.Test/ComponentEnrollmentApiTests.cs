@@ -36,6 +36,36 @@ public class ComponentEnrollmentApiTests
     }
 
     [Fact]
+    public void ValidateForRenewal_does_not_require_a_token_but_still_validates_the_keys()
+    {
+        // Renewal authenticates with the certificate, not a token, so a renewal request with no token is
+        // valid — but the public key is still validated.
+        var request = Valid();
+        request.Token = "";
+
+        ComponentEnrollmentValidations.ValidateForRenewal(request).IsSuccess.Should().BeTrue();
+
+        request.PublicKey = "not-base64!!";
+        ComponentEnrollmentValidations.ValidateForRenewal(request).IsFail.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ValidateForRenewal_enforces_the_server_dns_name_count_cap()
+    {
+        // The renew endpoint is anonymous (cert-authenticated), so it must apply the same count cap as
+        // enroll to bound the per-request work a component can force.
+        var request = Valid();
+        request.Token = "";
+        request.ServerPublicKey = NewPublicKey();
+        request.ServerDnsNames = Enumerable.Range(0, 17).Select(i => $"name{i}.eryph.local").ToList();
+
+        var validation = ComponentEnrollmentValidations.ValidateForRenewal(request);
+
+        validation.IsFail.Should().BeTrue();
+        validation.ToModelStateDictionary().Keys.Should().Contain("$.server_dns_names");
+    }
+
+    [Fact]
     public void Validate_accepts_a_server_certificate_request_with_valid_names()
     {
         var request = Valid();

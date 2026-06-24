@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.AppCore;
@@ -13,8 +14,22 @@ namespace Eryph.Controller
 {
     internal class Program
     {
-        private static async Task Main(string[] args)
+        private static async Task<int> Main(string[] args)
         {
+            // Setup command: create the state-database schema in an empty database, then exit. The
+            // cluster schema is setup (SQL scripts in production), not a startup migration.
+            if (args.Length > 0 && string.Equals(args[0], CreateDbCommand.Verb, StringComparison.OrdinalIgnoreCase))
+                return await CreateDbCommand.RunAsync(args);
+
+            // Operator command: send a decommission request to the running controller (delete the
+            // component's broker user + remove its registration), then exit without starting the host.
+            if (args.Length > 0 && string.Equals(args[0], DecommissionCommand.Verb, StringComparison.OrdinalIgnoreCase))
+                return await DecommissionCommand.RunAsync(args);
+
+            // Operator command: make a component renew its certificate now, then exit.
+            if (args.Length > 0 && string.Equals(args[0], RenewComponentCommand.Verb, StringComparison.OrdinalIgnoreCase))
+                return await RenewComponentCommand.RunAsync(args);
+
             // Use Serilog (like eryph-zero) instead of the host's default logging, which
             // hits a Microsoft.Extensions.Logging version seam on the .NET 10 runtime.
             Log.Logger = new LoggerConfiguration()
@@ -71,6 +86,7 @@ namespace Eryph.Controller
                     .AddControllerModule()
                     .UseSerilog()
                     .RunConsoleAsync().ConfigureAwait(false);
+                return 0;
             }
             finally
             {

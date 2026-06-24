@@ -1,0 +1,249 @@
+name: eryph-cluster
+
+# Local split-runtime bring-up for the CROSS-PLATFORM control plane (Identity + Controller + Compute
+# API + Network) over the mutual-TLS bus — the only mode the split runtime supports. The Hyper-V agent
+# and gene pool are net10.0-windows / Hyper-V and run as host processes, not Linux containers.
+#
+# Orchestration order (depends_on): a one-shot provisioning container creates the component CA, the
+# broker TLS material, the root trust anchor and the per-component enrollment files into shared volumes;
+# then the broker comes up with TLS; then identity (self-issues, serves HTTPS, hosts the CA); then the
+# enrolling components enroll against identity and join the bus over mTLS.
+#
+# Components are built from host-published output (see README): publish first, then `podman compose up`.
+
+networks:
+  eryph:
+
+volumes:
+  mariadb-data:
+  rabbit-data:
+  pki:            # shared component CA (provisioning creates it, identity reuses it)
+  broker-certs:   # ca.crt / server.crt / server.key for the broker
+  trust:          # root.crt the components install into their OS trust store
+  enroll:         # one-time enrollment files, one per enrolling component
+  identity-certs:
+  controller-certs:
+  apiendpoint-certs:
+  network-certs:
+
+services:
+  provision:
+    build:
+      context: .
+      dockerfile: Dockerfile.provision
+    image: eryph-cluster/provision
+    environment:
+      BROKER_DNS: rabbit
+      # Components enroll through the load balancer, so the enrollment files carry the LB URL.
+      IDENTITY_ENDPOINT: "https://identity-lb:8080/"
+    volumes:
+      - pki:/pki
+      - broker-certs:/broker-certs
+      - trust:/trust
+      - enroll:/enroll
+    networks: [eryph]
+    restart: "no"
+
+  mariadb:
+    image: docker.io/library/mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: eryph
+      MARIADB_DATABASE: eryph
+    command: ["--bind-address=0.0.0.0"]
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql:ro
+    networks: [eryph]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  rabbit:
+    image: docker.io/library/rabbitmq:3-management
+    # Run as the rabbitmq user (999) directly so the .erlang.cookie is created and read by the same uid
+    # (under rootless podman the default root->gosu drop leaves the cookie unreadable).
+    user: "999:999"
+    hostname: rabbit
+    depends_on:
+      provision: { condition: service_completed_successfully }
+    volumes:
+      - rabbit-data:/var/lib/rabbitmq
+      - broker-certs:/etc/rabbitmq/certs:ro
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # Enable the SSL auth-mechanism plugin (SASL EXTERNAL) alongside management.
+      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+    ports:
+      - "5671:5671"
+      - "15672:15672"
+    networks: [eryph]
+    healthcheck:
+      # check_port_connectivity gates dependents on all listener ports (incl. the management HTTP API
+      # on 15672, which identity calls at startup), not just the node being pingable.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  lb:
+    # TCP/SNI passthrough load balancer for the active-active components. Reachable as identity-lb /
+    # compute-lb; backends resolve at runtime so replicas can scale out / tier down without a reload.
+    image: docker.io/library/haproxy:lts
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      eryph:
+        aliases:
+          - identity-lb
+          - compute-lb
+    restart: "no"
+
+  # One-shot identity-database setup: creates the schema before identity runs, so identity no longer
+  # migrates its own database at startup (mirroring the controller's dbsetup). Reuses the identity image.
+  identity-dbsetup:
+    image: eryph-cluster/identity
+    depends_on:
+      mariadb: { condition: service_healthy }
+    environment:
+      ERYPH_IDENTITYDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph_identity;User Id=root;Password=eryph"
+    command: ["create-db"]
+    networks: [eryph]
+    restart: "no"
+
+  identity:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: Eryph.Identity
+    image: eryph-cluster/identity
+    hostname: identity
+    depends_on:
+      mariadb: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+      identity-dbsetup: { condition: service_completed_successfully }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: https://+:8080
+      # Issuer + self-issued server-cert SAN target the LB host, so any identity replica is valid
+      # behind the load balancer (and tokens carry a stable issuer).
+      ERYPH_IDENTITY_BASEURL: https://identity-lb:8080/
+      ERYPH_IDENTITYDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph_identity;User Id=root;Password=eryph"
+      RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
+      ERYPH_PKI_KEYSTORE: file
+      ERYPH_PKI_DIRECTORY: /pki
+      componentMtls__certificateDirectory: /identity-certs
+      # Identity creates a per-component broker user at enrollment (and its own at startup) via the
+      # RabbitMQ management API.
+      broker__managementUrl: "http://rabbit:15672"
+      broker__managementUser: guest
+      broker__managementPassword: guest
+      broker__virtualHost: "/"
+    volumes:
+      - pki:/pki
+      - identity-certs:/identity-certs
+      - trust:/trust:ro
+    ports:
+      - "8080:8080"
+    networks: [eryph]
+    restart: "no"
+
+  # One-shot state-database setup: creates the schema in the empty database before the controller runs,
+  # so the controller never races its own schema creation against the bus consuming registrations. The
+  # cluster schema is setup (SQL scripts in production), not a startup migration; create-db is the dev
+  # equivalent. Reuses the controller image.
+  dbsetup:
+    image: eryph-cluster/controller
+    depends_on:
+      mariadb: { condition: service_healthy }
+    environment:
+      ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
+    command: ["create-db"]
+    networks: [eryph]
+    restart: "no"
+
+  controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: Eryph.Controller
+        INSTALL_OVN_CLIENT: "true"
+    image: eryph-cluster/controller
+    hostname: controller
+    depends_on:
+      mariadb: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+      dbsetup: { condition: service_completed_successfully }
+      identity: { condition: service_started }
+    environment:
+      ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
+      RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
+      componentMtls__enrollmentFile: /enroll/controller.json
+      componentMtls__certificateDirectory: /controller-certs
+      # The controller deletes a component's broker user when it is decommissioned.
+      broker__managementUrl: "http://rabbit:15672"
+      broker__managementUser: guest
+      broker__managementPassword: guest
+      broker__virtualHost: "/"
+    volumes:
+      - controller-certs:/controller-certs
+      - enroll:/enroll:ro
+      - trust:/trust:ro
+    networks: [eryph]
+    restart: "no"
+
+  apiendpoint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: Eryph.ApiEndpoint
+    image: eryph-cluster/apiendpoint
+    hostname: apiendpoint
+    depends_on:
+      mariadb: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+      identity: { condition: service_started }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: https://+:8000
+      ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
+      ERYPH_IDENTITY_URL: "https://identity-lb:8080/identity"
+      RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
+      componentMtls__enrollmentFile: /enroll/apiendpoint.json
+      componentMtls__certificateDirectory: /apiendpoint-certs
+      # Serve a certificate for the LB host so clients reaching compute-lb validate it.
+      componentMtls__serverDnsNames: compute-lb
+    volumes:
+      - apiendpoint-certs:/apiendpoint-certs
+      - enroll:/enroll:ro
+      - trust:/trust:ro
+    ports:
+      - "8000:8000"
+    networks: [eryph]
+    restart: "no"
+
+  network:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: Eryph.Network
+        INSTALL_OVN_SERVER: "true"
+    image: eryph-cluster/network
+    hostname: network
+    depends_on:
+      rabbit: { condition: service_healthy }
+      identity: { condition: service_started }
+    environment:
+      RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
+      componentMtls__enrollmentFile: /enroll/network.json
+      componentMtls__certificateDirectory: /network-certs
+    volumes:
+      - network-certs:/network-certs
+      - enroll:/enroll:ro
+      - trust:/trust:ro
+    networks: [eryph]
+    restart: "no"

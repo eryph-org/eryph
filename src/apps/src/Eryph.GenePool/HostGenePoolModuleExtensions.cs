@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.GenePool
 {
@@ -24,14 +25,29 @@ namespace Eryph.GenePool
             builder.HostModule<GenePoolModule>();
             builder.ConfigureFrameworkServices((_, services) =>
             {
+                services.AddTransient<IAddSimpleInjectorFilter<GenePoolModule>, GenePoolModuleFilter>();
                 services.AddTransient<IConfigureContainerFilter<GenePoolModule>, GenePoolModuleFilter>();
             });
 
             return builder;
         }
 
-        private sealed class GenePoolModuleFilter : IConfigureContainerFilter<GenePoolModule>
+        private sealed class GenePoolModuleFilter
+            : IAddSimpleInjectorFilter<GenePoolModule>,
+                IConfigureContainerFilter<GenePoolModule>
         {
+            public Action<IModulesHostBuilderContext<GenePoolModule>, SimpleInjectorAddOptions> Invoke(
+                Action<IModulesHostBuilderContext<GenePoolModule>, SimpleInjectorAddOptions> next)
+            {
+                return (context, options) =>
+                {
+                    // Renew the component certificate before it expires without a restart (the context
+                    // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
+                    ComponentMtlsTransport.AddRenewal(options);
+                    next(context, options);
+                };
+            }
+
             public Action<IModuleContext<GenePoolModule>, Container> Invoke(
                 Action<IModuleContext<GenePoolModule>, Container> next)
             {

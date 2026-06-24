@@ -102,6 +102,11 @@ public class EnrollEndpointTests
                 ? throw new ComponentEnrollmentException("not authorized")
                 : Task.FromResult(_result);
         }
+
+        public Task<ComponentEnrollmentResult> RenewAsync(
+            System.Security.Cryptography.X509Certificates.X509Certificate2 clientCertificate,
+            ComponentEnrollmentRequest request, CancellationToken cancellationToken = default) =>
+            throw new System.NotSupportedException("The enroll endpoint tests do not exercise renewal.");
     }
 
     private sealed class StubProblemDetailsFactory : ProblemDetailsFactory

@@ -24,18 +24,40 @@ public sealed class ComponentEnrollmentClient(
     ComponentEnrollmentClientOptions options,
     ILogger<ComponentEnrollmentClient> logger)
 {
-    public async Task EnsureEnrolledAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Ensures the component holds a current certificate, renewing or enrolling as needed. When
+    /// <paramref name="force"/> is set, a renewal is performed even if the stored certificate is not yet
+    /// in its renewal window — an operator-triggered refresh (e.g. to pick up a rotated CA, or to verify
+    /// renewal works) rather than the scheduled "renew when due" check.
+    /// </summary>
+    public async Task EnsureEnrolledAsync(CancellationToken cancellationToken, bool force = false)
     {
-        if (store.HasCurrentCertificate())
+        if (!force && store.HasCurrentCertificate())
             return;
 
-        // If a still-valid (but renewal-due) certificate exists, the component can keep running on
-        // it; otherwise it must enroll before it can connect to the bus.
         var haveValid = store.HasValidCertificate();
-        await EnrollWithRetryAsync(blocking: !haveValid, cancellationToken);
+
+        // A forced renewal needs a valid certificate to authenticate the renew endpoint. With none
+        // (missing/expired), renewal cannot succeed and the one-time enrollment token was consumed at
+        // first enrollment, so the token path cannot recover it either — surface that clearly instead of
+        // a silent, doomed token attempt. Recovery is re-enrollment (a fresh enrollment file).
+        if (force && !haveValid)
+        {
+            logger.LogError(
+                "Cannot force a renewal for {ComponentType}: no valid certificate to authenticate with. "
+                + "The component must be re-enrolled (a new enrollment token) to recover.",
+                identity.ComponentType);
+            return;
+        }
+
+        // If a still-valid certificate exists, the component renews by authenticating with that
+        // certificate (mTLS) — the one-time token cannot be reused. A forced refresh of a still-current
+        // certificate takes this path too. Otherwise it has no usable certificate and must enroll with
+        // the token (blocking, so startup waits for the identity service).
+        await EnrollWithRetryAsync(blocking: !haveValid, renew: haveValid, cancellationToken);
     }
 
-    private async Task EnrollWithRetryAsync(bool blocking, CancellationToken cancellationToken)
+    private async Task EnrollWithRetryAsync(bool blocking, bool renew, CancellationToken cancellationToken)
     {
         var delay = options.InitialRetryDelay;
         var attempt = 0;
@@ -60,12 +82,17 @@ public sealed class ComponentEnrollmentClient(
                     Token = options.Token,
                 };
 
-                var result = await transport.EnrollAsync(request, cancellationToken);
+                // Renewal authenticates with the current certificate (presented by the transport's TLS
+                // layer) against the renew endpoint; first enrollment presents the one-time token. Both
+                // request a brand-new key pair so renewal also rotates the private key.
+                var result = renew
+                    ? await transport.RenewAsync(request, cancellationToken)
+                    : await transport.EnrollAsync(request, cancellationToken);
                 store.Save(clientKey.ExportPkcs8PrivateKey(), serverKey.ExportPkcs8PrivateKey(), result);
 
                 logger.LogInformation(
-                    "Component {ComponentType} enrolled on attempt {Attempt} (component {ComponentId}).",
-                    identity.ComponentType, attempt, result.ComponentId);
+                    "Component {ComponentType} {Action} on attempt {Attempt} (component {ComponentId}).",
+                    identity.ComponentType, renew ? "renewed" : "enrolled", attempt, result.ComponentId);
                 return;
             }
             catch (OperationCanceledException)

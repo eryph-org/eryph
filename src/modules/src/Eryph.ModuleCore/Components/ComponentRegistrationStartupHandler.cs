@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,9 +27,25 @@ internal sealed class ComponentRegistrationStartupHandler(
     IBus bus,
     ComponentIdentity identity,
     IComponentConfigState state,
+    IEnumerable<IComponentEndpointProvider> endpointProviders,
     ILogger<ComponentRegistrationStartupHandler> logger)
     : IStartupHandler
 {
+    // The component's static advertised endpoints (from ComponentIdentity) merged with whatever the
+    // host's endpoint providers contribute at registration time. Host-provided endpoints win on a key
+    // collision; in practice the sets are disjoint (e.g. identity advertises its HTTP base URL, the
+    // network host advertises the OVN SSL endpoints).
+    private Dictionary<string, string> ResolveAdvertisedEndpoints()
+    {
+        var endpoints = new Dictionary<string, string>(
+            identity.AdvertisedEndpoints.ToDictionary(kv => kv.Key, kv => kv.Value),
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var provider in endpointProviders)
+            foreach (var endpoint in provider.GetAdvertisedEndpoints())
+                endpoints[endpoint.Key] = endpoint.Value;
+        return endpoints;
+    }
+
     private static readonly TimeSpan InitialRetryDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(30);
 
@@ -61,7 +78,7 @@ internal sealed class ComponentRegistrationStartupHandler(
                     Version = identity.Version,
                     InboundQueue = identity.InboundQueue,
                     KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
-                    AdvertisedEndpoints = identity.AdvertisedEndpoints.ToDictionary(kv => kv.Key, kv => kv.Value),
+                    AdvertisedEndpoints = ResolveAdvertisedEndpoints(),
                 });
 
                 // Pull the current configuration from the controller. The controller replies to this

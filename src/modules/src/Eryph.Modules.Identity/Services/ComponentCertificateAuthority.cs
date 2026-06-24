@@ -51,6 +51,128 @@ public class ComponentCertificateAuthority(
         return trusted;
     }
 
+    public IReadOnlyList<X509Certificate2> GetIssuingCaCertificates()
+    {
+        // Public-only copies of every currently valid issuing intermediate (the key-bearing instances
+        // stay in the store). Both tiers are returned so the same set can build a chain for either a
+        // client or a server leaf; an unrelated intermediate in the ExtraStore is simply ignored.
+        //
+        // ALL valid generations are returned, not just the newest: during a CA rotation overlap a leaf
+        // issued under the previous intermediate must still chain (e.g. to validate it at renewal), so
+        // the superseded-but-still-valid intermediate has to be available alongside the new one.
+        // Read-only: enumerate the intermediates already in the store. Unlike GetIntermediate this never
+        // issues — a validation/chain-building caller (RenewAsync) must not mint CA material as a side
+        // effect, and issuing a fresh intermediate would not help validate a leaf signed by an older one
+        // anyway. If a tier has no intermediate yet (no leaf ever issued), it simply contributes none.
+        var result = new List<X509Certificate2>();
+        foreach (var tier in new[] { ClientCa, ServerCa })
+        {
+            foreach (var certificate in storeService.GetFromMyStore(tier.SubjectName))
+            {
+                if (IsValidCa(certificate))
+                    result.Add(X509CertificateLoader.LoadCertificate(certificate.RawData));
+                certificate.Dispose();
+            }
+        }
+        return result;
+    }
+
+    public void RotateRootCertificateAuthority()
+    {
+        // Demote the current generation (root + both intermediates) to public-only: it stays in the
+        // trust bundle so leaves issued under it still validate during the overlap, but it no longer has
+        // a private key, so it can never be selected for signing again. Demoting first also guarantees
+        // the freshly generated generation below is the ONLY key-bearing one, so signing switches to it
+        // deterministically rather than depending on a NotBefore tie-break.
+        DemoteToPublicOnly(Root);
+        DemoteToPublicOnly(ClientCa);
+        DemoteToPublicOnly(ServerCa);
+
+        // Free the persisted key names before regenerating under them. DemoteToPublicOnly removed each
+        // generation's CERTIFICATE from the store but not its persisted private key, and the new
+        // generation reuses the same key names — on Windows, GeneratePersistedRsaKey (CngKey.Create) does
+        // not overwrite, so it throws "key already exists" unless the old key is deleted first. (The
+        // in-memory/file backends silently overwrite, which hid this.) Deleting the key does not touch the
+        // demoted public-only certificate, which stays in the store for the overlap.
+        certificateKeyService.DeletePersistedKey(Root.KeyName);
+        certificateKeyService.DeletePersistedKey(ClientCa.KeyName);
+        certificateKeyService.DeletePersistedKey(ServerCa.KeyName);
+
+        // Generate a fresh signing root and mint new intermediates from it. Mint directly (not via
+        // GetIntermediate) because GetIntermediate's re-issue path removes the whole tier subject first,
+        // which would also delete the just-demoted previous intermediates we must keep trusted for the
+        // overlap. New leaves now chain through the new intermediates to the new root.
+        using (var rootKey = certificateKeyService.GeneratePersistedRsaKey(Root.KeyName, 4096))
+        using (var newRoot = certificateGenerator.GenerateCaCertificate(
+                   Root.SubjectName, Root.FriendlyName, rootKey, RootValidDays, []))
+        {
+            storeService.AddToMyStore(newRoot);
+        }
+
+        using var signingRoot = EnsureRoot();
+        MintIntermediate(ClientCa, signingRoot).Dispose();
+        MintIntermediate(ServerCa, signingRoot).Dispose();
+    }
+
+    public void RetireSupersededCertificateAuthorities()
+    {
+        // Drop the demoted (public-only) generations once the overlap is complete — i.e. every component
+        // has rotated to a leaf under the new generation — leaving only the current signing generation
+        // trusted. Removing a still-in-use old generation would break not-yet-rotated leaves, so this is
+        // an explicit "overlap complete" step, separate from RotateRootCertificateAuthority.
+        RetireSuperseded(Root);
+        RetireSuperseded(ClientCa);
+        RetireSuperseded(ServerCa);
+    }
+
+    // Replaces every key-bearing certificate of a tier with a public-only copy: it remains trusted (still
+    // in the store, still returned by GetTrustedCaCertificates / GetIssuingCaCertificates) but can no
+    // longer sign, because the signing key is selected from the store and only key-bearing certificates
+    // are candidates.
+    private void DemoteToPublicOnly(CaTier tier)
+    {
+        foreach (var certificate in storeService.GetFromMyStore(tier.SubjectName))
+        {
+            if (certificate.HasPrivateKey)
+            {
+                using var publicOnly = X509CertificateLoader.LoadCertificate(certificate.RawData);
+                // Remove by public key (matched on Subject Key Identifier) so only this exact generation
+                // is replaced, not other generations sharing the tier subject name.
+                storeService.RemoveFromMyStore(certificate.PublicKey);
+                storeService.AddToMyStore(publicOnly);
+            }
+            certificate.Dispose();
+        }
+    }
+
+    // Removes every generation of a tier except the current signing one (the newest valid key-bearing
+    // certificate). Each non-kept generation is removed by its own public key, so the kept one (a
+    // different key/SKI) is never touched.
+    private void RetireSuperseded(CaTier tier)
+    {
+        var candidates = storeService.GetFromMyStore(tier.SubjectName);
+        var keep = candidates
+            .Where(c => IsValidCa(c) && c.HasPrivateKey)
+            .OrderByDescending(c => c.NotBefore)
+            .FirstOrDefault();
+        try
+        {
+            // No current signing generation (e.g. nothing to retire): leave the trust set untouched
+            // rather than wiping it.
+            if (keep is null)
+                return;
+
+            foreach (var certificate in candidates)
+                if (!ReferenceEquals(certificate, keep))
+                    storeService.RemoveFromMyStore(certificate.PublicKey);
+        }
+        finally
+        {
+            foreach (var certificate in candidates)
+                certificate.Dispose();
+        }
+    }
+
     public IssuedCertificate IssueComponentCertificate(
         string componentId, string fqdn, RSA subjectPublicKey, int validDays = 90)
     {
@@ -67,7 +189,11 @@ public class ComponentCertificateAuthority(
         var san = new SubjectAlternativeNameBuilder();
         san.AddDnsName(fqdn);
         // The stable component id as a URN SAN so a peer can map the authenticated certificate to
-        // the exact component identity rather than the (human-oriented) CN.
+        // the exact component identity rather than the (human-oriented) CN. This MUST remain the only
+        // (and therefore first) URI-type SAN: the broker authenticates components with
+        // ssl_cert_login_from = subject_alternative_name / san_type = uri / san_index = 0, i.e. it takes
+        // the FIRST URI SAN as the AMQP user name. Adding another URI SAN before it would change the
+        // derived broker user and break authentication.
         san.AddUri(new Uri($"urn:eryph:component:{componentId}"));
 
         return Issue(ClientCa, subject.Build(), $"eryph component {fqdn}", subjectPublicKey, ClientAuthOid, san, validDays);
@@ -174,6 +300,14 @@ public class ComponentCertificateAuthority(
 
         RemoveTier(tier);
 
+        return MintIntermediate(tier, root);
+    }
+
+    // Issues and persists a new key-bearing intermediate of the given tier signed by the supplied root,
+    // WITHOUT touching any existing certificates of that tier. GetIntermediate calls this after clearing
+    // the tier; rotation calls it directly so the superseded (demoted) intermediates are preserved.
+    private X509Certificate2 MintIntermediate(CaTier tier, X509Certificate2 root)
+    {
         // The keyless issued intermediate holds a native handle we do not return (intermediateWithKey is
         // the one handed back and persisted), so dispose it after binding the key.
         using var key = certificateKeyService.GeneratePersistedRsaKey(tier.KeyName, 4096);

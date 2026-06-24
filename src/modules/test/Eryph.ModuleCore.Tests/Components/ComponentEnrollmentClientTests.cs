@@ -36,6 +36,10 @@ public class ComponentEnrollmentClientTests
         // Two failures (identity still starting), then success — and the result is persisted once.
         transport.Calls.Should().Be(3);
         store.SaveCount.Should().Be(1);
+        // A first enrollment (no stored certificate) authenticates with the one-time token, never the
+        // certificate-authenticated renewal endpoint.
+        transport.EnrollCalls.Should().Be(3);
+        transport.RenewCalls.Should().Be(0);
     }
 
     [Fact]
@@ -74,6 +78,55 @@ public class ComponentEnrollmentClientTests
 
         transport.Calls.Should().Be(1);
         store.SaveCount.Should().Be(1);
+        // A renewal authenticates with the current certificate against the renew endpoint, never the
+        // one-time token enrollment endpoint.
+        transport.RenewCalls.Should().Be(1);
+        transport.EnrollCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task EnsureEnrolledAsync_force_renews_even_when_the_certificate_is_still_current()
+    {
+        // An operator-forced refresh: the certificate is current (no scheduled renewal due), but force
+        // renews it anyway via the renew endpoint (not the token), and persists the result.
+        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var store = new FakeStore { Current = true, Valid = true };
+
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+
+        transport.RenewCalls.Should().Be(1);
+        transport.EnrollCalls.Should().Be(0);
+        store.SaveCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task EnsureEnrolledAsync_force_does_not_throw_when_renewing_a_current_certificate_fails()
+    {
+        // A forced renewal of a still-current certificate is non-blocking: a failed attempt must be
+        // swallowed (logged), not thrown, and must not persist anything — the component keeps the
+        // certificate it already has. (Operator feedback is the target component's log.)
+        var transport = new FakeTransport(failuresBeforeSuccess: int.MaxValue);
+        var store = new FakeStore { Current = true, Valid = true };
+
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+
+        transport.RenewCalls.Should().Be(1);
+        store.SaveCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task EnsureEnrolledAsync_force_with_no_valid_certificate_does_not_attempt_enrollment()
+    {
+        // A forced renewal of an expired/absent certificate cannot succeed (nothing to authenticate the
+        // renew endpoint, and the one-time token is already spent), so it must NOT fall through to a
+        // doomed token-enroll attempt — it surfaces the problem (logged) and makes no transport call.
+        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var store = new FakeStore { Current = false, Valid = false };
+
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+
+        transport.Calls.Should().Be(0);
+        store.SaveCount.Should().Be(0);
     }
 
     [Fact]
@@ -133,9 +186,24 @@ public class ComponentEnrollmentClientTests
         : IEnrollmentTransport
     {
         public int Calls { get; private set; }
+        public int EnrollCalls { get; private set; }
+        public int RenewCalls { get; private set; }
 
         public Task<ComponentEnrollmentResult> EnrollAsync(
             ComponentEnrollmentRequest request, CancellationToken cancellationToken)
+        {
+            EnrollCalls++;
+            return AttemptAsync();
+        }
+
+        public Task<ComponentEnrollmentResult> RenewAsync(
+            ComponentEnrollmentRequest request, CancellationToken cancellationToken)
+        {
+            RenewCalls++;
+            return AttemptAsync();
+        }
+
+        private Task<ComponentEnrollmentResult> AttemptAsync()
         {
             Calls++;
             if (Calls <= failuresBeforeSuccess)
@@ -170,6 +238,10 @@ public class ComponentEnrollmentClientTests
         public string? GetClientCertificatePfxPath() => Current ? "fake.pfx" : null;
 
         public System.Security.Cryptography.X509Certificates.X509Certificate2Collection LoadCaTrustBundle() => [];
+
+        public (System.Security.Cryptography.X509Certificates.X509Certificate2 Leaf,
+            System.Security.Cryptography.X509Certificates.X509Certificate2Collection Chain) LoadServerCertificate() =>
+            throw new System.NotSupportedException("The enrollment client tests do not use the server certificate.");
 
         public ComponentCertificatePem? ReadClientCertificatePem() => null;
     }

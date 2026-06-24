@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Eryph.Modules.Identity.Services;
 using Eryph.Rebus;
 using Eryph.Security.Cryptography;
@@ -17,9 +18,35 @@ using RabbitMQ.Client;
 //   issue-server <dns> <crt.pem> <key.pem>  issue a server cert (leaf+chain PEM) and its PKCS#8 key
 //   provision-broker <dns> <outDir>         init + export-bundle + issue-server in one step
 
-var keyService = new WindowsCertificateKeyService();
-var generator = new WindowsCertificateGenerator();
-var store = new WindowsCertificateStoreService();
+// PKI backend: the file store on Linux/containers, the Windows machine store otherwise — mirrors the
+// identity host (PkiOptions) so the CA this harness provisions is the same one the identity daemon
+// serves. ERYPH_PKI_KEYSTORE = auto (default; windows on Windows, file elsewhere) | windows | file;
+// directory from ERYPH_PKI_DIRECTORY.
+var keystoreChoice = Environment.GetEnvironmentVariable("ERYPH_PKI_KEYSTORE")?.Trim().ToLowerInvariant();
+var useFile = keystoreChoice switch
+{
+    null or "" or "auto" => !OperatingSystem.IsWindows(),
+    "file" => true,
+    "windows" => OperatingSystem.IsWindows()
+        ? false
+        : throw new InvalidOperationException(
+            "ERYPH_PKI_KEYSTORE=windows requires Windows; use 'file' (or 'auto') on this platform."),
+    _ => throw new InvalidOperationException(
+        $"Unsupported ERYPH_PKI_KEYSTORE '{keystoreChoice}'. Use 'auto', 'windows' or 'file'."),
+};
+var pkiDirectory = Environment.GetEnvironmentVariable("ERYPH_PKI_DIRECTORY") is { Length: > 0 } pkiDir
+    ? pkiDir
+    : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "eryph", "pki");
+
+ICertificateKeyService keyService = useFile
+    ? new FileCertificateKeyService(Path.Combine(pkiDirectory, "keys"))
+    : new WindowsCertificateKeyService();
+ICertificateGenerator generator = useFile
+    ? new CertificateGenerator()
+    : new WindowsCertificateGenerator();
+ICertificateStoreService store = useFile
+    ? new FileCertificateStoreService(pkiDirectory)
+    : new WindowsCertificateStoreService();
 var ca = new ComponentCertificateAuthority(store, generator, keyService);
 
 // CA tier identities — must match ComponentCertificateAuthority's private CaTier definitions.
@@ -39,8 +66,15 @@ X500DistinguishedName CaSubject(string cn)
     return b.Build();
 }
 
-bool MachineKeyExists(string name) =>
-    CngKey.Exists(name, CngProvider.MicrosoftSoftwareKeyStorageProvider, CngKeyOpenOptions.MachineKey);
+bool MachineKeyExists(string name)
+{
+    // The Windows machine store reports persistence via CNG; the file backend persists keys as files,
+    // so check the key store directly (CngKey is Windows-only and would throw on Linux).
+    if (!useFile)
+        return CngKey.Exists(name, CngProvider.MicrosoftSoftwareKeyStorageProvider, CngKeyOpenOptions.MachineKey);
+    using var key = keyService.GetPersistedRsaKey(name);
+    return key is not null;
+}
 
 void Status()
 {
@@ -105,7 +139,9 @@ void IssueClient(string componentId, string fqdn, string crtPath, string keyPath
     using var key = keyService.GenerateRsaKey(2048);
     var issued = ca.IssueComponentCertificate(componentId, fqdn, key);
     File.WriteAllText(crtPath, issued.Leaf.ExportCertificatePem());
-    File.WriteAllText(keyPath, key.ExportPkcs8PrivateKeyPem());
+    // Owner-only (0600): the private key must not be world-readable in the shared volume, matching how
+    // every other key file in the codebase is written (SecureFile / FileCertificateKeyService).
+    SecureFile.WriteOwnerOnly(keyPath, Encoding.ASCII.GetBytes(key.ExportPkcs8PrivateKeyPem()));
     Console.WriteLine($"Issued client (leaf-only) cert for '{fqdn}' ({componentId}): {crtPath}, {keyPath}");
 }
 
@@ -297,17 +333,20 @@ void EnrollTest(string identityUrl, string secret)
 
 void IssueServer(string dns, string crtPath, string keyPath)
 {
-    var provider = new CaServerCertificateProvider(keyService, ca);
-    var issued = provider.GetServerCertificate(dns);
+    // The broker (and any external TLS server) consumes its key as a PEM file, so generate an
+    // EXPORTABLE key and pair it with the CA-issued leaf — unlike the in-process server-TLS path
+    // (CaServerCertificateProvider), which persists a non-exportable key for in-memory use only.
+    using var key = keyService.GenerateRsaKey(2048);
+    var issued = ca.IssueServerCertificate([dns], key);
 
     using var w = new StreamWriter(crtPath, append: false);
     w.WriteLine(issued.Leaf.ExportCertificatePem());
     foreach (var c in issued.IssuingChain)
         w.WriteLine(c.ExportCertificatePem());
 
-    using var rsa = issued.Leaf.GetRSAPrivateKey()
-        ?? throw new InvalidOperationException("Issued server certificate has no private key.");
-    File.WriteAllText(keyPath, rsa.ExportPkcs8PrivateKeyPem());
+    // Owner-only (0600): the private key must not be world-readable in the shared volume, matching how
+    // every other key file in the codebase is written (SecureFile / FileCertificateKeyService).
+    SecureFile.WriteOwnerOnly(keyPath, Encoding.ASCII.GetBytes(key.ExportPkcs8PrivateKeyPem()));
 
     Console.WriteLine(
         $"Issued server cert for '{dns}': {crtPath} (leaf + {issued.IssuingChain.Count} chain cert(s)), key {keyPath}");

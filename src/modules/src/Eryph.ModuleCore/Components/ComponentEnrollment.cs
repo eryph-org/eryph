@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using Eryph.Rebus;
 using Microsoft.Extensions.Logging;
 
@@ -18,35 +19,17 @@ namespace Eryph.ModuleCore.Components;
 public static class ComponentEnrollment
 {
     public static RabbitMqRebusTransportConfigurer EnsureEnrolledTransport(
+        IComponentCertificateStore store,
         ComponentIdentity identity,
         IEndpointResolver endpointResolver,
         ComponentEnrollmentClientOptions options,
-        string certificateDirectory,
         string trustAnchorBundlePath,
-        TimeSpan renewalLeadTime,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken = default)
     {
-        var store = new FileComponentCertificateStore(certificateDirectory, renewalLeadTime);
-
-        // Enroll when the stored certificate is missing, expired, or already inside its renewal window
-        // (all three are "not current"). EnsureEnrolledAsync decides how hard to try: with no valid
-        // certificate it blocks and retries until the identity service answers (the bus cannot connect
-        // without one, and components may start before identity does — the token aborts a stuck startup);
-        // for a still-valid but renewal-due certificate it makes a single non-blocking attempt and
-        // returns, so a restart renews the certificate without ever blocking a component that can already
-        // run. Guarding on HasCurrentCertificate (not HasValidCertificate) is what lets startup renew a
-        // renewal-due certificate — periodic renewal is a separate milestone that is not yet wired.
-        if (!store.HasCurrentCertificate())
-        {
-            using var httpClient = CreateEnrollmentHttpClient(trustAnchorBundlePath);
-            var transport = new HttpEnrollmentTransport(httpClient, endpointResolver);
-            var client = new ComponentEnrollmentClient(
-                transport, store, identity, options,
-                loggerFactory.CreateLogger<ComponentEnrollmentClient>());
-
-            client.EnsureEnrolledAsync(cancellationToken).GetAwaiter().GetResult();
-        }
+        EnsureEnrolledAsync(
+                store, identity, endpointResolver, options, trustAnchorBundlePath, loggerFactory, cancellationToken)
+            .GetAwaiter().GetResult();
 
         var clientCertificatePfxPath = store.GetClientCertificatePfxPath()
             ?? throw new InvalidOperationException("Enrollment did not produce a usable client certificate.");
@@ -56,7 +39,47 @@ public static class ComponentEnrollment
         return new RabbitMqRebusTransportConfigurer(clientCertificatePfxPath);
     }
 
-    private static HttpClient CreateEnrollmentHttpClient(string trustAnchorBundlePath)
+    /// <summary>
+    /// Ensures the store holds a current certificate, (re)issuing one only when it is missing, expired,
+    /// or inside its renewal window. Shared by the startup bootstrap (above) and the periodic renewal
+    /// service so there is a single enroll/renew code path:
+    /// <list type="bullet">
+    /// <item>no usable certificate (missing/expired): enroll with the one-time token, blocking and
+    /// retrying until the identity service answers (the bus cannot connect without a certificate);</item>
+    /// <item>a still-valid but renewal-due certificate: renew by authenticating with that certificate
+    /// (mTLS) against the renew endpoint — the token is one-time and cannot be reused — in a single
+    /// non-blocking attempt so a healthy component is never blocked.</item>
+    /// </list>
+    /// </summary>
+    public static async Task EnsureEnrolledAsync(
+        IComponentCertificateStore store,
+        ComponentIdentity identity,
+        IEndpointResolver endpointResolver,
+        ComponentEnrollmentClientOptions options,
+        string trustAnchorBundlePath,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken = default,
+        bool force = false)
+    {
+        // Fast path: skip building the HTTP client/transport when nothing is due. ComponentEnrollmentClient
+        // re-checks this, so this is purely an allocation-avoiding short-circuit, not the authoritative gate.
+        if (!force && store.HasCurrentCertificate())
+            return;
+
+        // Present the current client certificate when one exists so a renewal authenticates with mTLS
+        // against the renew endpoint; a first enrollment has none yet and authenticates with the token.
+        using var clientCertificate = store.LoadClientCertificate();
+        using var httpClient = CreateEnrollmentHttpClient(trustAnchorBundlePath, clientCertificate);
+        var transport = new HttpEnrollmentTransport(httpClient, endpointResolver);
+        var client = new ComponentEnrollmentClient(
+            transport, store, identity, options,
+            loggerFactory.CreateLogger<ComponentEnrollmentClient>());
+
+        await client.EnsureEnrolledAsync(cancellationToken, force);
+    }
+
+    private static HttpClient CreateEnrollmentHttpClient(
+        string trustAnchorBundlePath, X509Certificate2? clientCertificate)
     {
         // Trust the identity service's server certificate via the pre-provisioned CA root bundle
         // (placed by the deployment tooling), not the machine trust store — the same single root.
@@ -75,7 +98,15 @@ public static class ComponentEnrollment
         // The handler owns the loaded anchors and disposes them with itself; HttpClient disposes the
         // handler (disposeHandler defaults to true), so disposing the HttpClient releases the anchor
         // handles. Otherwise the imported certificates would leak on every enrollment/restart.
-        return new HttpClient(new EnrollmentHttpClientHandler(trustAnchors));
+        var handler = new EnrollmentHttpClientHandler(trustAnchors);
+
+        // For renewal, present the component's current client certificate so the renew endpoint can
+        // authenticate it (mTLS) instead of the spent one-time token. A first enrollment has no
+        // certificate and the handler presents none — the token in the request authenticates instead.
+        if (clientCertificate is not null)
+            handler.ClientCertificates.Add(clientCertificate);
+
+        return new HttpClient(handler);
     }
 
     // Validates the identity server certificate against the pre-provisioned trust anchors (shared mTLS

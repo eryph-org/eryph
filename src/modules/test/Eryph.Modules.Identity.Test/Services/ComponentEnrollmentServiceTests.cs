@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -24,8 +25,11 @@ public class ComponentEnrollmentServiceTests
     private static ComponentCertificateAuthority CreateCa() =>
         new(new InMemoryCertificateStore(), new CertificateGenerator(), new InMemoryKeyService());
 
-    private static ComponentEnrollmentService CreateService(bool authorized) =>
-        new(CreateCa(), new StubPolicy(authorized), NullLogger<ComponentEnrollmentService>.Instance);
+    private static ComponentEnrollmentService CreateService(
+        bool authorized, IComponentBrokerProvisioner? brokerProvisioner = null) =>
+        new(CreateCa(), new StubPolicy(authorized),
+            brokerProvisioner is null ? [] : [brokerProvisioner],
+            NullLogger<ComponentEnrollmentService>.Instance);
 
     private static byte[] NewPublicKey()
     {
@@ -242,7 +246,7 @@ public class ComponentEnrollmentServiceTests
             var policy = new TokenEnrollmentPolicy(
                 new EnrollmentTokenRedeemer(ca, new IdentityDbRepository<RedeemedEnrollmentToken>(context)),
                 NullLogger<TokenEnrollmentPolicy>.Instance);
-            return new ComponentEnrollmentService(ca, policy, NullLogger<ComponentEnrollmentService>.Instance);
+            return new ComponentEnrollmentService(ca, policy, [], NullLogger<ComponentEnrollmentService>.Instance);
         }
 
         var token = EnrollmentTokenCodec.Issue(ca, ComponentType.ComputeApi, "api.eryph.local", DateTimeOffset.UtcNow.AddMinutes(5));
@@ -305,7 +309,7 @@ public class ComponentEnrollmentServiceTests
             var policy = new TokenEnrollmentPolicy(
                 new EnrollmentTokenRedeemer(ca, new IdentityDbRepository<RedeemedEnrollmentToken>(context)),
                 NullLogger<TokenEnrollmentPolicy>.Instance);
-            return new ComponentEnrollmentService(ca, policy, NullLogger<ComponentEnrollmentService>.Instance);
+            return new ComponentEnrollmentService(ca, policy, [], NullLogger<ComponentEnrollmentService>.Instance);
         }
 
         // Token is bound to api.eryph.local.
@@ -331,6 +335,189 @@ public class ComponentEnrollmentServiceTests
         });
         result.ComponentId.Should().Be(
             ComponentIdentity.DeriveComponentId(ComponentType.ComputeApi, "api.eryph.local"));
+    }
+
+    [Fact]
+    public async Task Renew_issues_a_fresh_certificate_for_the_identity_in_the_presented_certificate()
+    {
+        // One CA across both calls so the enrolled leaf chains to the same root the renewal validates against.
+        var ca = CreateCa();
+        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), [], NullLogger<ComponentEnrollmentService>.Instance);
+
+        var enrolled = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        // Renewal authenticates with the (CA-issued) leaf, presented without a token.
+        using var leaf = X509CertificateLoader.LoadCertificate(enrolled.Certificate);
+        var renewed = await sut.RenewAsync(leaf, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        renewed.ComponentId.Should().Be(enrolled.ComponentId);
+        renewed.Certificate.Should().NotBeEmpty();
+        renewed.IssuingChain.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Renew_takes_the_identity_from_the_certificate_not_the_request()
+    {
+        var ca = CreateCa();
+        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), [], NullLogger<ComponentEnrollmentService>.Instance);
+
+        var enrolled = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        // The request claims a different type and host; the renewed identity must still be the one
+        // bound in the presented certificate, so a component cannot renew into another identity.
+        using var leaf = X509CertificateLoader.LoadCertificate(enrolled.Certificate);
+        var renewed = await sut.RenewAsync(leaf, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "attacker.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        renewed.ComponentId.Should().Be(
+            ComponentIdentity.DeriveComponentId(ComponentType.VMHostAgent, "agent1.eryph.local"));
+    }
+
+    [Fact]
+    public async Task Renew_rejects_a_certificate_not_issued_by_the_component_ca()
+    {
+        var sut = CreateService(authorized: true);
+
+        // A self-signed certificate does not chain to the component root, so renewal must refuse it
+        // even though it carries a plausible subject — only a CA-issued component cert may renew.
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest(
+            "CN=agent1.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var foreign = request.CreateSelfSigned(
+            DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+
+        var act = () => sut.RenewAsync(foreign, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        await act.Should().ThrowAsync<ComponentEnrollmentException>();
+    }
+
+    [Fact]
+    public async Task Enroll_provisions_the_broker_user_for_the_issued_identity()
+    {
+        var broker = new RecordingBrokerProvisioner();
+        var sut = CreateService(authorized: true, brokerProvisioner: broker);
+
+        var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        // The broker user must be ensured for the same id the certificate was issued for, before the
+        // component connects to the bus.
+        broker.Ensured.Should().ContainSingle().Which.Should().Be(result.ComponentId);
+        broker.Removed.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Renew_provisions_the_broker_user()
+    {
+        var ca = CreateCa();
+        var broker = new RecordingBrokerProvisioner();
+        var sut = new ComponentEnrollmentService(
+            ca, new StubPolicy(true), [broker], NullLogger<ComponentEnrollmentService>.Instance);
+
+        var enrolled = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        using var leaf = X509CertificateLoader.LoadCertificate(enrolled.Certificate);
+        await sut.RenewAsync(leaf, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        }, CancellationToken.None);
+
+        // Ensured once at enrollment and again (idempotently) at renewal.
+        broker.Ensured.Should().Equal(enrolled.ComponentId, enrolled.ComponentId);
+    }
+
+    [Fact]
+    public async Task Renew_succeeds_even_when_broker_user_provisioning_fails()
+    {
+        // The certificate is renewed before the broker user is re-ensured, and the user already exists
+        // from enrollment, so a broker-management failure on renewal must NOT fail the renewal (which
+        // would drop the freshly issued certificate). Best-effort: log and return the new certificate.
+        var ca = CreateCa();
+        var enrolled = await new ComponentEnrollmentService(
+                ca, new StubPolicy(true), [], NullLogger<ComponentEnrollmentService>.Instance)
+            .EnrollAsync(new ComponentEnrollmentRequest
+            {
+                ComponentType = ComponentType.VMHostAgent,
+                Fqdn = "agent1.eryph.local",
+                PublicKey = NewPublicKey(),
+            });
+
+        using var leaf = X509CertificateLoader.LoadCertificate(enrolled.Certificate);
+        var sut = new ComponentEnrollmentService(
+            ca, new StubPolicy(true), [new ThrowingBrokerProvisioner()],
+            NullLogger<ComponentEnrollmentService>.Instance);
+
+        var renewed = await sut.RenewAsync(leaf, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        }, CancellationToken.None);
+
+        renewed.ComponentId.Should().Be(enrolled.ComponentId);
+        renewed.Certificate.Should().NotBeEmpty();
+    }
+
+    private sealed class ThrowingBrokerProvisioner : IComponentBrokerProvisioner
+    {
+        public Task EnsureComponentAsync(Guid componentId, CancellationToken cancellationToken = default) =>
+            throw new HttpRequestException("broker management API unavailable");
+
+        public Task RemoveComponentAsync(Guid componentId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class RecordingBrokerProvisioner : IComponentBrokerProvisioner
+    {
+        public List<Guid> Ensured { get; } = [];
+        public List<Guid> Removed { get; } = [];
+
+        public Task EnsureComponentAsync(Guid componentId, CancellationToken cancellationToken = default)
+        {
+            Ensured.Add(componentId);
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveComponentAsync(Guid componentId, CancellationToken cancellationToken = default)
+        {
+            Removed.Add(componentId);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class StubPolicy(bool authorized) : IComponentEnrollmentPolicy

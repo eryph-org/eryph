@@ -73,9 +73,10 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
                 ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),
             });
 
-        // Migrate the identity database before anything reads or seeds it (no-op on the in-memory
-        // provider used by tests).
-        options.AddStartupHandler<MigrateIdentityDbHandler>();
+        // The identity-database schema is created out of band, not migrated here: eryph-zero migrates it
+        // in its warmup phase (IdentityDatabaseResetHandler, like the state store), while the split
+        // runtime sets the schema up before startup (the `create-db` command / SQL setup scripts), like
+        // the controller's state database — so the module never migrates at startup.
 
         // Mirror the state store's change-tracking/export pipeline for the identity database. Register
         // change tracking BEFORE seeding so the export queues are enabled before the seeders save (and
@@ -244,10 +245,15 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
             new TokenEnrollmentPolicy(
                 container.GetInstance<IEnrollmentTokenRedeemer>(),
                 container.GetInstance<ILoggerFactory>().CreateLogger<TokenEnrollmentPolicy>()));
+        // Broker user provisioning is host-supplied: empty here (no managed broker, e.g. eryph-zero's
+        // in-memory bus), and the split-runtime identity host appends a RabbitMQ provisioner. Enrollment
+        // provisions through whatever is registered, so the module never reads a flag to decide.
+        container.Collection.Register<IComponentBrokerProvisioner>(Array.Empty<Type>());
         container.Register<IComponentEnrollmentService>(() =>
             new ComponentEnrollmentService(
                 container.GetInstance<IComponentCertificateAuthority>(),
                 container.GetInstance<IComponentEnrollmentPolicy>(),
+                container.GetAllInstances<IComponentBrokerProvisioner>(),
                 container.GetInstance<ILoggerFactory>().CreateLogger<ComponentEnrollmentService>()));
 
         // The identity component runs a bidirectional bus endpoint on its own inbound queue

@@ -24,8 +24,9 @@ namespace Eryph.Controller
     /// <summary>
     /// Hosts the controller module as a standalone runtime, wiring the module-container
     /// dependencies via Hosuto filters (mirroring eryph-zero's host extensions): the
-    /// MariaDB state store + migration, the RabbitMQ transport, and the (in-memory)
-    /// Rebus saga/timeout stores.
+    /// MariaDB state store, the RabbitMQ transport, and the (in-memory) Rebus
+    /// saga/timeout stores. The schema is set up out of band (the create-db command /
+    /// SQL scripts), not migrated at startup.
     /// </summary>
     internal static class HostControllerModuleExtensions
     {
@@ -51,8 +52,15 @@ namespace Eryph.Controller
             {
                 return (context, options) =>
                 {
-                    options.AddStartupHandler<MigrateStateDbHandler>();
+                    // The state-database schema is SETUP, not a startup migration: it is created out of
+                    // band (the `create-db` command in dev, SQL setup scripts in production) before the
+                    // controller runs, so the controller never races its own schema creation against the
+                    // bus consuming registration messages.
                     options.RegisterMySqlStateStore();
+
+                    // Renew the component certificate before it expires without a restart (the context
+                    // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
+                    ComponentMtlsTransport.AddRenewal(options);
 
                     // Change tracking (mirroring DB changes back to the on-disk config) is
                     // wired by ControllerModule itself when changeTracking:trackChanges is
@@ -86,6 +94,13 @@ namespace Eryph.Controller
                         new FileDistributedSynchronizationProvider(new DirectoryInfo(locksPath)));
 
                     container.UseOvn();
+
+                    // The split runtime manages a real broker, so the controller can delete a
+                    // component's RabbitMQ user when it is decommissioned (the revocation cutoff);
+                    // eryph-zero appends none and decommission only removes the registration.
+                    ComponentBrokerProvisioning.AppendRabbitMq(
+                        container,
+                        context.ModulesHostServices.GetRequiredService<IConfiguration>());
 
                     next(context, container);
                 };

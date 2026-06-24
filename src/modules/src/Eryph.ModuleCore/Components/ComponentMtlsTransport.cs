@@ -6,18 +6,21 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dbosoft.Rebus.Configuration;
 using Eryph.Messages.Components;
+using Rebus.Handlers;
 using Eryph.Rebus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.ModuleCore.Components;
 
 /// <summary>
-/// Host-side helper that registers the bus transport for a split-runtime component: when
-/// <c>componentMtls:enabled</c> is set it enrolls (blocking, retry-tolerant) and connects over
-/// mTLS; otherwise it registers the plaintext transport (the default dev path, no regression).
-/// Call from the host filter before the module configures its bus.
+/// Host-side helper that registers the bus transport for a split-runtime component: it enrolls
+/// (blocking, retry-tolerant) and connects over mTLS with the component's certificate. A standalone
+/// host calls this — being a split host is itself the decision to use mTLS, so there is no toggle;
+/// eryph-zero composes the in-memory bus instead and never calls this. Call from the host filter
+/// before the module configures its bus.
 /// </summary>
 public static class ComponentMtlsTransport
 {
@@ -28,30 +31,22 @@ public static class ComponentMtlsTransport
         ComponentType componentType)
     {
         var mtls = configuration.GetSection("componentMtls");
-        if (!bool.TryParse(mtls["enabled"], out var enabled) || !enabled)
-        {
-            // Register a constructed instance, not the type: RabbitMqRebusTransportConfigurer has two
-            // public constructors (plaintext and the mTLS certificate one), which SimpleInjector cannot
-            // auto-wire. The parameterless constructor is the plaintext dev path.
-            container.RegisterInstance<IRebusTransportConfigurer>(new RabbitMqRebusTransportConfigurer());
-            return;
-        }
 
         // Everything needed to bootstrap is in the operator-delivered enrollment file: the identity
         // CA cert (trust anchor), the identity endpoint, and the one-time token. None of it can
         // arrive over the bus that the resulting certificate is needed to join.
         var enrollmentFilePath = mtls["enrollmentFile"]
             ?? throw new InvalidOperationException(
-                "componentMtls:enrollmentFile must be set when componentMtls is enabled.");
+                $"componentMtls:enrollmentFile must be set to start the {componentType} process.");
         var enrollment = LoadEnrollmentFile(enrollmentFilePath);
 
         // Private key material is written here and must land in a predictable, ACL-able location —
-        // never the current working directory. Require it explicitly when mTLS is enabled, and create
-        // it owner-only (0700 on Unix) so a permissive umask cannot expose key material on first run.
+        // never the current working directory. Require it explicitly, and create it owner-only
+        // (0700 on Unix) so a permissive umask cannot expose key material on first run.
         var certificateDirectory = mtls["certificateDirectory"];
         if (string.IsNullOrWhiteSpace(certificateDirectory))
             throw new InvalidOperationException(
-                "componentMtls:certificateDirectory must be set when componentMtls is enabled.");
+                $"componentMtls:certificateDirectory must be set to start the {componentType} process.");
         SecureDirectory.EnsureOwnerOnly(certificateDirectory);
 
         // Materialise the trust anchor from the file so the enrollment HTTP client can pin it to
@@ -84,15 +79,28 @@ public static class ComponentMtlsTransport
         {
             ["identity"] = enrollment.IdentityEndpoint,
         });
-        var options = new ComponentEnrollmentClientOptions { Token = enrollment.Token };
+        // A component behind a load balancer must serve a certificate for the LB host name, not just
+        // its own FQDN; componentMtls:serverDnsNames (comma-separated) sets the server certificate
+        // SAN(s) it requests at enrollment. Empty means the component's own FQDN is used.
+        var serverDnsNames = (mtls["serverDnsNames"] ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var options = new ComponentEnrollmentClientOptions
+        {
+            Token = enrollment.Token,
+            ServerDnsNames = serverDnsNames,
+        };
+
+        // One store instance is the source of truth for the enrolled material: the startup bootstrap,
+        // the bus transport, peer-to-peer mTLS consumers and the periodic renewal service all share it.
+        var store = new FileComponentCertificateStore(
+            certificateDirectory, ComponentCertificateDefaults.RenewalLeadTime);
 
         var transport = ComponentEnrollment.EnsureEnrolledTransport(
+            store,
             identity,
             endpointResolver,
             options,
-            certificateDirectory: certificateDirectory,
             trustAnchorBundlePath: trustAnchorPath,
-            renewalLeadTime: TimeSpan.FromDays(45),
             loggerFactory: loggerFactory);
 
         container.RegisterInstance<IRebusTransportConfigurer>(transport);
@@ -101,8 +109,38 @@ public static class ComponentMtlsTransport
         // compute API's EGS remote-channel data plane dialing a host agent). Expose the store so those
         // consumers can present the client certificate and validate peers against the enrolled CA — the
         // single trust anchor, no divergent trust path.
-        container.RegisterInstance<IComponentCertificateStore>(
-            new FileComponentCertificateStore(certificateDirectory, TimeSpan.FromDays(45)));
+        container.RegisterInstance<IComponentCertificateStore>(store);
+
+        // Context for the periodic renewal service (registered as a hosted service by AddRenewal in the
+        // host's AddSimpleInjector phase). Resolving it here, after the certificate material exists, is
+        // what scopes renewal to the split runtime: eryph-zero never calls Register, so it never has it.
+        container.RegisterInstance(new ComponentRenewalContext
+        {
+            Store = store,
+            Identity = identity,
+            EndpointResolver = endpointResolver,
+            Options = options,
+            TrustAnchorBundlePath = trustAnchorPath,
+            LoggerFactory = loggerFactory,
+        });
+    }
+
+    /// <summary>
+    /// Registers the periodic certificate-renewal service so a long-lived component renews before its
+    /// certificate expires without needing a restart, plus the handler that lets an operator force a
+    /// renewal now (<see cref="RenewComponentCertificateCommand"/>). Call from a split-runtime host's
+    /// <c>AddSimpleInjector</c> phase (alongside <see cref="Register"/> in <c>ConfigureContainer</c>);
+    /// both resolve the <see cref="ComponentRenewalContext"/> that <see cref="Register"/> registers.
+    /// </summary>
+    public static void AddRenewal(SimpleInjectorAddOptions options)
+    {
+        options.AddHostedService<ComponentEnrollmentHostedService>();
+        // The module's bus consumes its own inbound queue; appending the handler here (not via the
+        // module's own-assembly scan) lets an operator address a renewal to this component.
+        options.Container.Collection.Append(
+            typeof(IHandleMessages<RenewComponentCertificateCommand>),
+            typeof(RenewComponentCertificateCommandHandler),
+            Lifestyle.Scoped);
     }
 
     private static ComponentEnrollmentFile LoadEnrollmentFile(string path)
