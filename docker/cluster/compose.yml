@@ -72,14 +72,18 @@ services:
       - rabbit-data:/var/lib/rabbitmq
       - broker-certs:/etc/rabbitmq/certs:ro
       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # Enable the SSL auth-mechanism plugin (SASL EXTERNAL) alongside management.
+      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
     ports:
       - "5671:5671"
       - "15672:15672"
     networks: [eryph]
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      # check_port_connectivity gates dependents on all listener ports (incl. the management HTTP API
+      # on 15672, which identity calls at startup), not just the node being pingable.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
       interval: 5s
-      timeout: 5s
+      timeout: 10s
       retries: 30
 
   lb:
@@ -117,6 +121,12 @@ services:
       ERYPH_PKI_KEYSTORE: file
       ERYPH_PKI_DIRECTORY: /pki
       componentMtls__certificateDirectory: /identity-certs
+      # Identity creates a per-component broker user at enrollment (and its own at startup) via the
+      # RabbitMQ management API.
+      broker__managementUrl: "http://rabbit:15672"
+      broker__managementUser: guest
+      broker__managementPassword: guest
+      broker__virtualHost: "/"
     volumes:
       - pki:/pki
       - identity-certs:/identity-certs
@@ -144,6 +154,11 @@ services:
       RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
       componentMtls__enrollmentFile: /enroll/controller.json
       componentMtls__certificateDirectory: /controller-certs
+      # The controller deletes a component's broker user when it is decommissioned.
+      broker__managementUrl: "http://rabbit:15672"
+      broker__managementUser: guest
+      broker__managementPassword: guest
+      broker__virtualHost: "/"
     volumes:
       - controller-certs:/controller-certs
       - enroll:/enroll:ro

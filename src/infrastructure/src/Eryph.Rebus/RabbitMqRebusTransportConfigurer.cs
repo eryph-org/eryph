@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Security;
 using System.Security.Authentication;
 using Dbosoft.Rebus.Configuration;
+using RabbitMQ.Client;
 using Rebus.Config;
 using Rebus.RabbitMq;
 using Rebus.Transport;
@@ -79,6 +81,20 @@ namespace Eryph.Rebus
                 // chain — the deployment root CA is installed into the host trust store.
                 version: SslProtocols.None,
                 acceptablePolicyErrors: SslPolicyErrors.None));
+
+            // Authenticate with the client certificate (SASL EXTERNAL): the broker derives the AMQP user
+            // name from the certificate's URI SAN (the component-id URN), so the authenticated user is the
+            // verified component identity and the connection string's user/password are ignored. This is
+            // what makes a per-component broker user — and its deletion as revocation — effective.
+            options.CustomizeConnectionFactory(factory =>
+            {
+                if (factory is ConnectionFactory connectionFactory)
+                    connectionFactory.AuthMechanisms = new List<IAuthMechanismFactory>
+                    {
+                        new ExternalMechanismFactory(),
+                    };
+                return factory;
+            });
         }
 
         private void WaitForConnection()
