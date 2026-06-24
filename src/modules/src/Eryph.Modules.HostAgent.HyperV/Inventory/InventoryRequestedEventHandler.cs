@@ -89,7 +89,7 @@ internal class InventoryRequestedEventHandler(
 
     private bool IsInventorizable(TypedPsObject<VirtualMachineInfo> vmInfo)
     {
-        var operationalStatus = VmStateUtils.convertMsvmOperationalStatus(vmInfo.Value.OperationalStatus);
+        var operationalStatus = VmStateUtils.convertMsvmOperationalStatus(vmInfo.Value.OperationalStatus ?? []);
         var state = vmInfo.Value.State;
         var isInventorizable = VmStateUtils.isInventorizable(state, operationalStatus);
 

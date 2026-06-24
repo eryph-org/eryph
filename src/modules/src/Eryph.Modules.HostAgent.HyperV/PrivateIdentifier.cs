@@ -7,5 +7,5 @@ public class PrivateIdentifier
 {
     [JsonProperty("_pi")]
     [JsonPropertyName("_pi")]
-    public PrivateIdentifierValue Value { get; set; }
+    public PrivateIdentifierValue? Value { get; set; }
 }

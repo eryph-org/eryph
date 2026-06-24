@@ -49,7 +49,7 @@ public class CheckDisksExistsCommandHandler(
         DiskInfo diskInfo,
         VmHostAgentConfiguration vmHostAgentConfig) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let fullPath = Path.Combine(diskInfo.Path, diskInfo.FileName)
+        let fullPath = Path.Combine(diskInfo.Path ?? "", diskInfo.FileName ?? "")
         from shouldRemove in GetDiskStorageSettings(fullPath, vmHostAgentConfig)
             .BiBind(
                 storageSettings =>

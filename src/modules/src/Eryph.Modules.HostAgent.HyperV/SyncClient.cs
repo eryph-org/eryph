@@ -53,7 +53,7 @@ public class SyncClient : ISyncClient
 
             await stream.WriteCommand(commandObject, cancellationToken);
 
-            return await stream.ReadString(cancellationToken);
+            return await stream.ReadString(cancellationToken) ?? "";
         })
         from _1 in guard(notEmpty(responseJson),
             Error.New("The response of the sync service is empty."))

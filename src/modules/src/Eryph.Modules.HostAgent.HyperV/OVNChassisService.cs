@@ -167,7 +167,9 @@ public class OVNChassisService(
         // via the matching ha_chassis_group on the controller side.
         try
         {
-            await using var scope = AsyncScopedLifestyle.BeginScope(serviceProvider as Container);
+            var container = serviceProvider as Container
+                ?? throw new InvalidOperationException("serviceProvider is not a SimpleInjector Container.");
+            await using var scope = AsyncScopedLifestyle.BeginScope(container);
             var providerManager = scope.GetInstance<INetworkProviderManager>();
             var configResult = await providerManager.GetCurrentConfiguration().ToEither();
             var config = configResult.Match(
@@ -209,7 +211,9 @@ public class OVNChassisService(
     {
         var runtime = AgentRuntime.New(serviceProvider);
 
-        await using var scope = AsyncScopedLifestyle.BeginScope(serviceProvider as Container);
+        var container = serviceProvider as Container
+            ?? throw new InvalidOperationException("serviceProvider is not a SimpleInjector Container.");
+        await using var scope = AsyncScopedLifestyle.BeginScope(container);
 
         try
         {

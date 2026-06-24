@@ -96,7 +96,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                 "Validating network impact...",
                 from agentSync in default(RT).AgentSync
                 from ct in cancelToken<RT>()
-                from messages in agentSync.ValidateChanges(newConfig.NetworkProviders, ct)
+                from messages in agentSync.ValidateChanges(newConfig.NetworkProviders ?? [], ct)
                 select messages)
             select messages)
         from _ in messages.ToSeq().Match(
@@ -121,7 +121,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _1 in unitEff
         let providersWithDisabledSpoofing = newConfig.NetworkProviders.ToSeq()
             .Filter(np => !np.MacAddressSpoofing.GetValueOrDefault(defaults.MacAddressSpoofing)
-                          && currentConfig.NetworkProviders.Any(cp =>
+                          && (currentConfig.NetworkProviders ?? []).Any(cp =>
                               cp.Name == np.Name &&
                               cp.MacAddressSpoofing.GetValueOrDefault(defaults.MacAddressSpoofing)))
             .Map(np => np.Name)
@@ -145,7 +145,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _1 in unitEff
         let providersWithRemovedDisableDhcpGuard = newConfig.NetworkProviders.ToSeq()
             .Filter(np => !np.DisableDhcpGuard.GetValueOrDefault(defaults.DisableDhcpGuard)
-                          && currentConfig.NetworkProviders.Any(cp =>
+                          && (currentConfig.NetworkProviders ?? []).Any(cp =>
                               cp.Name == np.Name &&
                               cp.DisableDhcpGuard.GetValueOrDefault(defaults.DisableDhcpGuard)))
             .Map(np => np.Name)
@@ -169,7 +169,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _1 in unitEff
         let providersWithRemovedDisableRouterGuard = newConfig.NetworkProviders.ToSeq()
             .Filter(np => !np.DisableRouterGuard.GetValueOrDefault(defaults.DisableRouterGuard)
-                          && currentConfig.NetworkProviders.Any(cp =>
+                          && (currentConfig.NetworkProviders ?? []).Any(cp =>
                               cp.Name == np.Name &&
                               cp.DisableRouterGuard.GetValueOrDefault(defaults.DisableRouterGuard)))
             .Map(np => np.Name)

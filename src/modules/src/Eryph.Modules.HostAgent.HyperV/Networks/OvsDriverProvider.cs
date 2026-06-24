@@ -37,7 +37,7 @@ public class OvsDriverProvider<RT> where RT : struct,
         from hostNetworkCommands in default(RT).HostNetworkCommands
         from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
         from _ in match(extensionInfo,
-            ei => logInformation("OVS Hyper-V switch extension {ExtensionVersion} is installed", ei.Version),
+            ei => logInformation("OVS Hyper-V switch extension {ExtensionVersion} is installed", ei.Version ?? ""),
             () => logInformation("OVS Hyper-V switch extension is not installed"))
         let infPath = Path.Combine(ovnRunDir, "driver", "dbo_ovse.inf")
         from infVersion in getDriverVersionFromInfFile(infPath)
@@ -51,7 +51,7 @@ public class OvsDriverProvider<RT> where RT : struct,
         let canUpgrade = allowUpgrade && (!isDriverPackageTestSigned || isDriverTestSigningEnabled)
         from ___ in match(extensionInfo,
             ei =>
-                from extensionVersion in parseVersion(ei.Version).ToAff(Error.New(
+                from extensionVersion in parseVersion(ei.Version ?? "").ToAff(Error.New(
                     "Could not parse the version of the Hyper-V extension"))
                 from _ in extensionVersion != infVersion && canUpgrade
                     ? from switchExtensions in hostNetworkCommands.GetSwitchExtensions()
@@ -89,7 +89,7 @@ public class OvsDriverProvider<RT> where RT : struct,
                     : from _ in extensionVersion != infVersion
                         ? logWarning(
                             "Hyper-V switch extension version {ExtensionVersion} does not match packaged driver version {DriverVersion}",
-                            ei.Version, infVersion)
+                            ei.Version ?? "", infVersion)
                         : SuccessAff<RT, Unit>(unit)
                     select unit
                 select unit,
@@ -133,7 +133,7 @@ public class OvsDriverProvider<RT> where RT : struct,
     public static Aff<RT, Unit> removeAllDriverPackages() =>
         from installedDriverPackages in getInstalledDriverPackages()
         from ___ in installedDriverPackages
-            .Map(di => removeDriverPackage(di.Driver))
+            .Map(di => removeDriverPackage(di.Driver ?? throw new InvalidOperationException("Driver package has no driver name")))
             .SequenceSerial()
         select unit;
 

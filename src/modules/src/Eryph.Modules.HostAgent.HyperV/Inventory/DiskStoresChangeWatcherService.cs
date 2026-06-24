@@ -81,16 +81,16 @@ public sealed class DiskStoresChangeWatcherService(
                 vmHostAgentConfig.Environments.ToSeq()
                     .Bind(e => e.Datastores.ToSeq())
                     .Filter(ds => ds.WatchFileSystem)
-                    .Map(ds => ds.Path),
+                    .Map(ds => ds.Path ?? ""),
                 vmHostAgentConfig.Environments.ToSeq()
                     .Filter(e => e.Defaults.WatchFileSystem)
-                    .Map(e => e.Defaults.Volumes),
+                    .Map(e => e.Defaults.Volumes ?? ""),
                 vmHostAgentConfig.Datastores.ToSeq()
                     .Filter(ds => ds.WatchFileSystem)
-                    .Map(ds => ds.Path),
+                    .Map(ds => ds.Path ?? ""),
                 Seq1(vmHostAgentConfig.Defaults)
                     .Filter(d => d.WatchFileSystem)
-                    .Map(d => d.Volumes));
+                    .Map(d => d.Volumes ?? ""));
 
             // The observable should not terminate unless we dispose it. When the observable
             // ends, we stop monitoring the file system events which would be a bug.

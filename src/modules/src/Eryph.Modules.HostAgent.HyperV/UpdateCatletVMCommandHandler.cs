@@ -36,10 +36,11 @@ internal class UpdateCatletVMCommandHandler(
         let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
         from currentStorageSettings in VMStorageSettings.FromVm(vmHostAgentConfig, vmInfo).WriteTrace()
-        from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, command.Config, currentStorageSettings)
+        let config = command.Config ?? throw new InvalidOperationException("The catlet config is missing.")
+        from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, config, currentStorageSettings)
             .WriteTrace()
         from _ in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
-        from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(command.Config)
+        from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(config)
             .ToEither()
             .MapLeft(issues =>
                 Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
@@ -47,7 +48,7 @@ internal class UpdateCatletVMCommandHandler(
         from vmInfoConsistent in EnsureNameConsistent(vmInfo, substitutedConfig, Engine).WriteTrace()
         from vmInfoConverged in VirtualMachine.Converge(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfoConsistent,
-                substitutedConfig, command.CatletId, command.MachineNetworkSettings,
+                substitutedConfig, command.CatletId, command.MachineNetworkSettings ?? [],
                 plannedStorageSettings, command.ResolvedGenes.ToSeq(), loggerFactory)
             .WriteTrace()
         let timestamp = DateTimeOffset.UtcNow

@@ -110,7 +110,7 @@ public static class HostStateProvider<RT>
         OvsBridge ovsBridge,
         Seq<OvsBridgePort> ovsPorts,
         Seq<OvsInterface> ovsInterfaces) =>
-        new(ovsBridge.Name,
+        new(ovsBridge.Name ?? throw new InvalidOperationException("The OVS bridge has no name."),
             ovsPorts.Filter(ovsPort => ovsBridge.Ports.Contains(ovsPort.Id))
                 .Map(ovsPort => createBridgePortInfo(ovsBridge, ovsPort, ovsInterfaces))
                 .Map(portInfo => (PortName: portInfo.Name, portInfo))
@@ -120,8 +120,8 @@ public static class HostStateProvider<RT>
         OvsBridge ovsBridge,
         OvsBridgePort ovsPort,
         Seq<OvsInterface> ovsInterfaces) =>
-        new(ovsPort.Name,
-            ovsBridge.Name,
+        new(ovsPort.Name ?? throw new InvalidOperationException("The OVS port has no name."),
+            ovsBridge.Name ?? throw new InvalidOperationException("The OVS bridge has no name."),
             Optional(ovsPort.Tag),
             Optional(ovsPort.VlanMode),
             Optional(ovsPort.BondMode),
@@ -131,8 +131,8 @@ public static class HostStateProvider<RT>
 
     private static OvsInterfaceInfo createInterfaceInfo(
         OvsInterface ovsInterface) =>
-        new(ovsInterface.Name,
-            ovsInterface.Type,
+        new(ovsInterface.Name ?? throw new InvalidOperationException("The OVS interface has no name."),
+            ovsInterface.Type ?? throw new InvalidOperationException("The OVS interface has no type."),
             Optional(ovsInterface.Error)
                 .Filter(notEmpty),
             ovsInterface.ExternalIds.Find("iface-id")
@@ -169,7 +169,8 @@ public static class HostStateProvider<RT>
     private static HostAdapterInfo createHostAdapterInfo(
         HostNetworkAdapter hostAdapter,
         HashMap<Guid, Guid> switchByAdapterId) =>
-        new(hostAdapter.Name,
+        new(hostAdapter.Name ?? throw new InvalidOperationException(
+                "The host network adapter has no name."),
             hostAdapter.InterfaceGuid,
             None,
             !hostAdapter.Virtual,
@@ -190,9 +191,13 @@ public static class HostStateProvider<RT>
     private static Eff<HostRouteInfo> CreateHostRouteInfo(
         NetRoute netRoute,
         HashMap<int, Guid> hostAdapters) =>
-        from destination in parseIPNetwork2(netRoute.DestinationPrefix)
+        from destination in parseIPNetwork2(
+                netRoute.DestinationPrefix ?? throw new InvalidOperationException(
+                    "The net route has no destination prefix."))
             .ToEff()
-        from nextHop in parseIPAddress(netRoute.NextHop)
+        from nextHop in parseIPAddress(
+            netRoute.NextHop ?? throw new InvalidOperationException(
+                "The net route has no next hop."))
             .ToEff()
         // The routes only contain the interface index but not the
         // interface ID. Hence, we need to look up the interface ID

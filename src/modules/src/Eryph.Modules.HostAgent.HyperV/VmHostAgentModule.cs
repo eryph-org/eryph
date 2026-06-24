@@ -125,7 +125,7 @@ public class VmHostAgentModule : WebModule
         // Validate + consume the one-time token and open the guest hvsocket BEFORE upgrading. A null
         // stream means an unknown/expired/used token → 404 without an upgrade, not leaking whether the
         // token ever existed.
-        Stream guestStream;
+        Stream? guestStream;
         try
         {
             guestStream = await channelService.OpenChannelAsync(token, context.RequestAborted)

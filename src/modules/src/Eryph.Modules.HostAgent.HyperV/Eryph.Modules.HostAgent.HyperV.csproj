@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>annotations</Nullable>
+    <Nullable>enable</Nullable>
     <RootNamespace>Eryph.Modules.HostAgent</RootNamespace>
   </PropertyGroup>
   <ItemGroup>

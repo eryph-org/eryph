@@ -76,13 +76,13 @@ public static class ProviderNetworkUpdate<RT>
         // commands might later fail.
         from _1 in hostStateWithFallback.VMSwitchExtensions
             .Filter(e => e.SwitchName == EryphConstants.OverlaySwitchName && !e.Enabled)
-            .Map(e => changeBuilder.EnableSwitchExtension(e.SwitchId, e.SwitchName))
+            .Map(e => changeBuilder.EnableSwitchExtension(e.SwitchId, e.SwitchName ?? ""))
             .SequenceSerial()
 
         // Disable the OVS extension on all switches which are not overlay switch(es).
         from _2 in hostStateWithFallback.VMSwitchExtensions
             .Filter(e => e.SwitchName != EryphConstants.OverlaySwitchName && e.Enabled)
-            .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName))
+            .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName ?? ""))
             .SequenceSerial()
 
         // Perform a rebuild of the Hyper-V switch used for the overlay network if necessary.
@@ -159,7 +159,7 @@ public static class ProviderNetworkUpdate<RT>
             .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has no default subnet."))
         from gateway in parseIPAddress(subnet.Gateway)
             .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has an invalid gateway IP address."))
-        from network in parseIPNetwork2(subnet.Network)
+        from network in parseIPNetwork2(subnet.Network ?? "")
             .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has an invalid network."))
         select new NewBridgeNat(getNetNatName(providerConfig.Name), gateway, network);
 

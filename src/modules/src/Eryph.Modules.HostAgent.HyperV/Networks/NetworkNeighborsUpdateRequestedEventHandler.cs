@@ -24,7 +24,7 @@ public class NetworkNeighborsUpdateRequestedEventHandler(ILogger log, IPowershel
 
         _ = await NetworkNeighborsUpdate.RemoveOutdatedNetworkNeighbors(
                 powershellEngine,
-                message.UpdatedAddresses.Map(r => (r.IpAddress, r.MacAddress)).ToSeq())
+                message.UpdatedAddresses.Map(r => (r.IpAddress ?? "", r.MacAddress ?? "")).ToSeq())
             .IfLeft(e => e.Throw());
 
         log.LogTrace("Updated network neighbors (ARP cache). Took {Milliseconds}ms.", stopwatch.ElapsedMilliseconds);

@@ -21,7 +21,6 @@ namespace Eryph.Modules.HostAgent;
 public class RemoveVirtualDiskCommandHandler(
     ITaskMessaging messaging,
     IPowershellEngine powershellEngine,
-    ILogger log,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
     IFileSystem fileSystem)
@@ -29,7 +28,10 @@ public class RemoveVirtualDiskCommandHandler(
 {
     public Task Handle(OperationTask<RemoveVirtualDiskCommand> message)
     {
-        return RemoveDisk(message.Command.Path, message.Command.FileName)
+        var command = message.Command ?? throw new InvalidOperationException("Command is missing from the operation task.");
+        var path = command.Path ?? throw new InvalidOperationException("The command is missing the disk path.");
+        var fileName = command.FileName ?? throw new InvalidOperationException("The command is missing the disk file name.");
+        return RemoveDisk(path, fileName)
             .FailOrComplete(messaging, message);
     }
 

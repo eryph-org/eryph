@@ -287,7 +287,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NetNat> netNats,
         Seq<NewBridge> expectedBridges) =>
         from _1 in LogMethodTrace(nameof(RemoveInvalidNats))
-        from removedNats in netNats.Filter(n => n.Name.StartsWith("eryph_"))
+        from removedNats in netNats.Filter(n => (n.Name ?? "").StartsWith("eryph_"))
             .Map(n => RemoveInvalidNat(n, expectedBridges))
             .SequenceSerial()
         select netNats.Except(removedNats.Somes()).ToSeq();
@@ -297,7 +297,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> expectedBridges) =>
         from _ in unitAff
         // When the prefix of the NetNat is invalid, we will just recreate the NetNat.
-        let natPrefix = parseIPNetwork2(nat.InternalIPInterfaceAddressPrefix)
+        let natPrefix = parseIPNetwork2(nat.InternalIPInterfaceAddressPrefix ?? "")
         let expectedNat = expectedBridges
             .Bind(b => b.Nat.ToSeq())
             .Find(n => n.NatName == nat.Name)
@@ -307,11 +307,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             : from _1 in LogDebug("Removing invalid host NAT '{Nat}'", nat.Name)
             from _2 in AddOperation(
                 () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
-                    from _ in hostCommands.RemoveNetNat(nat.Name)
+                    from _ in hostCommands.RemoveNetNat(nat.Name ?? "")
                     select unit,
                 false,
                 NetworkChangeOperation.RemoveNetNat,
-                nat.Name)
+                nat.Name ?? "")
             select Some(nat)
         select result;
 
@@ -321,8 +321,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<HostRouteInfo> unmanagedRoutes) =>
         from _1 in unitAff
         let unmanagedNats = netNats
-            .Filter(n => !n.Name.StartsWith("eryph_"))
-            .Map(n => from network in parseIPNetwork2(n.InternalIPInterfaceAddressPrefix)
+            .Filter(n => !(n.Name ?? "").StartsWith("eryph_"))
+            .Map(n => from network in parseIPNetwork2(n.InternalIPInterfaceAddressPrefix ?? "")
                 select (n.Name, Network: network))
             .Somes()
         from _2 in expectedBridges

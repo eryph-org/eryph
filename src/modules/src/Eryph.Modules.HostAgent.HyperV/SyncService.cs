@@ -47,7 +47,7 @@ internal class SyncService(
                 var ss = new StreamString(pipeServer);
 
 
-                var commandString = await ss.ReadString(stoppingToken);
+                var commandString = await ss.ReadString(stoppingToken) ?? "";
                 var command = JsonSerializer.Deserialize<SyncServiceCommand>(commandString);
 
                 var hasPermission = false;
@@ -90,7 +90,7 @@ internal class SyncService(
                 {
                     if (hasPermission)
                     {
-                        var response = await RunCommand(command);
+                        var response = await RunCommand(command ?? throw new InvalidOperationException("Command must not be null."));
                         await ss.WriteResponse(response, stoppingToken);
                     }
                     else
@@ -133,7 +133,7 @@ internal class SyncService(
                 };
             case "VALIDATE_CHANGES":
                 var networkProviders = command.Data.HasValue
-                    ? command.Data.Value.Deserialize<NetworkProvider[]>()
+                    ? command.Data.Value.Deserialize<NetworkProvider[]>() ?? []
                     : [];
                 return await networkSyncService.ValidateChanges(networkProviders)
                     .Match(r => new SyncServiceResponse

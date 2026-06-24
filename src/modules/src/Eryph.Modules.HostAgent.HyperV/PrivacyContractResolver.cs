@@ -51,7 +51,7 @@ public class PrivacyContractResolver : DefaultContractResolver
 
     private class PrivateValueProvider(PropertyInfo targetProperty, bool critical) : IValueProvider
     {
-        public object GetValue(object? target)
+        public object? GetValue(object? target)
         {
             var value = targetProperty.GetValue(target);
 
@@ -67,7 +67,7 @@ public class PrivacyContractResolver : DefaultContractResolver
             };
         }
 
-        public void SetValue(object target, object value)
+        public void SetValue(object? target, object? value)
         {
         }
     }

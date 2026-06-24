@@ -31,7 +31,7 @@ internal class CreateCatletVMCommandHandler(
 {
     protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(
         CreateCatletVMCommand command) =>
-        from _placement in ValidatePlacement(command.Config)
+        from _placement in ValidatePlacement(command.Config ?? throw new InvalidOperationException("The command config is missing."))
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         from plannedStorageSettings in VMStorageSettings.FromCatletConfig(command.Config, vmHostAgentConfig)
@@ -79,7 +79,7 @@ internal class CreateCatletVMCommandHandler(
             .ToEitherAsync(Error.New(
                 "Cannot create catlet. The storage identifier is missing."))
         let startupMemory = config.Memory?.Startup ?? 1024
-        from vm in VirtualMachine.Create(engine, config.Name, storageIdentifier,
+        from vm in VirtualMachine.Create(engine, config.Name ?? throw new InvalidOperationException("The catlet name is missing."), storageIdentifier,
             storageSettings.VMPath, startupMemory)
         select vm;
 }

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -29,18 +30,20 @@ internal class CreateVirtualDiskVMCommandHandler(
 
     private EitherAsync<Error, CreateVirtualDiskVMCommandResponse> HandleCommand(
         CreateVirtualDiskVMCommand command) =>
-        from _placement in ValidatePlacement(command.DataStore.Value, command.Environment.Value)
+        from _placement in ValidatePlacement(
+            (command.DataStore ?? throw new InvalidOperationException("DataStore is required.")).Value,
+            (command.Environment ?? throw new InvalidOperationException("Environment is required.")).Value)
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let storageNames = new StorageNames
         {
-            ProjectName = command.ProjectName.Value,
-            DataStoreName = command.DataStore.Value,
-            EnvironmentName = command.Environment.Value,
+            ProjectName = (command.ProjectName ?? throw new InvalidOperationException("ProjectName is required.")).Value,
+            DataStoreName = (command.DataStore ?? throw new InvalidOperationException("DataStore is required.")).Value,
+            EnvironmentName = (command.Environment ?? throw new InvalidOperationException("Environment is required.")).Value,
         }
         from basePath in storageNames.ResolveVolumeStorageBasePath(vmHostAgentConfig)
-        let fileName = $"{command.Name.Value}.vhdx"
-        let vhdPath = Path.Combine(basePath, command.StorageIdentifier.Value, fileName)
+        let fileName = $"{(command.Name ?? throw new InvalidOperationException("Name is required.")).Value}.vhdx"
+        let vhdPath = Path.Combine(basePath, (command.StorageIdentifier ?? throw new InvalidOperationException("StorageIdentifier is required.")).Value, fileName)
         let sizeBytes = command.Size * 1024L * 1024 * 1024
         let psCommand = PsCommandBuilder.Create()
             .AddCommand("New-VHD")

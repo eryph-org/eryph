@@ -20,7 +20,7 @@ internal class Tracer(ILogger log, ITraceWriter traceWriter) : ITracer
         traceWriter.WriteTrace(traceContext, records.TraceStarted, records.TraceStopped, records.Records.ToArray());
     }
 
-    public void Write(Guid contextId, string correlationId, TraceData data, string message = null)
+    public void Write(Guid contextId, string correlationId, TraceData data, string? message = null)
     {
         _records.AddOrUpdate(contextId, g =>
         {

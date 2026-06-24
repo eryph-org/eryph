@@ -17,13 +17,13 @@ public record OvsBridgePort : OVSTableRecord, IOVSEntityWithName
             { "interfaces", OVSReference.Metadata() },
         };
 
-    public int? Tag => GetValue<int?>("tag");
+    public int? Tag => GetValue<int>("tag");
 
-    public string? VlanMode => GetValue<string?>("vlan_mode");
+    public string? VlanMode => GetValue<string>("vlan_mode");
 
-    public string? BondMode => GetValue<string?>("bond_mode");
+    public string? BondMode => GetValue<string>("bond_mode");
 
     public Seq<Guid> Interfaces => GetReference("interfaces");
 
-    public string Name => GetValue<string>("name");
+    public string? Name => GetValue<string>("name");
 }

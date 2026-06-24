@@ -102,7 +102,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         new()
         {
             Name = config.Name,
-            Path = normalizePath(config.Path),
+            Path = normalizePath(config.Path) ?? "",
         };
 
     private static VmHostAgentEnvironmentConfiguration normalizePaths(
@@ -111,7 +111,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         {
             Name = config.Name,
             Defaults = normalizePaths(config.Defaults),
-            Datastores = config.Datastores?.Select(normalizePaths).ToArray(),
+            Datastores = config.Datastores?.Select(normalizePaths).ToArray() ?? [],
         };
 
 
@@ -124,13 +124,13 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         new()
         {
             Vms = string.Equals(
-                Path.TrimEndingDirectorySeparator(hostSettings.DefaultDataPath),
+                Path.TrimEndingDirectorySeparator(hostSettings.DefaultDataPath ?? ""),
                 defaults.Vms,
                 StringComparison.OrdinalIgnoreCase)
                 ? null
                 : defaults.Vms,
             Volumes = string.Equals(
-                Path.TrimEndingDirectorySeparator(hostSettings.DefaultVirtualHardDiskPath),
+                Path.TrimEndingDirectorySeparator(hostSettings.DefaultVirtualHardDiskPath ?? ""),
                 defaults.Volumes,
                 StringComparison.OrdinalIgnoreCase)
                 ? null
@@ -152,8 +152,8 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         HostSettings hostSettings) =>
         new()
         {
-            Vms = Optional(defaults.Vms).Filter(notEmpty).IfNone(hostSettings.DefaultDataPath),
-            Volumes = Optional(defaults.Volumes).Filter(notEmpty).IfNone(hostSettings.DefaultVirtualHardDiskPath),
+            Vms = Optional(defaults.Vms).Filter(notEmpty).IfNone(hostSettings.DefaultDataPath ?? ""),
+            Volumes = Optional(defaults.Volumes).Filter(notEmpty).IfNone(hostSettings.DefaultVirtualHardDiskPath ?? ""),
             WatchFileSystem = defaults.WatchFileSystem,
         };
 }

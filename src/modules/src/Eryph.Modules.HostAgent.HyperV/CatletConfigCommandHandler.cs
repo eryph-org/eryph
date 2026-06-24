@@ -20,6 +20,7 @@ internal abstract class CatletConfigCommandHandler<TMessage, TResult>(
     ILogger log)
     : IHandleMessages<OperationTask<TMessage>>
     where TMessage : class, new()
+    where TResult : notnull
 {
     protected readonly IPowershellEngine Engine = engine;
     protected readonly ILogger Log = log;
@@ -110,11 +111,11 @@ internal abstract class CatletConfigCommandHandler<TMessage, TResult>(
     {
         return Prelude.Cond<(string currentName, string newName)>(names =>
                 !string.IsNullOrWhiteSpace(names.newName) &&
-                !names.newName.Equals(names.currentName, StringComparison.Ordinal))((vmInfo.Value.Name,
-                config.Name))
+                !names.newName.Equals(names.currentName, StringComparison.Ordinal))((vmInfo.Value.Name ?? "",
+                config.Name ?? ""))
             .Match(
                 None: () => vmInfo,
-                Some: some => VirtualMachine.Rename(engine, vmInfo, config.Name));
+                Some: some => VirtualMachine.Rename(engine, vmInfo, some.newName));
     }
 
     protected static EitherAsync<Error, VirtualMachineData> CreateMachineInventory(

@@ -16,5 +16,5 @@ public record OvsBridge : OVSTableRecord, IOVSEntityWithName
 
     public Seq<Guid> Ports => GetReference("ports");
 
-    public string Name => GetValue<string>("name");
+    public string? Name => GetValue<string>("name");
 }

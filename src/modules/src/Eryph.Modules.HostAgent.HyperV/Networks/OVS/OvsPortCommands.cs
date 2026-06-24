@@ -51,7 +51,7 @@ internal class OvsPortCommands<RT> where RT : struct,
         from portNames in adapters
             // Do not use GetConfiguredPortName() as we need to be backwards
             // compatible with older port names.
-            .Map(a => getPortName(a.Id))
+            .Map(a => getPortName(a.Id ?? throw new InvalidOperationException("The network adapter has no Id.")))
             .SequenceSerial()
         from _ in change is VMPortChange.Add
             ? addPorts(portNames)
