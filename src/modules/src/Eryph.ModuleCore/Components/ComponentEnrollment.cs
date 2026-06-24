@@ -61,6 +61,8 @@ public static class ComponentEnrollment
         CancellationToken cancellationToken = default,
         bool force = false)
     {
+        // Fast path: skip building the HTTP client/transport when nothing is due. ComponentEnrollmentClient
+        // re-checks this, so this is purely an allocation-avoiding short-circuit, not the authoritative gate.
         if (!force && store.HasCurrentCertificate())
             return;
 

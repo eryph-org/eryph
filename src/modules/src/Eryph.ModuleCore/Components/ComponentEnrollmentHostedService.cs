@@ -11,8 +11,10 @@ namespace Eryph.ModuleCore.Components;
 /// certificate against the identity renew endpoint) once it enters its renewal window, so a long-lived
 /// component renews without a restart. Only the split-runtime hosts that use bus mTLS register it
 /// (DI-controlled, via <see cref="ComponentMtlsTransport.AddRenewal"/>); eryph-zero (in-memory bus)
-/// does not. The renewed certificate is written to the store atomically; the bus picks up the new file
-/// on its next reconnect (a forced reconnect on renewal is a planned refinement).
+/// does not. The renewed certificate is written to the store atomically and is picked up the next time
+/// a TLS consumer reads the file: the bus on its next reconnect, listeners on restart. Renewal is well
+/// inside the certificate's validity (the renewal window leads expiry), so a reconnect/restart at any
+/// later point loads the renewed certificate — no in-flight re-handshake is required.
 /// </summary>
 internal sealed class ComponentEnrollmentHostedService(
     ComponentRenewalContext context,

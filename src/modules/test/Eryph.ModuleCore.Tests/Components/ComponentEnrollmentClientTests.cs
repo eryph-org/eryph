@@ -100,6 +100,21 @@ public class ComponentEnrollmentClientTests
     }
 
     [Fact]
+    public async Task EnsureEnrolledAsync_force_does_not_throw_when_renewing_a_current_certificate_fails()
+    {
+        // A forced renewal of a still-current certificate is non-blocking: a failed attempt must be
+        // swallowed (logged), not thrown, and must not persist anything — the component keeps the
+        // certificate it already has. (Operator feedback is the target component's log.)
+        var transport = new FakeTransport(failuresBeforeSuccess: int.MaxValue);
+        var store = new FakeStore { Current = true, Valid = true };
+
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+
+        transport.RenewCalls.Should().Be(1);
+        store.SaveCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task EnsureEnrolledAsync_force_with_no_valid_certificate_does_not_attempt_enrollment()
     {
         // A forced renewal of an expired/absent certificate cannot succeed (nothing to authenticate the

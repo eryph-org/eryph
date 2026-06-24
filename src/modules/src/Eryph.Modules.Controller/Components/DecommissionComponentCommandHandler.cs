@@ -32,7 +32,7 @@ internal sealed class DecommissionComponentCommandHandler(
         foreach (var provisioner in brokerProvisioners)
             await provisioner.RemoveComponentAsync(message.ComponentId, CancellationToken.None);
 
-        var removed = await registry.RevokeAsync(message.ComponentId, CancellationToken.None);
+        var removed = await registry.RemoveRegistrationAsync(message.ComponentId, CancellationToken.None);
         logger.LogInformation(
             "Decommissioned component {ComponentId} (broker user removed; registration removed: {Removed}).",
             message.ComponentId, removed);

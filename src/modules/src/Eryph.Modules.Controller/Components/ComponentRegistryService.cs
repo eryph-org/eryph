@@ -135,7 +135,7 @@ internal sealed class ComponentRegistryService(
         return true;
     }
 
-    public async Task<bool> RevokeAsync(Guid componentId, CancellationToken cancellationToken)
+    public async Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken)
     {
         var registration = await repository.GetBySpecAsync(
             new ComponentRegistrationSpecs.GetByComponentId(componentId), cancellationToken);

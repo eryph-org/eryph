@@ -24,8 +24,9 @@ namespace Eryph.Controller
     /// <summary>
     /// Hosts the controller module as a standalone runtime, wiring the module-container
     /// dependencies via Hosuto filters (mirroring eryph-zero's host extensions): the
-    /// MariaDB state store + migration, the RabbitMQ transport, and the (in-memory)
-    /// Rebus saga/timeout stores.
+    /// MariaDB state store, the RabbitMQ transport, and the (in-memory) Rebus
+    /// saga/timeout stores. The schema is set up out of band (the create-db command /
+    /// SQL scripts), not migrated at startup.
     /// </summary>
     internal static class HostControllerModuleExtensions
     {

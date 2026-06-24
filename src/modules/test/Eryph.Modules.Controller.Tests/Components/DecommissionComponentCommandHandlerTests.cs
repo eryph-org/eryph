@@ -77,7 +77,7 @@ public class DecommissionComponentCommandHandlerTests
     {
         public List<Guid> Revoked { get; } = [];
 
-        public Task<bool> RevokeAsync(Guid componentId, CancellationToken cancellationToken)
+        public Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken)
         {
             Revoked.Add(componentId);
             return Task.FromResult(revokeResult);

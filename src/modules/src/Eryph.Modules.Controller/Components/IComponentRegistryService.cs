@@ -50,7 +50,7 @@ internal interface IComponentRegistryService
     /// <see cref="DeregisterAsync"/>. Not instance-scoped: decommissioning revokes the identity
     /// regardless of which run last registered it. Returns whether a row was removed.
     /// </summary>
-    Task<bool> RevokeAsync(Guid componentId, CancellationToken cancellationToken);
+    Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken);
 
     /// <summary>The components currently considered alive (status Active).</summary>
     Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken);

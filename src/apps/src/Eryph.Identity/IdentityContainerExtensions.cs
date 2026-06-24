@@ -38,9 +38,11 @@ namespace Eryph.Identity
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(GetOwnEndpoints()));
         }
 
-        // Registers the platform certificate/key backend. Selection is the DI registration's job;
-        // every consumer (TokenCertificateManager, ComponentCertificateAuthority, the TLS listeners)
-        // resolves ICertificateKeyService/ICertificateStoreService/ICertificateGenerator through DI.
+        // Registers the platform certificate/key backend for the module container. In-container
+        // consumers (TokenCertificateManager, ComponentCertificateAuthority) resolve
+        // ICertificateKeyService/ICertificateStoreService/ICertificateGenerator through DI. The Kestrel
+        // TLS listener runs outside this container, so it builds the same backend directly via
+        // PkiOptions.CreateServices (see RegisterCertificateServices' body), not through DI.
         private static void RegisterCertificateServices(Container container)
         {
             // The backend switch lives once in PkiOptions.CreateServices, shared with the Kestrel TLS

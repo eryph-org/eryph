@@ -306,7 +306,7 @@ public class ComponentRegistryServiceTests
 
         // Decommission is unconditional: unlike Deregister it is not instance-guarded, so it removes
         // the row whatever the current instance.
-        var removed = await service.RevokeAsync(componentId, CancellationToken.None);
+        var removed = await service.RemoveRegistrationAsync(componentId, CancellationToken.None);
 
         removed.Should().BeTrue();
         repo.Verify(r => r.DeleteAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
@@ -317,7 +317,7 @@ public class ComponentRegistryServiceTests
     {
         var (service, repo) = Create(existing: null);
 
-        var removed = await service.RevokeAsync(Guid.NewGuid(), CancellationToken.None);
+        var removed = await service.RemoveRegistrationAsync(Guid.NewGuid(), CancellationToken.None);
 
         removed.Should().BeFalse();
         repo.Verify(r => r.DeleteAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
