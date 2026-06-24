@@ -47,6 +47,13 @@ public interface IComponentCertificateAuthority
     /// orchestration layer's responsibility. Call <see cref="RetireSupersededCertificateAuthorities"/>
     /// once every component has rotated to complete the overlap.
     /// </para>
+    /// <para>
+    /// This is not crash-atomic against a file-based store: it demotes the current generation, then mints
+    /// the new one, so an interruption between those steps can leave a tier without signing material that
+    /// the next <see cref="IssueComponentCertificate"/> re-creates (losing the overlap). The caller that
+    /// drives rotation must therefore run it to completion (it is a single in-process operation, not a
+    /// multi-step protocol) and treat an interrupted rotation as "re-run from a known generation".
+    /// </para>
     /// </summary>
     void RotateRootCertificateAuthority();
 
