@@ -38,6 +38,26 @@ public interface IComponentCertificateAuthority
     IReadOnlyList<X509Certificate2> GetIssuingCaCertificates();
 
     /// <summary>
+    /// Begins a CA rotation: generates a new root and new issuing intermediates and switches signing to
+    /// them, while keeping the previous generation in the trust bundle (as public-only certificates) so
+    /// leaves issued under it still validate during the overlap. New leaves chain to the new root.
+    /// <para>
+    /// The new trust bundle (which now contains both roots) must be distributed to and trusted by every
+    /// component <b>before</b> they are served anything signed only by the new root; that ordering is the
+    /// orchestration layer's responsibility. Call <see cref="RetireSupersededCertificateAuthorities"/>
+    /// once every component has rotated to complete the overlap.
+    /// </para>
+    /// </summary>
+    void RotateRootCertificateAuthority();
+
+    /// <summary>
+    /// Completes a rotation by removing the superseded (public-only) CA generations, leaving only the
+    /// current signing generation trusted. Only safe once every component has rotated to a leaf issued
+    /// under the new generation — removing a still-in-use generation breaks not-yet-rotated leaves.
+    /// </summary>
+    void RetireSupersededCertificateAuthorities();
+
+    /// <summary>
     /// Issues a component mTLS client certificate (clientAuth) for the given identity, signed by
     /// the client intermediate. Returns the leaf plus the intermediate(s) the component must
     /// present alongside it to chain to the trusted root. The returned <see cref="IssuedCertificate"/>
