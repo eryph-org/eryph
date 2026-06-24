@@ -36,6 +36,10 @@ public class ComponentEnrollmentClientTests
         // Two failures (identity still starting), then success — and the result is persisted once.
         transport.Calls.Should().Be(3);
         store.SaveCount.Should().Be(1);
+        // A first enrollment (no stored certificate) authenticates with the one-time token, never the
+        // certificate-authenticated renewal endpoint.
+        transport.EnrollCalls.Should().Be(3);
+        transport.RenewCalls.Should().Be(0);
     }
 
     [Fact]
@@ -74,6 +78,10 @@ public class ComponentEnrollmentClientTests
 
         transport.Calls.Should().Be(1);
         store.SaveCount.Should().Be(1);
+        // A renewal authenticates with the current certificate against the renew endpoint, never the
+        // one-time token enrollment endpoint.
+        transport.RenewCalls.Should().Be(1);
+        transport.EnrollCalls.Should().Be(0);
     }
 
     [Fact]
@@ -133,9 +141,24 @@ public class ComponentEnrollmentClientTests
         : IEnrollmentTransport
     {
         public int Calls { get; private set; }
+        public int EnrollCalls { get; private set; }
+        public int RenewCalls { get; private set; }
 
         public Task<ComponentEnrollmentResult> EnrollAsync(
             ComponentEnrollmentRequest request, CancellationToken cancellationToken)
+        {
+            EnrollCalls++;
+            return AttemptAsync();
+        }
+
+        public Task<ComponentEnrollmentResult> RenewAsync(
+            ComponentEnrollmentRequest request, CancellationToken cancellationToken)
+        {
+            RenewCalls++;
+            return AttemptAsync();
+        }
+
+        private Task<ComponentEnrollmentResult> AttemptAsync()
         {
             Calls++;
             if (Calls <= failuresBeforeSuccess)

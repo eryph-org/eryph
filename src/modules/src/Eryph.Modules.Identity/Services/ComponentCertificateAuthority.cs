@@ -51,6 +51,20 @@ public class ComponentCertificateAuthority(
         return trusted;
     }
 
+    public IReadOnlyList<X509Certificate2> GetIssuingCaCertificates()
+    {
+        // Public-only copies of the issuing intermediates (the key-bearing instances stay in the store).
+        // Both tiers are returned so the same set can build a chain for either a client or a server leaf;
+        // an unrelated intermediate in the ExtraStore is simply ignored by the chain builder.
+        var result = new List<X509Certificate2>();
+        foreach (var tier in new[] { ClientCa, ServerCa })
+        {
+            using var intermediate = GetIntermediate(tier);
+            result.Add(X509CertificateLoader.LoadCertificate(intermediate.RawData));
+        }
+        return result;
+    }
+
     public IssuedCertificate IssueComponentCertificate(
         string componentId, string fqdn, RSA subjectPublicKey, int validDays = 90)
     {

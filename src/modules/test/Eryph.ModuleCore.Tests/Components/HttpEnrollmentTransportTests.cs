@@ -89,6 +89,43 @@ public class HttpEnrollmentTransportTests
     }
 
     [Fact]
+    public async Task RenewAsync_posts_to_the_renew_endpoint_under_the_identity_path_base()
+    {
+        var componentId = Guid.NewGuid();
+        Uri? requestUri = null;
+        var handler = new StubHandler((request, _) =>
+        {
+            requestUri = request.RequestUri;
+            var response = new
+            {
+                ComponentId = componentId.ToString(),
+                Certificate = Convert.ToBase64String(new byte[] { 5, 6 }),
+                IssuingChain = Array.Empty<string>(),
+                ServerCertificate = "",
+                ServerIssuingChain = Array.Empty<string>(),
+                CaTrustBundle = Array.Empty<string>(),
+            };
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(response, ServerJsonOptions), Encoding.UTF8, "application/json"),
+            };
+        });
+
+        var transport = new HttpEnrollmentTransport(
+            new HttpClient(handler),
+            new EndpointResolver(new() { ["identity"] = "https://identity.eryph.local:8080/identity" }));
+
+        var result = await transport.RenewAsync(
+            new ComponentEnrollmentRequest { ComponentType = ComponentType.Controller, Fqdn = "host.example" },
+            CancellationToken.None);
+
+        // Renewal goes to the renew endpoint (cert-authenticated), preserving the identity path base.
+        requestUri.Should().Be(new Uri("https://identity.eryph.local:8080/identity/v1/components/renew"));
+        result.ComponentId.Should().Be(componentId);
+    }
+
+    [Fact]
     public async Task EnrollAsync_throws_on_a_non_success_response_so_the_client_retries()
     {
         var handler = new StubHandler((_, _) => new HttpResponseMessage(HttpStatusCode.Unauthorized));

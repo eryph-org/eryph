@@ -30,12 +30,14 @@ public sealed class ComponentEnrollmentClient(
             return;
 
         // If a still-valid (but renewal-due) certificate exists, the component can keep running on
-        // it; otherwise it must enroll before it can connect to the bus.
+        // it and renews by authenticating with that certificate (mTLS) — the one-time token cannot be
+        // reused. Otherwise it has no usable certificate and must enroll with the token before it can
+        // connect to the bus.
         var haveValid = store.HasValidCertificate();
-        await EnrollWithRetryAsync(blocking: !haveValid, cancellationToken);
+        await EnrollWithRetryAsync(blocking: !haveValid, renew: haveValid, cancellationToken);
     }
 
-    private async Task EnrollWithRetryAsync(bool blocking, CancellationToken cancellationToken)
+    private async Task EnrollWithRetryAsync(bool blocking, bool renew, CancellationToken cancellationToken)
     {
         var delay = options.InitialRetryDelay;
         var attempt = 0;
@@ -60,12 +62,17 @@ public sealed class ComponentEnrollmentClient(
                     Token = options.Token,
                 };
 
-                var result = await transport.EnrollAsync(request, cancellationToken);
+                // Renewal authenticates with the current certificate (presented by the transport's TLS
+                // layer) against the renew endpoint; first enrollment presents the one-time token. Both
+                // request a brand-new key pair so renewal also rotates the private key.
+                var result = renew
+                    ? await transport.RenewAsync(request, cancellationToken)
+                    : await transport.EnrollAsync(request, cancellationToken);
                 store.Save(clientKey.ExportPkcs8PrivateKey(), serverKey.ExportPkcs8PrivateKey(), result);
 
                 logger.LogInformation(
-                    "Component {ComponentType} enrolled on attempt {Attempt} (component {ComponentId}).",
-                    identity.ComponentType, attempt, result.ComponentId);
+                    "Component {ComponentType} {Action} on attempt {Attempt} (component {ComponentId}).",
+                    identity.ComponentType, renew ? "renewed" : "enrolled", attempt, result.ComponentId);
                 return;
             }
             catch (OperationCanceledException)

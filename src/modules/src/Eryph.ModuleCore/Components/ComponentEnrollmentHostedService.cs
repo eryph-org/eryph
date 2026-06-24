@@ -7,19 +7,20 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.ModuleCore.Components;
 
 /// <summary>
-/// Re-checks the component certificate periodically and renews it before expiry via the enrollment
-/// client. NOTE: this is the periodic-renewal path and is <b>not yet wired</b> — no host registers it.
-/// Today certificates are (re)issued at startup by <see cref="ComponentMtlsTransport"/> (enroll-if-stale);
-/// periodic renewal (and the bus reconnect it requires) is a planned milestone. When enabled, the
-/// split-runtime hosts that use bus mTLS will register it; eryph-zero (in-memory bus) does not need it.
+/// Re-checks the component certificate periodically and renews it (by authenticating with the current
+/// certificate against the identity renew endpoint) once it enters its renewal window, so a long-lived
+/// component renews without a restart. Only the split-runtime hosts that use bus mTLS register it
+/// (DI-controlled, via <see cref="ComponentMtlsTransport.AddRenewal"/>); eryph-zero (in-memory bus)
+/// does not. The renewed certificate is written to the store atomically; the bus picks up the new file
+/// on its next reconnect (a forced reconnect on renewal is a planned refinement).
 /// </summary>
 internal sealed class ComponentEnrollmentHostedService(
-    ComponentEnrollmentClient client,
+    ComponentRenewalContext context,
     ILogger<ComponentEnrollmentHostedService> logger)
     : IHostedService
 {
     // How often to re-check whether the certificate has entered its renewal window. Renewal itself
-    // only acts when EnsureEnrolledAsync finds the certificate is no longer current.
+    // only acts when the certificate is no longer current (EnsureEnrolledAsync is a no-op otherwise).
     private static readonly TimeSpan RenewalCheckInterval = TimeSpan.FromHours(1);
 
     private readonly CancellationTokenSource _stopping = new();
@@ -37,7 +38,9 @@ internal sealed class ComponentEnrollmentHostedService(
         {
             try
             {
-                await client.EnsureEnrolledAsync(cancellationToken);
+                await ComponentEnrollment.EnsureEnrolledAsync(
+                    context.Store, context.Identity, context.EndpointResolver, context.Options,
+                    context.TrustAnchorBundlePath, context.LoggerFactory, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -45,7 +48,7 @@ internal sealed class ComponentEnrollmentHostedService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Component enrollment/renewal failed; will retry.");
+                logger.LogError(ex, "Component certificate renewal check failed; will retry.");
             }
 
             try

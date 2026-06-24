@@ -4,6 +4,7 @@ using Eryph.Modules.AspNetCore.Components;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -48,7 +49,15 @@ namespace Eryph.Identity
                     chain.Add(certificate);
 
                 options.ConfigureHttpsDefaults(https =>
-                    ComponentTls.ConfigureHttps(https, issued.Leaf, chain));
+                {
+                    ComponentTls.ConfigureHttps(https, issued.Leaf, chain);
+                    // Allow (but do not require) a client certificate: token-based enrollment must work
+                    // without one, while the renewal endpoint authenticates with the component's current
+                    // certificate. Kestrel must not reject it against the OS trust store — the renewal
+                    // service validates it against the component CA.
+                    https.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
+                    https.AllowAnyClientCertificate();
+                });
             });
         }
     }

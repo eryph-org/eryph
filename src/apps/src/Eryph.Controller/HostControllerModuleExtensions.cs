@@ -54,6 +54,10 @@ namespace Eryph.Controller
                     options.AddStartupHandler<MigrateStateDbHandler>();
                     options.RegisterMySqlStateStore();
 
+                    // Renew the component certificate before it expires without a restart (the context
+                    // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
+                    ComponentMtlsTransport.AddRenewal(options);
+
                     // Change tracking (mirroring DB changes back to the on-disk config) is
                     // wired by ControllerModule itself when changeTracking:trackChanges is
                     // set — which Program.cs does — so it must not be added again here.

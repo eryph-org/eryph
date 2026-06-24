@@ -46,6 +46,10 @@ namespace Eryph.Network
                     // Open the OVN databases for remote SSL access using the enrolled certificate. The
                     // container filter requires mTLS, so the certificate store is always registered.
                     options.AddHostedService<OvnRemoteEndpointService>();
+
+                    // Renew the component certificate before it expires without a restart (the context
+                    // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
+                    ComponentMtlsTransport.AddRenewal(options);
                 };
             }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Formats.Asn1;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -7,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ModuleCore.Components;
+using Eryph.Modules.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Identity.Services;
@@ -18,6 +20,8 @@ public sealed class ComponentEnrollmentService(
     ILogger<ComponentEnrollmentService> logger)
     : IComponentEnrollmentService
 {
+    private const string ComponentUrnPrefix = "urn:eryph:component:";
+
     public async Task<ComponentEnrollmentResult> EnrollAsync(
         ComponentEnrollmentRequest request, CancellationToken cancellationToken = default)
     {
@@ -26,46 +30,11 @@ public sealed class ComponentEnrollmentService(
             throw new ComponentEnrollmentException("The enrollment request must include the component FQDN.");
         if (!IsValidDnsName(request.Fqdn))
             throw new ComponentEnrollmentException("The component FQDN is not a valid DNS name.");
-        if (request.PublicKey is null || request.PublicKey.Length == 0)
-            throw new ComponentEnrollmentException("The enrollment request must include the component public key.");
 
         // Validate and import everything the request carries BEFORE authorizing, because authorizing
         // redeems the one-time token. A recoverable client error (malformed key bytes, an invalid
         // server DNS name) must not consume a token that is still valid for a corrected retry.
-        using var subjectKey = RSA.Create();
-        try
-        {
-            subjectKey.ImportSubjectPublicKeyInfo(request.PublicKey, out _);
-        }
-        catch (CryptographicException ex)
-        {
-            throw new ComponentEnrollmentException("The enrollment request public key is invalid.", ex);
-        }
-
-        // Cover every requested server name (default to the FQDN) — none is silently dropped, and
-        // each must be a valid DNS name or the whole request is rejected.
-        using RSA? serverKey = request.ServerPublicKey is { Length: > 0 } ? RSA.Create() : null;
-        IReadOnlyList<string>? serverDnsNames = null;
-        if (serverKey is not null)
-        {
-            var dnsNames = request.ServerDnsNames is { Count: > 0 }
-                ? request.ServerDnsNames.ToList()
-                : [request.Fqdn];
-            if (dnsNames.Any(string.IsNullOrWhiteSpace))
-                throw new ComponentEnrollmentException("A server certificate was requested with an empty DNS name.");
-            if (!dnsNames.All(IsValidDnsName))
-                throw new ComponentEnrollmentException(
-                    "A requested server DNS name is not a valid DNS name (wildcards and malformed names are rejected).");
-            try
-            {
-                serverKey.ImportSubjectPublicKeyInfo(request.ServerPublicKey!, out _);
-            }
-            catch (CryptographicException ex)
-            {
-                throw new ComponentEnrollmentException("The enrollment request server public key is invalid.", ex);
-            }
-            serverDnsNames = dnsNames;
-        }
+        using var keys = ImportRequestKeys(request);
 
         // Authorize last: redeeming the one-time token is the final gate before issuance.
         if (!await policy.IsAuthorizedAsync(request, cancellationToken))
@@ -76,13 +45,123 @@ public sealed class ComponentEnrollmentService(
         // different identity than the one it authenticated as.
         var componentId = ComponentIdentity.DeriveComponentId(request.ComponentType, request.Fqdn);
 
-        // The issued certificates and trust-bundle certificates are only needed to export their public
-        // wire bytes; dispose their native handles afterwards so a long-running identity service does
-        // not leak a handle per enrollment.
+        var result = Issue(componentId, request.Fqdn, keys);
+        logger.LogInformation(
+            "Issued component certificate(s) for {ComponentType} (component {ComponentId}; server cert: {HasServer}).",
+            request.ComponentType, componentId, result.ServerCertificate.Length > 0);
+        return result;
+    }
+
+    public Task<ComponentEnrollmentResult> RenewAsync(
+        X509Certificate2 clientCertificate,
+        ComponentEnrollmentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(clientCertificate);
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Renewal authenticates with the component's CURRENT certificate (mTLS), not a one-time token:
+        // the holder of a still-valid, CA-issued component certificate may obtain a fresh one. The
+        // identity to renew is taken from the validated certificate (its URN SAN + CN), never from the
+        // request, so a component can only renew its own identity.
+        //
+        // The renewal endpoint reads only the leaf (HttpContext.Connection.ClientCertificate) after the
+        // handshake, so the issuing intermediate cannot ride along — the CA supplies its own intermediate
+        // to build leaf -> intermediate -> root against the trusted root.
+        var trust = certificateAuthority.GetTrustedCaCertificates();
+        var issuing = certificateAuthority.GetIssuingCaCertificates();
+        try
+        {
+            var trustBundle = new X509Certificate2Collection();
+            foreach (var certificate in trust)
+                trustBundle.Add(certificate);
+            var intermediates = new X509Certificate2Collection();
+            foreach (var certificate in issuing)
+                intermediates.Add(certificate);
+            if (!ComponentClientCertificateValidator.IsTrustedComponentClient(
+                    clientCertificate, intermediates, trustBundle))
+                throw new ComponentEnrollmentException(
+                    "The presented certificate is not a trusted component certificate; cannot renew.");
+        }
+        finally
+        {
+            foreach (var certificate in trust)
+                certificate.Dispose();
+            foreach (var certificate in issuing)
+                certificate.Dispose();
+        }
+
+        var (componentId, fqdn) = ReadComponentIdentity(clientCertificate);
+        if (!IsValidDnsName(fqdn))
+            throw new ComponentEnrollmentException("The certificate's host name is not a valid DNS name.");
+
+        using var keys = ImportRequestKeys(request);
+        var result = Issue(componentId, fqdn, keys);
+        logger.LogInformation(
+            "Renewed component certificate(s) for component {ComponentId} ({Fqdn}; server cert: {HasServer}).",
+            componentId, fqdn, result.ServerCertificate.Length > 0);
+        return Task.FromResult(result);
+    }
+
+    // Imports and validates the public keys + server DNS names a request carries. Held in a disposable
+    // so both the enroll (token) and renew (certificate) paths free the key handles the same way.
+    private static RequestKeys ImportRequestKeys(ComponentEnrollmentRequest request)
+    {
+        if (request.PublicKey is null || request.PublicKey.Length == 0)
+            throw new ComponentEnrollmentException("The request must include the component public key.");
+
+        var subjectKey = RSA.Create();
+        try
+        {
+            subjectKey.ImportSubjectPublicKeyInfo(request.PublicKey, out _);
+        }
+        catch (CryptographicException ex)
+        {
+            subjectKey.Dispose();
+            throw new ComponentEnrollmentException("The request public key is invalid.", ex);
+        }
+
+        // Cover every requested server name (default to the FQDN) — none is silently dropped, and
+        // each must be a valid DNS name or the whole request is rejected.
+        RSA? serverKey = null;
+        IReadOnlyList<string>? serverDnsNames = null;
+        if (request.ServerPublicKey is { Length: > 0 })
+        {
+            var dnsNames = request.ServerDnsNames is { Count: > 0 }
+                ? request.ServerDnsNames.ToList()
+                : [request.Fqdn];
+            if (dnsNames.Any(string.IsNullOrWhiteSpace) || !dnsNames.All(IsValidDnsName))
+            {
+                subjectKey.Dispose();
+                throw new ComponentEnrollmentException(
+                    "A requested server DNS name is not a valid DNS name (wildcards and malformed names are rejected).");
+            }
+
+            serverKey = RSA.Create();
+            try
+            {
+                serverKey.ImportSubjectPublicKeyInfo(request.ServerPublicKey, out _);
+            }
+            catch (CryptographicException ex)
+            {
+                serverKey.Dispose();
+                subjectKey.Dispose();
+                throw new ComponentEnrollmentException("The request server public key is invalid.", ex);
+            }
+            serverDnsNames = dnsNames;
+        }
+
+        return new RequestKeys(subjectKey, serverKey, serverDnsNames);
+    }
+
+    // Issues the client (and optional server) certificate plus the trust bundle for an established
+    // identity. Shared by enroll and renew — the only difference is how the identity was proven.
+    private ComponentEnrollmentResult Issue(Guid componentId, string fqdn, RequestKeys keys)
+    {
         byte[] clientCertificate;
         List<byte[]> issuingChain;
         using (var issued = certificateAuthority.IssueComponentCertificate(
-                   componentId.ToString(), request.Fqdn, subjectKey))
+                   componentId.ToString(), fqdn, keys.SubjectKey))
         {
             clientCertificate = issued.Leaf.Export(X509ContentType.Cert);
             issuingChain = issued.IssuingChain
@@ -94,9 +173,7 @@ public sealed class ComponentEnrollmentService(
         List<byte[]> trustBundle;
         try
         {
-            trustBundle = trustCertificates
-                .Select(certificate => certificate.Export(X509ContentType.Cert))
-                .ToList();
+            trustBundle = trustCertificates.Select(c => c.Export(X509ContentType.Cert)).ToList();
         }
         finally
         {
@@ -104,24 +181,16 @@ public sealed class ComponentEnrollmentService(
                 certificate.Dispose();
         }
 
-        // Issue the component's server-TLS certificate when it supplied a server key, so it can serve
-        // its own endpoint over TLS chaining to the same root (see IssueServerCertificate).
         byte[] serverCertificate = [];
         IReadOnlyList<byte[]> serverChain = [];
-        if (serverDnsNames is not null)
+        if (keys.ServerDnsNames is not null && keys.ServerKey is not null)
         {
-            using var issuedServer = certificateAuthority.IssueServerCertificate(serverDnsNames, serverKey!);
+            using var issuedServer = certificateAuthority.IssueServerCertificate(keys.ServerDnsNames, keys.ServerKey);
             serverCertificate = issuedServer.Leaf.Export(X509ContentType.Cert);
             serverChain = issuedServer.IssuingChain
                 .Select(certificate => certificate.Export(X509ContentType.Cert))
                 .ToList();
         }
-
-        // Log only server-derived values (type, the derived component id) — the component id already
-        // encodes the FQDN, and logging the raw caller-supplied FQDN would be a log-injection vector.
-        logger.LogInformation(
-            "Issued component certificate(s) for {ComponentType} (component {ComponentId}; server cert: {HasServer}).",
-            request.ComponentType, componentId, serverCertificate.Length > 0);
 
         return new ComponentEnrollmentResult
         {
@@ -132,6 +201,46 @@ public sealed class ComponentEnrollmentService(
             ServerIssuingChain = serverChain,
             CaTrustBundle = trustBundle,
         };
+    }
+
+    // The component id is the URN SAN (urn:eryph:component:<id>) and the FQDN is the CN — the shape
+    // IssueComponentCertificate writes. Both come from the validated certificate, so a renewing
+    // component cannot claim another identity.
+    private static (Guid ComponentId, string Fqdn) ReadComponentIdentity(X509Certificate2 certificate)
+    {
+        var fqdn = certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
+        if (string.IsNullOrWhiteSpace(fqdn))
+            throw new ComponentEnrollmentException("The certificate has no common name (component host).");
+
+        var urn = EnumerateSanUris(certificate)
+            .FirstOrDefault(u => u.StartsWith(ComponentUrnPrefix, StringComparison.OrdinalIgnoreCase));
+        if (urn is null || !Guid.TryParse(urn[ComponentUrnPrefix.Length..], out var componentId))
+            throw new ComponentEnrollmentException(
+                "The certificate does not carry a component identity URN; cannot renew.");
+
+        return (componentId, fqdn);
+    }
+
+    // Reads the uniformResourceIdentifier ([6]) entries from the subjectAltName extension. The BCL's
+    // X509SubjectAlternativeNameExtension exposes DNS names and IP addresses but not URIs, so the
+    // extension's DER (a SEQUENCE OF GeneralName) is decoded directly to recover the component-id URN.
+    private static IEnumerable<string> EnumerateSanUris(X509Certificate2 certificate)
+    {
+        var extension = certificate.Extensions
+            .FirstOrDefault(e => e.Oid?.Value == "2.5.29.17");
+        if (extension is null)
+            yield break;
+
+        var uriTag = new Asn1Tag(TagClass.ContextSpecific, 6);
+        var sequence = new AsnReader(extension.RawData, AsnEncodingRules.DER).ReadSequence();
+        while (sequence.HasData)
+        {
+            var tag = sequence.PeekTag();
+            if (tag.TagClass == TagClass.ContextSpecific && tag.TagValue == 6)
+                yield return sequence.ReadCharacterString(UniversalTagNumber.IA5String, uriTag);
+            else
+                sequence.ReadEncodedValue();
+        }
     }
 
     // A certificate is issued for a caller-supplied name, so the name must be a syntactically valid
@@ -145,4 +254,18 @@ public sealed class ComponentEnrollmentService(
             name,
             @"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$",
             RegexOptions.CultureInvariant);
+
+    private sealed class RequestKeys(RSA subjectKey, RSA? serverKey, IReadOnlyList<string>? serverDnsNames)
+        : IDisposable
+    {
+        public RSA SubjectKey { get; } = subjectKey;
+        public RSA? ServerKey { get; } = serverKey;
+        public IReadOnlyList<string>? ServerDnsNames { get; } = serverDnsNames;
+
+        public void Dispose()
+        {
+            SubjectKey.Dispose();
+            ServerKey?.Dispose();
+        }
+    }
 }

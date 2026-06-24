@@ -10,6 +10,7 @@ using Eryph.Rebus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.ModuleCore.Components;
 
@@ -88,13 +89,17 @@ public static class ComponentMtlsTransport
             ServerDnsNames = serverDnsNames,
         };
 
+        // One store instance is the source of truth for the enrolled material: the startup bootstrap,
+        // the bus transport, peer-to-peer mTLS consumers and the periodic renewal service all share it.
+        var store = new FileComponentCertificateStore(
+            certificateDirectory, ComponentCertificateDefaults.RenewalLeadTime);
+
         var transport = ComponentEnrollment.EnsureEnrolledTransport(
+            store,
             identity,
             endpointResolver,
             options,
-            certificateDirectory: certificateDirectory,
             trustAnchorBundlePath: trustAnchorPath,
-            renewalLeadTime: TimeSpan.FromDays(45),
             loggerFactory: loggerFactory);
 
         container.RegisterInstance<IRebusTransportConfigurer>(transport);
@@ -103,9 +108,30 @@ public static class ComponentMtlsTransport
         // compute API's EGS remote-channel data plane dialing a host agent). Expose the store so those
         // consumers can present the client certificate and validate peers against the enrolled CA — the
         // single trust anchor, no divergent trust path.
-        container.RegisterInstance<IComponentCertificateStore>(
-            new FileComponentCertificateStore(certificateDirectory, TimeSpan.FromDays(45)));
+        container.RegisterInstance<IComponentCertificateStore>(store);
+
+        // Context for the periodic renewal service (registered as a hosted service by AddRenewal in the
+        // host's AddSimpleInjector phase). Resolving it here, after the certificate material exists, is
+        // what scopes renewal to the split runtime: eryph-zero never calls Register, so it never has it.
+        container.RegisterInstance(new ComponentRenewalContext
+        {
+            Store = store,
+            Identity = identity,
+            EndpointResolver = endpointResolver,
+            Options = options,
+            TrustAnchorBundlePath = trustAnchorPath,
+            LoggerFactory = loggerFactory,
+        });
     }
+
+    /// <summary>
+    /// Registers the periodic certificate-renewal service so a long-lived component renews before its
+    /// certificate expires without needing a restart. Call from a split-runtime host's
+    /// <c>AddSimpleInjector</c> phase (alongside <see cref="Register"/> in <c>ConfigureContainer</c>);
+    /// it resolves the <see cref="ComponentRenewalContext"/> that <see cref="Register"/> registers.
+    /// </summary>
+    public static void AddRenewal(SimpleInjectorAddOptions options) =>
+        options.AddHostedService<ComponentEnrollmentHostedService>();
 
     private static ComponentEnrollmentFile LoadEnrollmentFile(string path)
     {

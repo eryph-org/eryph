@@ -42,6 +42,11 @@ namespace Eryph.ApiEndpoint
                 return (context, options) =>
                 {
                     options.RegisterMySqlStateStore();
+
+                    // Renew the component certificate before it expires without a restart (the context
+                    // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
+                    ComponentMtlsTransport.AddRenewal(options);
+
                     next(context, options);
                 };
             }

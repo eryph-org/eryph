@@ -26,6 +26,18 @@ public interface IComponentCertificateAuthority
     IReadOnlyList<X509Certificate2> GetTrustedCaCertificates();
 
     /// <summary>
+    /// The issuing intermediate CA certificate(s) (client + server), as public-only copies. Needed to
+    /// build a chain from a presented leaf to the trusted root when the leaf is surfaced <b>without</b>
+    /// its chain — notably the renewal endpoint, which reads only
+    /// <c>HttpContext.Connection.ClientCertificate</c> (the leaf) after the handshake, so the
+    /// intermediate cannot ride along and must be supplied by the CA that issued it.
+    /// <para>
+    /// The returned certificates are fresh, <b>caller-owned</b> instances; the caller must dispose them.
+    /// </para>
+    /// </summary>
+    IReadOnlyList<X509Certificate2> GetIssuingCaCertificates();
+
+    /// <summary>
     /// Issues a component mTLS client certificate (clientAuth) for the given identity, signed by
     /// the client intermediate. Returns the leaf plus the intermediate(s) the component must
     /// present alongside it to chain to the trusted root. The returned <see cref="IssuedCertificate"/>

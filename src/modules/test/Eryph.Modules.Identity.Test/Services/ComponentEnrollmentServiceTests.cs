@@ -333,6 +333,84 @@ public class ComponentEnrollmentServiceTests
             ComponentIdentity.DeriveComponentId(ComponentType.ComputeApi, "api.eryph.local"));
     }
 
+    [Fact]
+    public async Task Renew_issues_a_fresh_certificate_for_the_identity_in_the_presented_certificate()
+    {
+        // One CA across both calls so the enrolled leaf chains to the same root the renewal validates against.
+        var ca = CreateCa();
+        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), NullLogger<ComponentEnrollmentService>.Instance);
+
+        var enrolled = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        // Renewal authenticates with the (CA-issued) leaf, presented without a token.
+        using var leaf = X509CertificateLoader.LoadCertificate(enrolled.Certificate);
+        var renewed = await sut.RenewAsync(leaf, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        renewed.ComponentId.Should().Be(enrolled.ComponentId);
+        renewed.Certificate.Should().NotBeEmpty();
+        renewed.IssuingChain.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Renew_takes_the_identity_from_the_certificate_not_the_request()
+    {
+        var ca = CreateCa();
+        var sut = new ComponentEnrollmentService(ca, new StubPolicy(true), NullLogger<ComponentEnrollmentService>.Instance);
+
+        var enrolled = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        // The request claims a different type and host; the renewed identity must still be the one
+        // bound in the presented certificate, so a component cannot renew into another identity.
+        using var leaf = X509CertificateLoader.LoadCertificate(enrolled.Certificate);
+        var renewed = await sut.RenewAsync(leaf, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.ComputeApi,
+            Fqdn = "attacker.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        renewed.ComponentId.Should().Be(
+            ComponentIdentity.DeriveComponentId(ComponentType.VMHostAgent, "agent1.eryph.local"));
+    }
+
+    [Fact]
+    public async Task Renew_rejects_a_certificate_not_issued_by_the_component_ca()
+    {
+        var sut = CreateService(authorized: true);
+
+        // A self-signed certificate does not chain to the component root, so renewal must refuse it
+        // even though it carries a plausible subject — only a CA-issued component cert may renew.
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest(
+            "CN=agent1.eryph.local", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var foreign = request.CreateSelfSigned(
+            DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+
+        var act = () => sut.RenewAsync(foreign, new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        await act.Should().ThrowAsync<ComponentEnrollmentException>();
+    }
+
     private sealed class StubPolicy(bool authorized) : IComponentEnrollmentPolicy
     {
         public Task<bool> IsAuthorizedAsync(ComponentEnrollmentRequest request, CancellationToken cancellationToken = default) =>

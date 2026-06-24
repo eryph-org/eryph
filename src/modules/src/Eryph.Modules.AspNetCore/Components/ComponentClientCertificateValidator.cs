@@ -26,6 +26,31 @@ public static class ComponentClientCertificateValidator
         X509Chain? presentedChain,
         X509Certificate2Collection trustedRoots)
     {
+        // The peer presents leaf + client intermediate in the handshake; Kestrel surfaces only the
+        // leaf to this callback, so the intermediate must come from the presented chain. The trust
+        // bundle holds the root anchor only, so without the presented intermediates the fresh chain
+        // has no source to build leaf -> intermediate -> root.
+        var intermediates = new X509Certificate2Collection();
+        if (presentedChain is not null)
+        {
+            foreach (var element in presentedChain.ChainElements)
+                intermediates.Add(element.Certificate);
+        }
+
+        return IsTrustedComponentClient(clientCertificate, intermediates, trustedRoots);
+    }
+
+    /// <summary>
+    /// As above, but the intermediates needed to build the chain are supplied directly rather than
+    /// taken from a presented chain. Used where the leaf is available without its chain — e.g. the
+    /// renewal endpoint reads only <c>HttpContext.Connection.ClientCertificate</c> after the handshake,
+    /// so the issuing CA supplies its own intermediate(s) to build leaf -&gt; intermediate -&gt; root.
+    /// </summary>
+    public static bool IsTrustedComponentClient(
+        X509Certificate2? clientCertificate,
+        X509Certificate2Collection? intermediates,
+        X509Certificate2Collection trustedRoots)
+    {
         if (clientCertificate is null || trustedRoots is null || trustedRoots.Count == 0)
             return false;
 
@@ -34,15 +59,8 @@ public static class ComponentClientCertificateValidator
         chain.ChainPolicy.CustomTrustStore.AddRange(trustedRoots);
         chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
 
-        // The peer presents leaf + client intermediate in the handshake; Kestrel surfaces only the
-        // leaf to this callback, so the intermediate must come from the presented chain. The trust
-        // bundle holds the root anchor only, so without the presented intermediates the fresh chain
-        // has no source to build leaf -> intermediate -> root.
-        if (presentedChain is not null)
-        {
-            foreach (var element in presentedChain.ChainElements)
-                chain.ChainPolicy.ExtraStore.Add(element.Certificate);
-        }
+        if (intermediates is not null)
+            chain.ChainPolicy.ExtraStore.AddRange(intermediates);
 
         return chain.Build(clientCertificate) && HasClientAuthEku(clientCertificate);
     }
