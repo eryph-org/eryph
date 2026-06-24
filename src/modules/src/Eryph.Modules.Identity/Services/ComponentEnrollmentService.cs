@@ -17,10 +17,11 @@ namespace Eryph.Modules.Identity.Services;
 public sealed class ComponentEnrollmentService(
     IComponentCertificateAuthority certificateAuthority,
     IComponentEnrollmentPolicy policy,
+    IEnumerable<IComponentBrokerProvisioner> brokerProvisioners,
     ILogger<ComponentEnrollmentService> logger)
     : IComponentEnrollmentService
 {
-    private const string ComponentUrnPrefix = "urn:eryph:component:";
+    private const string ComponentUrnPrefix = ComponentBrokerIdentity.ComponentUrnPrefix;
 
     public async Task<ComponentEnrollmentResult> EnrollAsync(
         ComponentEnrollmentRequest request, CancellationToken cancellationToken = default)
@@ -46,13 +47,20 @@ public sealed class ComponentEnrollmentService(
         var componentId = ComponentIdentity.DeriveComponentId(request.ComponentType, request.Fqdn);
 
         var result = Issue(componentId, request.Fqdn, keys);
+
+        // Provision the component's broker user before returning: the component connects to the bus with
+        // this certificate immediately after enrolling, and SASL EXTERNAL needs the matching user to
+        // already exist. Failing here fails the enrollment so the operator sees it, rather than the
+        // component silently being unable to connect.
+        await EnsureBrokerUserAsync(componentId, cancellationToken);
+
         logger.LogInformation(
             "Issued component certificate(s) for {ComponentType} (component {ComponentId}; server cert: {HasServer}).",
             request.ComponentType, componentId, result.ServerCertificate.Length > 0);
         return result;
     }
 
-    public Task<ComponentEnrollmentResult> RenewAsync(
+    public async Task<ComponentEnrollmentResult> RenewAsync(
         X509Certificate2 clientCertificate,
         ComponentEnrollmentRequest request,
         CancellationToken cancellationToken = default)
@@ -97,10 +105,23 @@ public sealed class ComponentEnrollmentService(
 
         using var keys = ImportRequestKeys(request);
         var result = Issue(componentId, fqdn, keys);
+
+        // Keep the broker user in step with the renewed certificate (idempotent): a component that has
+        // been re-enrolled after a decommission, or whose user was never created, is healed on renewal.
+        await EnsureBrokerUserAsync(componentId, cancellationToken);
+
         logger.LogInformation(
             "Renewed component certificate(s) for component {ComponentId} ({Fqdn}; server cert: {HasServer}).",
             componentId, fqdn, result.ServerCertificate.Length > 0);
-        return Task.FromResult(result);
+        return result;
+    }
+
+    private async Task EnsureBrokerUserAsync(Guid componentId, CancellationToken cancellationToken)
+    {
+        // Zero provisioners (eryph-zero's in-memory bus) makes this a no-op; the split runtime appends a
+        // RabbitMQ provisioner.
+        foreach (var provisioner in brokerProvisioners)
+            await provisioner.EnsureComponentAsync(componentId, cancellationToken);
     }
 
     // Imports and validates the public keys + server DNS names a request carries. Held in a disposable

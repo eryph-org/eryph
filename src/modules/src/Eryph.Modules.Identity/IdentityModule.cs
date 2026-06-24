@@ -244,10 +244,15 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
             new TokenEnrollmentPolicy(
                 container.GetInstance<IEnrollmentTokenRedeemer>(),
                 container.GetInstance<ILoggerFactory>().CreateLogger<TokenEnrollmentPolicy>()));
+        // Broker user provisioning is host-supplied: empty here (no managed broker, e.g. eryph-zero's
+        // in-memory bus), and the split-runtime identity host appends a RabbitMQ provisioner. Enrollment
+        // provisions through whatever is registered, so the module never reads a flag to decide.
+        container.Collection.Register<IComponentBrokerProvisioner>(Array.Empty<Type>());
         container.Register<IComponentEnrollmentService>(() =>
             new ComponentEnrollmentService(
                 container.GetInstance<IComponentCertificateAuthority>(),
                 container.GetInstance<IComponentEnrollmentPolicy>(),
+                container.GetAllInstances<IComponentBrokerProvisioner>(),
                 container.GetInstance<ILoggerFactory>().CreateLogger<ComponentEnrollmentService>()));
 
         // The identity component runs a bidirectional bus endpoint on its own inbound queue

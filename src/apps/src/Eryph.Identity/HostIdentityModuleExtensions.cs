@@ -1,6 +1,9 @@
 using System;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Rebus.Configuration;
 using Eryph.IdentityDb.MySql;
@@ -63,8 +66,57 @@ namespace Eryph.Identity
                     // The module configures and starts its bus inside ConfigureContainer, so the
                     // transport must be registered first.
                     RegisterTransport(context, container);
+
+                    // The split runtime manages a real broker, so provision a per-component RabbitMQ
+                    // user at enrollment (SASL EXTERNAL); eryph-zero registers none. The module resolves
+                    // the provisioner collection, so appending here is the host's decision to manage it.
+                    RegisterBrokerProvisioner(context, container);
+
                     next(context, container);
                 };
+            }
+
+            // Appends the RabbitMQ broker-user provisioner the module's enrollment service resolves, so
+            // a per-component user is created at enrollment. Configuration is required (no silent
+            // fallback): the management endpoint and an admin credential are the operator's contract.
+            private static void RegisterBrokerProvisioner(IModuleContext<IdentityModule> context, Container container)
+            {
+                var configuration = context.ModulesHostServices.GetRequiredService<IConfiguration>();
+                var broker = configuration.GetSection("broker");
+
+                var managementUrl = broker["managementUrl"];
+                if (string.IsNullOrWhiteSpace(managementUrl))
+                    throw new InvalidOperationException(
+                        "broker:managementUrl must be set so the identity service can provision per-component "
+                        + "broker users at enrollment.");
+                var managementUser = broker["managementUser"];
+                var managementPassword = broker["managementPassword"];
+                if (string.IsNullOrWhiteSpace(managementUser) || string.IsNullOrWhiteSpace(managementPassword))
+                    throw new InvalidOperationException(
+                        "broker:managementUser and broker:managementPassword must be set to authenticate to "
+                        + "the RabbitMQ management API.");
+
+                var options = new RabbitMqBrokerManagementOptions
+                {
+                    VirtualHost = broker["virtualHost"] is { Length: > 0 } vhost ? vhost : "/",
+                };
+
+                container.Collection.Append<IComponentBrokerProvisioner>(
+                    () =>
+                    {
+                        // BaseAddress must end with '/' so the provisioner's relative "api/..." paths
+                        // resolve under it; the admin credential is sent as HTTP Basic auth.
+                        var httpClient = new HttpClient
+                        {
+                            BaseAddress = new Uri(managementUrl.TrimEnd('/') + "/"),
+                        };
+                        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                            "Basic",
+                            Convert.ToBase64String(
+                                Encoding.ASCII.GetBytes($"{managementUser}:{managementPassword}")));
+                        return new RabbitMqBrokerProvisioner(httpClient, options);
+                    },
+                    Lifestyle.Singleton);
             }
 
             // Identity hosts the component CA, so for bus mTLS it self-issues its own client
