@@ -136,6 +136,20 @@ services:
     networks: [eryph]
     restart: "no"
 
+  # One-shot state-database setup: creates the schema in the empty database before the controller runs,
+  # so the controller never races its own schema creation against the bus consuming registrations. The
+  # cluster schema is setup (SQL scripts in production), not a startup migration; create-db is the dev
+  # equivalent. Reuses the controller image.
+  dbsetup:
+    image: eryph-cluster/controller
+    depends_on:
+      mariadb: { condition: service_healthy }
+    environment:
+      ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
+    command: ["create-db"]
+    networks: [eryph]
+    restart: "no"
+
   controller:
     build:
       context: .
@@ -148,6 +162,7 @@ services:
     depends_on:
       mariadb: { condition: service_healthy }
       rabbit: { condition: service_healthy }
+      dbsetup: { condition: service_completed_successfully }
       identity: { condition: service_started }
     environment:
       ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"

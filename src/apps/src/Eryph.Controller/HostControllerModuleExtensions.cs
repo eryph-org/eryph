@@ -51,7 +51,10 @@ namespace Eryph.Controller
             {
                 return (context, options) =>
                 {
-                    options.AddStartupHandler<MigrateStateDbHandler>();
+                    // The state-database schema is SETUP, not a startup migration: it is created out of
+                    // band (the `create-db` command in dev, SQL setup scripts in production) before the
+                    // controller runs, so the controller never races its own schema creation against the
+                    // bus consuming registration messages.
                     options.RegisterMySqlStateStore();
 
                     // Renew the component certificate before it expires without a restart (the context
