@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Eryph.Security.Cryptography;
 
 namespace Eryph.Identity
 {
@@ -38,5 +39,24 @@ namespace Eryph.Identity
 
         /// <summary>The key directory used by the file backend (keys live under a 'keys' subdirectory).</summary>
         public static string KeyDirectory(string directory) => Path.Combine(directory, "keys");
+
+        /// <summary>
+        /// Constructs the platform certificate/key services for the resolved backend. The single place
+        /// the backend switch lives, so the DI registration (module consumers) and the Kestrel TLS
+        /// listeners — which run outside the module container and must build the services themselves —
+        /// always pick the same backend and therefore the same CA.
+        /// </summary>
+        public static (ICertificateKeyService Keys, ICertificateStoreService Store, ICertificateGenerator Generator)
+            CreateServices()
+        {
+            var (useFile, directory) = Resolve();
+            return useFile
+                ? (new FileCertificateKeyService(KeyDirectory(directory)),
+                    new FileCertificateStoreService(directory),
+                    new CertificateGenerator())
+                : (new WindowsCertificateKeyService(),
+                    new WindowsCertificateStoreService(),
+                    new WindowsCertificateGenerator());
+        }
     }
 }

@@ -171,6 +171,10 @@ public class ComponentEnrollmentClientTests
 
         public System.Security.Cryptography.X509Certificates.X509Certificate2Collection LoadCaTrustBundle() => [];
 
+        public (System.Security.Cryptography.X509Certificates.X509Certificate2 Leaf,
+            System.Security.Cryptography.X509Certificates.X509Certificate2Collection Chain) LoadServerCertificate() =>
+            throw new System.NotSupportedException("The enrollment client tests do not use the server certificate.");
+
         public ComponentCertificatePem? ReadClientCertificatePem() => null;
     }
 }

@@ -42,21 +42,12 @@ namespace Eryph.Identity
         // resolves ICertificateKeyService/ICertificateStoreService/ICertificateGenerator through DI.
         private static void RegisterCertificateServices(Container container)
         {
-            var (useFile, directory) = PkiOptions.Resolve();
-            if (useFile)
-            {
-                container.RegisterSingleton<ICertificateKeyService>(
-                    () => new FileCertificateKeyService(PkiOptions.KeyDirectory(directory)));
-                container.RegisterSingleton<ICertificateStoreService>(
-                    () => new FileCertificateStoreService(directory));
-                container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
-            }
-            else
-            {
-                container.RegisterSingleton<ICertificateKeyService, WindowsCertificateKeyService>();
-                container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
-                container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
-            }
+            // The backend switch lives once in PkiOptions.CreateServices, shared with the Kestrel TLS
+            // listeners (which build the services outside this container) so both pick the same CA.
+            var (keys, store, generator) = PkiOptions.CreateServices();
+            container.RegisterInstance(keys);
+            container.RegisterInstance(store);
+            container.RegisterInstance(generator);
         }
 
         /// <summary>

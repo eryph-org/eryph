@@ -74,15 +74,8 @@ namespace Eryph.Identity
                 var services = context.ModulesHostServices;
                 var configuration = services.GetRequiredService<IConfiguration>();
                 var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Eryph.Identity.Transport");
-                var enabledRaw = configuration.GetSection("componentMtls")["enabled"];
-                if (!bool.TryParse(enabledRaw, out var enabled) || !enabled)
-                {
-                    logger.LogInformation("componentMtls disabled (enabled='{Raw}') — using plaintext bus transport.", enabledRaw);
-                    container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
-                    return;
-                }
 
-                logger.LogInformation("componentMtls enabled — self-issuing identity client certificate from the component CA.");
+                logger.LogInformation("Self-issuing identity client certificate from the component CA for the bus.");
 
                 var certificateAuthority = new ComponentCertificateAuthority(
                     services.GetRequiredService<ICertificateStoreService>(),
@@ -111,7 +104,7 @@ namespace Eryph.Identity
                 // unpredictable ACLs would be insecure. Fail fast so the operator configures a protected one.
                 if (string.IsNullOrWhiteSpace(certificateDirectory))
                     throw new InvalidOperationException(
-                        "componentMtls is enabled but componentMtls:certificateDirectory is not configured. "
+                        "componentMtls:certificateDirectory is not configured. "
                         + "Set it to an ACL-restricted directory for the identity client certificate.");
                 // Export leaf + issuing chain so the component presents the full chain (a broker that
                 // trusts only the root can then build it). The PKCS#12 holds the private key — write it

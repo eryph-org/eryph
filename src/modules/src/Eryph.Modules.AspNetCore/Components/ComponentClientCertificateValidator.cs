@@ -1,21 +1,21 @@
 #nullable enable
 using System.Security.Cryptography.X509Certificates;
 
-namespace Eryph.Modules.HostAgent.Channels;
+namespace Eryph.Modules.AspNetCore.Components;
 
 /// <summary>
-/// Validates the client certificate presented to the agent's channel listener. The connection is
+/// Validates a client certificate presented to a component's mutual-TLS listener. The connection is
 /// accepted only when the certificate chains to one of the deployment's trusted component CA roots
 /// (the same root that anchors the component client CA) and carries the clientAuth EKU — so only a
-/// valid eryph component (the compute API, which presents its enrolled component certificate) can
-/// open a channel.
+/// valid eryph component can connect. Shared by every component listener that requires mutual TLS
+/// (e.g. the agent's EGS channel), so the trust check is defined once.
 /// </summary>
 /// <remarks>
 /// Mirrors <see cref="Eryph.Rebus.TrustEvaluation"/>, but for the client direction (clientAuth EKU)
 /// and against the component CA trust bundle written at enrollment (<c>ca-bundle.pem</c>, loaded via
 /// <see cref="ModuleCore.Components.IComponentCertificateStore.LoadCaTrustBundle"/>). The single
-/// component root anchors both the server-TLS and client intermediates (see ComponentCertificateAuthority),
-/// so the same trust bundle validates the peer here.
+/// component root anchors both the server-TLS and client intermediates, so the same trust bundle
+/// validates the peer here.
 /// </remarks>
 public static class ComponentClientCertificateValidator
 {
@@ -34,10 +34,10 @@ public static class ComponentClientCertificateValidator
         chain.ChainPolicy.CustomTrustStore.AddRange(trustedRoots);
         chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
 
-        // The compute API presents leaf + client intermediate in the handshake; Kestrel surfaces only
-        // the leaf to this callback, so the intermediate must come from the presented chain. The trust
-        // bundle holds the root anchor only, so without the presented intermediates the fresh chain has
-        // no source to build leaf -> intermediate -> root.
+        // The peer presents leaf + client intermediate in the handshake; Kestrel surfaces only the
+        // leaf to this callback, so the intermediate must come from the presented chain. The trust
+        // bundle holds the root anchor only, so without the presented intermediates the fresh chain
+        // has no source to build leaf -> intermediate -> root.
         if (presentedChain is not null)
         {
             foreach (var element in presentedChain.ChainElements)

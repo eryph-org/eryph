@@ -34,6 +34,11 @@ public static class ComponentRegistrationExtensions
         container.RegisterSingleton<IComponentConfigState, ComponentConfigState>();
         container.Register<ConfigApplier>(Lifestyle.Scoped);
 
+        // Host-supplied endpoint providers, resolved at registration time and merged with the static
+        // endpoints above. Empty by default; a host appends one (Collection.Append) when the deployment
+        // exposes endpoints — so the module never reads a flag to decide what it advertises.
+        container.Collection.Register<IComponentEndpointProvider>(Array.Empty<Type>());
+
         // One realizer per configuration domain the module consumes (may be empty).
         container.Collection.Register<IConfigRealizer>(configRealizers);
 

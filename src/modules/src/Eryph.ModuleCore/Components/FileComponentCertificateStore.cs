@@ -189,6 +189,28 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
         return bundle;
     }
 
+    public (X509Certificate2 Leaf, X509Certificate2Collection Chain) LoadServerCertificate()
+    {
+        // server.pfx bundles the leaf (with key) and the issuing chain in one atomic file, so the
+        // chain travels with the leaf — a peer pinning only the root can still build the chain.
+        var pfxPath = GetServerCertificatePfxPath()
+            ?? throw new InvalidOperationException(
+                $"No enrolled server certificate found in '{directory}'; refusing to start a listener without TLS.");
+
+        var bundle = X509CertificateLoader.LoadPkcs12Collection(
+            File.ReadAllBytes(pfxPath), password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+        var leaf = bundle.OfType<X509Certificate2>().FirstOrDefault(c => c.HasPrivateKey)
+            ?? throw new InvalidOperationException(
+                $"The enrolled server certificate '{pfxPath}' does not contain a private key.");
+
+        var chain = new X509Certificate2Collection();
+        foreach (var certificate in bundle)
+            if (!ReferenceEquals(certificate, leaf))
+                chain.Add(certificate);
+
+        return (leaf, chain);
+    }
+
     /// <summary>
     /// Reads the enrolled client PEM material (private key, leaf-with-issuing-chain certificate and CA
     /// trust bundle) as strings, or <see langword="null"/> when the component is not yet enrolled. Used

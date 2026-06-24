@@ -56,23 +56,26 @@ namespace Eryph.Network
                 {
                     var configuration = context.ModulesHostServices.GetRequiredService<IConfiguration>();
 
-                    // The standalone network process exists to expose the OVN databases to the controller
-                    // and agents over SSL, which needs the component's enrolled certificate. Require mTLS
-                    // so a misconfigured (plaintext) deployment fails fast instead of silently serving the
-                    // databases on the local pipe only.
-                    if (!bool.TryParse(configuration.GetSection("componentMtls")["enabled"], out var enabled)
-                        || !enabled)
-                        throw new InvalidOperationException(
-                            "The standalone network process requires componentMtls to be enabled.");
-
                     // The module configures and starts its bus inside ConfigureContainer (run by next),
-                    // so the transport and OVN environment must be registered first.
+                    // so the transport and OVN environment must be registered first. Being the standalone
+                    // network host is itself the decision to connect over mTLS — there is no toggle.
                     ComponentMtlsTransport.Register(
                         container,
                         configuration,
                         context.ModulesHostServices.GetRequiredService<ILoggerFactory>(),
                         ComponentType.Network);
                     container.UseOvn();
+
+                    // This host exposes the OVN databases over SSL (OvnRemoteEndpointService), so it
+                    // advertises their endpoints to the controller. The address remote clients dial
+                    // defaults to the host FQDN identity (resolvable across DNS domains, matching the mTLS
+                    // certificate); an operator behind NAT/DNS can override it. A blank override is treated
+                    // as unset so it cannot advertise a malformed endpoint like "ssl:   :6641".
+                    var advertisedHost = configuration["ovn:advertisedHost"]?.Trim() is { Length: > 0 } host
+                        ? host
+                        : ComponentIdentity.GetLocalHostId();
+                    container.Collection.Append<IComponentEndpointProvider>(
+                        () => new OvnRemoteEndpointProvider(advertisedHost), Lifestyle.Singleton);
 
                     next(context, container);
                 };
