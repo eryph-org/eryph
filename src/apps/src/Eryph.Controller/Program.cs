@@ -26,6 +26,10 @@ namespace Eryph.Controller
             if (args.Length > 0 && string.Equals(args[0], DecommissionCommand.Verb, StringComparison.OrdinalIgnoreCase))
                 return await DecommissionCommand.RunAsync(args);
 
+            // Operator command: make a component renew its certificate now, then exit.
+            if (args.Length > 0 && string.Equals(args[0], RenewComponentCommand.Verb, StringComparison.OrdinalIgnoreCase))
+                return await RenewComponentCommand.RunAsync(args);
+
             // Use Serilog (like eryph-zero) instead of the host's default logging, which
             // hits a Microsoft.Extensions.Logging version seam on the .NET 10 runtime.
             Log.Logger = new LoggerConfiguration()

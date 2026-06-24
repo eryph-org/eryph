@@ -58,9 +58,10 @@ public static class ComponentEnrollment
         ComponentEnrollmentClientOptions options,
         string trustAnchorBundlePath,
         ILoggerFactory loggerFactory,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool force = false)
     {
-        if (store.HasCurrentCertificate())
+        if (!force && store.HasCurrentCertificate())
             return;
 
         // Present the current client certificate when one exists so a renewal authenticates with mTLS
@@ -72,7 +73,7 @@ public static class ComponentEnrollment
             transport, store, identity, options,
             loggerFactory.CreateLogger<ComponentEnrollmentClient>());
 
-        await client.EnsureEnrolledAsync(cancellationToken);
+        await client.EnsureEnrolledAsync(cancellationToken, force);
     }
 
     private static HttpClient CreateEnrollmentHttpClient(

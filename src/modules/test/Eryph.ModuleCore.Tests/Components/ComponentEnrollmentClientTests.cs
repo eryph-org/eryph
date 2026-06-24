@@ -85,6 +85,21 @@ public class ComponentEnrollmentClientTests
     }
 
     [Fact]
+    public async Task EnsureEnrolledAsync_force_renews_even_when_the_certificate_is_still_current()
+    {
+        // An operator-forced refresh: the certificate is current (no scheduled renewal due), but force
+        // renews it anyway via the renew endpoint (not the token), and persists the result.
+        var transport = new FakeTransport(failuresBeforeSuccess: 0);
+        var store = new FakeStore { Current = true, Valid = true };
+
+        await Create(transport, store).EnsureEnrolledAsync(CancellationToken.None, force: true);
+
+        transport.RenewCalls.Should().Be(1);
+        transport.EnrollCalls.Should().Be(0);
+        store.SaveCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task EnsureEnrolledAsync_fails_fast_on_a_non_transient_error_instead_of_retrying_forever()
     {
         // No valid certificate (blocking), but the failure is non-transient (a 401 from a used/expired

@@ -24,17 +24,23 @@ public sealed class ComponentEnrollmentClient(
     ComponentEnrollmentClientOptions options,
     ILogger<ComponentEnrollmentClient> logger)
 {
-    public async Task EnsureEnrolledAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Ensures the component holds a current certificate, renewing or enrolling as needed. When
+    /// <paramref name="force"/> is set, a renewal is performed even if the stored certificate is not yet
+    /// in its renewal window — an operator-triggered refresh (e.g. to pick up a rotated CA, or to verify
+    /// renewal works) rather than the scheduled "renew when due" check.
+    /// </summary>
+    public async Task EnsureEnrolledAsync(CancellationToken cancellationToken, bool force = false)
     {
-        if (store.HasCurrentCertificate())
+        if (!force && store.HasCurrentCertificate())
             return;
 
-        // If a still-valid (but renewal-due) certificate exists, the component can keep running on
-        // it and renews by authenticating with that certificate (mTLS) — the one-time token cannot be
-        // reused. Otherwise it has no usable certificate and must enroll with the token before it can
-        // connect to the bus.
+        // If a still-valid certificate exists, the component renews by authenticating with that
+        // certificate (mTLS) — the one-time token cannot be reused. A forced refresh of a still-current
+        // certificate takes this path too. Otherwise it has no usable certificate and must enroll with
+        // the token. A forced refresh never blocks (it is a background operation, like a due renewal).
         var haveValid = store.HasValidCertificate();
-        await EnrollWithRetryAsync(blocking: !haveValid, renew: haveValid, cancellationToken);
+        await EnrollWithRetryAsync(blocking: !haveValid && !force, renew: haveValid, cancellationToken);
     }
 
     private async Task EnrollWithRetryAsync(bool blocking, bool renew, CancellationToken cancellationToken)

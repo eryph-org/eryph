@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dbosoft.Rebus.Configuration;
 using Eryph.Messages.Components;
+using Rebus.Handlers;
 using Eryph.Rebus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -126,12 +127,21 @@ public static class ComponentMtlsTransport
 
     /// <summary>
     /// Registers the periodic certificate-renewal service so a long-lived component renews before its
-    /// certificate expires without needing a restart. Call from a split-runtime host's
+    /// certificate expires without needing a restart, plus the handler that lets an operator force a
+    /// renewal now (<see cref="RenewComponentCertificateCommand"/>). Call from a split-runtime host's
     /// <c>AddSimpleInjector</c> phase (alongside <see cref="Register"/> in <c>ConfigureContainer</c>);
-    /// it resolves the <see cref="ComponentRenewalContext"/> that <see cref="Register"/> registers.
+    /// both resolve the <see cref="ComponentRenewalContext"/> that <see cref="Register"/> registers.
     /// </summary>
-    public static void AddRenewal(SimpleInjectorAddOptions options) =>
+    public static void AddRenewal(SimpleInjectorAddOptions options)
+    {
         options.AddHostedService<ComponentEnrollmentHostedService>();
+        // The module's bus consumes its own inbound queue; appending the handler here (not via the
+        // module's own-assembly scan) lets an operator address a renewal to this component.
+        options.Container.Collection.Append(
+            typeof(IHandleMessages<RenewComponentCertificateCommand>),
+            typeof(RenewComponentCertificateCommandHandler),
+            Lifestyle.Scoped);
+    }
 
     private static ComponentEnrollmentFile LoadEnrollmentFile(string path)
     {
