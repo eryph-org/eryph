@@ -39,6 +39,9 @@ public class EndpointsConfigSourceTests
         public Task<bool> DeregisterAsync(Guid componentId, Guid instanceId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
+        public Task<bool> RevokeAsync(Guid componentId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
         public Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
             => Task.FromResult(active);
     }

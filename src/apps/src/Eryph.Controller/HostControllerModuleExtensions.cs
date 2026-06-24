@@ -91,6 +91,13 @@ namespace Eryph.Controller
 
                     container.UseOvn();
 
+                    // The split runtime manages a real broker, so the controller can delete a
+                    // component's RabbitMQ user when it is decommissioned (the revocation cutoff);
+                    // eryph-zero appends none and decommission only removes the registration.
+                    ComponentBrokerProvisioning.AppendRabbitMq(
+                        container,
+                        context.ModulesHostServices.GetRequiredService<IConfiguration>());
+
                     next(context, container);
                 };
             }

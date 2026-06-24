@@ -135,6 +135,20 @@ internal sealed class ComponentRegistryService(
         return true;
     }
 
+    public async Task<bool> RevokeAsync(Guid componentId, CancellationToken cancellationToken)
+    {
+        var registration = await repository.GetBySpecAsync(
+            new ComponentRegistrationSpecs.GetByComponentId(componentId), cancellationToken);
+        // Unconditional (not instance-guarded): an operator decommission removes the component whatever
+        // its current instance — the broker-user deletion that accompanies it is the real revocation,
+        // and leaving a stale row behind would keep advertising a component that can no longer connect.
+        if (registration is null)
+            return false;
+
+        await repository.DeleteAsync(registration, cancellationToken);
+        return true;
+    }
+
     public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
     {
         var cutoff = DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout;

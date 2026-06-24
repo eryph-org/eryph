@@ -287,6 +287,42 @@ public class ComponentRegistryServiceTests
         repo.Verify(r => r.DeleteAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Revoke_removes_the_registration_regardless_of_instance()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.ComputeApi,
+            InstanceId = Guid.NewGuid(),
+            MachineName = "host",
+            InboundQueue = "q",
+            Status = ComponentRegistrationStatus.Active,
+            LastHeartbeat = DateTimeOffset.UtcNow,
+        };
+        var (service, repo) = Create(existing);
+
+        // Decommission is unconditional: unlike Deregister it is not instance-guarded, so it removes
+        // the row whatever the current instance.
+        var removed = await service.RevokeAsync(componentId, CancellationToken.None);
+
+        removed.Should().BeTrue();
+        repo.Verify(r => r.DeleteAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Revoke_is_a_noop_when_the_component_is_not_registered()
+    {
+        var (service, repo) = Create(existing: null);
+
+        var removed = await service.RevokeAsync(Guid.NewGuid(), CancellationToken.None);
+
+        removed.Should().BeFalse();
+        repo.Verify(r => r.DeleteAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static ComponentRegistration ActiveComponent(string machineName, DateTimeOffset lastHeartbeat) =>
         new()
         {

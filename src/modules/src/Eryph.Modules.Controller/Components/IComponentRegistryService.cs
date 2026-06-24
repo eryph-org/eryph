@@ -44,6 +44,14 @@ internal interface IComponentRegistryService
     /// </summary>
     Task<bool> DeregisterAsync(Guid componentId, Guid instanceId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Removes a component's registration unconditionally on an operator decommission — the explicit
+    /// "this component is gone for good" action, as opposed to the instance-guarded graceful
+    /// <see cref="DeregisterAsync"/>. Not instance-scoped: decommissioning revokes the identity
+    /// regardless of which run last registered it. Returns whether a row was removed.
+    /// </summary>
+    Task<bool> RevokeAsync(Guid componentId, CancellationToken cancellationToken);
+
     /// <summary>The components currently considered alive (status Active).</summary>
     Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken);
 }
