@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Rebus.Configuration;
 using Eryph.IdentityDb.MySql;
@@ -91,11 +92,13 @@ namespace Eryph.Identity
                         provisioner.EnsureComponentAsync(componentId).GetAwaiter().GetResult();
                         return;
                     }
-                    catch (HttpRequestException ex)
+                    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
                     {
-                        // Fail fast once the deadline passes (identity cannot join the bus without its own
-                        // broker user) with an actionable message rather than letting the raw transport
-                        // exception bubble out of host startup.
+                        // Retry both connection failures (HttpRequestException — the management listener
+                        // not up yet) and timeouts (TaskCanceledException — the API hanging). Fail fast
+                        // once the deadline passes (identity cannot join the bus without its own broker
+                        // user) with an actionable message rather than letting the raw transport exception
+                        // bubble out of host startup.
                         if (DateTime.UtcNow >= deadline)
                             throw new InvalidOperationException(
                                 "The RabbitMQ management API was unreachable after 2 minutes; cannot "

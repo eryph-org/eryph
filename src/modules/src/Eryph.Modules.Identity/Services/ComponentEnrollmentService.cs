@@ -50,9 +50,23 @@ public sealed class ComponentEnrollmentService(
 
         // Provision the component's broker user before returning: the component connects to the bus with
         // this certificate immediately after enrolling, and SASL EXTERNAL needs the matching user to
-        // already exist. Failing here fails the enrollment so the operator sees it, rather than the
-        // component silently being unable to connect.
-        await EnsureBrokerUserAsync(componentId, cancellationToken);
+        // already exist. This is REQUIRED (unlike renewal's best-effort re-ensure): without the user the
+        // component cannot connect, so a failure must fail the enrollment. The one-time token was already
+        // redeemed, so log clearly that recovery is re-enrollment (a new token) before rethrowing.
+        try
+        {
+            await EnsureBrokerUserAsync(componentId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Issued the certificate for {ComponentType} (component {ComponentId}) but failed to create "
+                + "its broker user; enrollment cannot complete. The one-time token has been consumed, so "
+                + "recovery requires a new enrollment file (re-enrollment).",
+                request.ComponentType, componentId);
+            throw;
+        }
 
         logger.LogInformation(
             "Issued component certificate(s) for {ComponentType} (component {ComponentId}; server cert: {HasServer}).",

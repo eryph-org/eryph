@@ -144,4 +144,56 @@ public class ComponentCertificateAuthorityRotationTests
         Roots(ca).Should().ContainSingle();
         ChainsToTrust(ca, leaf).Should().BeTrue("the only generation must remain trusted");
     }
+
+    [Fact]
+    public void Rotation_does_not_collide_on_a_backend_that_refuses_to_overwrite_keys()
+    {
+        // Mimics the Windows CNG backend, where GeneratePersistedRsaKey throws if the key name already
+        // exists. Rotation reuses the tier key names, so it must delete the demoted generation's keys
+        // before regenerating. The in-memory/file backends silently overwrite and so cannot catch this.
+        var ca = new ComponentCertificateAuthority(
+            new InMemoryCertificateStore(), new CertificateGenerator(), new NonOverwritingKeyService());
+        using var _ = IssueClientLeaf(ca, "agent1.eryph.local");
+        IssueServerLeaf(ca, "agent1.eryph.local");
+
+        var act = () => ca.RotateRootCertificateAuthority();
+
+        act.Should().NotThrow();
+        Roots(ca).Should().HaveCount(2, "both generations are trusted after a successful rotation");
+    }
+
+    // A key service that refuses to overwrite an existing persisted key name, like Windows CNG
+    // (CngKey.Create without OverwriteExistingKey throws "the key already exists"). The production
+    // InMemory/File services silently overwrite, which is why they cannot guard rotation's key reuse.
+    private sealed class NonOverwritingKeyService : ICertificateKeyService
+    {
+        private readonly Dictionary<string, RSA> _keys = new();
+
+        public RSA GenerateRsaKey(int keyLength) => RSA.Create(keyLength);
+
+        public RSA GeneratePersistedRsaKey(string keyName, int keyLength)
+        {
+            if (_keys.ContainsKey(keyName))
+                throw new CryptographicException($"The key '{keyName}' already exists.");
+            var key = RSA.Create(keyLength);
+            _keys[keyName] = key;
+            return Clone(key);
+        }
+
+        public RSA? GetPersistedRsaKey(string keyName) =>
+            _keys.TryGetValue(keyName, out var stored) ? Clone(stored) : null;
+
+        public void DeletePersistedKey(string keyName)
+        {
+            if (_keys.Remove(keyName, out var key))
+                key.Dispose();
+        }
+
+        private static RSA Clone(RSA key)
+        {
+            var copy = RSA.Create();
+            copy.ImportRSAPrivateKey(key.ExportRSAPrivateKey(), out _);
+            return copy;
+        }
+    }
 }

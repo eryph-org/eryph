@@ -88,6 +88,16 @@ public class ComponentCertificateAuthority(
         DemoteToPublicOnly(ClientCa);
         DemoteToPublicOnly(ServerCa);
 
+        // Free the persisted key names before regenerating under them. DemoteToPublicOnly removed each
+        // generation's CERTIFICATE from the store but not its persisted private key, and the new
+        // generation reuses the same key names — on Windows, GeneratePersistedRsaKey (CngKey.Create) does
+        // not overwrite, so it throws "key already exists" unless the old key is deleted first. (The
+        // in-memory/file backends silently overwrite, which hid this.) Deleting the key does not touch the
+        // demoted public-only certificate, which stays in the store for the overlap.
+        certificateKeyService.DeletePersistedKey(Root.KeyName);
+        certificateKeyService.DeletePersistedKey(ClientCa.KeyName);
+        certificateKeyService.DeletePersistedKey(ServerCa.KeyName);
+
         // Generate a fresh signing root and mint new intermediates from it. Mint directly (not via
         // GetIntermediate) because GetIntermediate's re-issue path removes the whole tier subject first,
         // which would also delete the just-demoted previous intermediates we must keep trusted for the

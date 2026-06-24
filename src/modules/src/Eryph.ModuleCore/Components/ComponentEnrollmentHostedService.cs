@@ -38,9 +38,18 @@ internal sealed class ComponentEnrollmentHostedService(
         {
             try
             {
-                await ComponentEnrollment.EnsureEnrolledAsync(
-                    context.Store, context.Identity, context.EndpointResolver, context.Options,
-                    context.TrustAnchorBundlePath, context.LoggerFactory, cancellationToken);
+                // Serialize with an operator-forced renewal so the two cannot POST /renew concurrently.
+                await context.RenewalLock.WaitAsync(cancellationToken);
+                try
+                {
+                    await ComponentEnrollment.EnsureEnrolledAsync(
+                        context.Store, context.Identity, context.EndpointResolver, context.Options,
+                        context.TrustAnchorBundlePath, context.LoggerFactory, cancellationToken);
+                }
+                finally
+                {
+                    context.RenewalLock.Release();
+                }
             }
             catch (OperationCanceledException)
             {

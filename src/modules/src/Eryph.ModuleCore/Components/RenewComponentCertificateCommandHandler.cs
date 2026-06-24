@@ -24,8 +24,18 @@ internal sealed class RenewComponentCertificateCommandHandler(
     public async Task Handle(RenewComponentCertificateCommand message)
     {
         logger.LogInformation("Operator-requested certificate renewal; renewing now.");
-        await ComponentEnrollment.EnsureEnrolledAsync(
-            context.Store, context.Identity, context.EndpointResolver, context.Options,
-            context.TrustAnchorBundlePath, context.LoggerFactory, CancellationToken.None, force: true);
+
+        // Serialize with the periodic renewal service so the two cannot POST /renew concurrently.
+        await context.RenewalLock.WaitAsync(CancellationToken.None);
+        try
+        {
+            await ComponentEnrollment.EnsureEnrolledAsync(
+                context.Store, context.Identity, context.EndpointResolver, context.Options,
+                context.TrustAnchorBundlePath, context.LoggerFactory, CancellationToken.None, force: true);
+        }
+        finally
+        {
+            context.RenewalLock.Release();
+        }
     }
 }

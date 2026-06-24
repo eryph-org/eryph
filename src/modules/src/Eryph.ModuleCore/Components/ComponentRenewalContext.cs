@@ -1,3 +1,4 @@
+using System.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.ModuleCore.Components;
@@ -23,4 +24,11 @@ public sealed class ComponentRenewalContext
     /// the renewal service does not depend on each module registering <see cref="ILoggerFactory"/>.
     /// </summary>
     public required ILoggerFactory LoggerFactory { get; init; }
+
+    /// <summary>
+    /// Serializes renewal so the periodic check and an operator-forced renewal cannot run concurrently
+    /// (a double <c>/renew</c> wastes an enrollment and races the certificate-file write). Both callers
+    /// acquire it around the renewal. One per context instance (one per component process).
+    /// </summary>
+    public SemaphoreSlim RenewalLock { get; } = new(1, 1);
 }

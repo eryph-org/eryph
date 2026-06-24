@@ -33,4 +33,8 @@ podman exec eryph-cluster-mariadb-1 mariadb -uroot -peryph -N \
   -e 'SELECT ComponentType, Status FROM eryph.ComponentRegistrations;'                    # Active components
 ```
 
-See `docs/internal/cluster-container-bringup.md` for the orchestration model, gotchas and open items.
+Orchestration model in short: a one-shot `provision` step seeds the CA, broker TLS material, the root
+trust anchor and the per-component enrollment files; one-shot `dbsetup` / `identity-dbsetup` steps create
+the state and identity database schemas; then the broker comes up (TLS + SASL EXTERNAL), then identity
+(self-issues, provisions its own broker user, hosts the CA), then the enrolling components enroll over
+HTTPS and join the bus over mutual TLS.
