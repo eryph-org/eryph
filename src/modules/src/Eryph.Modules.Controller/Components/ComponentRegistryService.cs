@@ -118,6 +118,23 @@ internal sealed class ComponentRegistryService(
     // Read-time filtering is also self-healing — a component that missed a beat reappears on its
     // next heartbeat. (An explicit Stale/Dead status transition for health reporting, and ceasing
     // to push config to dead queues, remain follow-up #380 work.)
+    public async Task<bool> DeregisterAsync(
+        Guid componentId,
+        Guid instanceId,
+        CancellationToken cancellationToken)
+    {
+        var registration = await repository.GetBySpecAsync(
+            new ComponentRegistrationSpecs.GetByComponentId(componentId), cancellationToken);
+        // Only the instance that is leaving may deregister: a late message from a previous run must
+        // not remove the registration a restarted instance already replaced (different InstanceId),
+        // mirroring the heartbeat guard above.
+        if (registration is null || registration.InstanceId != instanceId)
+            return false;
+
+        await repository.DeleteAsync(registration, cancellationToken);
+        return true;
+    }
+
     public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
     {
         var cutoff = DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout;

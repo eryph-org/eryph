@@ -29,6 +29,8 @@ public class ComponentRegistryServiceTests
             .ReturnsAsync((ComponentRegistration r, CancellationToken _) => r);
         repo.Setup(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        repo.Setup(r => r.DeleteAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
         return (new ComponentRegistryService(repo.Object), repo);
     }
 
@@ -234,6 +236,55 @@ public class ComponentRegistryServiceTests
         var result = await service.GetActiveAsync(CancellationToken.None);
 
         result.Should().ContainSingle().Which.Should().BeSameAs(fresh);
+    }
+
+    [Fact]
+    public async Task Deregister_removes_the_registration_when_the_instance_matches()
+    {
+        var componentId = Guid.NewGuid();
+        var instanceId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.ComputeApi,
+            InstanceId = instanceId,
+            MachineName = "host",
+            InboundQueue = "q",
+            Status = ComponentRegistrationStatus.Active,
+            LastHeartbeat = DateTimeOffset.UtcNow,
+        };
+        var (service, repo) = Create(existing);
+
+        var removed = await service.DeregisterAsync(componentId, instanceId, CancellationToken.None);
+
+        removed.Should().BeTrue();
+        repo.Verify(r => r.DeleteAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Deregister_ignores_a_message_from_a_previous_instance()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.ComputeApi,
+            InstanceId = Guid.NewGuid(), // the current (restarted) instance
+            MachineName = "host",
+            InboundQueue = "q",
+            Status = ComponentRegistrationStatus.Active,
+            LastHeartbeat = DateTimeOffset.UtcNow,
+        };
+        var (service, repo) = Create(existing);
+
+        // A late deregistration from a previous run (different InstanceId) must not remove the
+        // registration the restarted instance already replaced.
+        var removed = await service.DeregisterAsync(componentId, Guid.NewGuid(), CancellationToken.None);
+
+        removed.Should().BeFalse();
+        repo.Verify(r => r.DeleteAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static ComponentRegistration ActiveComponent(string machineName, DateTimeOffset lastHeartbeat) =>
