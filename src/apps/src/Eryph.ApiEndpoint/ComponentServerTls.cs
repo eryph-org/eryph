@@ -1,5 +1,6 @@
 using System;
 using Eryph.ModuleCore.Components;
+using Eryph.Modules.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 
@@ -29,7 +30,7 @@ namespace Eryph.ApiEndpoint
                 var store = new FileComponentCertificateStore(certificateDirectory, ComponentCertificateDefaults.RenewalLeadTime);
                 var (leaf, chain) = store.LoadServerCertificate();
                 options.ConfigureHttpsDefaults(https =>
-                    Modules.AspNetCore.Components.ComponentTls.ConfigureHttps(https, leaf, chain));
+                    ComponentTls.ConfigureHttps(https, leaf, chain));
             });
         }
     }

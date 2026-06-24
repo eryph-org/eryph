@@ -81,7 +81,9 @@ public static class ComponentBrokerProvisioning
             managementPassword,
             new RabbitMqBrokerManagementOptions
             {
-                VirtualHost = broker["virtualHost"] is { Length: > 0 } vhost ? vhost : "/",
+                // Trim and treat whitespace as unset (default "/"); a blank value would otherwise become
+                // an invalid URL path segment in the permissions API call.
+                VirtualHost = broker["virtualHost"]?.Trim() is { Length: > 0 } vhost ? vhost : "/",
             });
     }
 
