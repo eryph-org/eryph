@@ -99,6 +99,18 @@ services:
           - compute-lb
     restart: "no"
 
+  # One-shot identity-database setup: creates the schema before identity runs, so identity no longer
+  # migrates its own database at startup (mirroring the controller's dbsetup). Reuses the identity image.
+  identity-dbsetup:
+    image: eryph-cluster/identity
+    depends_on:
+      mariadb: { condition: service_healthy }
+    environment:
+      ERYPH_IDENTITYDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph_identity;User Id=root;Password=eryph"
+    command: ["create-db"]
+    networks: [eryph]
+    restart: "no"
+
   identity:
     build:
       context: .
@@ -110,6 +122,7 @@ services:
     depends_on:
       mariadb: { condition: service_healthy }
       rabbit: { condition: service_healthy }
+      identity-dbsetup: { condition: service_completed_successfully }
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: https://+:8080

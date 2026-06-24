@@ -73,9 +73,10 @@ public class IdentityModule(IEndpointResolver endpointResolver, IConfiguration c
                 ["identity"] = endpointResolver.GetEndpoint("identity").ToString(),
             });
 
-        // Migrate the identity database before anything reads or seeds it (no-op on the in-memory
-        // provider used by tests).
-        options.AddStartupHandler<MigrateIdentityDbHandler>();
+        // The identity-database schema is created out of band, not migrated here: eryph-zero's host adds
+        // MigrateIdentityDbHandler (it owns its disposable SQLite database in-process), while the split
+        // runtime sets the schema up before startup (the `create-db` command / SQL setup scripts), like
+        // the controller's state database — so the module no longer migrates unconditionally.
 
         // Mirror the state store's change-tracking/export pipeline for the identity database. Register
         // change tracking BEFORE seeding so the export queues are enabled before the seeders save (and

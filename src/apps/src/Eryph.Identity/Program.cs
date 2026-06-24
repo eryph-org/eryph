@@ -19,6 +19,13 @@ namespace Eryph.Identity
                 return await EnrollmentCommand.RunAsync(args);
             }
 
+            // Setup command: create the identity-database schema in an empty database, then exit. The
+            // cluster schema is setup (SQL scripts in production), not a startup migration.
+            if (args.Length > 0 && string.Equals(args[0], CreateDbCommand.Verb, StringComparison.OrdinalIgnoreCase))
+            {
+                return await CreateDbCommand.RunAsync(args);
+            }
+
             // Logging uses the ASP.NET Core host defaults (UseAspNetCoreWithDefaults). Serilog is
             // intentionally not referenced here: wiring it via .UseSerilog() returns IHostBuilder
             // and breaks the RunModule chain. It can be added (with its packages) once the host
