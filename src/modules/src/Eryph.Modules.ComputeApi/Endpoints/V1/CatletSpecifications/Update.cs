@@ -60,6 +60,10 @@ public class Update(
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(UpdateCatletSpecificationRequestBody.Configuration)));
 
+        var architecturesValidation = RequestValidations.ValidateArchitectures(
+            request.Body.Architectures, nameof(UpdateCatletSpecificationRequestBody.Architectures));
+        if (architecturesValidation.IsFail)
+            return ValidationProblem(architecturesValidation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }

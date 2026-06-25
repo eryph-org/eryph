@@ -63,6 +63,11 @@ public class Create(
                 modelStateDictionary: validation.ToModelStateDictionary(
                     nameof(NewCatletSpecificationRequest.Configuration)));
 
+        var architecturesValidation = RequestValidations.ValidateArchitectures(
+            request.Architectures, nameof(NewCatletSpecificationRequest.Architectures));
+        if (architecturesValidation.IsFail)
+            return ValidationProblem(architecturesValidation.ToModelStateDictionary());
+
         var config = validation.ToOption().ValueUnsafe();
 
         var project = await projectRepository.GetByIdAsync(request.ProjectId, cancellationToken);

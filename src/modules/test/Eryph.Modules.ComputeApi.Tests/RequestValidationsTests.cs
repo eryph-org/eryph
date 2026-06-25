@@ -55,6 +55,38 @@ public class RequestValidationsTests
     }
 
     [Fact]
+    public void ValidateArchitectures_InvalidArchitecture_ReturnsIssueWithJsonPath()
+    {
+        // A bad architecture must surface as a validation issue rather than the
+        // throwing Architecture.New escaping as an unhandled exception (500).
+        var result = RequestValidations.ValidateArchitectures(
+            ["amd64/any"], "Architectures");
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("$.architectures[0]");
+            issue.Message.Should().Contain("hypervisor");
+        });
+    }
+
+    [Fact]
+    public void ValidateArchitectures_ValidArchitectures_ReturnsSuccess()
+    {
+        var result = RequestValidations.ValidateArchitectures(
+            ["hyperv/amd64", "hyperv/any", "any"], "Architectures");
+
+        result.Should().BeSuccess();
+    }
+
+    [Fact]
+    public void ValidateArchitectures_NoArchitectures_ReturnsSuccess()
+    {
+        var result = RequestValidations.ValidateArchitectures(null, "Architectures");
+
+        result.Should().BeSuccess();
+    }
+
+    [Fact]
     public void ValidateProjectNetworkConfig_InvalidValue_ReturnsIssueWithJsonPath()
     {
         using var document = JsonDocument.Parse("""
