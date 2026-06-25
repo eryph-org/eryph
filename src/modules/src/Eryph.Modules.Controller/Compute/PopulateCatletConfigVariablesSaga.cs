@@ -17,7 +17,6 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class PopulateCatletConfigVariablesSaga(
-    IBus bus,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<PopulateCatletConfigVariablesCommand,
             EryphSagaData<PopulateCatletConfigVariablesSagaData>>(workflow),

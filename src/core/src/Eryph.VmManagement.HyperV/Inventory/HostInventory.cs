@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.VmManagement.Inventory;
 
 internal class HostInventory(
-    ILogger log,
     INetworkProviderManager networkProviderManager)
 {
     public Task<Either<Error, VMHostMachineData>> InventorizeHost()

@@ -19,6 +19,10 @@ public static class NetplanBuilderSpecs
     {
         public GetAllNetworks(Guid projectId)
         {
+            // EF Core Include/ThenInclude expressions over the optional RouterPort and
+            // FloatingPort navigations are translated by EF and never dereferenced at
+            // runtime, so the possible-null-dereference warning is a false positive here.
+#pragma warning disable CS8602
             Query
                 .Where(x => x.ProjectId == projectId)
                 .Include(x => x.RouterPort).ThenInclude(x => x.IpAssignments)
@@ -27,8 +31,9 @@ public static class NetplanBuilderSpecs
                 .ThenInclude(x => x.Subnet);
 
             Query.Include(x => x.NetworkPorts)
-                .ThenInclude(x => x.FloatingPort).ThenInclude(x => x!.IpAssignments)
+                .ThenInclude(x => x.FloatingPort).ThenInclude(x => x.IpAssignments)
                 .Include(x => x.Subnets);
+#pragma warning restore CS8602
         }
     }
 }

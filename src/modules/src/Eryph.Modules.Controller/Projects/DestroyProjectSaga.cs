@@ -20,7 +20,6 @@ namespace Eryph.Modules.Controller.Projects;
 
 [UsedImplicitly]
 internal class DestroyProjectSaga(
-    ILogger logger,
     IInventoryLockManager lockManager,
     IWorkflow workflow,
     IStateStore stateStore)
