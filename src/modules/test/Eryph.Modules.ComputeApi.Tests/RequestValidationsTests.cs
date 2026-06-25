@@ -70,6 +70,17 @@ public class RequestValidationsTests
     }
 
     [Fact]
+    public void ValidateArchitectures_MultipleInvalid_ReturnsIssuePerItem()
+    {
+        var result = RequestValidations.ValidateArchitectures(
+            ["bogus/amd64", "hyperv/amd64", "garbage"], "Architectures");
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            first => first.Member.Should().Be("$.architectures[0]"),
+            second => second.Member.Should().Be("$.architectures[2]"));
+    }
+
+    [Fact]
     public void ValidateArchitectures_ValidArchitectures_ReturnsSuccess()
     {
         var result = RequestValidations.ValidateArchitectures(
