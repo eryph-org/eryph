@@ -32,7 +32,7 @@ public static class ApiModuleFactoryExtensions
     {
         public WebModuleFactory<ComputeApiModule> WithApiHost(Action<Container> configureContainer,
             Action<SimpleInjectorAddOptions> configureModuleContainer,
-            IAgentChannelForwarder channelForwarder = null)
+            IAgentChannelForwarder? channelForwarder = null)
         {
             // The compute API consumes IAgentChannelForwarder but does not register it — the host wires the
             // implementation (network dial in the split runtime, in-process in eryph-zero). The test host
@@ -56,7 +56,7 @@ public static class ApiModuleFactoryExtensions
 
                 hostBuilder.ConfigureAppConfiguration(cfg =>
                 {
-                    cfg.AddInMemoryCollection(new Dictionary<string, string>
+                    cfg.AddInMemoryCollection(new Dictionary<string, string?>
                     {
                         { "bus:type", "inmemory" },
                         { "databus:type", "inmemory" },
@@ -111,15 +111,27 @@ public static class ApiModuleFactoryExtensions
                 // Unfortunately, we cannot get the ISerializer of Rebus.
                 // Luckily, we can just use the JSON serializer with the same
                 // settings which we passed to Rebus.
-                .Map(m => JsonSerializer.Deserialize(
-                    m.Body,
-                    Type.GetType(m.Headers["rbs2-msg-type"])!,
-                    EryphJsonSerializerOptions.Options))
+                .Map(m =>
+                {
+                    var type = Type.GetType(m.Headers["rbs2-msg-type"])
+                        ?? throw new InvalidOperationException(
+                            $"The message type '{m.Headers["rbs2-msg-type"]}' could not be loaded.");
+                    return JsonSerializer.Deserialize(m.Body, type, EryphJsonSerializerOptions.Options);
+                })
                 .OfType<CreateOperationCommand>()
-                .Map(c => JsonSerializer.Deserialize(
-                    c.TaskMessage!.CommandData!,
-                    Type.GetType(c.TaskMessage.CommandType!)!,
-                    workflowOptions.JsonSerializerOptions))
+                .Map(c =>
+                {
+                    var taskMessage = c.TaskMessage
+                        ?? throw new InvalidOperationException("The command has no task message.");
+                    var commandData = taskMessage.CommandData
+                        ?? throw new InvalidOperationException("The task message has no command data.");
+                    var commandTypeName = taskMessage.CommandType
+                        ?? throw new InvalidOperationException("The task message has no command type.");
+                    var commandType = Type.GetType(commandTypeName)
+                        ?? throw new InvalidOperationException(
+                            $"The command type '{commandTypeName}' could not be loaded.");
+                    return JsonSerializer.Deserialize(commandData, commandType, workflowOptions.JsonSerializerOptions);
+                })
                 .OfType<T>()
                 .ToList();
         }

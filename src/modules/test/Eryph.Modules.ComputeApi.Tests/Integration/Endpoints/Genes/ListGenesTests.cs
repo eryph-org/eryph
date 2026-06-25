@@ -74,7 +74,8 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var genes = await response.Content.ReadFromJsonAsync<ListResponse<ApiGene>>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         genes.Value.Should().SatisfyRespectively(
             gene =>

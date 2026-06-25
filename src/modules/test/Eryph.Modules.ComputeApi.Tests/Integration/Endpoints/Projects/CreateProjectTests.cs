@@ -49,7 +49,7 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
                 ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
-        response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
         messages.Should().SatisfyRespectively(m =>
@@ -74,7 +74,7 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
                 ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
-        response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
         messages.Should().SatisfyRespectively(m =>
@@ -99,7 +99,7 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
                 ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
-        response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
         var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
         messages.Should().SatisfyRespectively(m =>

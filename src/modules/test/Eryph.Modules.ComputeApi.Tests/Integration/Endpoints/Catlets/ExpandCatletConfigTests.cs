@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -95,8 +96,9 @@ public class ExpandCatletConfigTests(ITestOutputHelper outputHelper)
         messages.Should().SatisfyRespectively(m =>
         {
             m.Config.Should().NotBeNull();
-            m.Config!.Name.Should().Be("test-config");
-            m.Config.Project.Should().Be(EryphConstants.DefaultProjectName);
+            var config = m.Config ?? throw new InvalidOperationException("The message has no config.");
+            config.Name.Should().Be("test-config");
+            config.Project.Should().Be(EryphConstants.DefaultProjectName);
             m.ShowSecrets.Should().BeTrue();
         });
     }
@@ -122,6 +124,6 @@ public class ExpandCatletConfigTests(ITestOutputHelper outputHelper)
 
         var messages = Factory.GetPendingRebusMessages<ExpandNewCatletConfigCommand>();
         messages.Should()
-            .SatisfyRespectively(m => { m.Config!.Project.Should().Be(EryphConstants.DefaultProjectName); });
+            .SatisfyRespectively(m => { (m.Config ?? throw new InvalidOperationException("The message has no config.")).Project.Should().Be(EryphConstants.DefaultProjectName); });
     }
 }

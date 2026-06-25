@@ -29,7 +29,8 @@ public class UserRightsProviderTests
     [MemberData(nameof(GetRolesPerAccessAccessRights))]
     public void Roles_have_correct_AccessRights(AccessRight accessRight, IEnumerable<Guid> expectedRoles)
     {
-        var userRightsProvider = new UserRightsProvider(null!, null!);
+        var userRightsProvider = new UserRightsProvider(
+            Mock.Of<IHttpContextAccessor>(), Mock.Of<IStateStore>());
         var rolesForAccessRight = userRightsProvider.GetProjectRoles(accessRight);
 
         rolesForAccessRight.Should().BeEquivalentTo(expectedRoles);

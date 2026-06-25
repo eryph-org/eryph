@@ -116,7 +116,7 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
         }
         else
         {
-            response!.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
+            response.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
             messages.Should().BeEmpty();
         }
     }
@@ -158,7 +158,7 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
                 ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
-        response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var messages = _factory.GetPendingRebusMessages<AddProjectMemberCommand>();
         messages.Should().BeEmpty();

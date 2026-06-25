@@ -60,7 +60,8 @@ public class OpenSshChannelConnectTests : InMemoryStateDbTestBase
     {
         using var authClient = _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, RemoteAccessScope, true);
-        var authorization = authClient.DefaultRequestHeaders.Authorization!;
+        var authorization = authClient.DefaultRequestHeaders.Authorization
+            ?? throw new InvalidOperationException("The authorization header is missing.");
 
         var wsClient = _factory.Server.CreateWebSocketClient();
         wsClient.ConfigureRequest = request => request.Headers["Authorization"] = authorization.ToString();

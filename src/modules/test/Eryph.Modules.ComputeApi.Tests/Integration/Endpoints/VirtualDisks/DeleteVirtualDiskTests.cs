@@ -77,9 +77,10 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be("The disk is attached to a virtual machine and cannot be deleted.");
+        problemDetails.Detail.Should().Be("The disk is attached to a virtual machine and cannot be deleted.");
     }
 
     [Fact]
@@ -106,9 +107,10 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be("The disk has children and cannot be deleted.");
+        problemDetails.Detail.Should().Be("The disk has children and cannot be deleted.");
     }
 
     [Fact]
@@ -138,9 +140,10 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be("The disk belongs to the gene pool and cannot be deleted.");
+        problemDetails.Detail.Should().Be("The disk belongs to the gene pool and cannot be deleted.");
     }
 
     [Fact]
@@ -148,8 +151,9 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
     {
         await WithScope(async stateStore =>
         {
-            var disk = await stateStore.For<VirtualDisk>().GetByIdAsync(DiskId);
-            disk!.Frozen = true;
+            var disk = await stateStore.For<VirtualDisk>().GetByIdAsync(DiskId)
+                ?? throw new InvalidOperationException("The disk could not be found.");
+            disk.Frozen = true;
             await stateStore.SaveChangesAsync();
         });
 
@@ -159,9 +163,10 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be("The configuration of the disk is frozen. The disk cannot be deleted.");
+        problemDetails.Detail.Should().Be("The configuration of the disk is frozen. The disk cannot be deleted.");
     }
 
     [Fact]

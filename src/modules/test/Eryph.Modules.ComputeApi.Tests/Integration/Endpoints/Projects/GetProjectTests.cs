@@ -98,15 +98,16 @@ public class GetProjectTests : InMemoryStateDbTestBase,
         response.Should().NotBeNull();
         if (isAuthorized)
         {
-            response!.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
             var project = await response.Content.ReadFromJsonAsync<ApiProject>(
-                ApiJsonSerializerOptions.Options);
+                ApiJsonSerializerOptions.Options)
+                ?? throw new InvalidOperationException("The response body could not be deserialized.");
             project.Id.Should().Be(projectId.ToString("D"));
             project.Id.Should().NotBeNullOrWhiteSpace();
         }
         else
         {
-            response!.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
+            response.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
         }
     }
 

@@ -140,7 +140,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         response.EnsureSuccessStatusCode();
 
         var gene = await response.Content.ReadFromJsonAsync<ApiGene>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         gene.Should().NotBeNull();
         gene.Id.Should().Be(FodderGeneId.ToString());
@@ -164,7 +165,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         response.EnsureSuccessStatusCode();
 
         var gene = await response.Content.ReadFromJsonAsync<ApiGene>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         gene.Should().NotBeNull();
         gene.Id.Should().Be(VolumeGeneId.ToString());

@@ -126,10 +126,11 @@ public class GetOperationTest : InMemoryStateDbTestBase,
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var operation = await response.Content.ReadFromJsonAsync<ApiOperation>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         operation.Should().NotBeNull();
-        operation!.Id.Should().Be(ExistingOperationId.ToString());
+        operation.Id.Should().Be(ExistingOperationId.ToString());
     }
 
     [Fact]
@@ -165,11 +166,12 @@ public class GetOperationTest : InMemoryStateDbTestBase,
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var operation = await response.Content.ReadFromJsonAsync<ApiOperation>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         operation.Should().NotBeNull();
-        operation!.Id.Should().Be(operationId.ToString());
-        var configJson = operation!.Result.Should().BeOfType<ApiCatletConfigOperationResult>()
+        operation.Id.Should().Be(operationId.ToString());
+        var configJson = operation.Result.Should().BeOfType<ApiCatletConfigOperationResult>()
             .Which.Configuration;
 
         var config = CatletConfigJsonSerializer.Deserialize(configJson);
@@ -207,9 +209,10 @@ public class GetOperationTest : InMemoryStateDbTestBase,
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var operation = await response.Content.ReadFromJsonAsync<ApiOperation>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         operation.Should().NotBeNull();
-        operation!.Id.Should().Be(CrossOperationId.ToString());
+        operation.Id.Should().Be(CrossOperationId.ToString());
     }
 }

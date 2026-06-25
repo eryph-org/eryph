@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Eryph.Core;
@@ -38,7 +39,8 @@ public class GetVirtualDiskTests(ITestOutputHelper outputHelper)
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var virtualDisk = await response.Content.ReadFromJsonAsync<ApiVirtualDisk>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         virtualDisk.Id.Should().Be(DiskId.ToString());
         virtualDisk.Project.Should().NotBeNull();
@@ -70,7 +72,8 @@ public class GetVirtualDiskTests(ITestOutputHelper outputHelper)
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var virtualDisk = await response.Content.ReadFromJsonAsync<ApiVirtualDisk>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
         virtualDisk.Id.Should().Be(DiskId.ToString());
         virtualDisk.Path.Should().BeNull();
         virtualDisk.ParentPath.Should().BeNull();
