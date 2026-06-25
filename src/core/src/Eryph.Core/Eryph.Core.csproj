@@ -12,6 +12,7 @@
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.1-ci.3" />
     <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.9.1-ci.3" />
     <PackageReference Include="Eryph.ConfigModel.Yaml" Version="0.9.1-ci.3" />
+    <PackageReference Include="Eryph.GenePool.Model" Version="0.6.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

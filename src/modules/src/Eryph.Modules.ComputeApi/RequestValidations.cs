@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
@@ -7,6 +9,7 @@ using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Model.V1;
 using LanguageExt;
@@ -47,6 +50,30 @@ public static class RequestValidations
             .MapFail(vi => vi.ToJsonPath(configNamingPolicy))
             .AddJsonPathPrefix(nameof(CatletSpecificationConfig.Content).ToJsonPath(apiNamingPolicy))
         select config;
+
+    /// <summary>
+    /// Validates the requested architecture strings. This must run before the
+    /// architectures are passed to the throwing <c>Architecture.New</c>, so that
+    /// an invalid architecture results in a validation problem (400) instead of
+    /// an unhandled exception (500).
+    /// </summary>
+    public static Validation<ValidationIssue, Unit> ValidateArchitectures(
+        IEnumerable<string>? architectures,
+        string propertyName) =>
+        architectures.ToSeq()
+            .Select((architecture, index) =>
+                ValidateArchitecture(architecture, $"{propertyName}[{index}]"))
+            .ToSeq()
+            .Sequence()
+            .Map(_ => unit)
+            .ToJsonPath(Optional(ApiJsonSerializerOptions.Options.PropertyNamingPolicy));
+
+    private static Validation<ValidationIssue, Unit> ValidateArchitecture(
+        string architecture,
+        string path) =>
+        from _ in Architecture.NewValidation(architecture)
+            .MapFail(e => new ValidationIssue(path, e.Message))
+        select unit;
 
     public static Validation<ValidationIssue, ProjectNetworksConfig> ValidateProjectNetworkConfig(
         JsonElement jsonElement) =>

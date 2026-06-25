@@ -92,6 +92,10 @@ internal static class HostControllerModuleExtensions
 
                 container.UseOvn();
 
+                // VM placement is host-provided; the standalone controller selects from the
+                // registered host agents (see ControllerPlacementCalculator for the open work).
+                container.RegisterSingleton<IPlacementCalculator, ControllerPlacementCalculator>();
+
                 // The split runtime manages a real broker, so the controller can delete a
                 // component's RabbitMQ user when it is decommissioned (the revocation cutoff);
                 // eryph-zero appends none and decommission only removes the registration.

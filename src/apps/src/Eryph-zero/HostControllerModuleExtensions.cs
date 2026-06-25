@@ -3,6 +3,7 @@ using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
+using Eryph.Modules.HostAgent.Inventory;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.StateDb.Sqlite;
 using Medallion.Threading;
@@ -61,6 +62,12 @@ public static class HostControllerModuleExtensions
                 container.RegisterInstance<IDistributedLockProvider>(
                     new FileDistributedSynchronizationProvider(
                         new DirectoryInfo(ZeroConfig.GetLocksConfigPath())));
+
+                // The embedded runtime places every catlet on the local host agent and
+                // accepts only architectures that host can run. The host architecture is
+                // the same one the agent reports for inventory.
+                container.RegisterInstance<IHostArchitectureProvider>(new HostArchitectureProvider());
+                container.RegisterSingleton<IPlacementCalculator, SingleHostPlacementCalculator>();
 
                 next(context, container);
             };

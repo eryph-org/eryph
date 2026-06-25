@@ -15,6 +15,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
@@ -28,6 +29,7 @@ internal class DeployCatletSpecificationSaga(
     IReadonlyStateStoreRepository<CatletSpecification> specificationRepository,
     IReadonlyStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository,
     IStorageIdentifierGenerator storageIdentifierGenerator,
+    IPlacementCalculator placementCalculator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<DeployCatletSpecificationCommand, EryphSagaData<DeployCatletSpecificationSagaData>>(
             workflow),
@@ -119,7 +121,6 @@ internal class DeployCatletSpecificationSaga(
         Data.Data.SpecificationId = specification.Id;
         Data.Data.SpecificationVersionId = specificationVersion.Id;
         Data.Data.ProjectId = specification.ProjectId;
-        Data.Data.AgentName = Environment.MachineName;
         Data.Data.Redeploy = message.Redeploy;
         Data.Data.ContentType = specificationVersion.ContentType;
         Data.Data.Configuration = specificationVersion.Configuration;
@@ -151,6 +152,16 @@ internal class DeployCatletSpecificationSaga(
         }
 
         Data.Data.BuiltConfig = builtConfig.CloneWith(c => { c.Variables = updatedVariables.ValueUnsafe().ToArray(); });
+
+        var placement = placementCalculator.CalculateVMPlacement(
+            Data.Data.BuiltConfig, specificationVersionVariant.Architecture);
+        if (placement.IsLeft)
+        {
+            await Fail(placement.LeftToSeq().Head.Message);
+            return;
+        }
+
+        Data.Data.AgentName = placement.RightToSeq().Head;
 
         var existingCatlet = await catletRepository.GetBySpecAsync(
             new CatletSpecs.GetBySpecificationId(specification.Id));

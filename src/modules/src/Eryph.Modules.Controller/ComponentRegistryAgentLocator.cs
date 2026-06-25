@@ -1,21 +1,16 @@
 using System;
-using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.Modules.Controller;
 
 /// <summary>
-/// Resolves the responsible host agent from <see cref="IComponentRegistry"/>.
-/// Replaces the host-provided single-machine locator; for a single-host
-/// deployment it returns the one registered host, preserving prior behavior.
-/// Cluster-aware placement (using <see cref="CatletConfig"/> and host capabilities)
-/// arrives in a later phase.
+/// Resolves the responsible storage-management host agent from
+/// <see cref="IComponentRegistry"/>. For a single-host deployment it returns
+/// the one registered host. VM placement is provided separately by the runtime
+/// host via <see cref="IPlacementCalculator"/>.
 /// </summary>
 internal sealed class ComponentRegistryAgentLocator(IComponentRegistry componentRegistry)
-    : IPlacementCalculator, IStorageManagementAgentLocator
+    : IStorageManagementAgentLocator
 {
-    public string CalculateVMPlacement(CatletConfig? dataConfig) =>
-        SingleHostAgent().AgentName;
-
     public string FindAgentForDataStore(string dataStore, string environment) =>
         SingleHostAgent().AgentName;
 

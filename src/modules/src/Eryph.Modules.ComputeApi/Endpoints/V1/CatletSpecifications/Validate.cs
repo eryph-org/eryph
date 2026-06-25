@@ -14,7 +14,6 @@ using LanguageExt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.CatletSpecifications;
@@ -64,15 +63,8 @@ public class Validate(
                        .Map(_ => unit)
                        .AddJsonPathPrefix(
                            nameof(ValidateSpecificationRequest.Configuration).ToJsonPath(apiNamingPolicy))
-                   | ValidateList(request, r => r.Architectures, ValidateArchitecture,
+                   | RequestValidations.ValidateArchitectures(
+                           request.Architectures,
                            nameof(ValidateSpecificationRequest.Architectures))
-                       .ToJsonPath(apiNamingPolicy)
-        select unit;
-
-    private static Validation<ValidationIssue, Unit> ValidateArchitecture(
-        string architecture,
-        string path) =>
-        from _ in Architecture.NewValidation(architecture)
-            .MapFail(e => new ValidationIssue(path, e.Message))
         select unit;
 }

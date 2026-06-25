@@ -19,6 +19,10 @@ public class HypervisorTests
     [InlineData("ANY", "any")]
     [InlineData("hyperv", "hyperv")]
     [InlineData("HYPERV", "hyperv")]
+    [InlineData("azure", "azure")]
+    [InlineData("AZURE", "azure")]
+    [InlineData("kvm", "kvm")]
+    [InlineData("ec2", "ec2")]
     public void NewValidation_ValidData_ReturnsResult(
         string hypervisor,
         string expected)
