@@ -52,7 +52,7 @@ internal class Program
                     await ModulesHost.CreateDefaultBuilder(args)
                         .UseSimpleInjector(container)
                         .ConfigureAppConfiguration((_, config) =>
-                            config.AddInMemoryCollection(new Dictionary<string, string>
+                            config.AddInMemoryCollection(new Dictionary<string, string?>
                             {
                                 // Transport is RabbitMQ (registered configurer); Rebus stores stay
                                 // in-memory for this milestone.
@@ -104,8 +104,6 @@ internal class Program
                     // Flush any log events buffered by Serilog before the process exits.
                     await Log.CloseAndFlushAsync();
                 }
-
-                break;
         }
     }
 }
