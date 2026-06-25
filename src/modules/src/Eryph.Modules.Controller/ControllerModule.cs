@@ -84,11 +84,11 @@ public class ControllerModule
             q.AddTrigger(trigger => trigger.WithIdentity("VirtualDiskCleanupJobTrigger")
                 .ForJob(VirtualDiskCleanupJob.Key)
                 .StartNow()
-                .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1))));
+                .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1)).RepeatForever()));
             q.AddTrigger(trigger => trigger.WithIdentity("OperationCleanupJobTrigger")
                 .ForJob(OperationCleanupJob.Key)
                 .StartNow()
-                .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1))));
+                .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1)).RepeatForever()));
 
             // The scheduled trigger will only fire the first time after waiting for one interval.
             // We add another trigger without a schedule to trigger the job immediately when
