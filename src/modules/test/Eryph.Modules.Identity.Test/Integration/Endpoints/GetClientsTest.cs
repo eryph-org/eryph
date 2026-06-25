@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading;
@@ -58,7 +59,8 @@ public class GetClientsTest(
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var client = await response.Content.ReadFromJsonAsync<Client>(
-            ApiJsonSerializerOptions.Options);
+            ApiJsonSerializerOptions.Options)
+            ?? throw new InvalidOperationException("The response body could not be deserialized.");
 
         client.Should().NotBeNull();
         client.Id.Should().Be("test2");

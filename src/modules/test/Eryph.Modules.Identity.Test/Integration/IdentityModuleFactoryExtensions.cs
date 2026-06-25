@@ -51,7 +51,7 @@ public static class IdentityModuleFactoryExtensions
                 // must supply an in-memory transport the module's ConfigureRebus can resolve
                 // (mirrors the compute-API test harness).
                 hostBuilder.ConfigureAppConfiguration((_, cfg) =>
-                    cfg.AddInMemoryCollection(new Dictionary<string, string>
+                    cfg.AddInMemoryCollection(new Dictionary<string, string?>
                     {
                         { "bus:type", "inmemory" },
                         { "databus:type", "inmemory" },

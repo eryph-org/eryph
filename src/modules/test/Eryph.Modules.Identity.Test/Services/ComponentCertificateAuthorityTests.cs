@@ -82,7 +82,7 @@ public class ComponentCertificateAuthorityTests
 
     private static string[] EnhancedKeyUsages(X509Certificate2 certificate) =>
         certificate.Extensions.OfType<X509EnhancedKeyUsageExtension>()
-            .Single().EnhancedKeyUsages.Cast<Oid>().Select(o => o.Value!).ToArray();
+            .Single().EnhancedKeyUsages.Cast<Oid>().Select(o => o.Value).OfType<string>().ToArray();
 
     [Fact]
     public void Regenerating_the_root_reissues_intermediates_so_new_leaves_chain_to_the_recovered_root()

@@ -22,10 +22,11 @@ public class EnrollmentTokenCodecTests
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(5);
         var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host, expiresAt);
 
-        var content = EnrollmentTokenCodec.TryRead(ca, token);
+        var content = EnrollmentTokenCodec.TryRead(ca, token)
+            ?? throw new InvalidOperationException("The enrollment token could not be read.");
 
         content.Should().NotBeNull();
-        content!.ComponentType.Should().Be(ComponentType.Controller);
+        content.ComponentType.Should().Be(ComponentType.Controller);
         content.Fqdn.Should().Be(Host);
         content.Jti.Should().NotBeNullOrWhiteSpace();
         // The token carries a second-resolution unix expiry.
@@ -39,7 +40,9 @@ public class EnrollmentTokenCodecTests
         var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, "Agent1.Eryph.LOCAL",
             DateTimeOffset.UtcNow.AddMinutes(5));
 
-        EnrollmentTokenCodec.TryRead(ca, token)!.Fqdn.Should().Be("agent1.eryph.local");
+        (EnrollmentTokenCodec.TryRead(ca, token)
+                ?? throw new InvalidOperationException("The enrollment token could not be read."))
+            .Fqdn.Should().Be("agent1.eryph.local");
     }
 
     [Fact]
@@ -49,10 +52,11 @@ public class EnrollmentTokenCodecTests
         var token = EnrollmentTokenCodec.Issue(ca, ComponentType.Controller, Host,
             DateTimeOffset.UtcNow.AddSeconds(-5));
 
-        var content = EnrollmentTokenCodec.TryRead(ca, token);
+        var content = EnrollmentTokenCodec.TryRead(ca, token)
+            ?? throw new InvalidOperationException("The enrollment token could not be read.");
 
         content.Should().NotBeNull("the codec verifies the signature only; expiry is enforced by the redeemer");
-        content!.ExpiresAt.Should().BeBefore(DateTimeOffset.UtcNow);
+        content.ExpiresAt.Should().BeBefore(DateTimeOffset.UtcNow);
     }
 
     [Fact]

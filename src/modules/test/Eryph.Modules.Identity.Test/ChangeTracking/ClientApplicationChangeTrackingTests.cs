@@ -70,8 +70,9 @@ public class ClientApplicationChangeTrackingTests : IDisposable
 
         var path = Path.Combine(_config.ClientsConfigPath, "client-1.json");
         _fileSystem.File.Exists(path).Should().BeTrue("the client must be mirrored to a config file");
-        var model = JsonSerializer.Deserialize<ClientConfigModel>(await _fileSystem.File.ReadAllTextAsync(path));
-        model!.ClientId.Should().Be("client-1");
+        var model = JsonSerializer.Deserialize<ClientConfigModel>(await _fileSystem.File.ReadAllTextAsync(path))
+            ?? throw new InvalidOperationException("The client config could not be deserialized.");
+        model.ClientId.Should().Be("client-1");
         model.X509CertificateBase64.Should().Be("cert-base64");
         model.SharedSecret.Should().Be("hashed-secret");
         model.AllowedScopes.Should().Contain("compute:write");
@@ -91,8 +92,9 @@ public class ClientApplicationChangeTrackingTests : IDisposable
         await seeder.Execute(CancellationToken.None);
 
         added.Should().NotBeNull("the client must be rebuilt from the file mirror");
-        added!.ClientId.Should().Be("client-1");
-        added.Certificate.Should().Be("cert-base64");
+        var addedClient = added ?? throw new InvalidOperationException("The client was not added.");
+        addedClient.ClientId.Should().Be("client-1");
+        addedClient.Certificate.Should().Be("cert-base64");
         added.ClientSecret.Should().Be("hashed-secret", "the stored hashed secret is re-added as hashed");
         added.Scopes.Should().Contain("compute:write");
     }

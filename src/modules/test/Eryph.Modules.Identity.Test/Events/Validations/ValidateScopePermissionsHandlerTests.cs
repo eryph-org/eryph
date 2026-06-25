@@ -447,7 +447,7 @@ public class ValidateScopePermissionsHandlerTests
         return context;
     }
 
-    private static ValidateTokenRequestContext CreateContextWithRawScopes(string clientId, string scopeString)
+    private static ValidateTokenRequestContext CreateContextWithRawScopes(string clientId, string? scopeString)
     {
         // Create a real request with raw scope string
         var request = new OpenIddictRequest

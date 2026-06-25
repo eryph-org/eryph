@@ -164,16 +164,18 @@ public class ClientAccessTokenTest(
         var discovery = await httpClient.GetStringAsync(httpClient.BaseAddress + ".well-known/openid-configuration");
         using var configuration = JsonDocument.Parse(discovery);
         var root = configuration.RootElement;
-        var issuer = root.GetProperty("issuer").GetString();
-        var tokenEndpoint = root.GetProperty("token_endpoint").GetString();
+        var issuer = root.GetProperty("issuer").GetString()
+            ?? throw new InvalidOperationException("The discovery document has no issuer.");
+        var tokenEndpoint = root.GetProperty("token_endpoint").GetString()
+            ?? throw new InvalidOperationException("The discovery document has no token endpoint.");
 
         // The server must advertise that the issuer is expected as the client-assertion audience.
         root.GetProperty("eryph_client_assertion_audience").GetString().Should().Be("issuer");
 
         // legacyFormat reproduces a pre-OpenIddict-7 client: token-endpoint audience + plain JWT type.
         var assertion = legacyFormat
-            ? CreateClientAssertion(clientId, tokenEndpoint!, rsaParameters, null)
-            : CreateClientAssertion(clientId, issuer!, rsaParameters, "client-authentication+jwt");
+            ? CreateClientAssertion(clientId, tokenEndpoint, rsaParameters, null)
+            : CreateClientAssertion(clientId, issuer, rsaParameters, "client-authentication+jwt");
 
         var properties = new Dictionary<string, string>
         {
@@ -194,7 +196,8 @@ public class ClientAccessTokenTest(
 
         var content = await response.Content.ReadAsStringAsync();
         using var token = JsonDocument.Parse(content);
-        return token.RootElement.GetProperty("access_token").GetString();
+        return token.RootElement.GetProperty("access_token").GetString()
+            ?? throw new InvalidOperationException("The token response has no access token.");
     }
 
     private static string CreateClientAssertion(
@@ -272,7 +275,8 @@ public class ClientAccessTokenTest(
 
             payload.TryGetValue("access_token", out var accessToken);
 
-            return accessToken as string;
+            return accessToken as string
+                ?? throw new InvalidOperationException("The token response has no access token.");
         }
         catch
         {
