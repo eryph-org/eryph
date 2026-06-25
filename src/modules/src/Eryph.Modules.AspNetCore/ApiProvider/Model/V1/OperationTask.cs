@@ -1,4 +1,5 @@
-﻿using Eryph.StateDb.Model;
+﻿using System;
+using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
@@ -17,4 +18,10 @@ public class OperationTask
     public required OperationTaskStatus Status { get; set; }
 
     public OperationTaskReference? Reference { get; set; }
+
+    public DateTimeOffset Created { get; set; }
+
+    public DateTimeOffset? StartedAt { get; set; }
+
+    public DateTimeOffset? EndedAt { get; set; }
 }

@@ -32,6 +32,14 @@ public class GetOperationTest : InMemoryStateDbTestBase,
     private static readonly Guid ExistingOperationId = Guid.NewGuid();
     private static readonly Guid CrossOperationId = Guid.NewGuid();
 
+    private static readonly DateTimeOffset OperationCreated =
+        new(2026, 1, 1, 8, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset OperationStarted =
+        new(2026, 1, 1, 8, 0, 5, TimeSpan.Zero);
+    private static readonly DateTimeOffset OperationEnded =
+        new(2026, 1, 1, 8, 1, 0, TimeSpan.Zero);
+    private const string RequestedByUser = "the-requesting-user";
+
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public GetOperationTest(
@@ -83,7 +91,12 @@ public class GetOperationTest : InMemoryStateDbTestBase,
             {
                 Id = ExistingOperationId,
                 TenantId = TenantId,
-                LastUpdated = DateTimeOffset.UtcNow,
+                Status = OperationStatus.Completed,
+                RequestedBy = RequestedByUser,
+                Created = OperationCreated,
+                StartedAt = OperationStarted,
+                EndedAt = OperationEnded,
+                LastUpdated = OperationEnded,
                 Projects =
                 [
                     new OperationProjectModel
@@ -131,6 +144,10 @@ public class GetOperationTest : InMemoryStateDbTestBase,
 
         operation.Should().NotBeNull();
         operation.Id.Should().Be(ExistingOperationId.ToString());
+        operation.RequestedBy.Should().Be(RequestedByUser);
+        operation.Created.Should().Be(OperationCreated);
+        operation.StartedAt.Should().Be(OperationStarted);
+        operation.EndedAt.Should().Be(OperationEnded);
     }
 
     [Fact]

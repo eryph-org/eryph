@@ -11,11 +11,12 @@ public static class OperationDispatcherExtensions
         this IOperationDispatcher dispatcher,
         Guid tenantId,
         string traceId,
-        object command)
+        object command,
+        string? requestedBy = null)
     {
         return dispatcher.StartNew(
             command,
-            new OperationDataRecord(tenantId, traceId),
+            new OperationDataRecord(tenantId, traceId, requestedBy),
             new Dictionary<string, string>
             {
                 { "trace_id", traceId },

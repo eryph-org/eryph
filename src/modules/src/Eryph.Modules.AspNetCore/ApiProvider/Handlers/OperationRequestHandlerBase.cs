@@ -31,7 +31,8 @@ public abstract class OperationRequestHandlerBase(
         var operation = await operationDispatcher.StartNew(
             userRightsProvider.GetUserTenantId(),
             httpContextAccessor.HttpContext?.TraceIdentifier ?? "",
-            command);
+            command,
+            userRightsProvider.GetUserId());
 
         var operationModel = ((Operation)operation).Model;
         var mappedModel = mapper.Map<Model.V1.Operation>(operationModel);

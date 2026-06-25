@@ -47,9 +47,11 @@ public class OperationManager(
             Id = operationId,
             Status = OperationStatus.Queued,
             TenantId = dataRecord.TenantId,
+            RequestedBy = dataRecord.RequestedBy,
             StatusMessage = nameof(Dbosoft.Rebus.Operations.OperationStatus.Queued),
             Resources = resources,
             Projects = projects,
+            Created = timestamp,
             LastUpdated = timestamp,
         };
         log.LogTrace("created operation: {@operation}", res);
@@ -148,6 +150,12 @@ public class OperationManager(
             Dbosoft.Rebus.Operations.OperationStatus.Completed => OperationStatus.Completed,
             _ => throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, null),
         };
+
+        if (op.Model.Status == OperationStatus.Running && op.Model.StartedAt is null)
+            op.Model.StartedAt = timestamp;
+
+        if (op.Model.Status is OperationStatus.Completed or OperationStatus.Failed)
+            op.Model.EndedAt = timestamp;
 
         op.Model.StatusMessage = additionalData switch
         {

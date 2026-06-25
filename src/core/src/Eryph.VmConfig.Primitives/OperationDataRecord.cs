@@ -2,4 +2,4 @@
 
 namespace Eryph;
 
-public record OperationDataRecord(Guid TenantId, string TraceId);
+public record OperationDataRecord(Guid TenantId, string TraceId, string? RequestedBy = null);

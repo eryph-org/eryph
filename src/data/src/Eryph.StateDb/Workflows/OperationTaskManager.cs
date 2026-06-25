@@ -46,6 +46,7 @@ public class OperationTaskManager(StateStoreContext db, ILogger logger) : Operat
             ParentTaskId = parentTaskId,
             Name = command.GetType().Name,
             DisplayName = displayName,
+            Created = timestamp,
             LastUpdated = timestamp,
         };
         logger.LogDebug("Creating task {taskId} for operation {operationId} with parent {parentTaskId}", taskId,
@@ -108,6 +109,12 @@ public class OperationTaskManager(StateStoreContext db, ILogger logger) : Operat
             OperationTaskStatus.Completed => Model.OperationTaskStatus.Completed,
             _ => throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, null),
         };
+
+        if (opTask.Model.Status == Model.OperationTaskStatus.Running && opTask.Model.StartedAt is null)
+            opTask.Model.StartedAt = timestamp;
+
+        if (opTask.Model.Status is Model.OperationTaskStatus.Completed or Model.OperationTaskStatus.Failed)
+            opTask.Model.EndedAt = timestamp;
 
         if (additionalData is ITaskReference taskReference)
         {

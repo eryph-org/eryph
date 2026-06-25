@@ -28,6 +28,21 @@ public class OperationTaskModel
 
     public string? ReferenceProjectName { get; set; }
 
+    /// <summary>
+    /// When the task was created (queued).
+    /// </summary>
+    public DateTimeOffset Created { get; set; }
+
+    /// <summary>
+    /// When the task first started running. Null while still queued.
+    /// </summary>
+    public DateTimeOffset? StartedAt { get; set; }
+
+    /// <summary>
+    /// When the task reached a terminal state (completed or failed).
+    /// </summary>
+    public DateTimeOffset? EndedAt { get; set; }
+
     public DateTimeOffset LastUpdated { get; set; }
 
     public List<TaskProgressEntry> Progress { get; set; } = null!;

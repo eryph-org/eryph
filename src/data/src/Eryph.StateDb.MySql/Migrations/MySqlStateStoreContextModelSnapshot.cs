@@ -487,15 +487,27 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<DateTimeOffset>("LastUpdated")
                         .IsConcurrencyToken()
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RequestedBy")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("ResultData")
                         .HasColumnType("longtext");
 
                     b.Property<string>("ResultType")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -563,8 +575,14 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("AgentName")
                         .HasColumnType("longtext");
 
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("DisplayName")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTimeOffset>("LastUpdated")
                         .IsConcurrencyToken()
@@ -590,6 +608,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<int?>("ReferenceType")
                         .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");

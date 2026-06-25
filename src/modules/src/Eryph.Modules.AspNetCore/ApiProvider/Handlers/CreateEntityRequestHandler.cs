@@ -34,7 +34,8 @@ internal class CreateEntityRequestHandler<TEntity>(
         var operation = await operationDispatcher.StartNew(
             userRightsProvider.GetUserTenantId(),
             httpContextAccessor.HttpContext?.TraceIdentifier ?? "",
-            command);
+            command,
+            userRightsProvider.GetUserId());
 
         var operationModel = ((StateDb.Workflows.Operation)operation).Model;
         var mappedModel = mapper.Map<Operation>(operationModel);

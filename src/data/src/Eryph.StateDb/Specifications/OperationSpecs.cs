@@ -59,6 +59,35 @@ public static class OperationSpecs
         }
     }
 
+    /// <summary>
+    /// Finds operations whose last update is older than the given cutoff,
+    /// regardless of status. Used by housekeeping to delete operations by age.
+    /// </summary>
+    public sealed class FindExpired : Specification<OperationModel>
+    {
+        public FindExpired(DateTimeOffset cutoff)
+        {
+            Query.Where(x => x.LastUpdated < cutoff);
+        }
+    }
+
+    /// <summary>
+    /// Finds operations which are still queued or running but have not been
+    /// updated since the given cutoff. Used by housekeeping to fail operations
+    /// which are stuck (e.g. because their agent died). Includes the tasks so
+    /// they can be failed together with the operation.
+    /// </summary>
+    public sealed class FindTimedOut : Specification<OperationModel>
+    {
+        public FindTimedOut(DateTimeOffset cutoff)
+        {
+            Query.Where(x =>
+                    (x.Status == OperationStatus.Queued || x.Status == OperationStatus.Running)
+                    && x.LastUpdated < cutoff)
+                .Include(x => x.Tasks);
+        }
+    }
+
     public sealed class GetById : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
     {
         public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles, string? expanded,

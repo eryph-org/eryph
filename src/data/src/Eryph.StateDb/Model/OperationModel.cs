@@ -21,6 +21,27 @@ public class OperationModel
 
     public string? StatusMessage { get; set; }
 
+    /// <summary>
+    /// The id of the user who requested the operation. Null for operations
+    /// started by the system (e.g. inventory or event handlers).
+    /// </summary>
+    public string? RequestedBy { get; set; }
+
+    /// <summary>
+    /// When the operation was created (queued).
+    /// </summary>
+    public DateTimeOffset Created { get; set; }
+
+    /// <summary>
+    /// When the operation first started running. Null while still queued.
+    /// </summary>
+    public DateTimeOffset? StartedAt { get; set; }
+
+    /// <summary>
+    /// When the operation reached a terminal state (completed or failed).
+    /// </summary>
+    public DateTimeOffset? EndedAt { get; set; }
+
     public DateTimeOffset LastUpdated { get; set; }
 
     public string? ResultData { get; set; }
