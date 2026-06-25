@@ -22,6 +22,7 @@ public class Operation(OperationModel model) : IOperation
                 OperationStatus.Running => Dbosoft.Rebus.Operations.OperationStatus.Running,
                 OperationStatus.Failed => Dbosoft.Rebus.Operations.OperationStatus.Failed,
                 OperationStatus.Completed => Dbosoft.Rebus.Operations.OperationStatus.Completed,
+                OperationStatus.Cancelled => Dbosoft.Rebus.Operations.OperationStatus.Cancelled,
                 _ => throw new ArgumentOutOfRangeException(),
             };
         }

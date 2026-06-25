@@ -59,6 +59,64 @@ public static class OperationSpecs
         }
     }
 
+    /// <summary>
+    /// Finds terminal operations (completed, failed or cancelled) whose last update is
+    /// older than the given cutoff. Used by housekeeping to delete operations by age;
+    /// active operations are never deleted this way, only timed out (see
+    /// <see cref="FindTimedOut"/>), regardless of how retention and timeout are configured.
+    /// </summary>
+    public sealed class FindExpired : Specification<OperationModel>
+    {
+        public FindExpired(DateTimeOffset cutoff)
+        {
+            Query.Where(x =>
+                x.LastUpdated < cutoff
+                && (x.Status == OperationStatus.Completed
+                    || x.Status == OperationStatus.Failed
+                    || x.Status == OperationStatus.Cancelled));
+        }
+    }
+
+    /// <summary>
+    /// Finds operations which are still queued or running but have not been
+    /// updated since the given cutoff. Used by housekeeping to cancel operations
+    /// which are stuck (e.g. because their agent died). Includes the tasks so
+    /// they can be cancelled together with the operation.
+    /// </summary>
+    public sealed class FindTimedOut : Specification<OperationModel>
+    {
+        public FindTimedOut(DateTimeOffset cutoff)
+        {
+            Query.Where(x =>
+                    (x.Status == OperationStatus.Queued || x.Status == OperationStatus.Running)
+                    && x.LastUpdated < cutoff)
+                .Include(x => x.Tasks);
+        }
+    }
+
+    /// <summary>
+    /// Finds an operation that the caller is allowed to cancel: the operation's
+    /// requester, an owner of all the operation's projects, or a super admin.
+    /// </summary>
+    public sealed class GetByIdForCancellation
+        : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
+    {
+        public GetByIdForCancellation(
+            Guid id, AuthContext authContext, string requesterId, IEnumerable<Guid> ownerRoles)
+        {
+            Query.Where(x => x.Id == id && x.TenantId == authContext.TenantId);
+
+            if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
+                Query.Where(x =>
+                    // The caller requested the operation themselves...
+                    x.RequestedBy == requesterId
+                    // ...or is an owner of every project the operation touches.
+                    || (x.Projects.Any() && x.Projects.All(projectRef =>
+                        projectRef.Project.ProjectRoles.Any(y =>
+                            authContext.Identities.Contains(y.IdentityId) && ownerRoles.Contains(y.RoleId)))));
+        }
+    }
+
     public sealed class GetById : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
     {
         public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles, string? expanded,

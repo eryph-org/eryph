@@ -21,6 +21,16 @@ public interface IGeneRequestRegistry
         OperationTask<PrepareGeneCommand> task,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Begins downloading the given gene and returns a token that is cancelled when the
+    /// host stops or when all of the gene's waiting tasks have been cancelled. The
+    /// returned token must be used for the download work.
+    /// </summary>
+    CancellationToken BeginDownload(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken hostToken);
+
     Task ReportProgress(
         UniqueGeneIdentifier uniqueGeneId,
         GeneHash geneHash,

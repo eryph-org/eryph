@@ -46,6 +46,7 @@ public class OperationTaskManager(StateStoreContext db, ILogger logger) : Operat
             ParentTaskId = parentTaskId,
             Name = command.GetType().Name,
             DisplayName = displayName,
+            Created = timestamp,
             LastUpdated = timestamp,
         };
         logger.LogDebug("Creating task {taskId} for operation {operationId} with parent {parentTaskId}", taskId,
@@ -92,10 +93,11 @@ public class OperationTaskManager(StateStoreContext db, ILogger logger) : Operat
             return new ValueTask<bool>(false);
         }
 
-        if (opTask.Status is OperationTaskStatus.Completed or OperationTaskStatus.Failed)
+        if (opTask.Status is OperationTaskStatus.Completed or OperationTaskStatus.Failed
+            or OperationTaskStatus.Cancelled)
         {
             logger.LogWarning(
-                "Operation: {operationId}, Task {taskId}: has already been completed or failed. Skipping status change. Task status: {status}",
+                "Operation: {operationId}, Task {taskId}: has already reached a terminal state. Skipping status change. Task status: {status}",
                 task.OperationId, task.Id, opTask.Status);
             return new ValueTask<bool>(false);
         }
@@ -106,8 +108,16 @@ public class OperationTaskManager(StateStoreContext db, ILogger logger) : Operat
             OperationTaskStatus.Running => Model.OperationTaskStatus.Running,
             OperationTaskStatus.Failed => Model.OperationTaskStatus.Failed,
             OperationTaskStatus.Completed => Model.OperationTaskStatus.Completed,
+            OperationTaskStatus.Cancelled => Model.OperationTaskStatus.Cancelled,
             _ => throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, null),
         };
+
+        if (opTask.Model.Status == Model.OperationTaskStatus.Running && opTask.Model.StartedAt is null)
+            opTask.Model.StartedAt = timestamp;
+
+        if (opTask.Model.Status is Model.OperationTaskStatus.Completed or Model.OperationTaskStatus.Failed
+            or Model.OperationTaskStatus.Cancelled)
+            opTask.Model.EndedAt = timestamp;
 
         if (additionalData is ITaskReference taskReference)
         {

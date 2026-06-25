@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Eryph.Core;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore;
 using Eryph.ModuleCore.Authorization;
 using Eryph.ModuleCore.Components;
 using Eryph.Modules.AspNetCore;
@@ -85,6 +86,8 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
             .Register<IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, Model.V1.CatletSpecification,
                     CatletSpecification>,
                 ListCatletSpecificationHandler>();
+
+        container.Register<IOperationCancellationDispatcher, OperationCancellationDispatcher>(Lifestyle.Scoped);
 
         base.ConfigureContainer(serviceProvider, container);
     }

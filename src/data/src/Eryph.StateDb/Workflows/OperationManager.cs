@@ -47,9 +47,11 @@ public class OperationManager(
             Id = operationId,
             Status = OperationStatus.Queued,
             TenantId = dataRecord.TenantId,
+            RequestedBy = dataRecord.RequestedBy,
             StatusMessage = nameof(Dbosoft.Rebus.Operations.OperationStatus.Queued),
             Resources = resources,
             Projects = projects,
+            Created = timestamp,
             LastUpdated = timestamp,
         };
         log.LogTrace("created operation: {@operation}", res);
@@ -132,10 +134,11 @@ public class OperationManager(
         }
 
         if (op.Status is Dbosoft.Rebus.Operations.OperationStatus.Completed
-            or Dbosoft.Rebus.Operations.OperationStatus.Failed)
+            or Dbosoft.Rebus.Operations.OperationStatus.Failed
+            or Dbosoft.Rebus.Operations.OperationStatus.Cancelled)
         {
             log.LogWarning(
-                "Operation: {operationId}: has already been completed or failed. Skipping status change. Status: {status}",
+                "Operation: {operationId}: has already reached a terminal state. Skipping status change. Status: {status}",
                 op.Id, op.Status);
             return false;
         }
@@ -146,8 +149,15 @@ public class OperationManager(
             Dbosoft.Rebus.Operations.OperationStatus.Running => OperationStatus.Running,
             Dbosoft.Rebus.Operations.OperationStatus.Failed => OperationStatus.Failed,
             Dbosoft.Rebus.Operations.OperationStatus.Completed => OperationStatus.Completed,
+            Dbosoft.Rebus.Operations.OperationStatus.Cancelled => OperationStatus.Cancelled,
             _ => throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, null),
         };
+
+        if (op.Model.Status == OperationStatus.Running && op.Model.StartedAt is null)
+            op.Model.StartedAt = timestamp;
+
+        if (op.Model.Status is OperationStatus.Completed or OperationStatus.Failed or OperationStatus.Cancelled)
+            op.Model.EndedAt = timestamp;
 
         op.Model.StatusMessage = additionalData switch
         {

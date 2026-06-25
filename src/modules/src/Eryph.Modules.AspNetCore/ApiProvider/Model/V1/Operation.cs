@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
@@ -10,6 +11,14 @@ public class Operation
     public required OperationStatus Status { get; set; }
 
     public string? StatusMessage { get; set; }
+
+    public string? RequestedBy { get; set; }
+
+    public DateTimeOffset Created { get; set; }
+
+    public DateTimeOffset? StartedAt { get; set; }
+
+    public DateTimeOffset? EndedAt { get; set; }
 
     public IReadOnlyList<OperationResource>? Resources { get; set; }
 

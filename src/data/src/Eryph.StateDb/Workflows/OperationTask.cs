@@ -23,6 +23,7 @@ internal class OperationTask(OperationTaskModel model) : IOperationTask
                 StateDb.Model.OperationTaskStatus.Running => OperationTaskStatus.Running,
                 StateDb.Model.OperationTaskStatus.Failed => OperationTaskStatus.Failed,
                 StateDb.Model.OperationTaskStatus.Completed => OperationTaskStatus.Completed,
+                StateDb.Model.OperationTaskStatus.Cancelled => OperationTaskStatus.Cancelled,
                 _ => throw new ArgumentOutOfRangeException(),
             };
         }

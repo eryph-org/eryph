@@ -15,6 +15,7 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 internal sealed class GeneRequestRegistry(
     Container container,
+    ITaskCancellationRegistry cancellationRegistry,
     ILogger logger)
     : IGeneRequestRegistry
 {
@@ -25,6 +26,14 @@ internal sealed class GeneRequestRegistry(
     private readonly SemaphoreSlim _availableSemaphore = new(0);
 
     private readonly Dictionary<(UniqueGeneIdentifier Id, GeneHash Hash), ISet<IOperationTaskMessage>> _pendingTasks =
+        new();
+
+    /// <summary>
+    /// Per-gene download cancellation. Created when a gene starts downloading and
+    /// cancelled once all of its waiting tasks have been cancelled, so the shared
+    /// download stops as soon as nobody wants it anymore.
+    /// </summary>
+    private readonly Dictionary<(UniqueGeneIdentifier Id, GeneHash Hash), CancellationTokenSource> _downloads =
         new();
 
     private readonly Queue<(UniqueGeneIdentifier Id, GeneHash Hash)> _queue = new();
@@ -74,10 +83,95 @@ internal sealed class GeneRequestRegistry(
             _semaphore.Release();
         }
 
+        // Register the task for cancellation so that a cancellation request for its
+        // operation can trip its token (observed by PruneCancelledTasks).
+        cancellationRegistry.Register(task.OperationId, task.TaskId);
+
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var taskMessaging = scope.GetInstance<ITaskMessaging>();
         var message = position > 0 ? $"Waiting for {position} other task(s)..." : "Waiting for next update...";
         await taskMessaging.ProgressMessage(task, new { message, progress = 0 });
+    }
+
+    public CancellationToken BeginDownload(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash,
+        CancellationToken hostToken)
+    {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(hostToken);
+        _semaphore.Wait();
+        try
+        {
+            // Defensive: dispose any leftover from an earlier processing of the same gene.
+            if (_downloads.Remove((uniqueGeneId, geneHash), out var existing))
+                existing.Dispose();
+            _downloads.Add((uniqueGeneId, geneHash), cts);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+
+        return cts.Token;
+    }
+
+    /// <summary>
+    /// Reports any waiting tasks whose cancellation has been requested as cancelled and
+    /// removes them. If no waiting task remains, the gene's download is cancelled.
+    /// </summary>
+    private async Task PruneCancelledTasks(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash)
+    {
+        List<IOperationTaskMessage> cancelledTasks = [];
+        CancellationTokenSource? downloadToCancel = null;
+        await _semaphore.WaitAsync();
+        try
+        {
+            if (_pendingTasks.TryGetValue((uniqueGeneId, geneHash), out var geneTasks))
+            {
+                foreach (var task in geneTasks.ToList())
+                {
+                    if (!cancellationRegistry.IsCancellationRequested(task.OperationId, task.TaskId))
+                        continue;
+
+                    cancelledTasks.Add(task);
+                    geneTasks.Remove(task);
+                }
+
+                if (geneTasks.Count == 0
+                    && _downloads.TryGetValue((uniqueGeneId, geneHash), out var cts))
+                    downloadToCancel = cts;
+            }
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+
+        if (downloadToCancel is not null)
+        {
+            logger.LogDebug("All tasks for gene {GeneId} ({GeneHash}) were cancelled. Cancelling the download.",
+                uniqueGeneId, geneHash);
+            try
+            {
+                downloadToCancel.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The download already finished and disposed its source; nothing to cancel.
+            }
+        }
+
+        if (cancelledTasks.Count == 0)
+            return;
+
+        await using var scope = AsyncScopedLifestyle.BeginScope(container);
+        var taskMessaging = scope.GetInstance<ITaskMessaging>();
+        foreach (var task in cancelledTasks)
+        {
+            logger.LogDebug("Task {TaskId} for gene {GeneId} ({GeneHash}) was cancelled.",
+                task.TaskId, uniqueGeneId, geneHash);
+            await taskMessaging.CancelTask(task);
+        }
     }
 
     public async Task<(UniqueGeneIdentifier Id, GeneHash Hash)> DequeueGeneRequest(
@@ -113,6 +207,10 @@ internal sealed class GeneRequestRegistry(
         string message,
         int progress)
     {
+        // Drop and report any tasks whose cancellation was requested before sending
+        // progress to the remaining waiters; cancels the download if none remain.
+        await PruneCancelledTasks(uniqueGeneId, geneHash);
+
         List<IOperationTaskMessage> tasksToUpdate = [];
         await _semaphore.WaitAsync();
         try
@@ -142,6 +240,11 @@ internal sealed class GeneRequestRegistry(
         GeneHash geneHash,
         Fin<PrepareGeneResponse> result)
     {
+        // Report any tasks whose cancellation was requested but not yet pruned as
+        // cancelled, so they receive a Cancelled status rather than the download's
+        // completed/failed result.
+        await PruneCancelledTasks(uniqueGeneId, geneHash);
+
         List<IOperationTaskMessage> tasksToComplete = [];
         List<List<IOperationTaskMessage>> tasksToUpdate = [];
         await _semaphore.WaitAsync();
@@ -151,6 +254,9 @@ internal sealed class GeneRequestRegistry(
                 tasksToComplete = [..geneTasks];
 
             _pendingTasks.Remove((uniqueGeneId, geneHash));
+
+            if (_downloads.Remove((uniqueGeneId, geneHash), out var downloadCts))
+                downloadCts.Dispose();
 
             foreach (var gene in _queue.Skip(1))
             {

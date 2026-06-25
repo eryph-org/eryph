@@ -16,7 +16,12 @@ public class OperationTaskModel
 
     public OperationTaskStatus Status { get; set; }
 
-    public string? AgentName { get; set; }
+    /// <summary>
+    /// The queue the task command was dispatched to (e.g. an agent's input queue).
+    /// Null until the task has been routed. Used to deliver cancellation requests
+    /// directly to the host running the task instead of broadcasting.
+    /// </summary>
+    public string? RoutedTo { get; set; }
 
     public string? Name { get; set; }
 
@@ -27,6 +32,21 @@ public class OperationTaskModel
     public string? ReferenceId { get; set; }
 
     public string? ReferenceProjectName { get; set; }
+
+    /// <summary>
+    /// When the task was created (queued).
+    /// </summary>
+    public DateTimeOffset Created { get; set; }
+
+    /// <summary>
+    /// When the task first started running. Null while still queued.
+    /// </summary>
+    public DateTimeOffset? StartedAt { get; set; }
+
+    /// <summary>
+    /// When the task reached a terminal state (completed, failed or cancelled).
+    /// </summary>
+    public DateTimeOffset? EndedAt { get; set; }
 
     public DateTimeOffset LastUpdated { get; set; }
 

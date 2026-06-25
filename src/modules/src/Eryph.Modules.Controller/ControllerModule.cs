@@ -44,6 +44,7 @@ public class ControllerModule
 
     private readonly IConfiguration _configuration;
     private readonly InventoryConfig _inventoryConfig = new();
+    private readonly OperationsHousekeepingConfig _operationsHousekeepingConfig = new();
 
     public ControllerModule(IConfiguration configuration)
     {
@@ -54,6 +55,9 @@ public class ControllerModule
 
         configuration.GetSection("Inventory")
             .Bind(_inventoryConfig);
+
+        configuration.GetSection("Housekeeping:Operations")
+            .Bind(_operationsHousekeepingConfig);
     }
 
     public string Name => "Eryph.Controller";
@@ -70,6 +74,8 @@ public class ControllerModule
                 .DisallowConcurrentExecution());
             q.AddJob<VirtualDiskCleanupJob>(job => job.WithIdentity(VirtualDiskCleanupJob.Key)
                 .DisallowConcurrentExecution());
+            q.AddJob<OperationCleanupJob>(job => job.WithIdentity(OperationCleanupJob.Key)
+                .DisallowConcurrentExecution());
 
             q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobTrigger")
                 .ForJob(InventoryTimerJob.Key)
@@ -78,7 +84,11 @@ public class ControllerModule
             q.AddTrigger(trigger => trigger.WithIdentity("VirtualDiskCleanupJobTrigger")
                 .ForJob(VirtualDiskCleanupJob.Key)
                 .StartNow()
-                .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1))));
+                .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1)).RepeatForever()));
+            q.AddTrigger(trigger => trigger.WithIdentity("OperationCleanupJobTrigger")
+                .ForJob(OperationCleanupJob.Key)
+                .StartNow()
+                .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1)).RepeatForever()));
 
             // The scheduled trigger will only fire the first time after waiting for one interval.
             // We add another trigger without a schedule to trigger the job immediately when
@@ -89,6 +99,9 @@ public class ControllerModule
             q.AddTrigger(trigger => trigger.WithIdentity("VirtualDiskCleanupJobStartupTrigger")
                 .ForJob(VirtualDiskCleanupJob.Key)
                 .StartNow());
+            q.AddTrigger(trigger => trigger.WithIdentity("OperationCleanupJobStartupTrigger")
+                .ForJob(OperationCleanupJob.Key)
+                .StartNow());
         });
         services.AddQuartzHostedService();
     }
@@ -98,6 +111,7 @@ public class ControllerModule
     {
         container.RegisterSingleton<IFileSystem, FileSystem>();
         container.RegisterInstance(_changeTrackingConfig);
+        container.RegisterInstance(_operationsHousekeepingConfig);
 
         container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
         container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
@@ -165,6 +179,9 @@ public class ControllerModule
                 x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                 x.SetNumberOfWorkers(5);
                 x.EnableSimpleInjectorUnitOfWork();
+                x.EnableOperationCancellation(
+                    container.GetInstance<WorkflowOptions>(),
+                    container.GetInstance<ITaskCancellationRegistry>());
             })
             .Timeouts(t => container.GetInstance<IRebusConfigurer<ITimeoutManager>>().Configure(t))
             .Sagas(s =>

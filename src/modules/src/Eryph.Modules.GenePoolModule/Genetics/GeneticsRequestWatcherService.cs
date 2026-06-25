@@ -56,6 +56,10 @@ internal class GeneticsRequestWatcherService(
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var geneProvider = scope.GetInstance<IGeneProvider>();
+
+        // Cancels when the host stops or when every task waiting for this gene has been
+        // cancelled, so a download nobody wants anymore is stopped.
+        var downloadToken = geneRequestRegistry.BeginDownload(geneId, geneHash, cancellationToken);
         await geneRequestRegistry.ReportProgress(geneId, geneHash, $"Processing {geneId} ({geneHash})", 0);
 
         var result = await geneProvider.ProvideGene(
@@ -63,7 +67,7 @@ internal class GeneticsRequestWatcherService(
                 geneHash,
                 async (message, progress) =>
                     await geneRequestRegistry.ReportProgress(geneId, geneHash, message, progress))
-            .RunWithCancel(cancellationToken);
+            .RunWithCancel(downloadToken);
 
         await geneRequestRegistry.CompleteRequest(geneId, geneHash, result);
     }

@@ -9,4 +9,5 @@ public enum OperationStatus
     Running,
     Failed,
     Completed,
+    Cancelled,
 }
