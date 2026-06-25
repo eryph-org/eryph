@@ -81,7 +81,8 @@ internal class SystemClientGenerator(
         if (!configData.AllowedScopes.SequenceEqual(RequiredScopes))
             return false;
 
-        using var publicKey = GetPublicKey(configData.X509CertificateBase64);
+        using var publicKey = GetPublicKey(configData.X509CertificateBase64
+            ?? throw new InvalidOperationException("X509CertificateBase64 is missing from client config."));
         if (publicKey is null)
             return false;
 

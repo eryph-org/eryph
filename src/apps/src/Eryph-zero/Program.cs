@@ -316,7 +316,7 @@ internal static class Program
                         .ConfigureEryphAppConfiguration(args)
                         .ConfigureAppConfiguration((_, config) =>
                         {
-                            config.AddInMemoryCollection(new Dictionary<string, string>
+                            config.AddInMemoryCollection(new Dictionary<string, string?>
                             {
                                 ["warmupMode"] = bool.TrueString,
                             });
@@ -426,7 +426,7 @@ internal static class Program
                     .ConfigureEryphAppConfiguration(args)
                     .ConfigureAppConfiguration((_, config) =>
                     {
-                        var settings = new Dictionary<string, string>
+                        var settings = new Dictionary<string, string?>
                         {
                             { "bus:type", "inmemory" },
                             { "databus:type", "inmemory" },
@@ -520,7 +520,7 @@ internal static class Program
         {
             hostBuilder.ConfigureAppConfiguration((_, config) =>
             {
-                config.AddInMemoryCollection(new Dictionary<string, string>
+                config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["changeTracking:trackChanges"] = bool.TrueString,
                     ["changeTracking:seedDatabase"] = bool.TrueString,
@@ -554,7 +554,9 @@ internal static class Program
     {
         using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         socket.Bind(DefaultLoopbackEndpoint);
-        return ((IPEndPoint)socket.LocalEndPoint)!.Port;
+        var localEndPoint = socket.LocalEndPoint as IPEndPoint
+            ?? throw new InvalidOperationException("Socket did not bind to an IPEndPoint.");
+        return localEndPoint.Port;
     }
 
     private static async Task<int> SelfInstall(FileSystemInfo? outFile, bool deleteOutFile)
@@ -789,7 +791,7 @@ internal static class Program
                 if (deleteOutFile)
                 {
                     Task.Delay(2000).GetAwaiter().GetResult();
-                    File.Delete(outFile.FullName);
+                    File.Delete(outFile?.FullName ?? throw new InvalidOperationException("outFile is unexpectedly null."));
                 }
             }
         }
@@ -945,8 +947,12 @@ internal static class Program
                             from uCleanup in LogProgress("Removing OVS bridges....")
                             from bridges in ovsControl.GetBridges(controlCancel.Token)
                             from uRemove in bridges
-                                .Map(b => ovsControl.RemoveBridge(b.Name, controlCancel.Token)
-                                    .MapLeft(l => Error.New($"Failed to remove OVS bridge {b.Name}.", l)))
+                                .Map(b =>
+                                {
+                                    var bridgeName = b.Name ?? throw new InvalidOperationException("OVS bridge has no name.");
+                                    return ovsControl.RemoveBridge(bridgeName, controlCancel.Token)
+                                        .MapLeft(l => Error.New($"Failed to remove OVS bridge {bridgeName}.", l));
+                                })
                                 .SequenceSerial().Map(_ => Unit.Default)
                             let stopCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                             from uStopLog in LogProgress("Stopping temporary chassis services...")
@@ -1028,7 +1034,7 @@ internal static class Program
                 if (deleteOutFile)
                 {
                     await Task.Delay(2000);
-                    File.Delete(outFile.FullName);
+                    File.Delete(outFile?.FullName ?? throw new InvalidOperationException("outFile is unexpectedly null."));
                 }
             }
         }

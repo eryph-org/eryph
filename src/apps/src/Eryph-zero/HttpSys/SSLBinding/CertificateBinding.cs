@@ -13,13 +13,13 @@ namespace Eryph.Runtime.Zero.HttpSys.SSLBinding;
 public class CertificateBinding
 {
     public CertificateBinding(string certificateThumbprint, StoreName certificateStoreName, IPEndPoint ipPort,
-        Guid appId, BindingOptions options = null)
+        Guid appId, BindingOptions? options = null)
         : this(certificateThumbprint, certificateStoreName.ToString(), ipPort, appId, options)
     {
     }
 
     public CertificateBinding(string certificateThumbprint, string? certificateStoreName, IPEndPoint ipPort, Guid appId,
-        BindingOptions options = null)
+        BindingOptions? options = null)
     {
         certificateStoreName ??= "MY";
         Thumbprint = certificateThumbprint ?? throw new ArgumentNullException(nameof(certificateThumbprint));

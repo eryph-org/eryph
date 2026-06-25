@@ -56,9 +56,9 @@ internal class UninstallCommands
         from _1 in logInformation<UninstallCommands>("Removing NAT configurations...")
         from hostNetworkCommands in default(DriverCommandsRuntime).HostNetworkCommands
         from netNats in hostNetworkCommands.GetNetNat()
-        let eryphNetNats = netNats.Filter(n => n.Name.StartsWith("eryph_"))
+        let eryphNetNats = netNats.Filter(n => (n.Name ?? "").StartsWith("eryph_"))
         from _2 in eryphNetNats
-            .Map(n => hostNetworkCommands.RemoveNetNat(n.Name))
+            .Map(n => hostNetworkCommands.RemoveNetNat(n.Name ?? ""))
             .SequenceSerial()
         select unit;
 
@@ -173,13 +173,13 @@ internal class UninstallCommands
         let paths = append(
             vmHostAgentConfig.Environments.ToSeq()
                 .Bind(e => e.Datastores.ToSeq())
-                .Map(ds => ds.Path),
+                .Map(ds => ds.Path ?? ""),
             vmHostAgentConfig.Environments.ToSeq()
-                .Bind(e => Seq(e.Defaults.Vms, e.Defaults.Volumes)),
+                .Bind(e => Seq(e.Defaults.Vms ?? "", e.Defaults.Volumes ?? "")),
             vmHostAgentConfig.Datastores.ToSeq()
-                .Map(ds => ds.Path),
-            Seq1(vmHostAgentConfig.Defaults.Vms),
-            Seq1(vmHostAgentConfig.Defaults.Volumes))
+                .Map(ds => ds.Path ?? ""),
+            Seq1(vmHostAgentConfig.Defaults.Vms ?? ""),
+            Seq1(vmHostAgentConfig.Defaults.Volumes ?? ""))
         from _ in paths.Map(RemoveStore).SequenceSerial()
         select unit;
 

@@ -107,8 +107,8 @@ internal static class HttpApi
         public CertCheckModes DefaultCertCheckMode;
         public int DefaultRevocationFreshnessTime;
         public int DefaultRevocationUrlRetrievalTimeout;
-        [MarshalAs(UnmanagedType.LPWStr)] public string pDefaultSslCtlIdentifier;
-        [MarshalAs(UnmanagedType.LPWStr)] public string pDefaultSslCtlStoreName;
+        [MarshalAs(UnmanagedType.LPWStr)] public string? pDefaultSslCtlIdentifier;
+        [MarshalAs(UnmanagedType.LPWStr)] public string? pDefaultSslCtlStoreName;
         public HTTP_SERVICE_CONFIG_SSL_FLAG DefaultFlags;
     }
 

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Eryph.Configuration.Model;
 
 namespace Eryph.Runtime.Zero.Configuration.Clients;
@@ -19,6 +20,6 @@ internal class ClientConfigService : IClientConfigService
 
     public Task Save(ClientConfigModel client)
     {
-        return _configIO.SaveConfigFile(client, client.ClientId);
+        return _configIO.SaveConfigFile(client, client.ClientId ?? throw new InvalidOperationException("ClientId is required to save a client config."));
     }
 }

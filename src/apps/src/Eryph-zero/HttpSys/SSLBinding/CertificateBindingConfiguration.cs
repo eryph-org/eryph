@@ -217,8 +217,7 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
                                 HttpApi.ThrowWin32ExceptionIfError(retVal);
 
                                 var outputConfigInfo =
-                                    (HttpApi.HTTP_SERVICE_CONFIG_SSL_SET)
-                                    Marshal.PtrToStructure(pOutputConfigInfo, typeof(HttpApi.HTTP_SERVICE_CONFIG_SSL_SET));
+                                    Marshal.PtrToStructure<HttpApi.HTTP_SERVICE_CONFIG_SSL_SET>(pOutputConfigInfo);
                                 result = CreateCertificateBindingInfo(outputConfigInfo);
                             }
                             finally
@@ -297,8 +296,8 @@ public class CertificateBindingConfiguration : ICertificateBindingConfiguration
                                     IntPtr.Zero);
                                 HttpApi.ThrowWin32ExceptionIfError(retVal);
 
-                                var outputConfigInfo = (HttpApi.HTTP_SERVICE_CONFIG_SSL_SET)Marshal.PtrToStructure(
-                                    pOutputConfigInfo, typeof(HttpApi.HTTP_SERVICE_CONFIG_SSL_SET));
+                                var outputConfigInfo =
+                                    Marshal.PtrToStructure<HttpApi.HTTP_SERVICE_CONFIG_SSL_SET>(pOutputConfigInfo);
                                 var resultItem = CreateCertificateBindingInfo(outputConfigInfo);
                                 result.Add(resultItem);
                                 token++;
