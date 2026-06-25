@@ -89,13 +89,19 @@ public class GeneSetTagManifestUtilsTests
                 Architecture = "any",
                 Hash = ComputeHash("sdc-any"),
             },
-            // Gene for a hypervisor which this version of eryph does not understand.
-            // It must be ignored to allow future extensions of the gene pool.
             new GeneReferenceData
             {
                 Name = "sda",
                 Architecture = "kvm/amd64",
                 Hash = ComputeHash("sda-kvm-amd64"),
+            },
+            // Gene for a hypervisor which this version of eryph does not understand.
+            // It must be ignored to allow future extensions of the gene pool.
+            new GeneReferenceData
+            {
+                Name = "sda",
+                Architecture = "vmware/amd64",
+                Hash = ComputeHash("sda-vmware-amd64"),
             },
         ],
     };
@@ -106,7 +112,7 @@ public class GeneSetTagManifestUtilsTests
         var result = GeneSetTagManifestUtils.GetGenes(_manifest).Should().BeRight().Subject;
 
         var dictionary = result.ToDictionary();
-        dictionary.Should().HaveCount(13);
+        dictionary.Should().HaveCount(14);
 
         dictionary.Should().ContainKey(UniqueGeneIdentifier.New("catlet::gene:acme/acme-os/1.0:catlet[any]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("catlet")));
@@ -138,9 +144,11 @@ public class GeneSetTagManifestUtilsTests
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("sdb-hyperv-any")));
         dictionary.Should().ContainKey(UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdc[any]"))
             .WhoseValue.Should().Be(GeneHash.New(ComputeHash("sdc-any")));
+        dictionary.Should().ContainKey(UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sda[kvm/amd64]"))
+            .WhoseValue.Should().Be(GeneHash.New(ComputeHash("sda-kvm-amd64")));
 
-        // The gene for the unsupported 'kvm' hypervisor must be ignored.
-        dictionary.Keys.Should().NotContain(k => k.Architecture.Hypervisor.Value == "kvm");
+        // The gene for the unknown 'vmware' hypervisor must be ignored.
+        dictionary.Keys.Should().NotContain(k => k.Architecture.Hypervisor.Value == "vmware");
     }
 
     [Theory]
