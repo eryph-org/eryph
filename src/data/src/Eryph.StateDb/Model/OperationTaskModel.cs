@@ -44,7 +44,7 @@ public class OperationTaskModel
     public DateTimeOffset? StartedAt { get; set; }
 
     /// <summary>
-    /// When the task reached a terminal state (completed or failed).
+    /// When the task reached a terminal state (completed, failed or cancelled).
     /// </summary>
     public DateTimeOffset? EndedAt { get; set; }
 

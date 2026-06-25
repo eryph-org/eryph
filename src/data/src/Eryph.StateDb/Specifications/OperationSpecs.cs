@@ -60,22 +60,28 @@ public static class OperationSpecs
     }
 
     /// <summary>
-    /// Finds operations whose last update is older than the given cutoff,
-    /// regardless of status. Used by housekeeping to delete operations by age.
+    /// Finds terminal operations (completed, failed or cancelled) whose last update is
+    /// older than the given cutoff. Used by housekeeping to delete operations by age;
+    /// active operations are never deleted this way, only timed out (see
+    /// <see cref="FindTimedOut"/>), regardless of how retention and timeout are configured.
     /// </summary>
     public sealed class FindExpired : Specification<OperationModel>
     {
         public FindExpired(DateTimeOffset cutoff)
         {
-            Query.Where(x => x.LastUpdated < cutoff);
+            Query.Where(x =>
+                x.LastUpdated < cutoff
+                && (x.Status == OperationStatus.Completed
+                    || x.Status == OperationStatus.Failed
+                    || x.Status == OperationStatus.Cancelled));
         }
     }
 
     /// <summary>
     /// Finds operations which are still queued or running but have not been
-    /// updated since the given cutoff. Used by housekeeping to fail operations
+    /// updated since the given cutoff. Used by housekeeping to cancel operations
     /// which are stuck (e.g. because their agent died). Includes the tasks so
-    /// they can be failed together with the operation.
+    /// they can be cancelled together with the operation.
     /// </summary>
     public sealed class FindTimedOut : Specification<OperationModel>
     {

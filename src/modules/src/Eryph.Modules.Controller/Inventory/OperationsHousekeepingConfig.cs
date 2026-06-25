@@ -11,7 +11,7 @@ internal class OperationsHousekeepingConfig
 
     /// <summary>
     /// Operations which are still queued or running but have not been updated
-    /// for longer than this are marked as failed.
+    /// for longer than this are cancelled.
     /// </summary>
     public TimeSpan RunningTimeout { get; init; } = TimeSpan.FromDays(1);
 }

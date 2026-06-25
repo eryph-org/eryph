@@ -38,7 +38,7 @@ public class OperationModel
     public DateTimeOffset? StartedAt { get; set; }
 
     /// <summary>
-    /// When the operation reached a terminal state (completed or failed).
+    /// When the operation reached a terminal state (completed, failed or cancelled).
     /// </summary>
     public DateTimeOffset? EndedAt { get; set; }
 

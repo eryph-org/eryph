@@ -48,7 +48,7 @@ public class OperationCleanupJobTests(ITestOutputHelper outputHelper)
             LastUpdated = now.AddDays(-40),
         });
 
-        // Still running but stale past the timeout: must be failed (not deleted).
+        // Still running but stale past the timeout: must be cancelled (not deleted).
         await stateStore.For<OperationModel>().AddAsync(new OperationModel
         {
             Id = TimedOutOpId,
@@ -90,7 +90,7 @@ public class OperationCleanupJobTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task Execute_deletes_expired_and_fails_timed_out_operations()
+    public async Task Execute_deletes_expired_and_cancels_timed_out_operations()
     {
         var job = new OperationCleanupJob(_container);
         await job.Execute(null!);
