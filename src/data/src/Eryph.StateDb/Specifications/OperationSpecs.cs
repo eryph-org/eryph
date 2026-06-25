@@ -88,6 +88,29 @@ public static class OperationSpecs
         }
     }
 
+    /// <summary>
+    /// Finds an operation that the caller is allowed to cancel: the operation's
+    /// requester, an owner of all the operation's projects, or a super admin.
+    /// </summary>
+    public sealed class GetByIdForCancellation
+        : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
+    {
+        public GetByIdForCancellation(
+            Guid id, AuthContext authContext, string requesterId, IEnumerable<Guid> ownerRoles)
+        {
+            Query.Where(x => x.Id == id && x.TenantId == authContext.TenantId);
+
+            if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
+                Query.Where(x =>
+                    // The caller requested the operation themselves...
+                    x.RequestedBy == requesterId
+                    // ...or is an owner of every project the operation touches.
+                    || (x.Projects.Any() && x.Projects.All(projectRef =>
+                        projectRef.Project.ProjectRoles.Any(y =>
+                            authContext.Identities.Contains(y.IdentityId) && ownerRoles.Contains(y.RoleId)))));
+        }
+    }
+
     public sealed class GetById : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
     {
         public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles, string? expanded,

@@ -180,6 +180,9 @@ public class ControllerModule
                 x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                 x.SetNumberOfWorkers(5);
                 x.EnableSimpleInjectorUnitOfWork();
+                x.EnableOperationCancellation(
+                    container.GetInstance<WorkflowOptions>(),
+                    container.GetInstance<ITaskCancellationRegistry>());
             })
             .Timeouts(t => container.GetInstance<IRebusConfigurer<ITimeoutManager>>().Configure(t))
             .Sagas(s =>

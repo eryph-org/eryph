@@ -106,15 +106,15 @@ public class OperationCleanupJobTests(ITestOutputHelper outputHelper)
         fresh!.Status.Should().Be(OperationStatus.Running);
         fresh.EndedAt.Should().BeNull();
 
-        // The timed out operation has been failed.
+        // The timed out operation has been cancelled.
         var timedOut = await stateStore.For<OperationModel>().GetByIdAsync(TimedOutOpId);
-        timedOut!.Status.Should().Be(OperationStatus.Failed);
+        timedOut!.Status.Should().Be(OperationStatus.Cancelled);
         timedOut.StatusMessage.Should().Be("Operation timed out.");
         timedOut.EndedAt.Should().NotBeNull();
 
-        // Its running task has been failed as well...
+        // Its running task has been cancelled as well...
         var runningTask = await stateStore.For<OperationTaskModel>().GetByIdAsync(RunningTaskId);
-        runningTask!.Status.Should().Be(OperationTaskStatus.Failed);
+        runningTask!.Status.Should().Be(OperationTaskStatus.Cancelled);
         runningTask.EndedAt.Should().NotBeNull();
 
         // ...but its already completed task is left as it was.

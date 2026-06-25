@@ -11,5 +11,6 @@ public class StartBusModuleHandler(IBus bus) : IStartupHandler
     public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         await bus.Advanced.Topics.Subscribe($"broadcast_{QueueNames.Network}");
+        await bus.Advanced.Topics.Subscribe(QueueNames.OperationCancellation);
     }
 }

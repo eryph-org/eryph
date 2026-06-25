@@ -4,6 +4,7 @@ using Dbosoft.OVN.Nodes;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Components;
@@ -75,6 +76,9 @@ public class NetworkModule
                 x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                 x.SetNumberOfWorkers(5);
                 x.EnableSynchronousRequestReply();
+                x.EnableOperationCancellation(
+                    container.GetInstance<WorkflowOptions>(),
+                    container.GetInstance<ITaskCancellationRegistry>());
             })
             .Subscriptions(s => container.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
             .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))

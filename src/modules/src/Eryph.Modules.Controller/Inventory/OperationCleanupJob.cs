@@ -11,7 +11,7 @@ using SimpleInjector.Lifestyles;
 namespace Eryph.Modules.Controller.Inventory;
 
 /// <summary>
-/// Housekeeping for operations: fails operations which are stuck (queued or
+/// Housekeeping for operations: cancels operations which are stuck (queued or
 /// running past a timeout) and deletes operations which are older than the
 /// configured retention age.
 /// </summary>
@@ -26,7 +26,7 @@ internal class OperationCleanupJob(Container container) : IJob
     {
         try
         {
-            await FailTimedOutOperations();
+            await CancelTimedOutOperations();
             await DeleteExpiredOperations();
         }
         catch (Exception ex)
@@ -35,11 +35,11 @@ internal class OperationCleanupJob(Container container) : IJob
         }
     }
 
-    private async Task FailTimedOutOperations()
+    private async Task CancelTimedOutOperations()
     {
         var now = DateTimeOffset.UtcNow;
         var cutoff = now - _config.RunningTimeout;
-        _logger.LogDebug("Failing operations which are still running but were not updated since {Cutoff:O}...", cutoff);
+        _logger.LogDebug("Cancelling operations which are still running but were not updated since {Cutoff:O}...", cutoff);
 
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var stateStore = container.GetInstance<IStateStore>();
@@ -49,20 +49,21 @@ internal class OperationCleanupJob(Container container) : IJob
         if (operations.Count == 0)
             return;
 
-        _logger.LogInformation("Failing {Count} timed out operations.", operations.Count);
+        _logger.LogInformation("Cancelling {Count} timed out operations.", operations.Count);
         foreach (var operation in operations)
         {
-            operation.Status = OperationStatus.Failed;
+            operation.Status = OperationStatus.Cancelled;
             operation.StatusMessage = "Operation timed out.";
             operation.EndedAt = now;
             operation.LastUpdated = now;
 
             foreach (var task in operation.Tasks)
             {
-                if (task.Status is OperationTaskStatus.Completed or OperationTaskStatus.Failed)
+                if (task.Status is OperationTaskStatus.Completed or OperationTaskStatus.Failed
+                    or OperationTaskStatus.Cancelled)
                     continue;
 
-                task.Status = OperationTaskStatus.Failed;
+                task.Status = OperationTaskStatus.Cancelled;
                 task.EndedAt = now;
                 task.LastUpdated = now;
             }

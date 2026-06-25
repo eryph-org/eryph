@@ -49,7 +49,7 @@ public class GeneticsRequestWatcherServiceTests
         provider.RegisterGene(Gene2);
         container.RegisterInstance<IGeneProvider>(provider);
 
-        var registry = new GeneRequestRegistry(container, NullLogger.Instance);
+        var registry = new GeneRequestRegistry(container, new TaskCancellationRegistry(), NullLogger.Instance);
         var service = new GeneticsRequestWatcherService(container, registry, NullLogger.Instance);
 
         await service.StartAsync(CancellationToken.None);
@@ -78,13 +78,77 @@ public class GeneticsRequestWatcherServiceTests
         }
     }
 
-    private static Container CreateContainer()
+    /// <summary>
+    /// Cancelling one of several tasks waiting for the same (deduplicated) download
+    /// reports just that task as cancelled and lets the shared download continue for
+    /// the others; cancelling the last waiter stops the download.
+    /// </summary>
+    [Fact]
+    public async Task Cancelling_tasks_reports_them_and_stops_the_download_when_none_remain()
+    {
+        var cancelledTaskIds = new ConcurrentDictionary<Guid, TaskCompletionSource>();
+        var taskMessaging = new Mock<ITaskMessaging>();
+        taskMessaging
+            .Setup(m => m.CancelTask(It.IsAny<IOperationTaskMessage>(), It.IsAny<IDictionary<string, string>?>()))
+            .Returns((IOperationTaskMessage message, IDictionary<string, string>? _) =>
+            {
+                cancelledTaskIds.GetOrAdd(message.TaskId, _ => new TaskCompletionSource()).TrySetResult();
+                return Task.CompletedTask;
+            });
+
+        await using var container = CreateContainer(taskMessaging.Object);
+        var provider = new CancellableGeneProvider();
+        container.RegisterInstance<IGeneProvider>(provider);
+
+        var cancellationRegistry = new TaskCancellationRegistry();
+        var registry = new GeneRequestRegistry(container, cancellationRegistry, NullLogger.Instance);
+        var service = new GeneticsRequestWatcherService(container, registry, NullLogger.Instance);
+
+        var task1 = CreateTask(Gene1, GeneHash1);
+        var task2 = CreateTask(Gene1, GeneHash1);
+
+        await service.StartAsync(CancellationToken.None);
+        try
+        {
+            // Both tasks wait for the same gene -> a single (deduplicated) download.
+            await registry.EnqueueGeneRequest(task1, CancellationToken.None);
+            await registry.EnqueueGeneRequest(task2, CancellationToken.None);
+            (await Task.WhenAny(provider.Started, Task.Delay(TimeSpan.FromSeconds(10))))
+                .Should().BeSameAs(provider.Started, "the shared download should start");
+
+            // Cancel the first task: it must be reported as cancelled, but the download
+            // continues because the second task still wants the gene.
+            cancellationRegistry.Cancel(task1.OperationId);
+            await WaitFor(cancelledTaskIds, task1.TaskId);
+            provider.Cancelled.IsCompleted.Should().BeFalse("the download is still wanted by the second task");
+
+            // Cancel the second task: now nobody wants the gene, so the download stops.
+            cancellationRegistry.Cancel(task2.OperationId);
+            await WaitFor(cancelledTaskIds, task2.TaskId);
+            (await Task.WhenAny(provider.Cancelled, Task.Delay(TimeSpan.FromSeconds(10))))
+                .Should().BeSameAs(provider.Cancelled, "the download should be cancelled once no task wants it");
+        }
+        finally
+        {
+            provider.Release();
+            await service.StopAsync(CancellationToken.None);
+        }
+    }
+
+    private static async Task WaitFor(ConcurrentDictionary<Guid, TaskCompletionSource> signals, Guid taskId)
+    {
+        var signal = signals.GetOrAdd(taskId, _ => new TaskCompletionSource()).Task;
+        (await Task.WhenAny(signal, Task.Delay(TimeSpan.FromSeconds(10))))
+            .Should().BeSameAs(signal, $"task {taskId} should have been reported as cancelled");
+    }
+
+    private static Container CreateContainer(ITaskMessaging? taskMessaging = null)
     {
         var container = new Container();
         container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
         // The registry resolves ITaskMessaging from a scope to report progress
         // and completion. A loose mock returns completed tasks for these calls.
-        container.RegisterInstance(new Mock<ITaskMessaging>().Object);
+        container.RegisterInstance(taskMessaging ?? new Mock<ITaskMessaging>().Object);
         return container;
     }
 
@@ -164,5 +228,55 @@ public class GeneticsRequestWatcherServiceTests
                 if (Interlocked.CompareExchange(ref _maxConcurrency, current, observed) == observed)
                     return;
         }
+    }
+
+    /// <summary>
+    /// A fake gene provider whose download reports progress in a loop (driving the
+    /// registry's cancellation pruning) and observes its cancellation token, so the
+    /// test can assert that the download is stopped when it is cancelled.
+    /// </summary>
+    private sealed class CancellableGeneProvider : IGeneProvider
+    {
+        private readonly TaskCompletionSource _started = new();
+        private readonly TaskCompletionSource _cancelled = new();
+        private readonly TaskCompletionSource _release = new();
+
+        public Task Started => _started.Task;
+        public Task Cancelled => _cancelled.Task;
+
+        public void Release() => _release.TrySetResult();
+
+        public Aff<CancelRt, PrepareGeneResponse> ProvideGene(
+            UniqueGeneIdentifier uniqueGeneId,
+            GeneHash geneHash,
+            Func<string, int, Task> reportProgress) =>
+            Aff<CancelRt, PrepareGeneResponse>(async rt =>
+            {
+                _started.TrySetResult();
+                try
+                {
+                    while (true)
+                    {
+                        rt.CancellationToken.ThrowIfCancellationRequested();
+                        // Reporting progress runs the registry's pruning of cancelled tasks.
+                        await reportProgress("downloading", 0).ConfigureAwait(false);
+                        await Task.WhenAny(_release.Task, Task.Delay(25, rt.CancellationToken)).ConfigureAwait(false);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    _cancelled.TrySetResult();
+                    throw;
+                }
+            });
+
+        public Aff<CancelRt, string> GetGeneContent(
+            UniqueGeneIdentifier uniqueGeneId,
+            GeneHash geneHash) =>
+            throw new NotSupportedException();
+
+        public Aff<CancelRt, GenesetTagManifestData> GetGeneSetManifest(
+            GeneSetIdentifier geneSetId) =>
+            throw new NotSupportedException();
     }
 }

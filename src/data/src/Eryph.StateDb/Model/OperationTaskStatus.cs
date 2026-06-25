@@ -9,4 +9,5 @@ public enum OperationTaskStatus
     Running,
     Failed,
     Completed,
+    Cancelled,
 }

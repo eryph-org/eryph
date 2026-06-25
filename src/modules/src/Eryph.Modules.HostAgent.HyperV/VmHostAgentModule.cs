@@ -11,6 +11,7 @@ using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.GuestServices.HvDataExchange.Host;
@@ -314,6 +315,9 @@ public class VmHostAgentModule : WebModule
                 x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                 x.SetNumberOfWorkers(5);
                 x.EnableSynchronousRequestReply();
+                x.EnableOperationCancellation(
+                    container.GetInstance<WorkflowOptions>(),
+                    container.GetInstance<ITaskCancellationRegistry>());
             })
             .Subscriptions(s => container.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
             .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
