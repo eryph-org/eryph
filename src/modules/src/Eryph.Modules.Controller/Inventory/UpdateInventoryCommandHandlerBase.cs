@@ -461,7 +461,11 @@ internal class UpdateInventoryCommandHandlerBase
                 project.Id,
                 diskInfo.DataStore ?? "",
                 diskInfo.Environment ?? "",
-                diskInfo.StorageIdentifier ?? "",
+                // Gene-pool disks have no storage identifier and are persisted with
+                // StorageIdentifier == null. Pass the nullable value through (instead of
+                // coalescing to "") so EF emits "IS NULL" and matches the existing row;
+                // otherwise every inventory run fails the lookup and inserts a duplicate.
+                diskInfo.StorageIdentifier,
                 diskInfo.Name ?? "",
                 diskInfo.DiskIdentifier));
 
