@@ -16,7 +16,12 @@ public class OperationTaskModel
 
     public OperationTaskStatus Status { get; set; }
 
-    public string? AgentName { get; set; }
+    /// <summary>
+    /// The queue the task command was dispatched to (e.g. an agent's input queue).
+    /// Null until the task has been routed. Used to deliver cancellation requests
+    /// directly to the host running the task instead of broadcasting.
+    /// </summary>
+    public string? RoutedTo { get; set; }
 
     public string? Name { get; set; }
 

@@ -572,9 +572,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("AgentName")
-                        .HasColumnType("longtext");
-
                     b.Property<DateTimeOffset>("Created")
                         .HasColumnType("datetime(6)");
 
@@ -608,6 +605,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<int?>("ReferenceType")
                         .HasColumnType("int");
+
+                    b.Property<string>("RoutedTo")
+                        .HasColumnType("longtext");
 
                     b.Property<DateTimeOffset?>("StartedAt")
                         .HasColumnType("datetime(6)");
