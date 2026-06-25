@@ -12,7 +12,7 @@ public static class VirtualDiskSpecs
     public sealed class GetByLocation : Specification<VirtualDisk>
     {
         public GetByLocation(Guid projectId, string dataStore, string environment,
-            string storageIdentifier, string name, Guid diskIdentifier)
+            string? storageIdentifier, string name, Guid diskIdentifier)
         {
             Query.Where(x => x.Project.Id == projectId);
             Query.Where(x => x.DataStore == dataStore &&
