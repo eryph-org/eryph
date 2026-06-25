@@ -37,6 +37,25 @@ public class ArchitectureTests
     }
 
     [Theory]
+    // Concrete host hyperv/amd64: exact and wildcard requests are satisfied.
+    [InlineData("hyperv/amd64", "hyperv/amd64", true)]
+    [InlineData("hyperv/any", "hyperv/amd64", true)]
+    [InlineData("any", "hyperv/amd64", true)]
+    // Mismatched hypervisor or processor cannot be placed on the host.
+    [InlineData("azure/amd64", "hyperv/amd64", false)]
+    [InlineData("kvm/amd64", "hyperv/amd64", false)]
+    [InlineData("azure/any", "hyperv/amd64", false)]
+    public void IsSatisfiedBy_ReturnsCorrectResult(
+        string architecture,
+        string hostArchitecture,
+        bool expected)
+    {
+        Architecture.New(architecture)
+            .IsSatisfiedBy(Architecture.New(hostArchitecture))
+            .Should().Be(expected);
+    }
+
+    [Theory]
     [InlineData(null!, "The value cannot be null.")]
     [InlineData("", "The architecture cannot be empty.")]
     [InlineData("a", "The architecture is invalid.")]

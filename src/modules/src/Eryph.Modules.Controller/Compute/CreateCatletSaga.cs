@@ -12,6 +12,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using LanguageExt;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using static LanguageExt.Prelude;
@@ -22,6 +23,7 @@ namespace Eryph.Modules.Controller.Compute;
 internal class CreateCatletSaga(
     IStorageIdentifierGenerator storageIdentifierGenerator,
     IStateStore stateStore,
+    IPlacementCalculator placementCalculator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>,
@@ -95,10 +97,19 @@ internal class CreateCatletSaga(
     {
         Data.Data.State = CreateCatletSagaState.Initiated;
         Data.Data.TenantId = message.TenantId;
-        Data.Data.AgentName = Environment.MachineName;
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
         var config = message.Config ?? throw new InvalidOperationException("Config from CreateCatletCommand must not be null.");
+
+        var placement = placementCalculator.CalculateVMPlacement(config, Data.Data.Architecture);
+        if (placement.IsLeft)
+        {
+            await Fail(placement.LeftToSeq().Head.Message);
+            return;
+        }
+
+        Data.Data.AgentName = placement.RightToSeq().Head;
+
         Data.Data.ProjectName = Optional(config.Project).Filter(notEmpty).Match(
             n => ProjectName.New(n),
             () => ProjectName.New(EryphConstants.DefaultProjectName));

@@ -34,6 +34,15 @@ public class Architecture : EryphName<Architecture>
 
     public bool IsAny => Value.Equals("any", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Whether a catlet of this architecture can be deployed on a host that has
+    /// the given <paramref name="hostArchitecture"/>. A wildcard (<c>any</c>)
+    /// hypervisor or processor part matches the host's concrete part.
+    /// </summary>
+    public bool IsSatisfiedBy(Architecture hostArchitecture) =>
+        (Hypervisor.IsAny || Hypervisor == hostArchitecture.Hypervisor)
+        && (ProcessorArchitecture.IsAny || ProcessorArchitecture == hostArchitecture.ProcessorArchitecture);
+
     private static string Normalize(string value) =>
         string.Equals(value, "any/any", StringComparison.OrdinalIgnoreCase)
             ? "any"

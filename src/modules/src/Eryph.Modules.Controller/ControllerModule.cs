@@ -132,11 +132,10 @@ public class ControllerModule
         container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
         container.RegisterSingleton<IStorageIdentifierGenerator, StorageIdentifierGenerator>();
 
-        // Placement and storage-agent location resolve through the component registry
-        // (single instance shared across both interfaces).
-        var agentLocator = Lifestyle.Singleton.CreateRegistration<ComponentRegistryAgentLocator>(container);
-        container.AddRegistration(typeof(IPlacementCalculator), agentLocator);
-        container.AddRegistration(typeof(IStorageManagementAgentLocator), agentLocator);
+        // Storage-agent location resolves through the component registry. VM placement
+        // (IPlacementCalculator) is registered by the runtime host, which knows how the
+        // deployment selects hosts and which architectures they can run.
+        container.RegisterSingleton<IStorageManagementAgentLocator, ComponentRegistryAgentLocator>();
 
         // Component registration + configuration distribution (controller is the authority).
         container.Register<IComponentRegistryService, ComponentRegistryService>(Lifestyle.Scoped);
