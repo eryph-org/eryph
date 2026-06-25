@@ -8,6 +8,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
+    <!-- EF Core 10.0.x still pins SQLitePCLRaw 2.1.11, whose native e_sqlite3 is
+         vulnerable (CVE-2025-6965, GHSA-2m69-gcr7-jv3q). Override the bundle to the
+         patched 3.0.x line (ships SQLite >= 3.50.2). Remove once EF Core bumps it. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
   </ItemGroup>
 
   <ItemGroup>
