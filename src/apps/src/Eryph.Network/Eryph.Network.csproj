@@ -5,6 +5,7 @@
          artifact (cross-platform OVN system environment); the net10.0-windows build runs on
          a Windows dev/host box using the Windows OVN environment, exactly like eryph-zero. -->
     <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
     <!-- Windows OVN runtime (WindowsSystemEnvironment). The cross-platform Dbosoft.OVN.Core
