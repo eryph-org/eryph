@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using Eryph.ConfigModel;
+using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 using static LanguageExt.Prelude;
@@ -12,7 +14,9 @@ public class ProcessorArchitecture : EryphName<ProcessorArchitecture>
     {
         ValidOrThrow(
             from _ in guard(
-                string.Equals(value, "amd64", StringComparison.OrdinalIgnoreCase)
+                // The known processor types are sourced from the gene pool model so that
+                // eryph stays in sync with the gene pool instead of duplicating the list.
+                ProcessorTypes.KnownNames.Contains(value, StringComparer.OrdinalIgnoreCase)
                 || string.Equals(value, "any", StringComparison.OrdinalIgnoreCase),
                 Error.New("The processor architecture is invalid.")
             ).ToValidation()

@@ -24,6 +24,9 @@ public class ArchitectureTests
     [InlineData("HYPERV/ANY", "hyperv/any")]
     [InlineData("hyperv/amd64", "hyperv/amd64")]
     [InlineData("HYPERV/AMD64", "hyperv/amd64")]
+    [InlineData("azure/amd64", "azure/amd64")]
+    [InlineData("AZURE/AMD64", "azure/amd64")]
+    [InlineData("azure/any", "azure/any")]
     public void NewValidation_ValidData_ReturnsResult(
         string hypervisor,
         string expected)
