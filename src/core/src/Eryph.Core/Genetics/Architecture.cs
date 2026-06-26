@@ -58,15 +58,19 @@ public class Architecture : EryphName<Architecture>
             if (IsAny)
                 return Seq1(this);
 
-            var hypervisors = Hypervisor.Cons(Hypervisor.BaseHypervisors);
+            // Hypervisors from most to least specific: the requested one, the base
+            // hypervisors it derives from, then the 'any' wildcard.
+            var hypervisors = Hypervisor.Cons(Hypervisor.BaseHypervisors)
+                .Add(Hypervisor.New("any"));
+            // Processors: the requested one then the 'any' wildcard (or just 'any').
             var processors = ProcessorArchitecture.IsAny
                 ? Seq1(ProcessorArchitecture)
                 : Seq(ProcessorArchitecture, ProcessorArchitecture.New("any"));
 
-            return (from hypervisor in hypervisors
-                    from processor in processors
-                    select new Architecture(hypervisor, processor))
-                .Add(new Architecture("any"));
+            return toSeq(
+                from hypervisor in hypervisors
+                from processor in processors
+                select new Architecture(hypervisor, processor));
         }
     }
 

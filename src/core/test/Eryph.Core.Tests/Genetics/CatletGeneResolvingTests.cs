@@ -53,7 +53,9 @@ public class CatletGeneResolvingTests
         (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:kvm-food[kvm/amd64]"),
             GeneHash.New(ComputeHash("kvm-food-kvm-amd64"))),
         (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdh[azure/amd64]"),
-            GeneHash.New(ComputeHash("sdh-azure-amd64"))));
+            GeneHash.New(ComputeHash("sdh-azure-amd64"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdi[any/amd64]"),
+            GeneHash.New(ComputeHash("sdi-any-amd64"))));
 
 
     [Theory]
@@ -110,6 +112,8 @@ public class CatletGeneResolvingTests
     [InlineData(GeneType.Volume, "sda", "hyperv/amd64", "sda-hyperv-amd64")]
     [InlineData(GeneType.Volume, "sdb", "hyperv/any", "sdb-hyperv-any")]
     [InlineData(GeneType.Volume, "sdc", "any", "sdc-any")]
+    // A wildcard-hypervisor gene with a matching processor is usable as a fallback.
+    [InlineData(GeneType.Volume, "sdi", "any/amd64", "sdi-any-amd64")]
     public void ResolveGenes_UsableGeneExists_ReturnsArchitecture(
         GeneType geneType, string geneName, string expectedArchitecture, string expectedContent)
     {
