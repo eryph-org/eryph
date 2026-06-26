@@ -1,9 +1,28 @@
-﻿using Eryph.Core.Genetics;
+﻿using System.Linq;
+using Eryph.Core.Genetics;
 
 namespace Eryph.Core.Tests.Genetics;
 
 public class ArchitectureTests
 {
+    [Theory]
+    [InlineData("any", "any")]
+    [InlineData("hyperv/amd64", "hyperv/amd64, hyperv/any, any")]
+    [InlineData("kvm/amd64", "kvm/amd64, kvm/any, any")]
+    [InlineData("hyperv/any", "hyperv/any, any")]
+    // A derived hypervisor falls back to its base after its own architectures.
+    [InlineData("azure/amd64", "azure/amd64, azure/any, hyperv/amd64, hyperv/any, any")]
+    [InlineData("ec2/amd64", "ec2/amd64, ec2/any, kvm/amd64, kvm/any, any")]
+    [InlineData("azure/any", "azure/any, hyperv/any, any")]
+    public void GeneResolutionOrder_ReturnsCandidatesInOrder(
+        string architecture,
+        string expectedOrder)
+    {
+        var order = Architecture.New(architecture).GeneResolutionOrder.Map(a => a.Value);
+
+        string.Join(", ", order).Should().Be(expectedOrder);
+    }
+
     [Theory]
     [InlineData("any", true)]
     [InlineData("hyperv/any", false)]

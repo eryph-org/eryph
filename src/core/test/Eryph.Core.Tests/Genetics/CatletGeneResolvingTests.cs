@@ -42,7 +42,18 @@ public class CatletGeneResolvingTests
         (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdd[hyperv/any]"),
             GeneHash.New(ComputeHash("sdd-hyperv-any"))),
         (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sde[hyperv/amd64]"),
-            GeneHash.New(ComputeHash("sde-hyperv-amd64"))));
+            GeneHash.New(ComputeHash("sde-hyperv-amd64"))),
+        // Genes for derived hypervisors (azure derives from hyperv, ec2 from kvm).
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdf[kvm/amd64]"),
+            GeneHash.New(ComputeHash("sdf-kvm-amd64"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdg[hyperv/amd64]"),
+            GeneHash.New(ComputeHash("sdg-hyperv-amd64"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdg[azure/amd64]"),
+            GeneHash.New(ComputeHash("sdg-azure-amd64"))),
+        (UniqueGeneIdentifier.New("fodder::gene:acme/acme-os/1.0:kvm-food[kvm/amd64]"),
+            GeneHash.New(ComputeHash("kvm-food-kvm-amd64"))),
+        (UniqueGeneIdentifier.New("volume::gene:acme/acme-os/1.0:sdh[azure/amd64]"),
+            GeneHash.New(ComputeHash("sdh-azure-amd64"))));
 
 
     [Theory]
@@ -116,6 +127,57 @@ public class CatletGeneResolvingTests
         result.Should().HaveCount(1);
         result.Should().ContainKey(expectedUniqueId)
             .WhoseValue.Should().Be(expectedGeneHash);
+    }
+
+    [Theory]
+    // A derived hypervisor falls back to a gene built for its base hypervisor when
+    // no gene for the derived hypervisor itself exists.
+    [InlineData(GeneType.Volume, "sde", "azure/amd64", "hyperv/amd64", "sde-hyperv-amd64")]
+    [InlineData(GeneType.Volume, "sdf", "ec2/amd64", "kvm/amd64", "sdf-kvm-amd64")]
+    [InlineData(GeneType.Fodder, "kvm-food", "ec2/amd64", "kvm/amd64", "kvm-food-kvm-amd64")]
+    // An exact gene for the derived hypervisor wins over the base-hypervisor gene.
+    [InlineData(GeneType.Volume, "sdg", "azure/amd64", "azure/amd64", "sdg-azure-amd64")]
+    public void ResolveGenes_DerivedHypervisor_ResolvesToBestGene(
+        GeneType geneType, string geneName, string requestedArchitecture,
+        string expectedArchitecture, string expectedContent)
+    {
+        var geneSetId = GeneSetIdentifier.New("acme/acme-os/1.0");
+        var geneId = new GeneIdentifier(geneSetId, GeneName.New(geneName));
+        var geneIdAndType = new GeneIdentifierWithType(geneType, geneId);
+
+        var expectedUniqueId = new UniqueGeneIdentifier(geneType, geneId, Architecture.New(expectedArchitecture));
+        var expectedGeneHash = GeneHash.New(ComputeHash(expectedContent));
+
+        var either = CatletGeneResolving.ResolveGenes(
+            Seq1(geneIdAndType), Architecture.New(requestedArchitecture), _genes);
+
+        var result = either.Should().BeRight().Subject.ToDictionary();
+        result.Should().HaveCount(1);
+        result.Should().ContainKey(expectedUniqueId)
+            .WhoseValue.Should().Be(expectedGeneHash);
+    }
+
+    [Theory]
+    // Compatibility is one-directional and only between a hypervisor and its base.
+    [InlineData(GeneType.Volume, "sdf", "azure/amd64")] // kvm gene, azure target
+    [InlineData(GeneType.Volume, "sde", "ec2/amd64")] // hyperv gene, ec2 target
+    [InlineData(GeneType.Volume, "sde", "kvm/amd64")] // hyperv gene, kvm target
+    [InlineData(GeneType.Volume, "sdh", "hyperv/amd64")] // azure gene, hyperv target (derived does not satisfy base)
+    public void ResolveGene_GeneIsNotCompatibleWithDerivedHypervisor_ReturnsError(
+        GeneType geneType, string geneName, string architecture)
+    {
+        var geneSetId = GeneSetIdentifier.New("acme/acme-os/1.0");
+        var geneId = new GeneIdentifier(geneSetId, GeneName.New(geneName));
+        var geneIdAndType = new GeneIdentifierWithType(geneType, geneId);
+
+        var either = CatletGeneResolving.ResolveGenes(
+            Seq1(geneIdAndType), Architecture.New(architecture), _genes);
+
+        var error = either.Should().BeLeft().Subject;
+        error.Message.Should().Be("Could not resolve some genes.");
+        error.Inner.Should().BeSome().Which.Message
+            .Should().Match(
+                $"The gene {geneType.ToString().ToLowerInvariant()}::{geneId} is not compatible with the hypervisor {Architecture.New(architecture).Hypervisor}.");
     }
 
     [Theory]

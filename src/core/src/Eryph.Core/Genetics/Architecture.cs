@@ -43,6 +43,33 @@ public class Architecture : EryphName<Architecture>
         (Hypervisor.IsAny || Hypervisor == hostArchitecture.Hypervisor)
         && (ProcessorArchitecture.IsAny || ProcessorArchitecture == hostArchitecture.ProcessorArchitecture);
 
+    /// <summary>
+    /// The concrete gene architectures that can satisfy a catlet of this
+    /// architecture, ordered by specificity to the requested architecture. The
+    /// requested architecture itself is first, so an exact gene always wins; genes
+    /// for a base hypervisor (e.g. <c>hyperv</c> for <c>azure</c>) and the
+    /// <c>any</c> wildcards follow as fallbacks. The order is derived purely from
+    /// the requested architecture - there is no built-in hypervisor preference.
+    /// </summary>
+    public Seq<Architecture> GeneResolutionOrder
+    {
+        get
+        {
+            if (IsAny)
+                return Seq1(this);
+
+            var hypervisors = Hypervisor.Cons(Hypervisor.BaseHypervisors);
+            var processors = ProcessorArchitecture.IsAny
+                ? Seq1(ProcessorArchitecture)
+                : Seq(ProcessorArchitecture, ProcessorArchitecture.New("any"));
+
+            return (from hypervisor in hypervisors
+                    from processor in processors
+                    select new Architecture(hypervisor, processor))
+                .Add(new Architecture("any"));
+        }
+    }
+
     private static string Normalize(string value) =>
         string.Equals(value, "any/any", StringComparison.OrdinalIgnoreCase)
             ? "any"
