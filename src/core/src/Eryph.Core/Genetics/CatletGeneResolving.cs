@@ -101,8 +101,7 @@ public static class CatletGeneResolving
             .Filter(i => i.GeneType == geneIdWithType.GeneType && i.Id == geneIdWithType.GeneIdentifier)
         from _2 in guard(filteredGenes.Count > 0, Error.New($"The gene {geneIdWithType} does not exist."))
         let hypervisorCompatibleGenes = filteredGenes
-            .Filter(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
-                         || g.Architecture.Hypervisor.IsAny)
+            .Filter(g => catletArchitecture.Hypervisor.AcceptsGenesFrom(g.Architecture.Hypervisor))
         from _3 in guard(
             hypervisorCompatibleGenes.Count > 0,
             Error.New(
@@ -114,10 +113,13 @@ public static class CatletGeneResolving
             processorCompatibleGenes.Count > 0,
             Error.New(
                 $"The gene {geneIdWithType} is not compatible with the processor architecture {catletArchitecture.ProcessorArchitecture}."))
-        let bestMatch = processorCompatibleGenes.Find(g => g.Architecture == catletArchitecture)
-                        | processorCompatibleGenes.Find(g => g.Architecture.Hypervisor == catletArchitecture.Hypervisor
-                                                             && g.Architecture.ProcessorArchitecture.IsAny)
-                        | processorCompatibleGenes.Find(g => g.Architecture.IsAny)
+        // Pick the gene that matches the requested architecture most closely. The
+        // order is driven solely by the requested architecture (see
+        // Architecture.GeneResolutionOrder): the exact architecture first, then a
+        // base-hypervisor gene (e.g. hyperv for azure), then the wildcards.
+        let bestMatch = catletArchitecture.GeneResolutionOrder
+            .Choose(arch => processorCompatibleGenes.Find(g => g.Architecture == arch))
+            .HeadOrNone()
         from result in bestMatch.ToValidation(
             Error.New($"BUG! Could not find best match for gene '{geneIdWithType}'."))
         select result;
