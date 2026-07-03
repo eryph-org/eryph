@@ -62,14 +62,16 @@ public class MapperProfileTests
                 v.Type.Should().Be(VariableType.Number);
                 v.Value.Should().Be("42");
                 v.Required.Should().BeFalse();
-                v.Secret.Should().BeFalse();
+                v.Secret.Should().BeNull();
             },
+            // Only a secret flag was set. Unset properties are passed through as
+            // null instead of being defaulted - the API mirrors the built config.
             v =>
             {
                 v.Name.Should().Be("password");
-                v.Type.Should().Be(VariableType.String);
+                v.Type.Should().BeNull();
                 v.Secret.Should().BeTrue();
-                v.Required.Should().BeTrue();
+                v.Required.Should().BeNull();
                 v.Value.Should().BeNull();
             });
     }

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.Json;
 using AutoMapper;
 using Eryph.ConfigModel.Json;
-using Eryph.ConfigModel.Variables;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
@@ -165,18 +164,19 @@ public class MapperProfile : Profile
     // Projects the variable definitions out of a variant's built config. The variables
     // were already resolved (bred from the parent chain) when the spec was built, so they
     // are surfaced as a typed field instead of forcing clients to re-resolve or to parse
-    // the built config blob.
+    // the built config blob. The values are passed through as-is (nullable) without
+    // inventing defaults - see CatletVariable.
     private static IReadOnlyList<CatletVariable> MapVariables(string builtConfig)
     {
         var config = CatletConfigJsonSerializer.Deserialize(builtConfig);
         return (config.Variables ?? [])
             .Select(v => new CatletVariable
             {
-                Name = v.Name ?? "",
-                Type = v.Type ?? VariableType.String,
+                Name = v.Name,
+                Type = v.Type,
                 Value = v.Value,
-                Secret = v.Secret ?? false,
-                Required = v.Required ?? true,
+                Secret = v.Secret,
+                Required = v.Required,
             })
             .ToList();
     }
