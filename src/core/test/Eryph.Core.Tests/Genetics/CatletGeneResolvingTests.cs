@@ -167,7 +167,7 @@ public class CatletGeneResolvingTests
     [InlineData(GeneType.Volume, "sde", "ec2/amd64")] // hyperv gene, ec2 target
     [InlineData(GeneType.Volume, "sde", "kvm/amd64")] // hyperv gene, kvm target
     [InlineData(GeneType.Volume, "sdh", "hyperv/amd64")] // azure gene, hyperv target (derived does not satisfy base)
-    public void ResolveGene_GeneIsNotCompatibleWithDerivedHypervisor_ReturnsError(
+    public void ResolveGenes_GeneIsNotCompatibleWithHypervisorLineage_ReturnsError(
         GeneType geneType, string geneName, string architecture)
     {
         var geneSetId = GeneSetIdentifier.New("acme/acme-os/1.0");
