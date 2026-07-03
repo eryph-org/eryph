@@ -9,5 +9,12 @@ public class CatletSpecificationVersionVariant
 
     public required JsonElement BuiltConfig { get; set; }
 
+    /// <summary>
+    /// The variable definitions of the built variant, resolved during the spec
+    /// build (i.e. bred from the parent chain). Exposed so deployment can collect
+    /// variable values without re-resolving the config.
+    /// </summary>
+    public required IReadOnlyList<CatletVariable> Variables { get; set; }
+
     public required IReadOnlyList<CatletSpecificationVersionVariantGene>? PinnedGenes { get; set; }
 }
