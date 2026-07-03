@@ -1,7 +1,9 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using AutoMapper;
+using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
@@ -148,7 +150,8 @@ public class MapperProfile : Profile
                     Content = s.Configuration,
                 }));
         CreateMap<StateDb.Model.CatletSpecificationVersionVariant, CatletSpecificationVersionVariant>()
-            .ForMember(v => v.BuiltConfig, o => o.MapFrom(s => MapToJsonElement(s.BuiltConfig)));
+            .ForMember(v => v.BuiltConfig, o => o.MapFrom(s => MapToJsonElement(s.BuiltConfig)))
+            .ForMember(v => v.Variables, o => o.MapFrom(s => MapVariables(s.BuiltConfig)));
         CreateMap<StateDb.Model.CatletSpecificationVersionVariantGene, CatletSpecificationVersionVariantGene>();
     }
 
@@ -156,5 +159,25 @@ public class MapperProfile : Profile
     {
         using var jsonDocument = JsonDocument.Parse(json);
         return jsonDocument.RootElement.Clone();
+    }
+
+    // Projects the variable definitions out of a variant's built config. The variables
+    // were already resolved (bred from the parent chain) when the spec was built, so they
+    // are surfaced as a typed field instead of forcing clients to re-resolve or to parse
+    // the built config blob. The values are passed through as-is (nullable) without
+    // inventing defaults - see CatletVariable.
+    private static IReadOnlyList<CatletVariable> MapVariables(string builtConfig)
+    {
+        var config = CatletConfigJsonSerializer.Deserialize(builtConfig);
+        return (config.Variables ?? [])
+            .Select(v => new CatletVariable
+            {
+                Name = v.Name,
+                Type = v.Type,
+                Value = v.Value,
+                Secret = v.Secret,
+                Required = v.Required,
+            })
+            .ToList();
     }
 }
