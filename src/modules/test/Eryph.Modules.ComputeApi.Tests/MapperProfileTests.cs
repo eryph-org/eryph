@@ -35,7 +35,7 @@ public class MapperProfileTests
                     Value = "42",
                     Required = false,
                 },
-                // Only a secret flag set: type and required must fall back to defaults.
+                // Only a secret flag is set; the other properties stay unset.
                 new VariableConfig
                 {
                     Name = "password",
