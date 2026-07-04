@@ -32,9 +32,16 @@ internal class ValidateCatletSpecificationSaga(
         {
             var architecture = response.Architecture ?? throw new InvalidOperationException(
                 "The build response is missing the architecture.");
-            Data.Data.PendingArchitectures = toHashSet(Data.Data.PendingArchitectures)
+            // PendingArchitectures can deserialize as null for a saga instance persisted before it
+            // was set (guard as UpdateCatletSpecificationSaga does).
+            Data.Data.PendingArchitectures = toHashSet(Data.Data.PendingArchitectures ?? new HashSet<Architecture>())
                 .Remove(architecture)
                 .ToHashSet();
+
+            // Fall back to the first built architecture for a saga instance started before the
+            // primary was chosen up front (backward compatibility), so the config/genes are always
+            // captured for one architecture.
+            Data.Data.PrimaryArchitecture ??= architecture;
 
             // Return the built config/genes of the deterministic primary architecture only, so the
             // response is stable regardless of build completion order. BuiltConfig is required by
@@ -51,6 +58,14 @@ internal class ValidateCatletSpecificationSaga(
             // Wait until every requested architecture has built successfully.
             if (Data.Data.PendingArchitectures.Count > 0)
                 return;
+
+            // The primary architecture's result must have been captured; guard rather than complete
+            // a "valid" response with a null payload that the result mapping would then reject.
+            if (Data.Data.BuiltConfig is null || Data.Data.ResolvedGenes is null)
+            {
+                await Fail("The specification build did not produce a configuration.");
+                return;
+            }
 
             Data.Data.State = ValidateCatletSpecificationSagaState.SpecificationBuilt;
 
