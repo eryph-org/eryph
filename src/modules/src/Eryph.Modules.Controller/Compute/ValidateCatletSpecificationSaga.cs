@@ -36,10 +36,17 @@ internal class ValidateCatletSpecificationSaga(
                 .Remove(architecture)
                 .ToHashSet();
 
-            // Validation only needs to know the spec builds; keep the last built config/genes as a
-            // representative result for the response.
-            Data.Data.BuiltConfig = response.BuiltConfig;
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
+            // Return the built config/genes of the deterministic primary architecture only, so the
+            // response is stable regardless of build completion order. BuiltConfig is required by
+            // the API result mapping, so treat it as required here (matching create/update).
+            if (Data.Data.PrimaryArchitecture is { } primaryArchitecture
+                && architecture.Equals(primaryArchitecture))
+            {
+                Data.Data.BuiltConfig = response.BuiltConfig ?? throw new InvalidOperationException(
+                    "BuiltConfig is required");
+                Data.Data.ResolvedGenes = response.ResolvedGenes ?? throw new InvalidOperationException(
+                    "ResolvedGenes is required");
+            }
 
             // Wait until every requested architecture has built successfully.
             if (Data.Data.PendingArchitectures.Count > 0)
@@ -64,10 +71,17 @@ internal class ValidateCatletSpecificationSaga(
         // Validate every requested architecture (falling back to the default when none was given),
         // matching what create/update actually build — so an architecture-specific build failure is
         // caught by validation instead of surfacing only later on save.
+        var defaultArchitecture = Architecture.New(EryphConstants.DefaultArchitecture);
         var architectures = message.Architectures is { Count: > 0 }
             ? message.Architectures
-            : new HashSet<Architecture> { Architecture.New(EryphConstants.DefaultArchitecture) };
+            : new HashSet<Architecture> { defaultArchitecture };
         Data.Data.PendingArchitectures = architectures;
+
+        // The response can only carry one built config/genes; pick a deterministic architecture for
+        // it — the default when requested, otherwise the first by ordinal — so it is stable.
+        Data.Data.PrimaryArchitecture = architectures.Contains(defaultArchitecture)
+            ? defaultArchitecture
+            : architectures.OrderBy(a => a.Value, StringComparer.Ordinal).First();
 
         foreach (var architecture in architectures)
             await StartNewTask(new BuildCatletSpecificationCommand
