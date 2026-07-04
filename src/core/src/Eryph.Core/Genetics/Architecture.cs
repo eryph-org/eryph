@@ -59,9 +59,11 @@ public class Architecture : EryphName<Architecture>
                 return Seq1(this);
 
             // Hypervisors from most to least specific: the requested one, the base
-            // hypervisors it derives from, then the 'any' wildcard.
+            // hypervisors it derives from, then the 'any' wildcard. Distinct guards
+            // the case where the requested hypervisor is already 'any'.
             var hypervisors = Hypervisor.Cons(Hypervisor.BaseHypervisors)
-                .Add(Hypervisor.New("any"));
+                .Add(Hypervisor.New("any"))
+                .Distinct();
             // Processors: the requested one then the 'any' wildcard (or just 'any').
             var processors = ProcessorArchitecture.IsAny
                 ? Seq1(ProcessorArchitecture)

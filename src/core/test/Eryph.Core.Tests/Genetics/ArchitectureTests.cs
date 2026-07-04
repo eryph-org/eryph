@@ -9,6 +9,8 @@ public class ArchitectureTests
     [InlineData("hyperv/amd64", "hyperv/amd64, hyperv/any, any/amd64, any")]
     [InlineData("kvm/amd64", "kvm/amd64, kvm/any, any/amd64, any")]
     [InlineData("hyperv/any", "hyperv/any, any")]
+    // A wildcard hypervisor with a concrete processor must not repeat the 'any' tier.
+    [InlineData("any/amd64", "any/amd64, any")]
     // A derived hypervisor falls back to its base after its own architectures.
     [InlineData("azure/amd64", "azure/amd64, azure/any, hyperv/amd64, hyperv/any, any/amd64, any")]
     [InlineData("ec2/amd64", "ec2/amd64, ec2/any, kvm/amd64, kvm/any, any/amd64, any")]
