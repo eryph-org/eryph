@@ -23,6 +23,19 @@ internal class InventoryTimerJob(Container container) : IJob
     public async Task Execute(IJobExecutionContext context)
     {
         _logger.LogDebug("Requesting scheduled inventory of all agents...");
+
+        // The two requests are independent: a failure to resolve/route the gene-pool inventory must not
+        // suppress the host inventory broadcast (and vice versa). Broadcast the VM/disk inventory request
+        // to all host agents first — it does not depend on resolving a specific agent.
+        try
+        {
+            await _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", new InventoryRequestedEvent());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to broadcast the host inventory request");
+        }
+
         try
         {
             // In the future, the gene pool might be shared between multiple agents. Hence,
@@ -33,13 +46,10 @@ internal class InventoryTimerJob(Container container) : IJob
                 {
                     AgentName = agentName,
                 });
-
-            // Broadcast the inventory request (for virtual machines and disks) to all agents
-            await _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", new InventoryRequestedEvent());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to request scheduled inventory of all agents");
+            _logger.LogError(ex, "Failed to request gene pool inventory");
         }
     }
 }

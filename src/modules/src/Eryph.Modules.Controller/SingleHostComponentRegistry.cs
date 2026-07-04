@@ -10,7 +10,7 @@ namespace Eryph.Modules.Controller;
 /// previous hard-coded providers used — the local machine name and the single
 /// local OVN chassis — so introducing the registry seam changes no behavior.
 /// </summary>
-internal sealed class SingleHostComponentRegistry : IComponentRegistry
+public sealed class SingleHostComponentRegistry : IComponentRegistry
 {
     public Seq<HostAgentComponent> GetHostAgents() =>
         Seq1(new HostAgentComponent(
