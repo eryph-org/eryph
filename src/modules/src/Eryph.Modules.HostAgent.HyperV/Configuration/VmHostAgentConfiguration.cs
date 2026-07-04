@@ -87,6 +87,8 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
             Defaults = simplifyDefaults(normalizePaths(config.Defaults), hostSettings),
             Datastores = config.Datastores?.Select(normalizePaths).ToArray(),
             Environments = config.Environments?.Select(normalizePaths).ToArray(),
+            // Ovn carries no paths to normalize, but must be preserved or it is lost on save.
+            Ovn = config.Ovn,
         };
 
     private static VmHostAgentDefaultsConfiguration normalizePaths(
@@ -145,6 +147,9 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
             Datastores = config.Datastores,
             Defaults = applyHostDefaults(config.Defaults, hostSettings),
             Environments = config.Environments,
+            // Ovn carries no host defaults, but must be preserved or the running agent (and get→import)
+            // never sees the configured overlay transport IP.
+            Ovn = config.Ovn,
         };
 
     private static VmHostAgentDefaultsConfiguration applyHostDefaults(

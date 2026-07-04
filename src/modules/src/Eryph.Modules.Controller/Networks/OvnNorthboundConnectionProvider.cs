@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -82,41 +81,9 @@ internal class OvnNorthboundConnectionProvider(
     internal static bool IsColocated(string componentMachineName, string localHostId) =>
         string.Equals(componentMachineName, localHostId, StringComparison.OrdinalIgnoreCase);
 
-    // The advertised endpoint has the form "ssl:<host>:<port>". The host may itself contain ':'
-    // (an IPv6 literal), so the port is taken from the last ':' rather than splitting on every ':'.
-    internal static (string Host, int Port) ParseSslEndpoint(string endpoint)
-    {
-        const string prefix = "ssl:";
-        // Tolerate surrounding whitespace on the whole value (e.g. a stray trailing newline from
-        // config), but reject a missing/whitespace host, whitespace around the port, and an
-        // out-of-range port so a malformed endpoint fails here with a clear message rather than
-        // producing an OvsDbConnection that fails obscurely on connect (NumberStyles.None rejects the
-        // leading/trailing whitespace and sign that int.TryParse would otherwise accept).
-        var trimmed = (endpoint ?? "").Trim();
-        var hostPort = trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            ? trimmed[prefix.Length..]
-            : throw new InvalidOperationException(
-                $"The advertised northbound endpoint '{endpoint}' must be of the form 'ssl:host:port'.");
-        var lastColon = hostPort.LastIndexOf(':');
-        var host = lastColon > 0 ? hostPort[..lastColon] : "";
-        // An IPv6 literal must be bracketed ("ssl:[fe80::1]:6641"); a bare IPv6 host is ambiguous and
-        // OVN rejects it, so reject an unbracketed host that still contains ':' rather than passing it
-        // through to build a connection that fails obscurely.
-        var unbracketedIpv6 = host.Contains(':') && !(host.StartsWith('[') && host.EndsWith(']'));
-        if (lastColon <= 0
-            || host.Any(char.IsWhiteSpace)
-            || unbracketedIpv6
-            || !int.TryParse(hostPort[(lastColon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out var port)
-            || port is < 1 or > 65535)
-            throw new InvalidOperationException(
-                $"The advertised northbound endpoint '{endpoint}' is not of the form 'ssl:host:port' "
-                + "(an IPv6 host must be bracketed, e.g. 'ssl:[fe80::1]:6641').");
-        return (host, port);
-    }
-
     private async Task<OvsDbConnection> BuildSslConnection(string endpoint)
     {
-        var (host, port) = ParseSslEndpoint(endpoint);
+        var (host, port) = OvnRemoteEndpoints.ParseSslEndpoint(endpoint);
 
         // Resolve the store safely so an un-enrolled controller gets the actionable message below rather
         // than a raw container ActivationException.

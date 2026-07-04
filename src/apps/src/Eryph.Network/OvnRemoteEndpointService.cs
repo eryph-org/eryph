@@ -36,13 +36,18 @@ internal sealed class OvnRemoteEndpointService(
         // anyway (e.g. a crash left only the PFX), fail fast rather than running on without listeners:
         // the module still advertises the SSL endpoints, so a silent "no listeners" state would leave
         // the controller/agents dialling a dead port.
-        var pem = certificateStore.ReadClientCertificatePem();
+        // These are TLS *server* listeners, so present the server certificate (serverAuth EKU): a client
+        // (ovn-controller / the controller's ovn-nbctl) validating the peer rejects the client
+        // certificate, which carries only clientAuth. The client leaf the components present on their own
+        // outgoing connections stays the client certificate.
+        var pem = certificateStore.ReadServerCertificatePem();
         if (pem is null)
         {
             FailFast(
-                "The component certificate (PEM) is not available, so the OVN databases cannot be "
+                "The component server certificate (PEM) is not available, so the OVN databases cannot be "
                 + "exposed over SSL. Stopping so the service manager restarts the process and re-runs "
-                + "enrollment; check the component enrollment if this persists.");
+                + "enrollment; check the component enrollment (a server certificate is required) if this "
+                + "persists.");
             return;
         }
 
@@ -63,9 +68,8 @@ internal sealed class OvnRemoteEndpointService(
 
         // Listen on all interfaces (null address) so the controller and agents can dial from other
         // hosts; clients are authenticated by certificate against the component CA.
-        // The controller consumes the northbound listener today. The southbound listener is opened and
-        // advertised so the agents' ovn-controller can connect to it remotely; wiring the agents to
-        // dial it (instead of the local pipe) is a separate slice and is not consumed yet.
+        // The controller consumes the northbound listener; the agents' ovn-controller dials the
+        // southbound listener remotely over SSL (see OVNChassisService's remote-chassis path).
         var clusterPlan = new ClusterPlan()
             .SetNorthboundSsl(pem.PrivateKeyPem, pem.CertificatePem, pem.CaBundlePem)
             .AddNorthboundConnection(OvnRemoteEndpoints.NorthboundPort, true)

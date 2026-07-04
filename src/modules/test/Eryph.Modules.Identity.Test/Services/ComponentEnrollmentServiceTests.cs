@@ -88,6 +88,32 @@ public class ComponentEnrollmentServiceTests
     }
 
     [Fact]
+    public async Task Enroll_includes_the_issuing_intermediates_in_the_ca_trust_bundle()
+    {
+        // OVS/ovn-controller presents a leaf-only chain over SSL, so a relying party needs the issuing
+        // intermediates in its trust bundle to build a path to the root. The bundle must therefore
+        // carry the intermediates in addition to the root(s), not just the roots.
+        var sut = CreateService(true);
+
+        var result = await sut.EnrollAsync(new ComponentEnrollmentRequest
+        {
+            ComponentType = ComponentType.VMHostAgent,
+            Fqdn = "agent1.eryph.local",
+            PublicKey = NewPublicKey(),
+        });
+
+        var bundle = new HashSet<string>();
+        foreach (var der in result.CaTrustBundle)
+            bundle.Add(Convert.ToHexString(der));
+
+        result.IssuingChain.Should().NotBeEmpty();
+        foreach (var intermediateDer in result.IssuingChain)
+            bundle.Should().Contain(Convert.ToHexString(intermediateDer),
+                "the CA trust bundle must include the issuing intermediate so a peer presenting a "
+                + "leaf-only chain can still build a path to the root");
+    }
+
+    [Fact]
     public async Task Enroll_also_issues_a_server_certificate_when_a_server_key_is_supplied()
     {
         var sut = CreateService(true);

@@ -21,6 +21,12 @@ echo "== 1. CA + broker TLS material (CN=$BROKER_DNS) =="
 dotnet /app/provision/eryph-cluster-provision.dll provision-broker "$BROKER_DNS" "$BROKER"
 # rabbitmq.conf points cacertfile at ca.crt; the broker trust bundle is the full CA bundle.
 cp "$BROKER/ca-bundle.pem" "$BROKER/ca.crt"
+# The broker runs as uid 999, but rootless podman maps THIS provision container's root to a different
+# subuid than the broker container's 999, so `chown 999` here would not grant the broker read access —
+# only the other bit reliably does across the two userns mappings. Hence 0644 rather than 0640+chown.
+# Dev harness only: an ephemeral key on a private local volume, regenerated on each bring-up. Production
+# key material is delivered with proper per-service ownership, not provisioned by this script.
+chmod 0644 "$BROKER/server.key"
 
 echo "== 2. Root trust anchor for the component OS trust stores =="
 # The first certificate block in the bundle is the self-signed root; the broker presents its

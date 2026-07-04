@@ -354,6 +354,54 @@ public class VmHostAgentConfigurationValidationsTests
         });
     }
 
+    [Theory]
+    [InlineData("10.0.0.21")]
+    [InlineData("fe80::1")]
+    public void ValidateVmHostAgentConfig_ValidOverlayTransportIp_ReturnsSuccess(string ip)
+    {
+        var config = new VmHostAgentConfiguration
+        {
+            Ovn = new VmHostAgentOvnConfiguration { OverlayTransportIp = ip },
+        };
+
+        var result = ValidateVmHostAgentConfig(config);
+
+        result.Should().BeSuccess();
+    }
+
+    [Fact]
+    public void ValidateVmHostAgentConfig_InvalidOverlayTransportIp_ReturnsFail()
+    {
+        var config = new VmHostAgentConfiguration
+        {
+            Ovn = new VmHostAgentOvnConfiguration { OverlayTransportIp = "not-an-ip" },
+        };
+
+        var result = ValidateVmHostAgentConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(issue =>
+        {
+            issue.Member.Should().Be("Ovn.OverlayTransportIp");
+            issue.Message.Should().Be("The value 'not-an-ip' is not a valid IP address.");
+        });
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ValidateVmHostAgentConfig_BlankOverlayTransportIp_TreatedAsUnset_ReturnsSuccess(string ip)
+    {
+        // A blank value is treated as "unset" (like null): it passes validation and the chassis falls
+        // back to the loopback tunnel endpoint (single-host only). Only a non-blank, non-parseable value
+        // is a validation error, so an operator who leaves it blank is not blocked here.
+        var config = new VmHostAgentConfiguration
+        {
+            Ovn = new VmHostAgentOvnConfiguration { OverlayTransportIp = ip },
+        };
+
+        ValidateVmHostAgentConfig(config).Should().BeSuccess();
+    }
+
     [Fact]
     public void ValidateVmHostAgentConfig_EnvironmentWithEmptyDefaults_ReturnsFail()
     {

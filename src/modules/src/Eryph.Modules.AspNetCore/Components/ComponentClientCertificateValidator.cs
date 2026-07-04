@@ -26,9 +26,9 @@ public static class ComponentClientCertificateValidator
         X509Certificate2Collection trustedRoots)
     {
         // The peer presents leaf + client intermediate in the handshake; Kestrel surfaces only the
-        // leaf to this callback, so the intermediate must come from the presented chain. The trust
-        // bundle holds the root anchor only, so without the presented intermediates the fresh chain
-        // has no source to build leaf -> intermediate -> root.
+        // leaf to this callback, so the intermediate is taken from the presented chain. (The trust
+        // bundle may itself now carry the issuing intermediates, but the presented chain is the
+        // reliable per-connection source to build leaf -> intermediate -> root here.)
         var intermediates = new X509Certificate2Collection();
         if (presentedChain is not null)
             foreach (var element in presentedChain.ChainElements)

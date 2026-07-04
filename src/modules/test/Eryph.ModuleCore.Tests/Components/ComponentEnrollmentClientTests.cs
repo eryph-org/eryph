@@ -243,5 +243,7 @@ public class ComponentEnrollmentClientTests
             throw new NotSupportedException("The enrollment client tests do not use the server certificate.");
 
         public ComponentCertificatePem? ReadClientCertificatePem() => null;
+
+        public ComponentCertificatePem? ReadServerCertificatePem() => null;
     }
 }
