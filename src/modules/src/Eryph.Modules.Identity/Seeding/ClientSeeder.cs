@@ -72,11 +72,11 @@ internal class ClientSeeder(
     /// file became unreadable) while a persisted database row keeps the previous certificate. The
     /// client then signs its assertions with the new on-disk private key while the server still
     /// validates against the stale certificate, so every request fails with <c>401 Unauthorized</c>.
-    /// When the certificates differ, the row is updated from the file, which also re-syncs the derived
-    /// JSON Web Key Set the server validates against. Comparing only the certificate is sufficient: the
-    /// generator only ever rewrites the certificate together with the scopes and roles it also
-    /// validates, so a certificate match implies the rest of the row already matches, and a mismatch
-    /// re-seeds the full descriptor (scopes and roles included) anyway.
+    /// When the certificates differ, the generator-owned fields are reapplied onto the stored row,
+    /// which also re-syncs the derived JSON Web Key Set the server validates against. Comparing only
+    /// the certificate is sufficient: the generator only ever rewrites the certificate together with
+    /// the scopes and roles it also validates, so a certificate match implies the rest already matches,
+    /// and a mismatch reapplies the scopes and roles from the file anyway.
     /// </summary>
     private async Task ReconcileSystemClientCertificate(
         ClientApplicationDescriptor existing,
@@ -91,6 +91,17 @@ internal class ClientSeeder(
         if (string.Equals(existing.Certificate, model.X509CertificateBase64, StringComparison.Ordinal))
             return;
 
-        await clientService.Update(model.ToDescriptor(), cancellationToken);
+        // Reapply only the fields the system client generator owns onto the existing row so no other
+        // stored property (e.g. display name) is disturbed. Keep the secret null so Update() leaves the
+        // stored client secret untouched — the system client authenticates with its certificate, not a
+        // shared secret.
+        existing.Certificate = model.X509CertificateBase64;
+        existing.Scopes.Clear();
+        existing.Scopes.UnionWith(model.AllowedScopes ?? []);
+        existing.AppRoles.Clear();
+        existing.AppRoles.UnionWith(model.Roles ?? []);
+        existing.ClientSecret = null;
+
+        await clientService.Update(existing, cancellationToken);
     }
 }

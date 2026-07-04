@@ -52,6 +52,7 @@ public class ClientSeederTests : IDisposable
         WriteClientFile(EryphConstants.SystemClientId, "new-cert");
 
         var stored = SystemClientDescriptor("old-cert");
+        stored.DisplayName = "preserved-name";
         ClientApplicationDescriptor? updated = null;
         var service = new Mock<IClientService>();
         service
@@ -72,6 +73,10 @@ public class ClientSeederTests : IDisposable
             "the reconciled row must carry the scopes from the file");
         updated.AppRoles.Should().Contain(EryphConstants.SuperAdminRole,
             "the reconciled row must carry the roles from the file");
+        updated.DisplayName.Should().Be("preserved-name",
+            "fields not owned by the generator must be preserved on the existing row");
+        updated.ClientSecret.Should().BeNull(
+            "the stored client secret must not be rotated by the reconciliation");
         service.Verify(s => s.Add(It.IsAny<ClientApplicationDescriptor>(), It.IsAny<bool>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
