@@ -14,6 +14,9 @@ jobs:
      value: 'Release'
    - name: signHash
      value: ''
+   # OVN release to bundle. Pinned, but overridable for special builds.
+   - name: ovnVersion
+     value: '26.3.0'
 
   steps:
   - task: DotNetCoreCLI@2
@@ -24,14 +27,12 @@ jobs:
       custom: 'tool'
       arguments: 'install --global azuresigntool'
       
-  - task: AzureCLI@2
-    displayName: download signed OVN package
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+  - task: PowerShell@2
+    displayName: download OVN package
     inputs:
-      azureSubscription: 'WebApps (releases)'
-      scriptType: 'batch'
-      scriptLocation: 'inlineScript'
-      inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovnpackage.zip --container-name=internal --name=ovs/3.3.90.1/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
+      pwsh: true
+      filePath: '$(Build.SourcesDirectory)/scripts/Fetch-OvnPackage.ps1'
+      arguments: '-Version $(ovnVersion) -OutFile "$(Build.SourcesDirectory)/ovnpackage.zip"'
     
   - task: gitversion/setup@3.1.11
     displayName: Install GitVersion

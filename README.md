@@ -20,6 +20,14 @@ We use Visual Studio 2022 for building.
 If you want to build and run eryph from code, please note that this repository don't contains signed versions of our driver package, which is only delivered with the released packages. 
 Therefore you have to enable the use of unsigned drivers on your dev machine. 
 
+Local dev runs also need the OVN package (`ovnpackage.zip` at the repository root), which is not committed. Fetch it once with:
+
+```powershell
+./scripts/Fetch-OvnPackage.ps1
+```
+
+This downloads the package from https://releases.dbosoft.eu and verifies its checksum. Pass `-Version` to select a different OVN release. 
+
 ## Versioning
 
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/eryph-org/eryph/tags). 

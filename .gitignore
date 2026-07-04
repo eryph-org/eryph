@@ -268,3 +268,6 @@ docs/internal/
 # Local standalone-run scratch dir (pids, generated settings, planning notes)
 .run/
 *.lscache
+
+# Local OVN package for dev runs (fetched from releases.dbosoft.eu by CI; not committed)
+/ovnpackage.zip
