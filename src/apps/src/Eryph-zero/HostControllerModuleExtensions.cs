@@ -69,6 +69,10 @@ public static class HostControllerModuleExtensions
                 container.RegisterInstance<IHostArchitectureProvider>(new HostArchitectureProvider());
                 container.RegisterSingleton<IPlacementCalculator, SingleHostPlacementCalculator>();
 
+                // Single local host: placement, storage-agent location and OVN topology resolve to the
+                // one local host agent / chassis. The split controller wires a registry-backed view.
+                container.RegisterSingleton<IComponentRegistry, SingleHostComponentRegistry>();
+
                 next(context, container);
             };
         }

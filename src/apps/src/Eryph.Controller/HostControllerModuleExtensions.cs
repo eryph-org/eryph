@@ -96,6 +96,11 @@ internal static class HostControllerModuleExtensions
                 // registered host agents (see ControllerPlacementCalculator for the open work).
                 container.RegisterSingleton<IPlacementCalculator, ControllerPlacementCalculator>();
 
+                // The read-side host-agent view is backed by the ComponentRegistration catalog, so
+                // placement, storage-agent location and OVN topology resolve the real registered agents
+                // (a Hyper-V host on another machine), not the controller's own machine name.
+                container.RegisterSingleton<IComponentRegistry, RegistryBackedComponentRegistry>();
+
                 // The split runtime manages a real broker, so the controller can delete a
                 // component's RabbitMQ user when it is decommissioned (the revocation cutoff);
                 // eryph-zero appends none and decommission only removes the registration.

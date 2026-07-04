@@ -13,8 +13,10 @@ namespace Eryph.Modules.Controller;
 public interface IComponentRegistry
 {
     /// <summary>
-    /// The host agents currently part of the deployment. The single-host
-    /// implementation returns exactly one entry representing the local host.
+    /// The host agents currently part of the deployment, ordered deterministically by
+    /// <see cref="HostAgentComponent.AgentName"/> so that repeated calls and independent
+    /// consumers (placement, storage-agent location, OVN topology) always resolve to the same
+    /// agent. The single-host implementation returns exactly one entry representing the local host.
     /// </summary>
     Seq<HostAgentComponent> GetHostAgents();
 }

@@ -129,13 +129,11 @@ public class ControllerModule
         container.AddStateDbDataServices();
 
         container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
-        // KNOWN LIMITATION (deferred to the multi-host placement slice): the registry is
-        // single-host (derives the agent from Environment.MachineName / local chassis). It is
-        // correct for the all-in-one and the current single-host split dev runtime, but real
-        // multi-host placement must derive host agents from the ComponentRegistration catalog
-        // (IComponentRegistryService) instead. Not wired yet — same category as the documented
-        // network-sync accepted workaround.
-        container.RegisterSingleton<IComponentRegistry, SingleHostComponentRegistry>();
+        // IComponentRegistry (the read-side view of host agents that placement, storage-agent location
+        // and the OVN topology resolve from) is registered by the runtime host, like IPlacementCalculator:
+        // eryph-zero registers the single-host implementation, the standalone controller a registry-backed
+        // one that reads the ComponentRegistration catalog. This keeps the host-vs-single-host choice a DI
+        // composition decision rather than a runtime flag inside the module.
         container.RegisterSingleton<IClusterTopologyProvider, ComponentRegistryClusterTopologyProvider>();
         container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
