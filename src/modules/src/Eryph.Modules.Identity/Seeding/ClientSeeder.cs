@@ -72,11 +72,13 @@ internal class ClientSeeder(
     /// file became unreadable) while a persisted database row keeps the previous certificate. The
     /// client then signs its assertions with the new on-disk private key while the server still
     /// validates against the stale certificate, so every request fails with <c>401 Unauthorized</c>.
-    /// When the certificates differ, the generator-owned fields are reapplied onto the stored row,
-    /// which also re-syncs the derived JSON Web Key Set the server validates against. Comparing only
-    /// the certificate is sufficient: the generator only ever rewrites the certificate together with
-    /// the scopes and roles it also validates, so a certificate match implies the rest already matches,
-    /// and a mismatch reapplies the scopes and roles from the file anyway.
+    /// When the certificates differ, the generator-owned fields (certificate, scopes and roles) are
+    /// reapplied onto the stored row, which also re-syncs the derived JSON Web Key Set the server
+    /// validates against. Comparing only the certificate is sufficient in practice: the certificate is
+    /// the only field whose drift breaks authentication, and the generator regenerates it whenever the
+    /// required scopes or the key pair no longer match (see <c>SystemClientGenerator.IsValid</c>). The
+    /// roles are a fixed constant for the system client, so they do not drift on their own; a mismatch
+    /// reapplies them together with the scopes anyway.
     /// </summary>
     private async Task ReconcileSystemClientCertificate(
         ClientApplicationDescriptor existing,
