@@ -45,9 +45,12 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>(
 
     public async ValueTask<TDescriptor> Update(TDescriptor descriptor, CancellationToken cancellationToken)
     {
-        if (descriptor.ClientId == EryphConstants.SystemClientId)
-            throw new Exception("System client can't be updated");
-
+        // Modifying the system client is blocked at the public API (Clients/Update, Clients/NewKey), so
+        // callers exposed to users must keep that check themselves. It is intentionally allowed here —
+        // unlike Delete, which keeps its guard because there is no legitimate internal deletion path —
+        // so the client seeder can reconcile the stored system-client certificate with the one
+        // eryph-zero's system client generator regenerated on disk. Without this the database keeps a
+        // stale certificate and rejects the client's assertions.
         ArgumentNullException.ThrowIfNull(descriptor.ClientId);
         var currentApplication = await repository.GetBySpecAsync(
                                      GetSingleEntitySpec(descriptor.ClientId, descriptor.TenantId), cancellationToken)
