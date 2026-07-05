@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -34,6 +33,12 @@ namespace Eryph.Modules.Identity.Bootstrap;
 /// tracking off). The client row is written through <see cref="IClientService"/>, so change tracking —
 /// when enabled — exports it like any other client.
 /// </para>
+/// <para>
+/// This assumes a single identity instance: the private key is node-local (like the host's CA and
+/// token-signing material) while the client row is shared. Two instances with different local keys would
+/// each rewrite the shared row to match their own key on every boot. Identity is single-instance today
+/// for exactly that reason; running it as an HA set would require a shared or leader-owned key store.
+/// </para>
 /// </remarks>
 internal sealed class SystemClientBootstrap(
     ISystemClientKeyStore keyStore,
@@ -65,7 +70,9 @@ internal sealed class SystemClientBootstrap(
         }
 
         // Reuse the existing key when there is one (never rotate the break-glass credential); otherwise
-        // mint and persist a new key before it is referenced by the database row.
+        // mint and persist a new key before it is referenced by the database row. When storedKey is
+        // non-null, `key` aliases it and both `using` declarations dispose the same instance — safe,
+        // because AsymmetricAlgorithm.Dispose is idempotent.
         using var key = storedKey ?? await GenerateAndStoreKey(cancellationToken);
         using var certificate = BuildCertificate(key);
         var certificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
@@ -155,7 +162,8 @@ internal sealed class SystemClientBootstrap(
         if (publicKey is null)
             return false;
 
-        return key.ExportSubjectPublicKeyInfo().SequenceEqual(publicKey.ExportSubjectPublicKeyInfo());
+        return key.ExportSubjectPublicKeyInfo().AsSpan()
+            .SequenceEqual(publicKey.ExportSubjectPublicKeyInfo());
     }
 
     private static RSA? GetCertificatePublicKey(string certificateBase64)

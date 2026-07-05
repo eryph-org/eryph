@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -20,21 +19,25 @@ internal sealed class FileSystemClientKeyStore(string keyFile) : ISystemClientKe
 {
     public async Task<RSA?> TryReadKey(CancellationToken cancellationToken)
     {
+        // Only a genuinely absent key returns null (first boot ⇒ the bootstrap generates one). A key that
+        // exists but cannot be read (I/O error, wrong format) is surfaced, not swallowed: silently
+        // returning null there would make the bootstrap mint a NEW break-glass credential and overwrite
+        // the operator's, so failing startup loudly is the safer choice. Atomic owner-only writes make a
+        // torn file unlikely in the first place.
         if (!File.Exists(keyFile))
             return null;
 
+        var pem = await File.ReadAllTextAsync(keyFile, Encoding.UTF8, cancellationToken);
+        var key = RSA.Create();
         try
         {
-            var pem = await File.ReadAllTextAsync(keyFile, Encoding.UTF8, cancellationToken);
-            var key = RSA.Create();
             key.ImportFromPem(pem);
             return key;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch
         {
-            // A missing key is expected on first boot; an unreadable one (torn write, wrong format) is
-            // treated the same so the bootstrap regenerates a working credential rather than crashing.
-            return null;
+            key.Dispose();
+            throw;
         }
     }
 

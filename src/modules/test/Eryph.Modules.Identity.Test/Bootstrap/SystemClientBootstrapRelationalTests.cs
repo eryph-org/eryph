@@ -101,6 +101,52 @@ public class SystemClientBootstrapRelationalTests
     }
 
     [Fact]
+    public async Task Bootstrap_reconciles_a_drifted_certificate_on_a_relational_store()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+
+        await using var provider = BuildProvider(connection, applyOpenIddict: true);
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IdentityDbContext>()
+                .Database.EnsureCreatedAsync();
+        }
+
+        var keyStore = new InMemoryKeyStore();
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            await NewBootstrap(scope.ServiceProvider, keyStore).ExecuteAsync(CancellationToken.None);
+        }
+
+        // Drift the stored certificate to one belonging to a different key (as if the key were restored
+        // from backup): assertions signed with the on-disk key would now fail against the stored row.
+        using (var otherKey = RSA.Create(2048))
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var service = NewClientService(scope.ServiceProvider);
+            var row = await service.Get(
+                EryphConstants.SystemClientId, EryphConstants.DefaultTenantId, CancellationToken.None);
+            row!.Certificate = SelfSignedCertificateBase64(otherKey);
+            await service.Update(row, CancellationToken.None);
+        }
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            await NewBootstrap(scope.ServiceProvider, keyStore).ExecuteAsync(CancellationToken.None);
+        }
+
+        keyStore.Writes.Should().Be(1, "reconciling a drifted certificate must not rotate the key");
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var row = await NewClientService(scope.ServiceProvider).Get(
+                EryphConstants.SystemClientId, EryphConstants.DefaultTenantId, CancellationToken.None);
+            CertificateMatchesKey(row!.Certificate, keyStore.Peek()).Should()
+                .BeTrue("the drifted certificate must be rebuilt from the on-disk key through the real store");
+        }
+    }
+
+    [Fact]
     public async Task EnsureCreated_builds_the_OpenIddict_tables_only_with_ApplyOpenIddict()
     {
         // Guards the create-db fix: without ApplyOpenIddict the runtime table (OpenIddictApplications)
@@ -156,6 +202,16 @@ public class SystemClientBootstrapRelationalTests
     private static SystemClientBootstrap NewBootstrap(IServiceProvider scopeServices, ISystemClientKeyStore keyStore) =>
         new(keyStore, NewClientService(scopeServices), new CertificateGenerator(), new InMemoryKeyService(),
             NullLogger<SystemClientBootstrap>.Instance);
+
+    private static string SelfSignedCertificateBase64(RSA key)
+    {
+        var subject = new X500DistinguishedNameBuilder();
+        subject.AddCommonName("drift");
+        using var certificate = new CertificateGenerator().GenerateSelfSignedCertificate(
+            subject.Build(), "drift", key, 30,
+            [new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true)]);
+        return Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+    }
 
     private static bool CertificateMatchesKey(string? certificateBase64, RSA? key)
     {

@@ -17,8 +17,10 @@ namespace Eryph.Modules.Identity.Bootstrap;
 public interface ISystemClientKeyStore
 {
     /// <summary>
-    /// Reads the stored private key, or returns <see langword="null"/> when none is present (or it
-    /// cannot be read). The caller owns and disposes the returned key.
+    /// Reads the stored private key, or returns <see langword="null"/> when none is present (so the
+    /// bootstrap generates one). The caller owns and disposes the returned key. An implementation may
+    /// throw when a key exists but cannot be read, to avoid silently minting a new credential over the
+    /// operator's; it should not return <see langword="null"/> in that case.
     /// </summary>
     Task<RSA?> TryReadKey(CancellationToken cancellationToken);
 
