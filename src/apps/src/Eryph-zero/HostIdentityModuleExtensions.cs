@@ -3,9 +3,12 @@ using System.IO;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
 using Eryph.IdentityDb.Sqlite;
+using Eryph.ModuleCore;
 using Eryph.Modules.Identity;
+using Eryph.Modules.Identity.Bootstrap;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Clients;
+using Eryph.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
@@ -49,6 +52,11 @@ public static class HostIdentityModuleExtensions
                 // phase (IdentityDatabaseResetHandler in Program.cs), exactly like the state database
                 // (DatabaseResetHandler) — the main host just uses the already-migrated database.
                 next(context, options);
+
+                // Ensure the system-client on startup. The module owns the mechanism; eryph-zero supplies
+                // the DPAPI key store (registered in ConfigureContainer) so the key keeps its established
+                // on-disk contract.
+                options.AddSystemClientBootstrap();
             };
         }
 
@@ -69,6 +77,12 @@ public static class HostIdentityModuleExtensions
                 // ClientSeeder (replacing IdentityClientSeeder). IFileSystem + SeedFromConfigHandler
                 // are registered by the module. Only the scope seeder remains zero-specific.
                 container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
+
+                // Supply the system-client key store the module's SystemClientBootstrap resolves. It keeps
+                // the DPAPI-encrypted system-client.key at the client-config path (the external contract),
+                // so cross-wire ICryptoIOServices from the host into the module container for it.
+                container.Register(context.ModulesHostServices.GetRequiredService<ICryptoIOServices>);
+                container.Register<ISystemClientKeyStore, DpapiSystemClientKeyStore>();
             };
         }
     }

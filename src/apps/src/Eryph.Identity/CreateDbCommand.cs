@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Eryph.IdentityDb;
 using Eryph.IdentityDb.MySql;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +30,12 @@ internal static class CreateDbCommand
 
         var builder = new DbContextOptionsBuilder<MySqlIdentityDbContext>();
         new MySqlIdentityDbContextConfigurer(connectionString).Configure(builder);
+        // OpenIddict contributes its tables (applications, tokens, scopes, authorizations) through this
+        // options extension, not the context's OnModelCreating — exactly as the runtime registration
+        // (RegisterIdentityStore) and the design-time migration factory do. Without it EnsureCreated
+        // omits every OpenIddict table (e.g. OpenIddictApplications), and the running service then fails
+        // its first client query against the missing table.
+        IdentityDbModel.ApplyOpenIddict(builder);
         await using var context = new MySqlIdentityDbContext(builder.Options);
 
         var created = await context.Database.EnsureCreatedAsync();
