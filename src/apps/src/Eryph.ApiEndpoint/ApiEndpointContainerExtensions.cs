@@ -44,24 +44,25 @@ internal static class ApiEndpointContainerExtensions
 
     private static Dictionary<string, string> GetEndpoints()
     {
-        var baseUrl = Environment.GetEnvironmentVariable("ERYPH_API_BASEURL")
-                      ?? "http://localhost:8081/";
-        // Normalize so appending a path segment ("{baseUrl}compute") can't yield
-        // a malformed URL when the env value is supplied without a trailing '/'.
-        if (!baseUrl.EndsWith('/'))
-            baseUrl += "/";
-        var computeUrl = Environment.GetEnvironmentVariable("ERYPH_COMPUTE_URL")
-                         ?? $"{baseUrl}compute";
-        // The identity issuer used as the JWT authority. In a real deployment this is the
-        // distributed/overridden identity endpoint; for the standalone dev run it is config.
+        // The compute API's own public access URL (endpoints:public) — its advertised endpoint and
+        // module path, and the host baked into its enrolled server certificate. Independent of
+        // ASPNETCORE_URLS (the bind address), so a load balancer can front it. It serves at the root of
+        // its own host, so the URL carries no path prefix.
+        var accessUrl = (ComponentPublicEndpoint.GetFromEnvironment()
+            ?? throw new InvalidOperationException(
+                "endpoints:public must be set to the compute API access URL.")).ToString();
+
+        // The identity access URL used as the JWT authority — a consumer pointer to another component,
+        // so it stays its own value (the identity's endpoints:public, addressed at its host root).
         var identityUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL")
-                          ?? "http://localhost:8080/identity";
+            ?? throw new InvalidOperationException(
+                "ERYPH_IDENTITY_URL must be set to the identity access URL (the JWT authority).");
 
         return new Dictionary<string, string>
         {
-            ["base"] = baseUrl,
-            ["default"] = baseUrl,
-            ["compute"] = computeUrl,
+            ["base"] = accessUrl,
+            ["default"] = accessUrl,
+            ["compute"] = accessUrl,
             ["identity"] = identityUrl,
         };
     }

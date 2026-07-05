@@ -19,7 +19,7 @@ public class CaServerCertificateProviderTests
             new InMemoryCertificateStore(), new CertificateGenerator(), keyService);
         var sut = new CaServerCertificateProvider(keyService, ca);
 
-        using var issued = sut.GetServerCertificate("identity.eryph.local");
+        using var issued = sut.GetServerCertificate(["identity.eryph.local"]);
 
         issued.Leaf.HasPrivateKey.Should().BeTrue("the listener must be able to present the key");
         issued.IssuingChain.Should().NotBeEmpty();

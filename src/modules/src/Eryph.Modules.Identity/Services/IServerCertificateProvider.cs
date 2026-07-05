@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Eryph.Modules.Identity.Services;
 
 /// <summary>
@@ -9,8 +11,9 @@ namespace Eryph.Modules.Identity.Services;
 public interface IServerCertificateProvider
 {
     /// <summary>
-    /// The server-TLS certificate (leaf, with private key) for <paramref name="dnsName"/> plus the
-    /// issuing intermediate(s) to present so a relying party can chain it to a trusted root.
+    /// The server-TLS certificate (leaf, with private key) for <paramref name="dnsNames"/> — the first
+    /// is the subject common name, all are subject alternative names — plus the issuing intermediate(s)
+    /// to present so a relying party can chain it to a trusted root.
     /// </summary>
-    IssuedCertificate GetServerCertificate(string dnsName);
+    IssuedCertificate GetServerCertificate(IReadOnlyList<string> dnsNames);
 }

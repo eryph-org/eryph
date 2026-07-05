@@ -76,33 +76,29 @@ internal static class IdentityContainerExtensions
     public static string GetSystemClientKeyFile()
         => Path.Combine(PkiOptions.Resolve().Directory, "system-client.key");
 
-    /// <summary>The identity component's own public URL (config/env, default for dev).</summary>
-    public static string GetIdentityUrl()
-    {
-        return Environment.GetEnvironmentVariable("ERYPH_IDENTITY_URL")
-               ?? $"{GetBaseUrl()}identity";
-    }
-
     /// <summary>
-    /// The base URL the identity host listens on, always normalized to end with '/'
-    /// so callers can safely append path segments (e.g. "{baseUrl}identity").
+    /// The identity component's public access URL (<c>endpoints:public</c>) — the URL clients and peer
+    /// components use to reach it. It is its advertised endpoint, its module path and (via the served
+    /// path) its OpenIddict issuer, so all three agree; it carries no path prefix because the identity
+    /// owns its whole host and serves at its root. Independent of <c>ASPNETCORE_URLS</c> (the bind
+    /// address), so a load balancer can front it. Required — the component must know how it is reached.
     /// </summary>
-    private static string GetBaseUrl()
-    {
-        var baseUrl = Environment.GetEnvironmentVariable("ERYPH_IDENTITY_BASEURL")
-                      ?? "http://localhost:8080/";
-        return baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/";
-    }
+    public static string GetAccessUrl()
+        => (ComponentPublicEndpoint.GetFromEnvironment()
+            ?? throw new InvalidOperationException(
+                "endpoints:public must be set to the identity access URL (the URL clients and "
+                + "components use to reach identity)."))
+           .ToString();
 
     private static Dictionary<string, string> GetOwnEndpoints()
     {
-        var baseUrl = GetBaseUrl();
+        var accessUrl = GetAccessUrl();
 
         return new Dictionary<string, string>
         {
-            ["base"] = baseUrl,
-            ["default"] = baseUrl,
-            ["identity"] = GetIdentityUrl(),
+            ["base"] = accessUrl,
+            ["default"] = accessUrl,
+            ["identity"] = accessUrl,
         };
     }
 }

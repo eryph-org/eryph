@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography.X509Certificates;
+using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.Components;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -21,16 +22,16 @@ internal static class IdentityServerTls
     {
         webHostBuilder.ConfigureKestrel((context, options) =>
         {
-            // Require an explicit base URL: the host name is baked into the self-issued server
-            // certificate, so falling back to "localhost" would silently issue a certificate
-            // components can never validate against the address they connect to.
-            var baseUrl = context.Configuration["ERYPH_IDENTITY_BASEURL"];
-            if (string.IsNullOrWhiteSpace(baseUrl)
-                || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+            // The host name(s) baked into the self-issued server certificate come from the component's
+            // access URL (endpoints:public), the same value it advertises — so the certificate matches
+            // the address components connect to. componentMtls:serverDnsNames can override for a
+            // multi-SAN certificate. Require it: falling back to "localhost" would silently issue a
+            // certificate components can never validate against the address they connect to.
+            var dnsNames = ComponentPublicEndpoint.GetServerDnsNames(context.Configuration);
+            if (dnsNames.Count == 0)
                 throw new InvalidOperationException(
-                    "ERYPH_IDENTITY_BASEURL must be set to an absolute URL; it is required to issue the "
-                    + "identity server certificate for the correct host name.");
-            var dnsName = baseUri.Host;
+                    "endpoints:public must be set to the identity access URL; its host is baked into the "
+                    + "self-issued identity server certificate (or set componentMtls:serverDnsNames).");
 
             // Build the platform key/cert backend directly (the listener runs outside the module
             // container, so it cannot resolve these from DI). PkiOptions.CreateServices is the same
@@ -39,7 +40,7 @@ internal static class IdentityServerTls
             var (keyService, storeService, generator) = PkiOptions.CreateServices();
             var certificateAuthority = new ComponentCertificateAuthority(storeService, generator, keyService);
             var issued = new CaServerCertificateProvider(keyService, certificateAuthority)
-                .GetServerCertificate(dnsName);
+                .GetServerCertificate(dnsNames);
 
             var chain = new X509Certificate2Collection();
             foreach (var certificate in issued.IssuingChain)

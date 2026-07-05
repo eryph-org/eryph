@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using Eryph.Security.Cryptography;
 
@@ -14,12 +15,12 @@ public sealed class CaServerCertificateProvider(
     IComponentCertificateAuthority certificateAuthority)
     : IServerCertificateProvider
 {
-    public IssuedCertificate GetServerCertificate(string dnsName)
+    public IssuedCertificate GetServerCertificate(IReadOnlyList<string> dnsNames)
     {
         // CopyWithPrivateKey binds an independent copy of the key into the returned certificate, so
         // the source key can be disposed once the bound leaf has been created.
         using var key = certificateKeyService.GenerateRsaKey(2048);
-        var issued = certificateAuthority.IssueServerCertificate([dnsName], key);
+        var issued = certificateAuthority.IssueServerCertificate(dnsNames, key);
 
         // The server presents the leaf, so it needs the private key bound; the issuing chain is
         // carried through unchanged for the listener to present alongside it. The key is re-imported
