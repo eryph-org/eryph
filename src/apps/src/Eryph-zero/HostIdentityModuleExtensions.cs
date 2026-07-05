@@ -72,11 +72,10 @@ public static class HostIdentityModuleExtensions
 
                 next(context, container);
 
-                // Client persistence is now handled by the identity module's change-tracking export
+                // Client persistence is handled by the identity module's change-tracking export
                 // (replacing the old ClientServiceWithConfigServiceDecorator write-through) and its
-                // ClientSeeder (replacing IdentityClientSeeder). IFileSystem + SeedFromConfigHandler
-                // are registered by the module. Only the scope seeder remains zero-specific.
-                container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
+                // ClientSeeder (replacing IdentityClientSeeder); scope seeding is module-owned too. So
+                // eryph-zero adds no identity seeders of its own here.
 
                 // Supply the system-client key store the module's SystemClientBootstrap resolves. It keeps
                 // the DPAPI-encrypted system-client.key at the client-config path (the external contract),

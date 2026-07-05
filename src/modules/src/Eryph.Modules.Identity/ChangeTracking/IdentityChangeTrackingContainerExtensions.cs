@@ -49,9 +49,11 @@ public static class IdentityChangeTrackingContainerExtensions
         {
             // Always append (so the IConfigSeeder<IdentityModule> collection is registered even when no
             // other seeders are — SimpleInjector requires the collection to exist for SeedFromConfigHandler
-            // to resolve it). The seeder itself honours IdentityChangeTrackingConfig.SeedDatabase, so it is a
-            // no-op when seeding is disabled. eryph-zero appends its own client/scope seeders too; the appends
-            // compose into one collection that the single handler runs.
+            // to resolve it). The client/token seeders honour IdentityChangeTrackingConfig.SeedDatabase, so
+            // they are a no-op when seeding is disabled; the scope seeder always runs, because the token
+            // endpoint needs the API scopes registered regardless of the change-tracking config. eryph-zero
+            // appends its own client seeder too; the appends compose into one collection the single handler runs.
+            options.Container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>(Lifestyle.Scoped);
             options.Container.Collection.Append<IConfigSeeder<IdentityModule>, ClientSeeder>(Lifestyle.Scoped);
             options.Container.Collection.Append<IConfigSeeder<IdentityModule>, RedeemedTokenSeeder>(Lifestyle.Scoped);
 
