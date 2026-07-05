@@ -2,7 +2,6 @@
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.ModuleCore.Startup;
-using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
@@ -29,14 +28,11 @@ public class ZeroStartupModule
         container.RegisterSingleton(serviceProvider.GetRequiredService<IControllerSettingsManager>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>);
 
-        container.RegisterSingleton<IClientConfigService, ClientConfigService>();
         container.RegisterSingleton(serviceProvider.GetRequiredService<ICertificateGenerator>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<ICertificateKeyService>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<ICertificateStoreService>);
-        container.RegisterSingleton(serviceProvider.GetRequiredService<ICryptoIOServices>);
         container.RegisterSingleton<ISslEndpointManager, SslEndpointManager>();
         container.RegisterSingleton<ISslEndpointRegistry, WinHttpSslEndpointRegistry>();
-        container.Register<ISystemClientGenerator, SystemClientGenerator>();
     }
 
     [UsedImplicitly]
@@ -48,7 +44,6 @@ public class ZeroStartupModule
         // fail during service start after a reboot.
         options.AddStartupHandler<EnsureHyperVAndOvnStartupHandler>();
         options.AddStartupHandler<EnsureConfigurationStartupHandler>();
-        options.AddStartupHandler<SystemClientStartupHandler>();
         options.AddHostedService<SslEndpointService>();
     }
 }

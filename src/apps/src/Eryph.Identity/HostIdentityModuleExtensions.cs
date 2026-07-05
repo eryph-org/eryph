@@ -10,6 +10,7 @@ using Eryph.IdentityDb.MySql;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using Eryph.Modules.Identity;
+using Eryph.Modules.Identity.Bootstrap;
 using Eryph.Modules.Identity.Services;
 using Eryph.Rebus;
 using Eryph.Security.Cryptography;
@@ -54,6 +55,11 @@ internal static class HostIdentityModuleExtensions
                 options.RegisterMySqlIdentityStore(
                     IdentityContainerExtensions.GetIdentityDbConnectionString());
                 next(context, options);
+
+                // Ensure the system-client on startup, the same module-owned bootstrap eryph-zero uses.
+                // Here the key store writes the break-glass key as an owner-only PEM (registered in
+                // ConfigureContainer).
+                options.AddSystemClientBootstrap();
             };
         }
 
@@ -71,6 +77,11 @@ internal static class HostIdentityModuleExtensions
                 // the provisioner collection, so appending here is the host's decision to manage it.
                 ComponentBrokerProvisioning.AppendRabbitMq(
                     container, context.ModulesHostServices.GetRequiredService<IConfiguration>());
+
+                // Supply the system-client key store the module's SystemClientBootstrap resolves. The
+                // break-glass key is an owner-only PEM under the operator-secured PKI directory.
+                container.RegisterInstance<ISystemClientKeyStore>(
+                    new FileSystemClientKeyStore(IdentityContainerExtensions.GetSystemClientKeyFile()));
 
                 next(context, container);
             };

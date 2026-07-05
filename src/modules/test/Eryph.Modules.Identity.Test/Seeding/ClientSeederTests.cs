@@ -16,10 +16,9 @@ using Xunit;
 namespace Eryph.Modules.Identity.Test.Seeding;
 
 /// <summary>
-/// Covers the system-client reconciliation the seeder performs on top of add-only seeding: when the
-/// eryph-zero system client generator regenerates the on-disk certificate, the persisted database row
-/// must be updated to match, otherwise the client's assertions are validated against a stale
-/// certificate and every request fails with 401. Regular clients stay add-only.
+/// The client seeder rebuilds regular clients from the on-disk mirror (add-only). The system client is
+/// not seeded here at all — it is owned end to end by <c>SystemClientBootstrap</c> — so the seeder must
+/// skip it entirely, even though a mirror file for it exists (written by change-tracking export).
 /// </summary>
 public class ClientSeederTests : IDisposable
 {
@@ -47,79 +46,48 @@ public class ClientSeederTests : IDisposable
     }
 
     [Fact]
-    public async Task System_client_certificate_is_reconciled_when_the_stored_one_differs()
+    public async Task System_client_is_skipped_entirely()
     {
         WriteClientFile(EryphConstants.SystemClientId, "new-cert");
 
-        var stored = SystemClientDescriptor("old-cert");
-        stored.DisplayName = "preserved-name";
-        ClientApplicationDescriptor? updated = null;
         var service = new Mock<IClientService>();
-        service
-            .Setup(s => s.Get(EryphConstants.SystemClientId, TenantId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(stored);
-        service
-            .Setup(s => s.Update(It.IsAny<ClientApplicationDescriptor>(), It.IsAny<CancellationToken>()))
-            .Callback<ClientApplicationDescriptor, CancellationToken>((d, _) => updated = d)
-            .ReturnsAsync((ClientApplicationDescriptor d, CancellationToken _) => d);
-
         var seeder = new ClientSeeder(_config, _fileSystem, service.Object);
         await seeder.Execute(CancellationToken.None);
 
-        updated.Should().NotBeNull("the stale system-client certificate must be reconciled");
-        updated!.ClientId.Should().Be(EryphConstants.SystemClientId);
-        updated.Certificate.Should().Be("new-cert", "the database must follow the on-disk certificate");
-        updated.Scopes.Should().BeEquivalentTo(new[] { "compute:write", "identity:write" },
-            "the reconciled row must carry the scopes from the file");
-        updated.AppRoles.Should().Contain(EryphConstants.SuperAdminRole,
-            "the reconciled row must carry the roles from the file");
-        updated.DisplayName.Should().Be("preserved-name",
-            "fields not owned by the generator must be preserved on the existing row");
-        updated.ClientSecret.Should().BeNull(
-            "the stored client secret must not be rotated by the reconciliation");
+        // The bootstrap owns the system client; the seeder must not even query it, let alone add or update.
+        service.Verify(s => s.Get(EryphConstants.SystemClientId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         service.Verify(s => s.Add(It.IsAny<ClientApplicationDescriptor>(), It.IsAny<bool>(),
             It.IsAny<CancellationToken>()), Times.Never);
+        service.Verify(s => s.Update(It.IsAny<ClientApplicationDescriptor>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task System_client_is_not_reconciled_when_the_on_disk_certificate_is_missing()
+    public async Task New_regular_client_is_added()
     {
-        // A torn/partial write must not wipe the server's validation key.
-        WriteClientFile(EryphConstants.SystemClientId, certificate: "");
+        WriteClientFile("regular-client", "file-cert");
 
         var service = new Mock<IClientService>();
         service
-            .Setup(s => s.Get(EryphConstants.SystemClientId, TenantId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SystemClientDescriptor("stored-cert"));
+            .Setup(s => s.Get("regular-client", TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ClientApplicationDescriptor?)null);
+        ClientApplicationDescriptor? added = null;
+        service
+            .Setup(s => s.Add(It.IsAny<ClientApplicationDescriptor>(), true, It.IsAny<CancellationToken>()))
+            .Callback<ClientApplicationDescriptor, bool, CancellationToken>((d, _, _) => added = d)
+            .ReturnsAsync((ClientApplicationDescriptor d, bool _, CancellationToken _) => d);
 
         var seeder = new ClientSeeder(_config, _fileSystem, service.Object);
         await seeder.Execute(CancellationToken.None);
 
-        service.Verify(s => s.Update(It.IsAny<ClientApplicationDescriptor>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+        added.Should().NotBeNull();
+        added!.ClientId.Should().Be("regular-client");
+        added.Certificate.Should().Be("file-cert");
     }
 
     [Fact]
-    public async Task System_client_is_not_touched_when_the_certificate_matches()
-    {
-        WriteClientFile(EryphConstants.SystemClientId, "same-cert");
-
-        var service = new Mock<IClientService>();
-        service
-            .Setup(s => s.Get(EryphConstants.SystemClientId, TenantId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SystemClientDescriptor("same-cert"));
-
-        var seeder = new ClientSeeder(_config, _fileSystem, service.Object);
-        await seeder.Execute(CancellationToken.None);
-
-        service.Verify(s => s.Update(It.IsAny<ClientApplicationDescriptor>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-        service.Verify(s => s.Add(It.IsAny<ClientApplicationDescriptor>(), It.IsAny<bool>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Existing_regular_client_is_left_untouched_even_when_its_certificate_differs()
+    public async Task Existing_regular_client_is_left_untouched()
     {
         WriteClientFile("regular-client", "file-cert");
 
@@ -142,13 +110,6 @@ public class ClientSeederTests : IDisposable
         service.Verify(s => s.Add(It.IsAny<ClientApplicationDescriptor>(), It.IsAny<bool>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    private static ClientApplicationDescriptor SystemClientDescriptor(string certificate) => new()
-    {
-        ClientId = EryphConstants.SystemClientId,
-        TenantId = TenantId,
-        Certificate = certificate,
-    };
 
     private void WriteClientFile(string clientId, string certificate)
     {

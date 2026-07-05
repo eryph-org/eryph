@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Services;
 using SimpleInjector;
@@ -67,6 +68,13 @@ internal static class IdentityContainerExtensions
 
         return connectionString;
     }
+
+    /// <summary>
+    /// The owner-only PEM file holding the system-client break-glass private key, under the same
+    /// operator-secured PKI directory as the CA/token key material (<c>ERYPH_PKI_DIRECTORY</c>).
+    /// </summary>
+    public static string GetSystemClientKeyFile()
+        => Path.Combine(PkiOptions.Resolve().Directory, "system-client.key");
 
     /// <summary>The identity component's own public URL (config/env, default for dev).</summary>
     public static string GetIdentityUrl()
