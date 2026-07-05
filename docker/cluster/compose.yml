@@ -125,10 +125,12 @@ services:
       identity-dbsetup: { condition: service_completed_successfully }
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Listening address (all interfaces) — independent of the access URL below.
       ASPNETCORE_URLS: https://+:8080
-      # Issuer + self-issued server-cert SAN target the LB host, so any identity replica is valid
-      # behind the load balancer (and tokens carry a stable issuer).
-      ERYPH_IDENTITY_BASEURL: https://identity-lb:8080/
+      # The access URL clients and components use to reach identity: the LB host. Drives the advertised
+      # endpoint, the self-issued server-cert SAN and (via the request-derived issuer, since clients use
+      # this URL) the token issuer — all identical, so any replica behind the LB is valid.
+      endpoints__public: https://identity-lb:8080/
       ERYPH_IDENTITYDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph_identity;User Id=root;Password=eryph"
       RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
       ERYPH_PKI_KEYSTORE: file
@@ -208,14 +210,18 @@ services:
       identity: { condition: service_started }
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Listening address — independent of the access URL below.
       ASPNETCORE_URLS: https://+:8000
       ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
-      ERYPH_IDENTITY_URL: "https://identity-lb:8080/identity"
+      # This component's own access URL (LB host): its advertised endpoint and the SAN it requests for
+      # its enrolled server certificate (so clients reaching compute-lb validate it).
+      endpoints__public: https://compute-lb:8000/
+      # The identity access URL used as the JWT authority — the identity's own root URL (no /identity
+      # prefix: identity serves at its host root, so that is where discovery and the issuer live).
+      ERYPH_IDENTITY_URL: "https://identity-lb:8080/"
       RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
       componentMtls__enrollmentFile: /enroll/apiendpoint.json
       componentMtls__certificateDirectory: /apiendpoint-certs
-      # Serve a certificate for the LB host so clients reaching compute-lb validate it.
-      componentMtls__serverDnsNames: compute-lb
     volumes:
       - apiendpoint-certs:/apiendpoint-certs
       - enroll:/enroll:ro

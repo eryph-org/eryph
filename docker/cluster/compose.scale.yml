@@ -24,7 +24,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: https://+:8080
-      ERYPH_IDENTITY_BASEURL: https://identity-lb:8080/
+      endpoints__public: https://identity-lb:8080/
       ERYPH_IDENTITYDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph_identity;User Id=root;Password=eryph"
       RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
       ERYPH_PKI_KEYSTORE: file
@@ -67,11 +67,11 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: https://+:8000
       ERYPH_STATEDB_CONNECTIONSTRING: "Server=mariadb;Port=3306;Database=eryph;User Id=root;Password=eryph"
-      ERYPH_IDENTITY_URL: "https://identity-lb:8080/identity"
+      endpoints__public: https://compute-lb:8000/
+      ERYPH_IDENTITY_URL: "https://identity-lb:8080/"
       RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
       componentMtls__enrollmentFile: /enroll/apiendpoint2.json
       componentMtls__certificateDirectory: /apiendpoint2-certs
-      componentMtls__serverDnsNames: compute-lb
     volumes:
       - apiendpoint2-certs:/apiendpoint2-certs
       - enroll:/enroll:ro

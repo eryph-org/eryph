@@ -78,11 +78,11 @@ public static class ComponentMtlsTransport
         {
             ["identity"] = enrollment.IdentityEndpoint,
         });
-        // A component behind a load balancer must serve a certificate for the LB host name, not just
-        // its own FQDN; componentMtls:serverDnsNames (comma-separated) sets the server certificate
-        // SAN(s) it requests at enrollment. Empty means the component's own FQDN is used.
-        var serverDnsNames = (mtls["serverDnsNames"] ?? "")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        // A component behind a load balancer must serve a certificate for the access-URL host name, not
+        // just its own FQDN. The server certificate SAN(s) requested at enrollment default to the host
+        // of the public access URL (endpoints:public); componentMtls:serverDnsNames overrides that for a
+        // multi-SAN certificate. Empty (neither configured) means the component's own FQDN is used.
+        var serverDnsNames = ComponentPublicEndpoint.GetServerDnsNames(configuration);
         var options = new ComponentEnrollmentClientOptions
         {
             Token = enrollment.Token,
