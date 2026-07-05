@@ -215,14 +215,19 @@ public class SystemClientBootstrapRelationalTests
 
     private static bool CertificateMatchesKey(string? certificateBase64, RSA? key)
     {
-        if (string.IsNullOrEmpty(certificateBase64) || key is null)
-            return false;
+        // The caller passes a throwaway key freshly created by the fake store, so dispose it here.
+        using (key)
+        {
+            if (string.IsNullOrEmpty(certificateBase64) || key is null)
+                return false;
 
-        using var certificate =
-            X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64));
-        using var publicKey = certificate.GetRSAPublicKey();
-        return publicKey is not null
-               && key.ExportSubjectPublicKeyInfo().AsSpan().SequenceEqual(publicKey.ExportSubjectPublicKeyInfo());
+            using var certificate =
+                X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64));
+            using var publicKey = certificate.GetRSAPublicKey();
+            return publicKey is not null
+                   && key.ExportSubjectPublicKeyInfo().AsSpan()
+                       .SequenceEqual(publicKey.ExportSubjectPublicKeyInfo());
+        }
     }
 
     private sealed class InMemoryKeyStore : ISystemClientKeyStore

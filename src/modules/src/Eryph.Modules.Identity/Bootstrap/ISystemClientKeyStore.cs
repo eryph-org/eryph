@@ -18,9 +18,14 @@ public interface ISystemClientKeyStore
 {
     /// <summary>
     /// Reads the stored private key, or returns <see langword="null"/> when none is present (so the
-    /// bootstrap generates one). The caller owns and disposes the returned key. An implementation may
-    /// throw when a key exists but cannot be read, to avoid silently minting a new credential over the
-    /// operator's; it should not return <see langword="null"/> in that case.
+    /// bootstrap generates one). The caller owns and disposes the returned key.
+    /// <para>
+    /// How a key that <em>exists but cannot be read</em> is handled is the implementation's choice: the
+    /// standalone file store <b>throws</b> (a corrupt remote break-glass key must not be silently
+    /// replaced), while eryph-zero returns <see langword="null"/> and lets the bootstrap regenerate — the
+    /// long-standing behaviour for its local, disposable, single-machine store, where a lost key is
+    /// simply re-minted.
+    /// </para>
     /// </summary>
     Task<RSA?> TryReadKey(CancellationToken cancellationToken);
 

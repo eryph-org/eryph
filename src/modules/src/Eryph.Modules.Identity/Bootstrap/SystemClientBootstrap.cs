@@ -70,10 +70,10 @@ internal sealed class SystemClientBootstrap(
         }
 
         // Reuse the existing key when there is one (never rotate the break-glass credential); otherwise
-        // mint and persist a new key before it is referenced by the database row. When storedKey is
-        // non-null, `key` aliases it and both `using` declarations dispose the same instance — safe,
-        // because AsymmetricAlgorithm.Dispose is idempotent.
-        using var key = storedKey ?? await GenerateAndStoreKey(cancellationToken);
+        // mint and persist a new key before it is referenced by the database row. The generated key owns
+        // its own `using` so `key` below is a non-owning alias — no instance is disposed twice.
+        using var generatedKey = storedKey is null ? await GenerateAndStoreKey(cancellationToken) : null;
+        var key = storedKey ?? generatedKey!;
         using var certificate = BuildCertificate(key);
         var certificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
 
@@ -147,15 +147,19 @@ internal sealed class SystemClientBootstrap(
     }
 
     // The stored key is authoritative: the row is consistent when its certificate's public key matches
-    // the on-disk private key (so assertions validate) and it carries exactly the required scopes. The
-    // roles are a fixed constant, so scope drift is the only field that changes on its own; a mismatch
-    // reapplies both anyway.
+    // the on-disk private key (so assertions validate), it carries exactly the required scopes, and it
+    // still holds the super-admin role. The role is a fixed constant that does not drift on its own, but
+    // a manual edit or a bad migration could strip it while leaving the certificate valid, silently
+    // demoting the break-glass credential — so it is checked too and reapplied on any mismatch.
     private static bool IsConsistent(RSA key, ClientApplicationDescriptor descriptor)
     {
         if (string.IsNullOrWhiteSpace(descriptor.Certificate))
             return false;
 
         if (!descriptor.Scopes.SetEquals(RequiredScopes))
+            return false;
+
+        if (!descriptor.AppRoles.Contains(EryphConstants.SuperAdminRole))
             return false;
 
         using var publicKey = GetCertificatePublicKey(descriptor.Certificate);

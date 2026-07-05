@@ -124,6 +124,23 @@ public class SystemClientBootstrapTests
         clients.Get(EryphConstants.SystemClientId)!.Scopes.Should().BeEquivalentTo(RequiredScopes);
     }
 
+    [Fact]
+    public async Task A_stripped_super_admin_role_is_reapplied()
+    {
+        var (keyStore, _) = await Bootstrapped();
+        var clients = new ClientStore();
+        var row = await CreateRow(keyStore); // certificate and scopes are correct, but the role was removed
+        row.AppRoles.Clear();
+        clients.Seed(row);
+
+        var bootstrap = NewBootstrap(keyStore, clients.Service);
+        await bootstrap.ExecuteAsync(CancellationToken.None);
+
+        keyStore.Writes.Should().Be(1);
+        clients.Updated.Should().Be(1);
+        clients.Get(EryphConstants.SystemClientId)!.AppRoles.Should().Contain(EryphConstants.SuperAdminRole);
+    }
+
     private static SystemClientBootstrap NewBootstrap(ISystemClientKeyStore keyStore, IClientService clientService) =>
         new(keyStore, clientService, new CertificateGenerator(), new InMemoryKeyService(),
             NullLogger<SystemClientBootstrap>.Instance);
@@ -148,14 +165,19 @@ public class SystemClientBootstrapTests
 
     private static bool CertificateMatchesKey(string? certificateBase64, RSA? key)
     {
-        if (string.IsNullOrEmpty(certificateBase64) || key is null)
-            return false;
+        // The caller passes a throwaway key freshly created by the fake store, so dispose it here.
+        using (key)
+        {
+            if (string.IsNullOrEmpty(certificateBase64) || key is null)
+                return false;
 
-        using var certificate =
-            X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64));
-        using var publicKey = certificate.GetRSAPublicKey();
-        return publicKey is not null
-               && key.ExportSubjectPublicKeyInfo().AsSpan().SequenceEqual(publicKey.ExportSubjectPublicKeyInfo());
+            using var certificate =
+                X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64));
+            using var publicKey = certificate.GetRSAPublicKey();
+            return publicKey is not null
+                   && key.ExportSubjectPublicKeyInfo().AsSpan()
+                       .SequenceEqual(publicKey.ExportSubjectPublicKeyInfo());
+        }
     }
 
     /// <summary>In-memory <see cref="ISystemClientKeyStore"/> holding the key as PEM (fresh instance per read).</summary>
