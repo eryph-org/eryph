@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using LanguageExt;
@@ -17,6 +18,7 @@ public static class VmHostAgentConfigurationValidations
         from _ in ValidateProperty(configuration, c => c.Defaults, ValidateDefaultsConfig, path)
                   | ValidateList(configuration, c => c.Datastores, ValidateDataStoreConfig, path)
                   | ValidateList(configuration, c => c.Environments, ValidateEnvironmentConfig, path)
+                  | ValidateProperty(configuration, c => c.Ovn, ValidateOvnConfig, path)
         from __ in ValidateNoDuplicatePaths(configuration)
                    | ValidateProperty(configuration, c => c.Datastores, ValidateNoDuplicateDataStores, path)
                    | ValidateProperty(configuration, c => c.Environments, ValidateNoDuplicateEnvironments, path)
@@ -50,6 +52,17 @@ public static class VmHostAgentConfigurationValidations
         string path) =>
         ValidateProperty(toValidate, c => c.Vms, ValidatePath, path, true)
         | ValidateProperty(toValidate, c => c.Volumes, ValidatePath, path, true);
+
+    private static Validation<ValidationIssue, Unit> ValidateOvnConfig(
+        VmHostAgentOvnConfiguration toValidate,
+        string path) =>
+        ValidateProperty(toValidate, c => c.OverlayTransportIp, ValidateIpAddress, path);
+
+    private static Validation<Error, string> ValidateIpAddress(string value) =>
+        IPAddress.TryParse(value, out _)
+            ? Success<Error, string>(value)
+            : Fail<Error, string>(Error.New(
+                $"The value '{value}' is not a valid IP address."));
 
     private static Validation<Error, string> ValidatePath(string path) =>
         from _ in Validations.ValidateWindowsPath(path, "value")

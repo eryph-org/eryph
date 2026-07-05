@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Eryph.ModuleCore;
 
@@ -47,7 +48,49 @@ public sealed class DistributedEndpointResolver : IEndpointResolver
         return new Uri(new Uri(defaultBase), endpoint);
     }
 
+    /// <summary>
+    /// Reads the raw distributed value for <paramref name="name"/> without the URI coercion
+    /// <see cref="GetEndpoint"/> applies — for consumers whose endpoint is not an HTTP(S) URL, such
+    /// as the OVN <c>ssl:host:port</c> database endpoints. Returns <see langword="false"/> when the
+    /// name has not been distributed (or was distributed empty).
+    /// </summary>
+    public bool TryGetRawEndpoint(string name, [NotNullWhen(true)] out string? value) =>
+        _endpoints.TryGetValue(name, out value) && !string.IsNullOrWhiteSpace(value);
+
+    /// <summary>
+    /// Raised after <see cref="Update"/> swaps in a new endpoint map, so a consumer that realizes an
+    /// endpoint into live system state (e.g. the OVN chassis southbound dial) can re-apply when the
+    /// controller distributes a change after the consumer already ran once at startup.
+    /// </summary>
+    public event EventHandler? Changed;
+
     /// <summary>Replaces the endpoint map with the controller-distributed set.</summary>
-    public void Update(IReadOnlyDictionary<string, string> endpoints) =>
-        _endpoints = new Dictionary<string, string>(endpoints, StringComparer.OrdinalIgnoreCase);
+    public void Update(IReadOnlyDictionary<string, string> endpoints)
+    {
+        var updated = new Dictionary<string, string>(endpoints, StringComparer.OrdinalIgnoreCase);
+        var previous = _endpoints;
+        _endpoints = updated;
+
+        // Only signal consumers when the set actually changed. Realizing an endpoint into live system
+        // state (DNS resolution, a certificate read, an OVS chassis-plan round-trip) is expensive, and
+        // the controller may republish an unchanged map under a new config version.
+        if (!SameEndpoints(previous, updated))
+            Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static bool SameEndpoints(
+        IReadOnlyDictionary<string, string> a, IReadOnlyDictionary<string, string> b)
+    {
+        if (a.Count != b.Count)
+            return false;
+
+        foreach (var (key, value) in a)
+        {
+            if (!b.TryGetValue(key, out var other)
+                || !string.Equals(value, other, StringComparison.Ordinal))
+                return false;
+        }
+
+        return true;
+    }
 }

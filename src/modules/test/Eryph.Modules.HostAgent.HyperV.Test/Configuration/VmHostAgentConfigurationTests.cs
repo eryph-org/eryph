@@ -67,6 +67,26 @@ public class VmHostAgentConfigurationTests
         _fileMock.VerifyNoOtherCalls();
     }
 
+    [Fact]
+    public async Task GetConfigYaml_ConfigWithOvnOverlayIp_PreservesOvnSection()
+    {
+        // Regression: readConfig/applyHostDefaults (the read seam, distinct from the save seam) must
+        // preserve the ovn section — an earlier change dropped it, so the running agent and the
+        // get -> edit -> import workflow never saw the configured overlay transport IP.
+        _fileMock.Setup(m => m.Exists(ConfigPath)).Returns(true).Verifiable();
+        _fileMock.Setup(m => m.ReadAllText(ConfigPath, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("""
+                          ovn:
+                            overlay_transport_ip: 10.0.0.5
+                          """)
+            .Verifiable();
+
+        var result = await getConfigYaml(ConfigPath, _hostSettings).Run(_runtime);
+
+        result.Should().BeSuccess().Which.Should()
+            .Contain("ovn:").And.Contain("overlay_transport_ip: 10.0.0.5");
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -391,6 +411,28 @@ public class VmHostAgentConfigurationTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _fileMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SaveConfig_ConfigWithOvnOverlayIp_PreservesOvnSection()
+    {
+        // Regression: the overlay transport IP must survive normalization + serialization (rebuilding
+        // the config for save previously dropped Ovn), and 'ovn:' appears only because it is set.
+        var config = new VmHostAgentConfiguration
+        {
+            Ovn = new VmHostAgentOvnConfiguration { OverlayTransportIp = "10.0.0.5" },
+        };
+
+        var result = await saveConfig(config, ConfigPath, _hostSettings).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _fileMock.Verify(m => m.WriteAllText(
+                ConfigPath,
+                It.Is<string>(yaml =>
+                    yaml.Contains("ovn:") && yaml.Contains("overlay_transport_ip: 10.0.0.5")),
+                Encoding.UTF8,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     public readonly struct TestRuntime(TestRuntimeEnv env) :

@@ -246,15 +246,26 @@ public sealed class ComponentEnrollmentService(
                 .ToList();
         }
 
+        // The trust bundle must let a component validate a peer's leaf even when the peer presents only
+        // the leaf without its issuing chain — OVS/ovn-controller does exactly that on an SSL connection.
+        // So include the issuing intermediates (client + server CAs) alongside the trusted root(s), not
+        // just the roots; otherwise a leaf-only peer (the OVN southbound/northbound listeners) cannot be
+        // chained to a trusted root and validation fails.
         var trustCertificates = certificateAuthority.GetTrustedCaCertificates();
+        IReadOnlyList<X509Certificate2>? issuingCertificates = null;
         List<byte[]> trustBundle;
         try
         {
-            trustBundle = trustCertificates.Select(c => c.Export(X509ContentType.Cert)).ToList();
+            // Acquire inside the try so a throw here still disposes trustCertificates in the finally.
+            issuingCertificates = certificateAuthority.GetIssuingCaCertificates();
+            trustBundle = trustCertificates.Concat(issuingCertificates)
+                .Select(c => c.Export(X509ContentType.Cert)).ToList();
         }
         finally
         {
             foreach (var certificate in trustCertificates)
+                certificate.Dispose();
+            foreach (var certificate in issuingCertificates ?? [])
                 certificate.Dispose();
         }
 

@@ -27,8 +27,10 @@ public sealed class ComponentEnrollmentResult
     /// <summary>The server certificate's issuing intermediate CA certificate(s), each DER-encoded.</summary>
     public IReadOnlyList<byte[]> ServerIssuingChain { get; init; } = [];
 
-    /// <summary>The CA trust bundle: the currently trusted root CA certificate(s), each
-    /// DER-encoded. A bundle rather than a single anchor so a CA rollover can keep old and new
-    /// roots trusted at once.</summary>
+    /// <summary>The CA trust bundle: the currently trusted root CA certificate(s) plus the issuing
+    /// intermediate CA(s), each DER-encoded. The intermediates are included so a relying party can
+    /// still build a chain to a trusted root when a peer presents only its leaf without its issuing
+    /// chain (as OVS/ovn-controller does over SSL). A bundle rather than a single anchor so a CA
+    /// rollover can keep old and new generations trusted at once.</summary>
     public IReadOnlyList<byte[]> CaTrustBundle { get; init; } = [];
 }

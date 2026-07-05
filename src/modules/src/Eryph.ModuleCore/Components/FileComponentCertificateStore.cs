@@ -142,21 +142,36 @@ public sealed class FileComponentCertificateStore(string directory, TimeSpan ren
     /// bundle is not carried by the PFX, so it cannot be reconstructed from it; recovery is a re-enrollment
     /// (which rewrites the full PEM set). Callers must treat null as "not currently usable for SSL".
     /// </remarks>
-    public ComponentCertificatePem? ReadClientCertificatePem()
+    public ComponentCertificatePem? ReadClientCertificatePem() =>
+        ReadPem(KeyPath, LeafPath, ChainPath);
+
+    /// <summary>
+    /// Reads the enrolled <b>server</b>-TLS PEM material (private key, leaf-with-issuing-chain
+    /// certificate and CA trust bundle), or <see langword="null"/> when no server certificate is
+    /// enrolled or its PEM copies are incomplete. The certificate is the leaf followed by its issuing
+    /// chain so a listener presents the full path a peer pinning only the root can validate.
+    /// </summary>
+    public ComponentCertificatePem? ReadServerCertificatePem() =>
+        ReadPem(ServerKeyPath, ServerLeafPath, ServerChainPath);
+
+    // Reads a (key, leaf[, chain]) PEM triple plus the shared CA trust bundle. Returns null when the
+    // key, leaf or bundle is missing — notably the rare crash-between-writes case that left only the
+    // PFX. Callers treat null as "not currently usable for SSL".
+    private ComponentCertificatePem? ReadPem(string keyPath, string leafPath, string chainPath)
     {
-        if (!File.Exists(KeyPath) || !File.Exists(LeafPath) || !File.Exists(BundlePath))
+        if (!File.Exists(keyPath) || !File.Exists(leafPath) || !File.Exists(BundlePath))
             return null;
 
-        var certificate = File.ReadAllText(LeafPath);
-        if (File.Exists(ChainPath))
+        var certificate = File.ReadAllText(leafPath);
+        if (File.Exists(chainPath))
         {
-            var chain = File.ReadAllText(ChainPath);
+            var chain = File.ReadAllText(chainPath);
             if (!string.IsNullOrWhiteSpace(chain))
                 certificate = certificate.TrimEnd() + "\n" + chain.TrimStart();
         }
 
         return new ComponentCertificatePem(
-            File.ReadAllText(KeyPath),
+            File.ReadAllText(keyPath),
             certificate,
             File.ReadAllText(BundlePath));
     }

@@ -57,4 +57,13 @@ public interface IComponentCertificateStore
     /// PEM-based TLS directly (e.g. OVN's <c>set-ssl</c>, which takes PEM strings, not a PKCS#12 file).
     /// </summary>
     ComponentCertificatePem? ReadClientCertificatePem();
+
+    /// <summary>
+    /// The enrolled <b>server</b>-TLS PEM material (private key, leaf-with-issuing-chain certificate and
+    /// CA trust bundle) as strings, or <see langword="null"/> when no server certificate is enrolled. A
+    /// TLS listener (e.g. the OVN southbound/northbound SSL databases) must present the server
+    /// certificate — it carries the <c>serverAuth</c> EKU — not the client certificate, which peers
+    /// reject for server authentication.
+    /// </summary>
+    ComponentCertificatePem? ReadServerCertificatePem();
 }
