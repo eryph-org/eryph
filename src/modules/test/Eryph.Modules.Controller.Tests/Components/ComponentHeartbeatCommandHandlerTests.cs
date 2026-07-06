@@ -174,7 +174,13 @@ public class ComponentHeartbeatCommandHandlerTests
     {
         public Task<ComponentRegistration?> RecordHeartbeatAsync(Guid componentId, Guid instanceId,
             IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
-            => Task.FromResult(heartbeatResult);
+        {
+            // Mirror the real service: the recorded registration reflects the heartbeat's applied state,
+            // which is what the handler reconciles against.
+            if (heartbeatResult is not null)
+                heartbeatResult.AppliedConfigVersions = new Dictionary<ConfigDomain, long>(appliedConfigVersions);
+            return Task.FromResult(heartbeatResult);
+        }
 
         public Task<ComponentRegistration> UpsertAsync(RegisterComponentCommand command,
             CancellationToken cancellationToken)

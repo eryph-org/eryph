@@ -43,8 +43,10 @@ internal sealed class ComponentHeartbeatCommandHandler(
         // used to be. The push still only targets the queue persisted at registration (never a message
         // field), so it cannot be redirected or leak config to a new party; binding the heartbeat to an
         // authenticated component is part of the component authentication phase.
+        // Reconcile against the applied state as recorded (the returned registration), not the raw
+        // message, so drift detection stays aligned with whatever the registry accepted.
         var outdated = await distribution.GetOutdatedBundlesAsync(
-            registration.ComponentType, message.AppliedConfigVersions, CancellationToken.None);
+            registration.ComponentType, registration.AppliedConfigVersions, CancellationToken.None);
         if (outdated.Count == 0)
             return;
 
