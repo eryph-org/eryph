@@ -93,8 +93,8 @@ public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, I
         await using var dbScope = CreateScope();
         var repository = dbScope.GetInstance<IStateStoreRepository<AuthoredConfig>>();
 
-        await repository.AddAsync(Entry(1, "a"), default);
-        await repository.AddAsync(Entry(1, "b"), default);
+        await repository.AddAsync(Entry(1, "a"));
+        await repository.AddAsync(Entry(1, "b"));
 
         var save = () => dbScope.GetInstance<IStateStore>().SaveChangesAsync();
         await save.Should().ThrowAsync<DbUpdateException>();
