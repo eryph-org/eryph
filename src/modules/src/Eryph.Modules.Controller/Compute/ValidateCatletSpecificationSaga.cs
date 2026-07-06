@@ -99,16 +99,18 @@ internal class ValidateCatletSpecificationSaga(
             ? defaultArchitecture
             : architectures.OrderBy(a => a.Value, StringComparer.Ordinal).First();
 
+        // Resolve genes on a registered host agent's gene pool (see CreateCatletSpecificationSaga):
+        // the controller's own machine name has no gene pool queue in the split runtime. Resolve once
+        // and reuse it for every architecture.
+        var geneAgentName = agentLocator.FindAgentForGenePool();
+
         foreach (var architecture in architectures)
             await StartNewTask(new BuildCatletSpecificationCommand
             {
                 ContentType = message.ContentType,
                 Configuration = message.Configuration,
                 Architecture = architecture,
-                // Resolve genes on a registered host agent's gene pool (see
-                // CreateCatletSpecificationSaga): the controller's own machine name has no gene pool
-                // queue in the split runtime.
-                AgentName = agentLocator.FindAgentForGenePool(),
+                AgentName = geneAgentName,
             });
     }
 
