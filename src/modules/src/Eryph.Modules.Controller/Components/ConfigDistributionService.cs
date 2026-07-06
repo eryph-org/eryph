@@ -81,6 +81,39 @@ internal sealed class ConfigDistributionService(
     }
 
     /// <summary>
+    /// Compares a component's reported applied versions against the current materialized records
+    /// and returns the bundles for the entitled domains where it is behind — <b>without</b>
+    /// re-evaluating the sources or taking the per-domain lock. Used by heartbeat drift
+    /// reconciliation: unlike <see cref="BuildSnapshotAsync"/> (the startup pull, which re-reads the
+    /// sources to guarantee freshness), this reflects only what the push path already published, so
+    /// it stays a cheap, lock-free read that runs on every heartbeat. A source that changed without a
+    /// refresh trigger is a separate concern (the record, not the component, is then stale).
+    /// </summary>
+    public async Task<List<ConfigBundle>> GetOutdatedBundlesAsync(
+        ComponentType componentType,
+        IReadOnlyDictionary<ConfigDomain, long> appliedVersions,
+        CancellationToken cancellationToken)
+    {
+        var bundles = new List<ConfigBundle>();
+        foreach (var domain in GetEntitledDomains(componentType))
+        {
+            var record = await records.GetBySpecAsync(
+                new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
+            if (record is null)
+                continue;
+
+            var applied = appliedVersions.GetValueOrDefault(domain, 0);
+            if (record.Version > applied)
+                bundles.Add(new ConfigBundle
+                {
+                    Domain = domain, Version = record.Version, Payload = record.Payload,
+                });
+        }
+
+        return bundles;
+    }
+
+    /// <summary>
     /// Re-evaluates a domain against its source and returns the new bundle when the
     /// payload changed — or <c>null</c> when nothing changed (so the push path can
     /// skip publishing). The pull path uses <see cref="EnsureCurrentRecordAsync"/>

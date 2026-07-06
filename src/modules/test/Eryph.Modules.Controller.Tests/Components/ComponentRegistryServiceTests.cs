@@ -143,9 +143,10 @@ public class ComponentRegistryServiceTests
 
         // A restart reports an empty/reset applied set; the heartbeat from the registered
         // instance must reflect it verbatim.
-        await service.RecordHeartbeatAsync(
+        var result = await service.RecordHeartbeatAsync(
             componentId, instanceId, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
 
+        result.Should().BeSameAs(existing);
         repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
         existing.Status.Should().Be(ComponentRegistrationStatus.Active);
         existing.AppliedConfigVersions.Should().BeEmpty();
@@ -173,9 +174,10 @@ public class ComponentRegistryServiceTests
 
         // A delayed heartbeat from a previous process instance (e.g. reordered on the broker)
         // must be ignored so it cannot revert InstanceId or applied-config state.
-        await service.RecordHeartbeatAsync(
+        var result = await service.RecordHeartbeatAsync(
             componentId, staleInstance, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
 
+        result.Should().BeNull();
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
         existing.InstanceId.Should().Be(currentInstance);
         existing.AppliedConfigVersions.Should().HaveCount(2);
@@ -186,10 +188,11 @@ public class ComponentRegistryServiceTests
     {
         var (service, repo) = Create();
 
-        await service.RecordHeartbeatAsync(
+        var result = await service.RecordHeartbeatAsync(
             Guid.NewGuid(), Guid.NewGuid(),
             new Dictionary<ConfigDomain, long>(), CancellationToken.None);
 
+        result.Should().BeNull();
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

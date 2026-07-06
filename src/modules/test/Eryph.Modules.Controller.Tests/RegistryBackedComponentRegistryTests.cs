@@ -89,7 +89,7 @@ public class RegistryBackedComponentRegistryTests
             CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
-        public Task RecordHeartbeatAsync(Guid componentId, Guid instanceId,
+        public Task<ComponentRegistration?> RecordHeartbeatAsync(Guid componentId, Guid instanceId,
             IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 

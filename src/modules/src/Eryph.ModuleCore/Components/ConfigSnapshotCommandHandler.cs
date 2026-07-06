@@ -5,8 +5,9 @@ using Rebus.Handlers;
 namespace Eryph.ModuleCore.Components;
 
 /// <summary>
-/// Applies the initial (or delta) configuration snapshot the controller sends to
-/// this component's inbound queue on registration.
+/// Applies a configuration snapshot the controller sends to this component's inbound queue: either the
+/// reply to the component's startup config request, or a heartbeat-driven drift re-push (from
+/// <c>ComponentHeartbeatCommandHandler</c>) when the component is found behind the authoritative records.
 /// </summary>
 internal sealed class ConfigSnapshotCommandHandler(
     ComponentIdentity identity,

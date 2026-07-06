@@ -32,7 +32,10 @@ internal static class ConfigRecordSpecs
     {
         public GetByDomain(ConfigDomain domain)
         {
+            Domain = domain;
             Query.Where(x => x.Domain == domain);
         }
+
+        public ConfigDomain Domain { get; }
     }
 }

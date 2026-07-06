@@ -248,6 +248,136 @@ public class ConfigDistributionServiceTests
             .Should().Contain(ConfigDomain.OvnCluster);
     }
 
+    [Fact]
+    public async Task GetOutdatedBundles_returns_the_bundle_for_a_domain_the_component_is_behind_on()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConfigRecord
+            {
+                Id = Guid.NewGuid(),
+                Domain = ConfigDomain.OvnCluster,
+                Version = 3,
+                Payload = """{"chassis":[]}""",
+            });
+
+        var service = CreateService(records);
+
+        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.OvnCluster] = 1 };
+        var bundles = await service.GetOutdatedBundlesAsync(ComponentType.Network, applied, CancellationToken.None);
+
+        bundles.Should().ContainSingle();
+        bundles[0].Domain.Should().Be(ConfigDomain.OvnCluster);
+        bundles[0].Version.Should().Be(3);
+        bundles[0].Payload.Should().Be("""{"chassis":[]}""");
+    }
+
+    [Fact]
+    public async Task GetOutdatedBundles_uses_the_stored_record_without_re_evaluating_the_source()
+    {
+        // Drift detection must be cheap: it reflects the record the push path already published, not a
+        // fresh source build, and never bumps the version. Even with a source that would produce a
+        // different (newer) payload, the outdated bundle is the stored v3.
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConfigRecord
+            {
+                Id = Guid.NewGuid(), Domain = ConfigDomain.OvnCluster, Version = 3, Payload = "stored",
+            });
+
+        var service = CreateService(records, new StubSource(ConfigDomain.OvnCluster, "fresh-would-bump"));
+
+        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.OvnCluster] = 1 };
+        var bundles = await service.GetOutdatedBundlesAsync(ComponentType.Network, applied, CancellationToken.None);
+
+        bundles.Should().ContainSingle();
+        bundles[0].Version.Should().Be(3);
+        bundles[0].Payload.Should().Be("stored");
+        records.Verify(r => r.UpdateAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()), Times.Never);
+        records.Verify(r => r.AddAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetOutdatedBundles_is_empty_when_the_component_is_current()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConfigRecord
+            {
+                Id = Guid.NewGuid(), Domain = ConfigDomain.OvnCluster, Version = 3, Payload = "p",
+            });
+
+        var service = CreateService(records);
+
+        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.OvnCluster] = 3 };
+        var bundles = await service.GetOutdatedBundlesAsync(ComponentType.Network, applied, CancellationToken.None);
+
+        bundles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetOutdatedBundles_skips_a_domain_with_no_record_yet()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecord?)null);
+
+        var service = CreateService(records);
+
+        var bundles = await service.GetOutdatedBundlesAsync(
+            ComponentType.Network, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+
+        bundles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetOutdatedBundles_returns_only_the_domains_the_component_is_behind_on()
+    {
+        // A host agent is entitled to three domains: it is behind on placement, current on
+        // network-providers, and no endpoints record exists yet — only the placement bundle is returned.
+        var byDomain = new Dictionary<ConfigDomain, ConfigRecord>
+        {
+            [ConfigDomain.PlacementConfig] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig, Version = 5, Payload = "placement" },
+            [ConfigDomain.NetworkProviders] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.NetworkProviders, Version = 2, Payload = "network" },
+            // No Endpoints record.
+        };
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecordSpecs.GetByDomain spec, CancellationToken _) =>
+                byDomain.GetValueOrDefault(spec.Domain));
+
+        var service = CreateService(records);
+
+        var applied = new Dictionary<ConfigDomain, long>
+        {
+            [ConfigDomain.PlacementConfig] = 3,   // behind: record is v5
+            [ConfigDomain.NetworkProviders] = 2,  // current: record is v2
+            // Endpoints: neither applied nor a record — skipped.
+        };
+        var bundles = await service.GetOutdatedBundlesAsync(ComponentType.VMHostAgent, applied, CancellationToken.None);
+
+        bundles.Should().ContainSingle();
+        bundles[0].Domain.Should().Be(ConfigDomain.PlacementConfig);
+        bundles[0].Version.Should().Be(5);
+        bundles[0].Payload.Should().Be("placement");
+    }
+
+    [Fact]
+    public async Task GetOutdatedBundles_for_an_unentitled_component_reads_nothing()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        var service = CreateService(records);
+
+        var bundles = await service.GetOutdatedBundlesAsync(
+            ComponentType.GenePoolAgent, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+
+        bundles.Should().BeEmpty();
+        records.Verify(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     /// <summary>A config source whose payload the test controls directly.</summary>
     private sealed class StubSource(ConfigDomain domain, string payload) : IConfigSource
     {

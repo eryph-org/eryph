@@ -20,10 +20,12 @@ internal interface IComponentRegistryService
     /// applied-config state with what the component reports. The heartbeat is the
     /// component's authoritative current state: a restart (signalled by a new
     /// <paramref name="instanceId"/>) resets <paramref name="appliedConfigVersions"/>,
-    /// so this overwrites rather than merges. Does nothing if the component is not
-    /// registered.
+    /// so this overwrites rather than merges. Returns the updated registration, or
+    /// <c>null</c> when the component is not registered or the heartbeat is from a
+    /// superseded instance — in which case nothing is recorded and the caller must not
+    /// act on it (e.g. drift reconciliation).
     /// </summary>
-    Task RecordHeartbeatAsync(
+    Task<ComponentRegistration?> RecordHeartbeatAsync(
         Guid componentId,
         Guid instanceId,
         IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions,

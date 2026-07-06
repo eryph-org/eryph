@@ -58,7 +58,7 @@ internal sealed class ComponentRegistryService(
         return existing;
     }
 
-    public async Task RecordHeartbeatAsync(
+    public async Task<ComponentRegistration?> RecordHeartbeatAsync(
         Guid componentId,
         Guid instanceId,
         IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions,
@@ -67,7 +67,7 @@ internal sealed class ComponentRegistryService(
         var registration = await repository.GetBySpecAsync(
             new ComponentRegistrationSpecs.GetByComponentId(componentId), cancellationToken);
         if (registration is null)
-            return;
+            return null;
 
         // Ignore heartbeats that do not belong to the currently-registered instance.
         // Registration is the authority for the live InstanceId; on a brokered transport a
@@ -76,7 +76,7 @@ internal sealed class ComponentRegistryService(
         // state) to the stale instance. A restart re-registers with its new InstanceId first,
         // so the matching heartbeat still resets applied state as intended.
         if (registration.InstanceId != instanceId)
-            return;
+            return null;
 
         registration.LastHeartbeat = DateTimeOffset.UtcNow;
         registration.Status = ComponentRegistrationStatus.Active;
@@ -85,6 +85,7 @@ internal sealed class ComponentRegistryService(
         // the controller's view does not lag behind reality.
         registration.AppliedConfigVersions = new Dictionary<ConfigDomain, long>(appliedConfigVersions);
         await repository.UpdateAsync(registration, cancellationToken);
+        return registration;
     }
 
     public async Task RecordAppliedAsync(
