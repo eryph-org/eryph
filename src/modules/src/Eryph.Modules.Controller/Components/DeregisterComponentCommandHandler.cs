@@ -1,8 +1,10 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
+using Eryph.Rebus;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Components;
@@ -13,6 +15,7 @@ namespace Eryph.Modules.Controller.Components;
 /// </summary>
 [UsedImplicitly]
 internal sealed class DeregisterComponentCommandHandler(
+    IBus bus,
     IComponentRegistryService registry,
     ILogger<DeregisterComponentCommandHandler> logger)
     : IHandleMessages<DeregisterComponentCommand>
@@ -21,8 +24,18 @@ internal sealed class DeregisterComponentCommandHandler(
     {
         var removed = await registry.DeregisterAsync(
             message.ComponentId, message.InstanceId, CancellationToken.None);
-        if (removed)
-            logger.LogInformation(
-                "Deregistered component {ComponentId} on graceful shutdown.", message.ComponentId);
+        if (!removed)
+            return;
+
+        logger.LogInformation(
+            "Deregistered component {ComponentId} on graceful shutdown.", message.ComponentId);
+
+        // A departing host agent changes the OVN gateway chassis topology. The deregister command does
+        // not carry the component type, so refresh OvnCluster on any removal; the refresh re-evaluates
+        // the chassis from the registry and only pushes to the network component when it actually
+        // changed, so this is a no-op for non-host-agent components.
+        await bus.Advanced.Routing.Send(
+            QueueNames.Controllers,
+            new RefreshConfigDomainCommand { Domain = ConfigDomain.OvnCluster });
     }
 }

@@ -34,5 +34,13 @@ internal sealed class RegisterComponentCommandHandler(
             await bus.Advanced.Routing.Send(
                 QueueNames.Controllers,
                 new RefreshConfigDomainCommand { Domain = ConfigDomain.Endpoints });
+
+        // A host agent joining (or re-registering with a changed chassis priority) alters the OVN
+        // gateway chassis topology; re-evaluate and push OvnCluster so the network component updates its
+        // chassis groups without waiting for the next network sync. No-op when the topology is unchanged.
+        if (message.ComponentType == ComponentType.VMHostAgent)
+            await bus.Advanced.Routing.Send(
+                QueueNames.Controllers,
+                new RefreshConfigDomainCommand { Domain = ConfigDomain.OvnCluster });
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.ModuleCore.Components;
@@ -18,12 +19,15 @@ internal sealed class ComponentCertificateNorthboundListener(
 {
     public ClusterPlan Configure(ClusterPlan plan)
     {
-        var pem = certificateStore.ReadServerCertificatePem();
-        if (pem is null)
-            // No server certificate: cannot open an SSL listener. Leave the plan unchanged rather than
-            // advertise a listener that will not accept connections. The southbound endpoint service
-            // fails the process fast on the same missing material, so this is a defensive no-op.
-            return plan;
+        // No server certificate: FAIL the apply rather than return a chassis-only plan. The realizer
+        // reconciles the northbound connection/SSL tables, so applying a plan without the listener would
+        // remove an existing pssl:6641 listener — the very clobber this design prevents. Throwing fails
+        // the cluster-config apply (which the bus retries) and leaves the current listener intact until
+        // enrollment is restored.
+        var pem = certificateStore.ReadServerCertificatePem()
+                  ?? throw new InvalidOperationException(
+                      "The component server certificate (PEM) is not available, so the OVN northbound SSL "
+                      + "listener cannot be configured. Check the component enrollment.");
 
         return plan
             .SetNorthboundSsl(pem.PrivateKeyPem, pem.CertificatePem, pem.CaBundlePem)
