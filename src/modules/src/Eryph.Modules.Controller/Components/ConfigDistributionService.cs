@@ -42,6 +42,12 @@ internal sealed class ConfigDistributionService(
             // the deployment endpoints (e.g. the identity issuer) to reach other components.
             [ComponentType.VMHostAgent] =
                 [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders, ConfigDomain.Endpoints],
+
+            // The network component hosts the OVN databases; it receives the northbound cluster
+            // topology (gateway chassis groups) and realizes it locally, so the controller never
+            // writes the northbound cluster tables as a remote client.
+            [ComponentType.Network] =
+                [ConfigDomain.OvnCluster],
         };
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>

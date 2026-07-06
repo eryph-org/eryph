@@ -34,16 +34,23 @@ public class NetworkModule
         options.AddStartupHandler<StartBusModuleHandler>();
 
         // Opt in to controller-driven component registration so the controller can track the network
-        // process's liveness, route to its inbound queue, and resolve its OVN endpoints. The network
-        // process consumes no distributed config domains, so it registers no realizers. It advertises no
-        // endpoints itself — whether the OVN databases are exposed remotely (SSL) is the host's decision,
-        // contributed through an IComponentEndpointProvider the standalone network host wires (eryph-zero
-        // wires none, so in-process advertises nothing). Suffix the inbound queue with the host FQDN
-        // identity so queue names stay unique across DNS domains on a shared broker.
+        // process's liveness, route to its inbound queue, and resolve its OVN endpoints. It consumes the
+        // OvnCluster config domain — the northbound gateway chassis topology the controller computes —
+        // and realizes it against its local northbound database (OvnClusterConfigRealizer). It advertises
+        // no endpoints itself — whether the OVN databases are exposed remotely (SSL) is the host's
+        // decision, contributed through an IComponentEndpointProvider the standalone network host wires
+        // (eryph-zero wires none, so in-process advertises nothing). Suffix the inbound queue with the
+        // host FQDN identity so queue names stay unique across DNS domains on a shared broker.
         options.AddComponentRegistration(
             ComponentType.Network,
             $"{QueueNames.Network}.{ComponentIdentity.GetLocalHostId()}",
-            null);
+            null,
+            typeof(OvnClusterConfigRealizer));
+
+        // Host-supplied northbound SSL listeners folded into the cluster plan by
+        // OvnClusterConfigRealizer. Empty by default (eryph-zero: local pipe, no SSL); the standalone
+        // network host appends a pssl:6641 listener backed by its enrolled component certificate.
+        options.Container.Collection.Register<IOvnNorthboundListener>(Array.Empty<Type>());
 
         options.AddLogging();
     }

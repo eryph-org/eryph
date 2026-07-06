@@ -42,4 +42,14 @@ public enum ConfigDomain
     /// controller starts from the advertised endpoints and overlays operator overrides.
     /// </summary>
     Endpoints,
+
+    /// <summary>
+    /// The OVN northbound cluster topology (the gateway chassis group and its members).
+    /// The controller computes it from the registered host agents; the network component,
+    /// which hosts the northbound database, realizes it against its local database together
+    /// with the connection/SSL configuration it owns. This keeps a single writer of the
+    /// northbound connection tables, so the controller's client-mode plan application no
+    /// longer reconciles away the network component's SSL listeners.
+    /// </summary>
+    OvnCluster,
 }

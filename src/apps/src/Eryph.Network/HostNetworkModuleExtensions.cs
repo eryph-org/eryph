@@ -43,9 +43,11 @@ internal static class HostNetworkModuleExtensions
             {
                 next(context, options);
 
-                // Open the OVN databases for remote SSL access using the enrolled certificate. The
-                // container filter requires mTLS, so the certificate store is always registered.
-                options.AddHostedService<OvnRemoteEndpointService>();
+                // Open the OVN southbound database for remote SSL access using the enrolled
+                // certificate. The container filter requires mTLS, so the certificate store is always
+                // registered. The northbound listener is contributed to the cluster plan instead (see
+                // the container filter below) so it is applied together with the gateway chassis.
+                options.AddHostedService<OvnSouthboundEndpointService>();
 
                 // Renew the component certificate before it expires without a restart (the context
                 // is registered by ComponentMtlsTransport.Register in ConfigureContainer below).
@@ -80,6 +82,12 @@ internal static class HostNetworkModuleExtensions
                     : ComponentIdentity.GetLocalHostId();
                 container.Collection.Append<IComponentEndpointProvider>(
                     () => new OvnRemoteEndpointProvider(advertisedHost), Lifestyle.Singleton);
+
+                // Contribute the northbound SSL listener (pssl:6641, backed by the enrolled server
+                // certificate) to the cluster plan the network module applies to its local northbound
+                // database — so the listener and the gateway chassis are one reconciled plan.
+                container.Collection.Append<IOvnNorthboundListener, ComponentCertificateNorthboundListener>(
+                    Lifestyle.Singleton);
 
                 next(context, container);
             };
