@@ -17,6 +17,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class PopulateCatletConfigVariablesSaga(
+    IStorageManagementAgentLocator agentLocator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<PopulateCatletConfigVariablesCommand,
             EryphSagaData<PopulateCatletConfigVariablesSagaData>>(workflow),
@@ -38,7 +39,9 @@ internal class PopulateCatletConfigVariablesSaga(
         var config = message.Config ?? throw new InvalidOperationException("CatletConfig must not be null in PopulateCatletConfigVariablesSaga.");
 
         Data.Data.Config = config;
-        Data.Data.AgentName = Environment.MachineName;
+        // Resolve genes on a registered host agent's gene pool (see CreateCatletSpecificationSaga):
+        // the controller's own machine name has no gene pool queue in the split runtime.
+        Data.Data.AgentName = agentLocator.FindAgentForGenePool();
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
         await StartNewTask(new BuildCatletSpecificationCommand

@@ -23,6 +23,7 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class CreateCatletSpecificationSaga(
     IStateStoreRepository<CatletSpecification> repository,
+    IStorageManagementAgentLocator agentLocator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CreateCatletSpecificationCommand, EryphSagaData<CreateCatletSpecificationSagaData>>(
             workflow),
@@ -97,7 +98,11 @@ internal class CreateCatletSpecificationSaga(
     protected override async Task Initiated(CreateCatletSpecificationCommand message)
     {
         Data.Data.State = CreateCatletSpecificationSagaState.Initiated;
-        Data.Data.AgentName = Environment.MachineName;
+        // Resolve the genes on a registered host agent's gene pool, not the controller's own machine
+        // name: in the split runtime the gene pool runs on the host agent (e.g. WASD12), so routing to
+        // eryph.genepool.<controller-host> targets a queue that does not exist. FindAgentForGenePool
+        // returns the single host in eryph-zero (the same machine) and a real host agent in the split.
+        Data.Data.AgentName = agentLocator.FindAgentForGenePool();
         var architectures = message.Architectures ?? throw new InvalidOperationException("Architectures cannot be null");
         Data.Data.Architectures = architectures;
         Data.Data.ContentType = message.ContentType;
