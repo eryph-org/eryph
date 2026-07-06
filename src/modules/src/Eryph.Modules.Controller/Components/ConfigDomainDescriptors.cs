@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -15,10 +14,11 @@ namespace Eryph.Modules.Controller.Components;
 /// </summary>
 /// <remarks>
 /// This is the minimal form of the per-domain descriptor in plan §10.7 (which also carries the scoping
-/// capability). The validator deserializes with unmapped members disallowed, so a payload that
-/// validates here deserializes to the same object the realizer applies — rejecting invalid JSON,
-/// wrong-cased/foreign members and a bare <c>null</c> before any of them can be distributed and wedge
-/// or silently empty the fleet.
+/// capability). Validation deserializes with unmapped members disallowed — so an invalid,
+/// wrong-cased/foreign-member or bare-<c>null</c> payload is rejected before it can be distributed and
+/// wedge or silently empty the fleet — and returns the <b>canonical</b> form (re-serialized), so two
+/// semantically-identical payloads that differ only in whitespace or property order do not create noisy
+/// versions or redundant redistributions.
 /// </remarks>
 internal static class ConfigDomainDescriptors
 {
@@ -27,22 +27,39 @@ internal static class ConfigDomainDescriptors
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     };
 
-    private static readonly IReadOnlyDictionary<ConfigDomain, Func<string, bool>> Authorable =
-        new Dictionary<ConfigDomain, Func<string, bool>>
+    private delegate bool TryCanonicalizeDelegate(string payload, out string canonical);
+
+    private static readonly IReadOnlyDictionary<ConfigDomain, TryCanonicalizeDelegate> Authorable =
+        new Dictionary<ConfigDomain, TryCanonicalizeDelegate>
         {
-            [ConfigDomain.PlacementConfig] = payload => CanParse<PlacementConfig>(payload),
+            [ConfigDomain.PlacementConfig] = Canonicalize<PlacementConfig>,
         };
 
     public static bool IsAuthorable(ConfigDomain domain) => Authorable.ContainsKey(domain);
 
-    public static bool IsValidPayload(ConfigDomain domain, string payload) =>
-        Authorable.TryGetValue(domain, out var validate) && validate(payload);
-
-    private static bool CanParse<T>(string payload)
+    /// <summary>
+    /// Validates the payload against the domain's schema and returns its canonical serialization.
+    /// Returns false when the domain is not authorable or the payload is invalid.
+    /// </summary>
+    public static bool TryCanonicalize(ConfigDomain domain, string payload, out string canonical)
     {
+        canonical = payload;
+        return Authorable.TryGetValue(domain, out var canonicalize) && canonicalize(payload, out canonical);
+    }
+
+    private static bool Canonicalize<T>(string payload, out string canonical)
+    {
+        canonical = payload;
         try
         {
-            return JsonSerializer.Deserialize<T>(payload, StrictJson) is not null;
+            var value = JsonSerializer.Deserialize<T>(payload, StrictJson);
+            if (value is null)
+                return false;
+
+            // Re-serialize with the default options the realizer/source use, so the stored payload is
+            // canonical (stable whitespace and property order).
+            canonical = JsonSerializer.Serialize(value);
+            return true;
         }
         catch (JsonException)
         {

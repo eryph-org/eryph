@@ -72,6 +72,12 @@ public static class ScopeHierarchy
         [
             EryphConstants.Authorization.Scopes.IdentityClientsRead,
         ],
+
+        // Management API hierarchies
+        [EryphConstants.Authorization.Scopes.ManagementWrite] =
+        [
+            EryphConstants.Authorization.Scopes.ManagementRead,
+        ],
     };
 
     /// <summary>
