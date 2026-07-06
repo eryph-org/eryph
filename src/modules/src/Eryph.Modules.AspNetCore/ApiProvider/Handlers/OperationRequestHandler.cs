@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Rebus.TransactionScopes;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
@@ -20,7 +17,6 @@ public class OperationRequestHandler<TEntity>(
     IHttpContextAccessor httpContextAccessor,
     IMapper mapper,
     IOperationDispatcher operationDispatcher,
-    IStateStore stateStore,
     IUserRightsProvider userRightsProvider)
     : OperationRequestHandlerBase(
             apiResultFactory,
@@ -37,9 +33,6 @@ public class OperationRequestHandler<TEntity>(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken)
     {
-        using var ta = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled);
-        ta.EnlistRebus();
-
         if (typeof(TEntity) == typeof(Gene))
         {
             if (!await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin))
@@ -58,10 +51,11 @@ public class OperationRequestHandler<TEntity>(
         }
 
         var command = createOperationFunc();
+        // StartNew persists and commits the operation (OperationManager.GetOrCreateAsync) before it
+        // dispatches the command, so the row is durable before the controller can receive it. No
+        // ambient TransactionScope: an enlisted MariaDB write commits via XA only at scope disposal,
+        // which would let the dispatched command race ahead of the commit.
         var result = await StartOperation(command);
-
-        await stateStore.SaveChangesAsync(cancellationToken);
-        ta.Complete();
 
         return result;
     }
