@@ -28,8 +28,28 @@ public class ConfigDistributionServiceTests
         settingsManager.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, ControllerSettings>(settings));
 
-        var source = new PlacementConfigSource(settingsManager.Object, NullLogger<PlacementConfigSource>.Instance);
+        var source = new PlacementConfigSource(
+            NoAuthoredStore(), settingsManager.Object, NullLogger<PlacementConfigSource>.Instance);
         return new ConfigDistributionService(records.Object, new IConfigSource[] { source }, NoOpLock());
+    }
+
+    // Nothing authored via the API, so PlacementConfigSource falls back to the settings file.
+    // IAuthoredConfigStore is internal and cannot be proxied by Moq, so it is hand-stubbed.
+    private static IAuthoredConfigStore NoAuthoredStore() => new EmptyAuthoredStore();
+
+    private sealed class EmptyAuthoredStore : IAuthoredConfigStore
+    {
+        public Task<AuthoredConfig?> GetCurrentAsync(
+            ConfigDomain domain, string scope, CancellationToken cancellationToken)
+            => Task.FromResult<AuthoredConfig?>(null);
+
+        public Task<AuthoredConfig> AddVersionAsync(
+            ConfigDomain domain, string scope, string payload, string? author, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<AuthoredConfig>> GetHistoryAsync(
+            ConfigDomain domain, string scope, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
     }
 
     // The distributed lock only serializes concurrent access; for single-threaded unit tests a

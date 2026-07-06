@@ -9,18 +9,28 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.Modules.Controller.Components;
 
 /// <summary>
-/// Builds the <see cref="ConfigDomain.PlacementConfig"/> payload from the
-/// Placement section of the controller settings.
+/// Builds the <see cref="ConfigDomain.PlacementConfig"/> payload. The operator-authored value (set via
+/// the management API and stored versioned) is authoritative once it exists; until the domain is first
+/// authored the source falls back to the Placement section of the controller settings file, so
+/// existing file-based deployments keep working unchanged.
 /// </summary>
 internal sealed class PlacementConfigSource(
+    IAuthoredConfigStore authoredStore,
     IControllerSettingsManager settingsManager,
     ILogger<PlacementConfigSource> logger)
     : IConfigSource
 {
     public ConfigDomain Domain => ConfigDomain.PlacementConfig;
 
-    public Task<string> BuildPayloadAsync(CancellationToken cancellationToken) =>
-        settingsManager.GetCurrentConfiguration()
+    public async Task<string> BuildPayloadAsync(CancellationToken cancellationToken)
+    {
+        var authored = await authoredStore.GetCurrentAsync(
+            ConfigDomain.PlacementConfig, ConfigScope.Default, cancellationToken);
+        if (authored is not null)
+            return authored.Payload;
+
+        // Not yet authored via the management API — fall back to the controller settings file.
+        return await settingsManager.GetCurrentConfiguration()
             .Match(
                 settings => JsonSerializer.Serialize(settings.Placement),
                 error =>
@@ -35,4 +45,5 @@ internal sealed class PlacementConfigSource(
                     throw new InvalidOperationException(
                         $"Cannot distribute placement configuration: {error.Message}");
                 });
+    }
 }
