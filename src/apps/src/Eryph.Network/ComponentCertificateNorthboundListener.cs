@@ -21,9 +21,9 @@ internal sealed class ComponentCertificateNorthboundListener(
     {
         // No server certificate: FAIL the apply rather than return a chassis-only plan. The realizer
         // reconciles the northbound connection/SSL tables, so applying a plan without the listener would
-        // remove an existing pssl:6641 listener — the very clobber this design prevents. Throwing fails
-        // the cluster-config apply (which the bus retries) and leaves the current listener intact until
-        // enrollment is restored.
+        // remove an existing pssl:6641 listener — the very clobber this design prevents. Throwing aborts
+        // the apply before the plan reaches the database, so the current listener is left intact; the
+        // configuration is re-applied on the next topology change once enrollment is restored.
         var pem = certificateStore.ReadServerCertificatePem()
                   ?? throw new InvalidOperationException(
                       "The component server certificate (PEM) is not available, so the OVN northbound SSL "

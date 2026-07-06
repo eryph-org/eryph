@@ -3,8 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
+using Eryph.Rebus;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Components;
@@ -18,6 +20,7 @@ namespace Eryph.Modules.Controller.Components;
 /// </summary>
 [UsedImplicitly]
 internal sealed class DecommissionComponentCommandHandler(
+    IBus bus,
     IComponentRegistryService registry,
     IEnumerable<IComponentBrokerProvisioner> brokerProvisioners,
     ILogger<DecommissionComponentCommandHandler> logger)
@@ -35,5 +38,17 @@ internal sealed class DecommissionComponentCommandHandler(
         logger.LogInformation(
             "Decommissioned component {ComponentId} (broker user removed; registration removed: {Removed}).",
             message.ComponentId, removed);
+
+        if (!removed)
+            return;
+
+        // Permanent removal changes the OVN gateway chassis topology (a decommissioned host agent can no
+        // longer act as a gateway). Refresh OvnCluster so the network component drops its chassis. The
+        // command does not carry the component type, so refresh on any removal; the refresh re-evaluates
+        // the chassis and only pushes when it actually changed. Chassis are deliberately NOT refreshed on
+        // graceful deregister, which is transient (a restarting agent) and would otherwise flap the group.
+        await bus.Advanced.Routing.Send(
+            QueueNames.Controllers,
+            new RefreshConfigDomainCommand { Domain = ConfigDomain.OvnCluster });
     }
 }

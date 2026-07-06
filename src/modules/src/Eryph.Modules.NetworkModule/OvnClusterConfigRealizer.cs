@@ -40,20 +40,20 @@ internal sealed class OvnClusterConfigRealizer(
 
         // Guard against a malformed/version-skewed payload that deserialized with a null or empty group
         // name or a null chassis list — applying such a plan would create an unnamed group or throw
-        // while iterating. Fail with a clear error (the config apply is retried by the bus).
+        // while iterating. Individual invalid/duplicate chassis entries are handled in BuildPlan.
         if (string.IsNullOrWhiteSpace(config.ChassisGroupName) || config.Chassis is null)
             throw new InvalidOperationException(
                 "The OVN cluster configuration payload is invalid: a chassis group name and a chassis "
                 + "list are required.");
 
-        var plan = new ClusterPlan().AddChassisGroup(config.ChassisGroupName);
-        foreach (var chassis in config.Chassis)
-            plan = plan.AddChassis(config.ChassisGroupName, chassis.Name, chassis.Priority);
+        // Wait for the local northbound database to accept connections before applying. The database
+        // node starts on its own thread, so a config snapshot can arrive before ovsdb-server is
+        // listening on the local pipe. There is no automatic re-push of an unchanged payload (config
+        // drift re-distribution is a separate concern), so failing here without waiting could leave the
+        // chassis and listener unset for the process lifetime; waiting closes that startup race.
+        await WaitForNorthboundDatabaseAsync(cancellationToken);
 
-        // Fold in the host-supplied northbound listeners so they are part of the same reconciled plan
-        // as the chassis (none in eryph-zero, a pssl:6641 SSL listener in the split runtime).
-        foreach (var listener in northboundListeners)
-            plan = listener.Configure(plan);
+        var plan = BuildPlan(config, northboundListeners);
 
         var realizer = new ClusterPlanNorthboundRealizer(
             systemEnvironment,
@@ -68,5 +68,50 @@ internal sealed class OvnClusterConfigRealizer(
             "Applied OVN cluster configuration v{Version} to the local northbound database "
             + "(chassis group '{ChassisGroup}', {ChassisCount} chassis).",
             version, config.ChassisGroupName, config.Chassis.Count);
+    }
+
+    /// <summary>
+    /// Builds the northbound cluster plan: the gateway chassis group and its members plus the
+    /// host-supplied listeners, all in one reconciled plan. Chassis are added at most once per name and
+    /// nameless entries are skipped — the registry can currently yield the same chassis name for more
+    /// than one agent, and <see cref="ClusterPlanConfigurationExtensions.AddChassis"/> throws on a
+    /// duplicate key, which would otherwise fail the whole apply.
+    /// </summary>
+    internal static ClusterPlan BuildPlan(
+        OvnClusterConfig config,
+        IEnumerable<IOvnNorthboundListener> northboundListeners)
+    {
+        var plan = new ClusterPlan().AddChassisGroup(config.ChassisGroupName);
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var chassis in config.Chassis)
+        {
+            if (string.IsNullOrWhiteSpace(chassis?.Name) || !seen.Add(chassis.Name))
+                continue;
+            plan = plan.AddChassis(config.ChassisGroupName, chassis.Name, chassis.Priority);
+        }
+
+        // Fold in the host-supplied northbound listeners (none in eryph-zero, a pssl:6641 SSL listener in
+        // the split runtime) so they are part of the same reconciled plan as the chassis.
+        foreach (var listener in northboundListeners)
+            plan = listener.Configure(plan);
+
+        return plan;
+    }
+
+    private async Task WaitForNorthboundDatabaseAsync(CancellationToken cancellationToken)
+    {
+        var either = await ovnSettings.NorthDBConnection
+            .WaitForDbSocket(systemEnvironment, cancellationToken);
+
+        var started = either.Match(
+            s => s,
+            error => throw new InvalidOperationException(
+                $"Failed to wait for the OVN northbound database: {error.Message}"));
+
+        if (!started)
+            throw new InvalidOperationException(
+                "The OVN northbound database did not become available, so the OVN cluster configuration "
+                + "cannot be applied.");
     }
 }
