@@ -3,6 +3,8 @@ using Eryph.ModuleCore.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb.Model;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using Rebus.Bus;
 
 namespace Eryph.Modules.Controller.Tests.Components;
 
@@ -10,13 +12,17 @@ public class DecommissionComponentCommandHandlerTests
 {
     private static readonly Guid ComponentId = Guid.NewGuid();
 
+    // The OvnCluster refresh send only needs to not blow up; the routing chain is auto-mocked and
+    // Task-returning members return completed tasks.
+    private static IBus NoOpBus() => new Mock<IBus> { DefaultValue = DefaultValue.Mock }.Object;
+
     [Fact]
     public async Task Decommission_removes_the_broker_user_and_the_registration()
     {
         var broker = new RecordingBrokerProvisioner();
         var registry = new StubRegistry(true);
         var handler = new DecommissionComponentCommandHandler(
-            registry, [broker], NullLogger<DecommissionComponentCommandHandler>.Instance);
+            NoOpBus(), registry, [broker], NullLogger<DecommissionComponentCommandHandler>.Instance);
 
         await handler.Handle(new DecommissionComponentCommand { ComponentId = ComponentId });
 
@@ -32,7 +38,7 @@ public class DecommissionComponentCommandHandlerTests
         var broker = new RecordingBrokerProvisioner();
         var registry = new StubRegistry(false);
         var handler = new DecommissionComponentCommandHandler(
-            registry, [broker], NullLogger<DecommissionComponentCommandHandler>.Instance);
+            NoOpBus(), registry, [broker], NullLogger<DecommissionComponentCommandHandler>.Instance);
 
         await handler.Handle(new DecommissionComponentCommand { ComponentId = ComponentId });
 
@@ -46,7 +52,7 @@ public class DecommissionComponentCommandHandlerTests
         // just removes the registration without any broker call.
         var registry = new StubRegistry(true);
         var handler = new DecommissionComponentCommandHandler(
-            registry, [], NullLogger<DecommissionComponentCommandHandler>.Instance);
+            NoOpBus(), registry, [], NullLogger<DecommissionComponentCommandHandler>.Instance);
 
         await handler.Handle(new DecommissionComponentCommand { ComponentId = ComponentId });
 
