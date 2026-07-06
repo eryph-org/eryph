@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Messages.Components;
 using Microsoft.Extensions.Logging;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Eryph.Modules.Controller.Components;
 
@@ -15,7 +17,7 @@ namespace Eryph.Modules.Controller.Components;
 /// existing file-based deployments keep working unchanged.
 /// </summary>
 internal sealed class PlacementConfigSource(
-    IAuthoredConfigStore authoredStore,
+    Container container,
     IControllerSettingsManager settingsManager,
     ILogger<PlacementConfigSource> logger)
     : IConfigSource
@@ -24,10 +26,16 @@ internal sealed class PlacementConfigSource(
 
     public async Task<string> BuildPayloadAsync(CancellationToken cancellationToken)
     {
-        var authored = await authoredStore.GetCurrentAsync(
-            ConfigDomain.PlacementConfig, ConfigScope.Default, cancellationToken);
-        if (authored is not null)
-            return authored.Payload;
+        // The authored value (operator-set via the management API) is authoritative once it exists.
+        // The store is scoped, so resolve it in a dedicated scope — this source may be built outside a
+        // request scope (mirrors EndpointsConfigSource).
+        await using (var scope = AsyncScopedLifestyle.BeginScope(container))
+        {
+            var authored = await scope.GetInstance<IAuthoredConfigStore>()
+                .GetCurrentAsync(ConfigDomain.PlacementConfig, ConfigScope.Default, cancellationToken);
+            if (authored is not null)
+                return authored.Payload;
+        }
 
         // Not yet authored via the management API — fall back to the controller settings file.
         return await settingsManager.GetCurrentConfiguration()

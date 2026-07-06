@@ -9,6 +9,8 @@ using Eryph.StateDb.Model;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.Components;
@@ -28,14 +30,16 @@ public class ConfigDistributionServiceTests
         settingsManager.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, ControllerSettings>(settings));
 
+        var container = new Container();
+        container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+        // Nothing authored via the API, so PlacementConfigSource falls back to the settings file. The
+        // scoped store is resolved from the container; IAuthoredConfigStore is internal so it is
+        // hand-stubbed.
+        container.RegisterInstance<IAuthoredConfigStore>(new EmptyAuthoredStore());
         var source = new PlacementConfigSource(
-            NoAuthoredStore(), settingsManager.Object, NullLogger<PlacementConfigSource>.Instance);
+            container, settingsManager.Object, NullLogger<PlacementConfigSource>.Instance);
         return new ConfigDistributionService(records.Object, new IConfigSource[] { source }, NoOpLock());
     }
-
-    // Nothing authored via the API, so PlacementConfigSource falls back to the settings file.
-    // IAuthoredConfigStore is internal and cannot be proxied by Moq, so it is hand-stubbed.
-    private static IAuthoredConfigStore NoAuthoredStore() => new EmptyAuthoredStore();
 
     private sealed class EmptyAuthoredStore : IAuthoredConfigStore
     {

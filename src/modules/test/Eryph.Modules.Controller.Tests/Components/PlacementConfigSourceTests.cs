@@ -7,27 +7,39 @@ using Eryph.StateDb.Model;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.Components;
 
 /// <summary>
 /// The placement source is authoritative from the operator-authored store once a value exists, and
-/// falls back to the controller settings file until the domain is first authored via the API.
+/// falls back to the controller settings file until the domain is first authored via the API. The
+/// scoped store is resolved from the container in a dedicated scope, so the source is constructed with
+/// the container (mirrors EndpointsConfigSource).
 /// </summary>
 public class PlacementConfigSourceTests
 {
+    private static PlacementConfigSource Create(AuthoredConfig? authored, IControllerSettingsManager settings)
+    {
+        var container = new Container();
+        container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+        container.RegisterInstance<IAuthoredConfigStore>(new StubStore(authored));
+        return new PlacementConfigSource(container, settings, NullLogger<PlacementConfigSource>.Instance);
+    }
+
     [Fact]
     public async Task Uses_the_authored_value_when_present_without_reading_the_file()
     {
-        var store = new StubStore(new AuthoredConfig
-        {
-            Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig,
-            Scope = ConfigScope.Default, Version = 3, Payload = "authored-json",
-        });
         var settings = new Mock<IControllerSettingsManager>();
-
-        var source = new PlacementConfigSource(store, settings.Object, NullLogger<PlacementConfigSource>.Instance);
+        var source = Create(
+            new AuthoredConfig
+            {
+                Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig,
+                Scope = ConfigScope.Default, Version = 3, Payload = "authored-json",
+            },
+            settings.Object);
 
         var payload = await source.BuildPayloadAsync(default);
 
@@ -38,7 +50,6 @@ public class PlacementConfigSourceTests
     [Fact]
     public async Task Falls_back_to_the_settings_file_when_not_yet_authored()
     {
-        var store = new StubStore(null);
         var settings = new Mock<IControllerSettingsManager>();
         settings.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, ControllerSettings>(new ControllerSettings
@@ -46,7 +57,7 @@ public class PlacementConfigSourceTests
                 Placement = new PlacementConfig { Datastores = ["ds1"], Environments = ["env1"] },
             }));
 
-        var source = new PlacementConfigSource(store, settings.Object, NullLogger<PlacementConfigSource>.Instance);
+        var source = Create(null, settings.Object);
 
         var payload = await source.BuildPayloadAsync(default);
 
