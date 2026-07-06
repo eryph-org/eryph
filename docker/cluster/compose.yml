@@ -247,6 +247,10 @@ services:
       RABBITMQ_CONNECTIONSTRING: "amqps://guest:guest@rabbit:5671"
       componentMtls__enrollmentFile: /enroll/network.json
       componentMtls__certificateDirectory: /network-certs
+      # Advertise the OVN databases at the podman-resolvable service name: the default FQDN
+      # (network.was.corp) isn't a real DNS name inside this dev network. OVS SSL validates against
+      # the component CA, not the host name, so the enrolled cert still verifies.
+      ovn__advertisedHost: network
     volumes:
       - network-certs:/network-certs
       - enroll:/enroll:ro

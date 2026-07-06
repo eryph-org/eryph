@@ -238,6 +238,16 @@ public class ConfigDistributionServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public void Network_component_is_entitled_to_the_OvnCluster_domain()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        var service = CreateService(records);
+
+        service.GetEntitledDomains(ComponentType.Network)
+            .Should().Contain(ConfigDomain.OvnCluster);
+    }
+
     /// <summary>A config source whose payload the test controls directly.</summary>
     private sealed class StubSource(ConfigDomain domain, string payload) : IConfigSource
     {

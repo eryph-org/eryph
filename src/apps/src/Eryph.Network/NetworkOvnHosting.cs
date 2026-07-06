@@ -16,9 +16,10 @@ internal static class NetworkOvnHosting
     /// <summary>
     /// Registers the OVN settings and system environment for the standalone network process. The
     /// process hosts the OVN northbound and southbound databases plus northd on the local pipe
-    /// (<see cref="LocalOVSWithOVNSettings"/>); the remote SSL listeners that let the controller and
-    /// agents reach the databases are opened separately by
-    /// <see cref="OvnRemoteEndpointService"/>. The concrete <see cref="ISystemEnvironment"/> is a
+    /// (<see cref="LocalOVSWithOVNSettings"/>); the southbound SSL listener that lets the agents reach
+    /// the database is opened separately by <see cref="OvnSouthboundEndpointService"/>, and the
+    /// northbound SSL listener is folded into the cluster plan the network module applies. The concrete
+    /// <see cref="ISystemEnvironment"/> is a
     /// host/platform concern, exactly as in eryph-zero and the standalone controller.
     /// </summary>
     public static void UseOvn(this Container container)

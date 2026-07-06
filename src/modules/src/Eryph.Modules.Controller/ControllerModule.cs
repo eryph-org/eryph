@@ -162,7 +162,8 @@ public class ControllerModule
         // configuration; register it explicitly rather than relying on auto cross-wiring.
         container.RegisterInstance(_configuration);
         container.Collection.Register<IConfigSource>(typeof(PlacementConfigSource),
-            typeof(NetworkProvidersConfigSource), typeof(EndpointsConfigSource));
+            typeof(NetworkProvidersConfigSource), typeof(EndpointsConfigSource),
+            typeof(OvnClusterConfigSource));
 
         //use network services from host
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());

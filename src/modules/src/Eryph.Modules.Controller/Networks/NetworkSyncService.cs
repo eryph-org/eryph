@@ -26,14 +26,13 @@ namespace Eryph.Modules.Controller.Networks;
 
 internal class NetworkSyncService(
     Container container,
-    INetworkProviderManager providerManager,
-    IClusterTopologyProvider clusterTopologyProvider)
+    INetworkProviderManager providerManager)
     : INetworkSyncService
 {
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
         from providerConfig in providerManager.GetCurrentConfiguration()
         from _ in SyncNetworks(providerConfig).Run().ToEitherAsync()
-        from _2 in PublishNetworkProvidersConfigChange().ToAsync()
+        from _2 in PublishConfigDomainChanges().ToAsync()
         select Unit.Default;
 
     public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders)
@@ -78,32 +77,40 @@ internal class NetworkSyncService(
         return TryAsync(ValidateChangesAsync).ToEither();
     }
 
-    // After (re)realizing the network configuration, re-evaluate the distributed
-    // NetworkProviders domain and push it to registered agents so a config change
-    // propagates without requiring an agent restart. The handler bumps the version
-    // and publishes only when the content actually changed, so an unchanged sync
-    // (e.g. on startup) is a no-op. Best-effort: a failed publish must never fail
-    // the network sync itself.
-    private async Task<Either<Error, Unit>> PublishNetworkProvidersConfigChange()
+    // After (re)realizing the network configuration, re-evaluate the distributed config
+    // domains and push them to entitled components so a change propagates without a restart:
+    // NetworkProviders to the agents, and OvnCluster (the northbound gateway chassis topology)
+    // to the network component, which realizes it against its local northbound database instead
+    // of the controller writing it as a remote client. The handler bumps the version and
+    // publishes only when the content actually changed, so an unchanged sync (e.g. on startup)
+    // is a no-op. Best-effort: a failed publish must never fail the network sync itself.
+    private async Task<Either<Error, Unit>> PublishConfigDomainChanges()
+    {
+        // Publish each domain independently: a transient failure publishing one must not skip the
+        // other. Both are best-effort - a failed publish must never fail the network sync itself.
+        await PublishConfigDomainChange(ConfigDomain.NetworkProviders);
+        await PublishConfigDomainChange(ConfigDomain.OvnCluster);
+
+        return Right<Error, Unit>(unit);
+    }
+
+    private async Task PublishConfigDomainChange(ConfigDomain domain)
     {
         try
         {
             await container.GetInstance<IBus>().Advanced.Routing.Send(
                 QueueNames.Controllers,
-                new RefreshConfigDomainCommand { Domain = ConfigDomain.NetworkProviders });
+                new RefreshConfigDomainCommand { Domain = domain });
         }
         catch (Exception ex)
         {
             container.GetInstance<ILogger<NetworkSyncService>>().LogWarning(
-                ex, "Failed to publish network provider configuration change to subscribers.");
+                ex, "Failed to publish {Domain} configuration change to subscribers.", domain);
         }
-
-        return Right<Error, Unit>(unit);
     }
 
     private Aff<Unit> SyncNetworks(
         NetworkProvidersConfiguration providersConfiguration) =>
-        from _0 in ApplyClusterPlan()
         from _1 in RealizeProviderNetworks(providersConfiguration)
         from _2 in RealizeProjectNetworks(providersConfiguration)
         from applyResult in ApplyNetworkPlans(providersConfiguration)
@@ -119,28 +126,6 @@ internal class NetworkSyncService(
             errors => FailAff<Unit>(
                 Error.New("Failed to apply network plans for projects.", Error.Many(errors))))
         select unit;
-
-    private Aff<Unit> ApplyClusterPlan() =>
-        use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
-            scope =>
-                from _ in unitAff
-                let sysEnv = scope.GetInstance<ISystemEnvironment>()
-                let connectionProvider = scope.GetInstance<IOvnNorthboundConnectionProvider>()
-                from connection in connectionProvider.GetNorthboundConnection()
-                let northboundTool = new OVNControlTool(sysEnv, connection)
-                let realizer = new ClusterPlanNorthboundRealizer(sysEnv, northboundTool)
-                let clusterPlan = BuildClusterPlan(
-                    clusterTopologyProvider.ChassisGroupName,
-                    clusterTopologyProvider.GetChassis())
-                from _2 in realizer.ApplyClusterPlan(clusterPlan).ToAff(e => e)
-                select unit);
-
-    internal static ClusterPlan BuildClusterPlan(
-        string chassisGroupName,
-        Seq<(string ChassisName, short Priority)> chassis) =>
-        chassis.Fold(
-            new ClusterPlan().AddChassisGroup(chassisGroupName),
-            (plan, c) => plan.AddChassis(chassisGroupName, c.ChassisName, c.Priority));
 
     private Aff<Unit> RealizeProviderNetworks(
         NetworkProvidersConfiguration providerConfig) =>
