@@ -331,6 +331,40 @@ public class ConfigDistributionServiceTests
     }
 
     [Fact]
+    public async Task GetOutdatedBundles_returns_only_the_domains_the_component_is_behind_on()
+    {
+        // A host agent is entitled to three domains: it is behind on placement, current on
+        // network-providers, and no endpoints record exists yet — only the placement bundle is returned.
+        var byDomain = new Dictionary<ConfigDomain, ConfigRecord>
+        {
+            [ConfigDomain.PlacementConfig] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig, Version = 5, Payload = "placement" },
+            [ConfigDomain.NetworkProviders] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.NetworkProviders, Version = 2, Payload = "network" },
+            // No Endpoints record.
+        };
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecordSpecs.GetByDomain spec, CancellationToken _) =>
+                byDomain.GetValueOrDefault(spec.Domain));
+
+        var service = CreateService(records);
+
+        var applied = new Dictionary<ConfigDomain, long>
+        {
+            [ConfigDomain.PlacementConfig] = 3,   // behind: record is v5
+            [ConfigDomain.NetworkProviders] = 2,  // current: record is v2
+            // Endpoints: neither applied nor a record — skipped.
+        };
+        var bundles = await service.GetOutdatedBundlesAsync(ComponentType.VMHostAgent, applied, CancellationToken.None);
+
+        bundles.Should().ContainSingle();
+        bundles[0].Domain.Should().Be(ConfigDomain.PlacementConfig);
+        bundles[0].Version.Should().Be(5);
+        bundles[0].Payload.Should().Be("placement");
+    }
+
+    [Fact]
     public async Task GetOutdatedBundles_for_an_unentitled_component_reads_nothing()
     {
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();

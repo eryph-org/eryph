@@ -36,14 +36,22 @@ internal sealed class ComponentHeartbeatCommandHandler(
         if (registration is null)
             return;
 
+        // NOTE (pre-auth trust boundary): like RequestConfigCommandHandler, the heartbeat's component
+        // identity is not yet verified against an authenticated sender. A forged heartbeat carrying a
+        // real component/instance id and a low applied version can therefore now trigger a drift re-push
+        // on that component's heartbeat interval — an escalation from the passive registry update this
+        // used to be. The push still only targets the queue persisted at registration (never a message
+        // field), so it cannot be redirected or leak config to a new party; binding the heartbeat to an
+        // authenticated component is part of the component authentication phase.
         var outdated = await distribution.GetOutdatedBundlesAsync(
             registration.ComponentType, message.AppliedConfigVersions, CancellationToken.None);
         if (outdated.Count == 0)
             return;
 
-        // Route to the queue persisted at registration (never a message field) so a drift push
-        // cannot be redirected, and reuse ConfigSnapshotCommand: the component applies it exactly
-        // like the startup snapshot reply.
+        // Route to the queue persisted at registration (never a message field) so a drift push cannot be
+        // redirected. ConfigSnapshotCommand (not the single-domain PushConfigCommand the refresh path
+        // uses) carries every outdated domain in one send; the component applies it exactly like the
+        // startup snapshot reply.
         await bus.Advanced.Routing.Send(registration.InboundQueue, new ConfigSnapshotCommand
         {
             ComponentId = registration.ComponentId,

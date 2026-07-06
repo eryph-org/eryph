@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.DistributedLock;
 using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
@@ -77,6 +73,60 @@ public class ComponentHeartbeatCommandHandlerTests
                     && c.Bundles[0].Domain == ConfigDomain.OvnCluster
                     && c.Bundles[0].Version == 5
                     && c.Bundles[0].Payload == "p"),
+                It.IsAny<IDictionary<string, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Behind_component_is_re_pushed_only_the_domains_it_is_behind_on()
+    {
+        // A host agent (three entitled domains) behind on placement but current on network-providers is
+        // re-pushed exactly the placement bundle — the multi-domain partial-drift case, asserted through
+        // the handler's actual bus send.
+        var registration = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = ComponentId,
+            ComponentType = ComponentType.VMHostAgent,
+            InstanceId = InstanceId,
+            MachineName = "host",
+            InboundQueue = "host-inbound",
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long>(),
+        };
+        var byDomain = new Dictionary<ConfigDomain, ConfigRecord>
+        {
+            [ConfigDomain.PlacementConfig] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig, Version = 5, Payload = "placement" },
+            [ConfigDomain.NetworkProviders] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.NetworkProviders, Version = 2, Payload = "network" },
+            // No Endpoints record.
+        };
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecordSpecs.GetByDomain spec, CancellationToken _) =>
+                byDomain.GetValueOrDefault(spec.Domain));
+
+        var registry = new StubRegistry(registration);
+        var bus = new Mock<IBus> { DefaultValue = DefaultValue.Mock };
+        var handler = new ComponentHeartbeatCommandHandler(bus.Object, registry, Distribution(records));
+
+        await handler.Handle(new ComponentHeartbeatCommand
+        {
+            ComponentId = ComponentId,
+            InstanceId = InstanceId,
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
+            {
+                [ConfigDomain.PlacementConfig] = 3,   // behind: record is v5
+                [ConfigDomain.NetworkProviders] = 2,  // current: record is v2
+            },
+        });
+
+        Mock.Get(bus.Object.Advanced.Routing).Verify(r => r.Send(
+                "host-inbound",
+                It.Is<ConfigSnapshotCommand>(c =>
+                    c.Bundles.Count == 1
+                    && c.Bundles[0].Domain == ConfigDomain.PlacementConfig
+                    && c.Bundles[0].Version == 5),
                 It.IsAny<IDictionary<string, string>>()),
             Times.Once);
     }
