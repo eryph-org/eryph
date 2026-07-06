@@ -17,6 +17,13 @@ public enum ComponentType
     Identity,
 
     /// <summary>
+    /// The management API (full/server deployments only). It registers so it can authenticate on the
+    /// bus via mTLS and dispatch operations to the controller; it is not entitled to any configuration
+    /// domain, since it authors configuration rather than receiving it.
+    /// </summary>
+    Management,
+
+    /// <summary>
     /// The controller itself. It does not register in the component catalog (it is the authority),
     /// but it has a component identity so it can authenticate on the bus via mTLS.
     /// </summary>
