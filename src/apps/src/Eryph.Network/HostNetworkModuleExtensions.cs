@@ -14,8 +14,9 @@ namespace Eryph.Network;
 /// <summary>
 /// Hosts the OVN control-plane <see cref="NetworkModule"/> as a standalone runtime: it enrolls and
 /// connects the module's bus over mTLS (so the controller can register and route to it), wires the
-/// cross-platform OVN environment, and runs <see cref="OvnRemoteEndpointService"/> to expose the OVN
-/// databases to remote clients over SSL.
+/// cross-platform OVN environment, runs <see cref="OvnSouthboundEndpointService"/> to expose the OVN
+/// southbound database over SSL, and contributes the northbound SSL listener
+/// (<see cref="ComponentCertificateNorthboundListener"/>) to the cluster plan the network module applies.
 /// </summary>
 internal static class HostNetworkModuleExtensions
 {
@@ -72,8 +73,9 @@ internal static class HostNetworkModuleExtensions
                     ComponentType.Network);
                 container.UseOvn();
 
-                // This host exposes the OVN databases over SSL (OvnRemoteEndpointService), so it
-                // advertises their endpoints to the controller. The address remote clients dial
+                // This host exposes the OVN databases over SSL (southbound via OvnSouthboundEndpointService,
+                // northbound via the listener folded into the cluster plan), so it advertises their
+                // endpoints to the controller. The address remote clients dial
                 // defaults to the host FQDN identity (resolvable across DNS domains, matching the mTLS
                 // certificate); an operator behind NAT/DNS can override it. A blank override is treated
                 // as unset so it cannot advertise a malformed endpoint like "ssl:   :6641".
