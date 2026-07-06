@@ -22,6 +22,9 @@ internal class CreateEntityRequestHandler<TEntity>(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken)
     {
+        // Honour a client-aborted request before we create and dispatch an operation.
+        cancellationToken.ThrowIfCancellationRequested();
+
         var command = createOperationFunc();
 
         // StartNew persists and commits the operation (OperationManager.GetOrCreateAsync) before it

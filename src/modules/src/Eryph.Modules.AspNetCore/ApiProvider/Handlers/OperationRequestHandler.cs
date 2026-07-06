@@ -33,6 +33,9 @@ public class OperationRequestHandler<TEntity>(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken)
     {
+        // Honour a client-aborted request before we create and dispatch an operation.
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (typeof(TEntity) == typeof(Gene))
         {
             if (!await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin))
