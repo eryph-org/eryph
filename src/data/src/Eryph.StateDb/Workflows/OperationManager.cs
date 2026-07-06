@@ -57,6 +57,12 @@ public class OperationManager(
         log.LogTrace("created operation: {@operation}", res);
 
         await db.AddAsync(res);
+        // Persist the operation before the dispatcher sends its command: on a multi-process runtime the
+        // controller handling the CreateOperationCommand must be able to read this row, so it has to be
+        // durable before the send. Do not rely on the caller enlisting the write in a TransactionScope —
+        // the MariaDB provider commits an enlisted write via XA only at scope disposal, which races (and
+        // loses to) the Rebus send. SQLite never enlists, so eryph-zero already commits first.
+        await db.SaveChangesAsync();
         return new Operation(res);
     }
 
