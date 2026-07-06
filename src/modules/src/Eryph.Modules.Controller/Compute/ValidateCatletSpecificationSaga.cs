@@ -18,6 +18,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class ValidateCatletSpecificationSaga(
+    IStorageManagementAgentLocator agentLocator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<ValidateCatletSpecificationCommand, EryphSagaData<ValidateCatletSpecificationSagaData>>(
             workflow),
@@ -98,13 +99,18 @@ internal class ValidateCatletSpecificationSaga(
             ? defaultArchitecture
             : architectures.OrderBy(a => a.Value, StringComparer.Ordinal).First();
 
+        // Resolve genes on a registered host agent's gene pool (see CreateCatletSpecificationSaga):
+        // the controller's own machine name has no gene pool queue in the split runtime. Resolve once
+        // and reuse it for every architecture.
+        var geneAgentName = agentLocator.FindAgentForGenePool();
+
         foreach (var architecture in architectures)
             await StartNewTask(new BuildCatletSpecificationCommand
             {
                 ContentType = message.ContentType,
                 Configuration = message.Configuration,
                 Architecture = architecture,
-                AgentName = Environment.MachineName,
+                AgentName = geneAgentName,
             });
     }
 

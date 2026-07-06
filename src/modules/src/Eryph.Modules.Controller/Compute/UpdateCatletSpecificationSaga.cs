@@ -20,6 +20,7 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class UpdateCatletSpecificationSaga(
     IStateStore stateStore,
+    IStorageManagementAgentLocator agentLocator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<UpdateCatletSpecificationCommand, EryphSagaData<UpdateCatletSpecificationSagaData>>(
             workflow),
@@ -101,7 +102,9 @@ internal class UpdateCatletSpecificationSaga(
         }
 
         Data.Data.SpecificationVersionId = Guid.NewGuid();
-        Data.Data.AgentName = Environment.MachineName;
+        // Resolve genes on a registered host agent's gene pool (see CreateCatletSpecificationSaga):
+        // the controller's own machine name has no gene pool queue in the split runtime.
+        Data.Data.AgentName = agentLocator.FindAgentForGenePool();
         Data.Data.ContentType = message.ContentType;
         Data.Data.OriginalConfig = message.Configuration;
         Data.Data.Architectures = message.Architectures ?? throw new InvalidOperationException("Architectures is required");

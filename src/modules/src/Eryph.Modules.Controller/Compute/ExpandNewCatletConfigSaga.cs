@@ -21,6 +21,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class ExpandNewCatletConfigSaga(
+    IStorageManagementAgentLocator agentLocator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<ExpandNewCatletConfigCommand, EryphSagaData<ExpandNewCatletConfigSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>
@@ -68,7 +69,9 @@ internal class ExpandNewCatletConfigSaga(
         Data.Data.Config = message.Config;
         Data.Data.ShowSecrets = message.ShowSecrets;
 
-        Data.Data.AgentName = Environment.MachineName;
+        // Resolve genes on a registered host agent's gene pool (see CreateCatletSpecificationSaga):
+        // the controller's own machine name has no gene pool queue in the split runtime.
+        Data.Data.AgentName = agentLocator.FindAgentForGenePool();
         Data.Data.Architecture = Architecture.New(EryphConstants.DefaultArchitecture);
 
         var config = message.Config ?? throw new InvalidOperationException("Config is required");
