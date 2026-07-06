@@ -10,15 +10,6 @@ using Eryph.StateDb.Model;
 namespace Eryph.Modules.Controller.Components;
 
 /// <summary>
-/// The default (match-all) scope, used by <c>Global</c> domains and as the fallback for
-/// <c>Scopable</c> domains.
-/// </summary>
-internal static class ConfigScope
-{
-    public const string Default = "";
-}
-
-/// <summary>
 /// Reads and appends immutable, operator-authored versions of a configuration domain (see
 /// <see cref="AuthoredConfig"/>). The current value is the highest version; a new version is only
 /// ever appended, so history is preserved and a rollback is a new version carrying an earlier payload.
@@ -53,10 +44,13 @@ internal sealed class AuthoredConfigStore(
     public async Task<AuthoredConfig> AddVersionAsync(
         ConfigDomain domain, string scope, string payload, string? author, CancellationToken cancellationToken)
     {
-        // Serialize appends per domain/scope: two concurrent authors must not read the same current
-        // version and both allocate the same next one (the unique (Domain,Scope,Version) index would
-        // reject the loser and lose its update). Held until the message unit of work completes.
-        await lockHolder.AcquireLock($"authored-config-{domain}-{scope}", LockTimeout);
+        // Serialize appends per domain/scope on this controller so two concurrent authors do not read
+        // the same current version and both allocate the same next one. The lock is host-local (the
+        // provider is file-based), so across multiple controllers the real guard is the unique
+        // (Domain, Scope, Version) index: a colliding insert is rejected and the message unit of work
+        // retries, re-reading the committed version and allocating the next one — the write converges,
+        // it is not lost. Held until the message unit of work completes.
+        await lockHolder.AcquireLock($"authored-config:{domain}:{scope}", LockTimeout);
 
         var current = await repository.GetBySpecAsync(
             new AuthoredConfigSpecs.GetCurrent(domain, scope), cancellationToken);

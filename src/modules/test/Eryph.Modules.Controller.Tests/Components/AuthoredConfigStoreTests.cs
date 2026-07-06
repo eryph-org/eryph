@@ -1,13 +1,12 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Eryph.DistributedLock;
 using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Microsoft.EntityFrameworkCore;
 using Moq;
+using SimpleInjector;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Components;
@@ -52,7 +51,7 @@ public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, I
         return await Store(dbScope).GetHistoryAsync(domain, scope, default);
     }
 
-    private static AuthoredConfigStore Store(SimpleInjector.Scope dbScope) =>
+    private static AuthoredConfigStore Store(Scope dbScope) =>
         new(dbScope.GetInstance<IStateStoreRepository<AuthoredConfig>>(),
             new Mock<IDistributedLockScopeHolder>().Object);
 
@@ -81,8 +80,33 @@ public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, I
 
         var history = await GetHistory(ConfigDomain.PlacementConfig, ConfigScope.Default);
 
-        history.Select(h => h.Version).Should().ContainInOrder(3, 2, 1);
-        history.Select(h => h.Payload).Should().ContainInOrder("p3", "p2", "p1");
+        history.Select(h => h.Version).Should().Equal(3, 2, 1);
+        history.Select(h => h.Payload).Should().Equal("p3", "p2", "p1");
+    }
+
+    [Fact]
+    public async Task Duplicate_domain_scope_version_is_rejected_by_the_unique_index()
+    {
+        // The unique (Domain, Scope, Version) index is the real cross-controller guard: two controllers
+        // that both allocate the same next version collide here, and the losing unit of work retries and
+        // re-versions — so the write converges rather than being lost.
+        await using var dbScope = CreateScope();
+        var repository = dbScope.GetInstance<IStateStoreRepository<AuthoredConfig>>();
+
+        await repository.AddAsync(Entry(1, "a"), default);
+        await repository.AddAsync(Entry(1, "b"), default);
+
+        var save = () => dbScope.GetInstance<IStateStore>().SaveChangesAsync();
+        await save.Should().ThrowAsync<DbUpdateException>();
+
+        static AuthoredConfig Entry(long version, string payload) => new()
+        {
+            Id = Guid.NewGuid(),
+            Domain = ConfigDomain.PlacementConfig,
+            Scope = ConfigScope.Default,
+            Version = version,
+            Payload = payload,
+        };
     }
 
     [Fact]
