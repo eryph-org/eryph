@@ -156,6 +156,7 @@ public class ControllerModule
         // component deletes its broker user. The decommission handler resolves whatever is registered.
         container.Collection.Register<IComponentBrokerProvisioner>(Array.Empty<Type>());
         container.Register<ConfigDistributionService>(Lifestyle.Scoped);
+        container.Register<IAuthoredConfigStore, AuthoredConfigStore>(Lifestyle.Scoped);
         // Controller settings (incl. the Placement section) are owned by the host.
         container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());
         // EndpointsConfigSource reads the operator endpoint overrides from the host

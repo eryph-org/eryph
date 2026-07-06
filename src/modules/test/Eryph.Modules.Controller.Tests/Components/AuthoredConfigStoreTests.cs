@@ -1,0 +1,107 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Eryph.DistributedLock;
+using Eryph.Messages.Components;
+using Eryph.Modules.Controller.Components;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
+using Eryph.StateDb.TestBase;
+using Moq;
+using Xunit.Abstractions;
+
+namespace Eryph.Modules.Controller.Tests.Components;
+
+[Trait("Category", "Docker")]
+[Collection(nameof(MySqlDatabaseCollection))]
+public class MySqlAuthoredConfigStoreTests(ITestOutputHelper outputHelper, MySqlFixture databaseFixture)
+    : AuthoredConfigStoreTests(outputHelper, databaseFixture);
+
+[Collection(nameof(SqliteDatabaseCollection))]
+public class SqliteAuthoredConfigStoreTests(ITestOutputHelper outputHelper, SqliteFixture databaseFixture)
+    : AuthoredConfigStoreTests(outputHelper, databaseFixture);
+
+/// <summary>
+/// Verifies the versioned authored-config store against a real database: versions are monotonic per
+/// (domain, scope), the current value is the highest version, history is complete and newest-first,
+/// and scopes version independently.
+/// </summary>
+public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, IDatabaseFixture databaseFixture)
+    : StateDbTestBase(databaseFixture, outputHelper)
+{
+    // Each authoring is its own unit of work in production (one bus message); mirror that by opening a
+    // fresh scope per operation so the store sees committed state, not uncommitted inserts.
+    private async Task<AuthoredConfig> AddVersion(
+        ConfigDomain domain, string scope, string payload, string? author = null)
+    {
+        await using var dbScope = CreateScope();
+        var entry = await Store(dbScope).AddVersionAsync(domain, scope, payload, author, default);
+        await dbScope.GetInstance<IStateStore>().SaveChangesAsync();
+        return entry;
+    }
+
+    private async Task<AuthoredConfig?> GetCurrent(ConfigDomain domain, string scope)
+    {
+        await using var dbScope = CreateScope();
+        return await Store(dbScope).GetCurrentAsync(domain, scope, default);
+    }
+
+    private async Task<IReadOnlyList<AuthoredConfig>> GetHistory(ConfigDomain domain, string scope)
+    {
+        await using var dbScope = CreateScope();
+        return await Store(dbScope).GetHistoryAsync(domain, scope, default);
+    }
+
+    private static AuthoredConfigStore Store(SimpleInjector.Scope dbScope) =>
+        new(dbScope.GetInstance<IStateStoreRepository<AuthoredConfig>>(),
+            new Mock<IDistributedLockScopeHolder>().Object);
+
+    [Fact]
+    public async Task AddVersion_appends_monotonic_versions_and_GetCurrent_returns_the_highest()
+    {
+        var v1 = await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p1", "alice");
+        var v2 = await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p2", "bob");
+
+        v1.Version.Should().Be(1);
+        v2.Version.Should().Be(2);
+
+        var current = await GetCurrent(ConfigDomain.PlacementConfig, ConfigScope.Default);
+        current.Should().NotBeNull();
+        current!.Version.Should().Be(2);
+        current.Payload.Should().Be("p2");
+        current.CreatedBy.Should().Be("bob");
+    }
+
+    [Fact]
+    public async Task GetHistory_returns_all_versions_newest_first()
+    {
+        await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p1");
+        await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p2");
+        await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p3");
+
+        var history = await GetHistory(ConfigDomain.PlacementConfig, ConfigScope.Default);
+
+        history.Select(h => h.Version).Should().ContainInOrder(3, 2, 1);
+        history.Select(h => h.Payload).Should().ContainInOrder("p3", "p2", "p1");
+    }
+
+    [Fact]
+    public async Task Versions_are_independent_per_scope()
+    {
+        await AddVersion(ConfigDomain.NetworkProviders, ConfigScope.Default, "default-1");
+        await AddVersion(ConfigDomain.NetworkProviders, "environment=prod", "prod-1");
+        await AddVersion(ConfigDomain.NetworkProviders, "environment=prod", "prod-2");
+
+        (await GetCurrent(ConfigDomain.NetworkProviders, ConfigScope.Default))!.Version.Should().Be(1);
+
+        var prod = await GetCurrent(ConfigDomain.NetworkProviders, "environment=prod");
+        prod!.Version.Should().Be(2);
+        prod.Payload.Should().Be("prod-2");
+    }
+
+    [Fact]
+    public async Task GetCurrent_is_null_when_nothing_is_authored()
+    {
+        (await GetCurrent(ConfigDomain.Endpoints, ConfigScope.Default)).Should().BeNull();
+    }
+}

@@ -71,6 +71,8 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<ConfigRecord> ConfigRecords { get; set; }
 
+    public DbSet<AuthoredConfig> AuthoredConfigs { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // The change tracking in the controller module uses transaction
@@ -444,6 +446,18 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<ConfigRecord>()
             .HasIndex(x => x.Domain)
+            .IsUnique();
+
+        modelBuilder.Entity<AuthoredConfig>()
+            .HasKey(x => x.Id);
+
+        modelBuilder.Entity<AuthoredConfig>()
+            .Property(x => x.Domain)
+            .HasConversion<string>();
+
+        // At most one entry per domain/scope/version; the current value is the highest version.
+        modelBuilder.Entity<AuthoredConfig>()
+            .HasIndex(x => new { x.Domain, x.Scope, x.Version })
             .IsUnique();
     }
 }
