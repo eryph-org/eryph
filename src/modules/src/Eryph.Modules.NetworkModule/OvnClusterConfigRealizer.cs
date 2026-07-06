@@ -38,6 +38,14 @@ internal sealed class OvnClusterConfigRealizer(
                      ?? throw new InvalidOperationException(
                          "The OVN cluster configuration payload was empty.");
 
+        // Guard against a malformed/version-skewed payload that deserialized with a null or empty group
+        // name or a null chassis list — applying such a plan would create an unnamed group or throw
+        // while iterating. Fail with a clear error (the config apply is retried by the bus).
+        if (string.IsNullOrWhiteSpace(config.ChassisGroupName) || config.Chassis is null)
+            throw new InvalidOperationException(
+                "The OVN cluster configuration payload is invalid: a chassis group name and a chassis "
+                + "list are required.");
+
         var plan = new ClusterPlan().AddChassisGroup(config.ChassisGroupName);
         foreach (var chassis in config.Chassis)
             plan = plan.AddChassis(config.ChassisGroupName, chassis.Name, chassis.Priority);

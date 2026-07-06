@@ -86,23 +86,27 @@ internal class NetworkSyncService(
     // is a no-op. Best-effort: a failed publish must never fail the network sync itself.
     private async Task<Either<Error, Unit>> PublishConfigDomainChanges()
     {
+        // Publish each domain independently: a transient failure publishing one must not skip the
+        // other. Both are best-effort - a failed publish must never fail the network sync itself.
+        await PublishConfigDomainChange(ConfigDomain.NetworkProviders);
+        await PublishConfigDomainChange(ConfigDomain.OvnCluster);
+
+        return Right<Error, Unit>(unit);
+    }
+
+    private async Task PublishConfigDomainChange(ConfigDomain domain)
+    {
         try
         {
-            var bus = container.GetInstance<IBus>();
-            await bus.Advanced.Routing.Send(
+            await container.GetInstance<IBus>().Advanced.Routing.Send(
                 QueueNames.Controllers,
-                new RefreshConfigDomainCommand { Domain = ConfigDomain.NetworkProviders });
-            await bus.Advanced.Routing.Send(
-                QueueNames.Controllers,
-                new RefreshConfigDomainCommand { Domain = ConfigDomain.OvnCluster });
+                new RefreshConfigDomainCommand { Domain = domain });
         }
         catch (Exception ex)
         {
             container.GetInstance<ILogger<NetworkSyncService>>().LogWarning(
-                ex, "Failed to publish configuration domain changes to subscribers.");
+                ex, "Failed to publish {Domain} configuration change to subscribers.", domain);
         }
-
-        return Right<Error, Unit>(unit);
     }
 
     private Aff<Unit> SyncNetworks(
