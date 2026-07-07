@@ -2,9 +2,9 @@ using Ardalis.Specification;
 using Eryph.Messages.Components;
 using Eryph.StateDb.Model;
 
-namespace Eryph.Modules.Controller.Components;
+namespace Eryph.StateDb.Specifications;
 
-internal static class AuthoredConfigSpecs
+public static class AuthoredConfigSpecs
 {
     /// <summary>The current (highest-version) authored value for a domain/scope, or none.</summary>
     public sealed class GetCurrent : Specification<AuthoredConfig>,
@@ -15,6 +15,16 @@ internal static class AuthoredConfigSpecs
             Query.Where(x => x.Domain == domain && x.Scope == scope)
                 .OrderByDescending(x => x.Version)
                 .Take(1);
+        }
+    }
+
+    /// <summary>A specific authored version for a domain/scope, or none.</summary>
+    public sealed class GetByVersion : Specification<AuthoredConfig>,
+        ISingleResultSpecification<AuthoredConfig>
+    {
+        public GetByVersion(ConfigDomain domain, string scope, long version)
+        {
+            Query.Where(x => x.Domain == domain && x.Scope == scope && x.Version == version);
         }
     }
 

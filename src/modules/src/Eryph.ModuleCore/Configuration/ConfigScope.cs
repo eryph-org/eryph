@@ -1,9 +1,9 @@
-namespace Eryph.Modules.Controller.Components;
+namespace Eryph.ModuleCore.Configuration;
 
 /// <summary>
 /// Well-known configuration scopes. A scope selects which components receive an authored value.
 /// </summary>
-internal static class ConfigScope
+public static class ConfigScope
 {
     /// <summary>
     /// The default (match-all) scope, used by <c>Global</c> domains and as the fallback for

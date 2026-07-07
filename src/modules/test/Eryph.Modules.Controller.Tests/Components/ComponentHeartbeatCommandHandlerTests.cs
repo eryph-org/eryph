@@ -3,6 +3,7 @@ using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using Moq;
 using Rebus.Bus;
 
@@ -95,8 +96,8 @@ public class ComponentHeartbeatCommandHandlerTests
         };
         var byDomain = new Dictionary<ConfigDomain, ConfigRecord>
         {
-            [ConfigDomain.PlacementConfig] = new()
-                { Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig, Version = 5, Payload = "placement" },
+            [ConfigDomain.StorageConfig] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig, Version = 5, Payload = "placement" },
             [ConfigDomain.NetworkProviders] = new()
                 { Id = Guid.NewGuid(), Domain = ConfigDomain.NetworkProviders, Version = 2, Payload = "network" },
             // No Endpoints record.
@@ -116,7 +117,7 @@ public class ComponentHeartbeatCommandHandlerTests
             InstanceId = InstanceId,
             AppliedConfigVersions = new Dictionary<ConfigDomain, long>
             {
-                [ConfigDomain.PlacementConfig] = 3,   // behind: record is v5
+                [ConfigDomain.StorageConfig] = 3,   // behind: record is v5
                 [ConfigDomain.NetworkProviders] = 2,  // current: record is v2
             },
         });
@@ -125,7 +126,7 @@ public class ComponentHeartbeatCommandHandlerTests
                 "host-inbound",
                 It.Is<ConfigSnapshotCommand>(c =>
                     c.Bundles.Count == 1
-                    && c.Bundles[0].Domain == ConfigDomain.PlacementConfig
+                    && c.Bundles[0].Domain == ConfigDomain.StorageConfig
                     && c.Bundles[0].Version == 5),
                 It.IsAny<IDictionary<string, string>>()),
             Times.Once);

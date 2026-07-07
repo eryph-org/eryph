@@ -5,8 +5,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.DistributedLock;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.Controller.Components;
 
@@ -33,26 +35,8 @@ internal sealed class ConfigDistributionService(
     // than block a worker indefinitely.
     private static readonly TimeSpan LockTimeout = TimeSpan.FromMinutes(1);
 
-    // Which configuration domains each component type is entitled to receive.
-    private static readonly IReadOnlyDictionary<ComponentType, ConfigDomain[]> Entitlements =
-        new Dictionary<ComponentType, ConfigDomain[]>
-        {
-            // Host agents need the placement vocabulary (datastore/environment names)
-            // and the network-provider configuration to realize host networking, plus
-            // the deployment endpoints (e.g. the identity issuer) to reach other components.
-            [ComponentType.VMHostAgent] =
-                [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders, ConfigDomain.Endpoints],
-
-            // The network component hosts the OVN databases; it receives the northbound cluster
-            // topology (gateway chassis groups) and realizes it locally, so the controller never
-            // writes the northbound cluster tables as a remote client.
-            [ComponentType.Network] =
-                [ConfigDomain.OvnCluster],
-        };
-
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>
-        // Return a fresh array so a caller cannot mutate the shared entitlement definition.
-        Entitlements.TryGetValue(componentType, out var domains) ? [.. domains] : [];
+        ComponentConfigEntitlements.GetEntitledDomains(componentType);
 
     /// <summary>
     /// Builds the snapshot bundles a component is entitled to and does not already

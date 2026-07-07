@@ -1,9 +1,9 @@
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -11,18 +11,18 @@ using SimpleInjector.Lifestyles;
 namespace Eryph.Modules.Controller.Components;
 
 /// <summary>
-/// Builds the <see cref="ConfigDomain.PlacementConfig"/> payload. The operator-authored value (set via
+/// Builds the <see cref="ConfigDomain.StorageConfig"/> payload. The operator-authored value (set via
 /// the management API and stored versioned) is authoritative once it exists; until the domain is first
 /// authored the source falls back to the Placement section of the controller settings file, so
 /// existing file-based deployments keep working unchanged.
 /// </summary>
-internal sealed class PlacementConfigSource(
+internal sealed class StorageConfigSource(
     Container container,
     IControllerSettingsManager settingsManager,
-    ILogger<PlacementConfigSource> logger)
+    ILogger<StorageConfigSource> logger)
     : IConfigSource
 {
-    public ConfigDomain Domain => ConfigDomain.PlacementConfig;
+    public ConfigDomain Domain => ConfigDomain.StorageConfig;
 
     public async Task<string> BuildPayloadAsync(CancellationToken cancellationToken)
     {
@@ -32,7 +32,7 @@ internal sealed class PlacementConfigSource(
         await using (var scope = AsyncScopedLifestyle.BeginScope(container))
         {
             var authored = await scope.GetInstance<IAuthoredConfigStore>()
-                .GetCurrentAsync(ConfigDomain.PlacementConfig, ConfigScope.Default, cancellationToken);
+                .GetCurrentAsync(ConfigDomain.StorageConfig, ConfigScope.Default, cancellationToken);
             if (authored is not null)
                 return authored.Payload;
         }
@@ -40,7 +40,7 @@ internal sealed class PlacementConfigSource(
         // Not yet authored via the management API — fall back to the controller settings file.
         return await settingsManager.GetCurrentConfiguration()
             .Match(
-                settings => JsonSerializer.Serialize(settings.Placement),
+                settings => StorageConfigYamlSerializer.Serialize(settings.Storage),
                 error =>
                 {
                     // Never distribute a silently-empty placement vocabulary — that would make
@@ -49,7 +49,7 @@ internal sealed class PlacementConfigSource(
                     // copy until the controller settings are readable again.
                     logger.LogError(
                         "Failed to read controller settings for {Domain}: {Error}.",
-                        ConfigDomain.PlacementConfig, error.Message);
+                        ConfigDomain.StorageConfig, error.Message);
                     throw new InvalidOperationException(
                         $"Cannot distribute placement configuration: {error.Message}");
                 });

@@ -1,5 +1,6 @@
 using Eryph.DistributedLock;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -58,13 +59,13 @@ public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, I
     [Fact]
     public async Task AddVersion_appends_monotonic_versions_and_GetCurrent_returns_the_highest()
     {
-        var v1 = await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p1", "alice");
-        var v2 = await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p2", "bob");
+        var v1 = await AddVersion(ConfigDomain.StorageConfig, ConfigScope.Default, "p1", "alice");
+        var v2 = await AddVersion(ConfigDomain.StorageConfig, ConfigScope.Default, "p2", "bob");
 
         v1.Version.Should().Be(1);
         v2.Version.Should().Be(2);
 
-        var current = await GetCurrent(ConfigDomain.PlacementConfig, ConfigScope.Default);
+        var current = await GetCurrent(ConfigDomain.StorageConfig, ConfigScope.Default);
         current.Should().NotBeNull();
         current!.Version.Should().Be(2);
         current.Payload.Should().Be("p2");
@@ -74,11 +75,11 @@ public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, I
     [Fact]
     public async Task GetHistory_returns_all_versions_newest_first()
     {
-        await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p1");
-        await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p2");
-        await AddVersion(ConfigDomain.PlacementConfig, ConfigScope.Default, "p3");
+        await AddVersion(ConfigDomain.StorageConfig, ConfigScope.Default, "p1");
+        await AddVersion(ConfigDomain.StorageConfig, ConfigScope.Default, "p2");
+        await AddVersion(ConfigDomain.StorageConfig, ConfigScope.Default, "p3");
 
-        var history = await GetHistory(ConfigDomain.PlacementConfig, ConfigScope.Default);
+        var history = await GetHistory(ConfigDomain.StorageConfig, ConfigScope.Default);
 
         history.Select(h => h.Version).Should().Equal(3, 2, 1);
         history.Select(h => h.Payload).Should().Equal("p3", "p2", "p1");
@@ -102,7 +103,7 @@ public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, I
         static AuthoredConfig Entry(long version, string payload) => new()
         {
             Id = Guid.NewGuid(),
-            Domain = ConfigDomain.PlacementConfig,
+            Domain = ConfigDomain.StorageConfig,
             Scope = ConfigScope.Default,
             Version = version,
             Payload = payload,

@@ -6,6 +6,7 @@ using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -32,12 +33,12 @@ public class ConfigDistributionServiceTests
 
         var container = new Container();
         container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-        // Nothing authored via the API, so PlacementConfigSource falls back to the settings file. The
+        // Nothing authored via the API, so StorageConfigSource falls back to the settings file. The
         // scoped store is resolved from the container; IAuthoredConfigStore is internal so it is
         // hand-stubbed.
         container.RegisterInstance<IAuthoredConfigStore>(new EmptyAuthoredStore());
-        var source = new PlacementConfigSource(
-            container, settingsManager.Object, NullLogger<PlacementConfigSource>.Instance);
+        var source = new StorageConfigSource(
+            container, settingsManager.Object, NullLogger<StorageConfigSource>.Instance);
         return new ConfigDistributionService(records.Object, new IConfigSource[] { source }, NoOpLock());
     }
 
@@ -71,7 +72,7 @@ public class ConfigDistributionServiceTests
     {
         var settings = new ControllerSettings
         {
-            Placement = new PlacementConfig { Datastores = ["ds1"], Environments = ["env1"] },
+            Storage = new StorageConfig { Datastores = ["ds1"], Environments = ["env1"] },
         };
 
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
@@ -86,10 +87,10 @@ public class ConfigDistributionServiceTests
             ComponentType.VMHostAgent, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
 
         bundles.Should().ContainSingle();
-        bundles[0].Domain.Should().Be(ConfigDomain.PlacementConfig);
+        bundles[0].Domain.Should().Be(ConfigDomain.StorageConfig);
         bundles[0].Version.Should().Be(1);
 
-        var payload = JsonSerializer.Deserialize<PlacementConfig>(bundles[0].Payload)!;
+        var payload = StorageConfigYamlSerializer.Deserialize(bundles[0].Payload);
         payload.Datastores.Should().BeEquivalentTo("ds1");
         payload.Environments.Should().BeEquivalentTo("env1");
     }
@@ -105,14 +106,14 @@ public class ConfigDistributionServiceTests
 
         // The host agent is entitled to both placement and network-provider config.
         var service = CreateService(records,
-            new StubSource(ConfigDomain.PlacementConfig, """{"p":1}"""),
+            new StubSource(ConfigDomain.StorageConfig, """{"p":1}"""),
             new StubSource(ConfigDomain.NetworkProviders, "network_providers: []"));
 
         var bundles = await service.BuildSnapshotAsync(
             ComponentType.VMHostAgent, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
 
         bundles.Select(b => b.Domain).Should().BeEquivalentTo(
-            [ConfigDomain.PlacementConfig, ConfigDomain.NetworkProviders]);
+            [ConfigDomain.StorageConfig, ConfigDomain.NetworkProviders]);
     }
 
     [Fact]
@@ -137,14 +138,14 @@ public class ConfigDistributionServiceTests
             .ReturnsAsync(new ConfigRecord
             {
                 Id = Guid.NewGuid(),
-                Domain = ConfigDomain.PlacementConfig,
+                Domain = ConfigDomain.StorageConfig,
                 Version = 3,
                 Payload = """{"v":1}""",
             });
 
-        var service = CreateService(records, new StubSource(ConfigDomain.PlacementConfig, """{"v":1}"""));
+        var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"v":1}"""));
 
-        var known = new Dictionary<ConfigDomain, long> { [ConfigDomain.PlacementConfig] = 3 };
+        var known = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 3 };
         var bundles = await service.BuildSnapshotAsync(ComponentType.VMHostAgent, known, CancellationToken.None);
 
         bundles.Should().BeEmpty();
@@ -158,7 +159,7 @@ public class ConfigDistributionServiceTests
         var existing = new ConfigRecord
         {
             Id = Guid.NewGuid(),
-            Domain = ConfigDomain.PlacementConfig,
+            Domain = ConfigDomain.StorageConfig,
             Version = 1,
             Payload = """{"old":true}""",
         };
@@ -168,10 +169,10 @@ public class ConfigDistributionServiceTests
         records.Setup(r => r.UpdateAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var service = CreateService(records, new StubSource(ConfigDomain.PlacementConfig, """{"new":true}"""));
+        var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"new":true}"""));
 
         // Component still holds v1; the source changed, so it must receive v2.
-        var known = new Dictionary<ConfigDomain, long> { [ConfigDomain.PlacementConfig] = 1 };
+        var known = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 1 };
         var bundles = await service.BuildSnapshotAsync(ComponentType.VMHostAgent, known, CancellationToken.None);
 
         bundles.Should().ContainSingle();
@@ -188,12 +189,12 @@ public class ConfigDistributionServiceTests
         records.Setup(r => r.AddAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ConfigRecord record, CancellationToken _) => record);
 
-        var service = CreateService(records, new StubSource(ConfigDomain.PlacementConfig, """{"v":1}"""));
+        var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"v":1}"""));
 
-        var bundle = await service.RefreshAsync(ConfigDomain.PlacementConfig, CancellationToken.None);
+        var bundle = await service.RefreshAsync(ConfigDomain.StorageConfig, CancellationToken.None);
 
         bundle.Should().NotBeNull();
-        bundle!.Domain.Should().Be(ConfigDomain.PlacementConfig);
+        bundle!.Domain.Should().Be(ConfigDomain.StorageConfig);
         bundle.Version.Should().Be(1);
         bundle.Payload.Should().Be("""{"v":1}""");
         records.Verify(r => r.AddAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -205,7 +206,7 @@ public class ConfigDistributionServiceTests
         var existing = new ConfigRecord
         {
             Id = Guid.NewGuid(),
-            Domain = ConfigDomain.PlacementConfig,
+            Domain = ConfigDomain.StorageConfig,
             Version = 3,
             Payload = """{"v":"old"}""",
         };
@@ -215,9 +216,9 @@ public class ConfigDistributionServiceTests
         records.Setup(r => r.UpdateAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var service = CreateService(records, new StubSource(ConfigDomain.PlacementConfig, """{"v":"new"}"""));
+        var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"v":"new"}"""));
 
-        var bundle = await service.RefreshAsync(ConfigDomain.PlacementConfig, CancellationToken.None);
+        var bundle = await service.RefreshAsync(ConfigDomain.StorageConfig, CancellationToken.None);
 
         bundle.Should().NotBeNull();
         bundle!.Version.Should().Be(4);
@@ -231,7 +232,7 @@ public class ConfigDistributionServiceTests
         var existing = new ConfigRecord
         {
             Id = Guid.NewGuid(),
-            Domain = ConfigDomain.PlacementConfig,
+            Domain = ConfigDomain.StorageConfig,
             Version = 5,
             Payload = """{"v":"same"}""",
         };
@@ -239,9 +240,9 @@ public class ConfigDistributionServiceTests
         records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        var service = CreateService(records, new StubSource(ConfigDomain.PlacementConfig, """{"v":"same"}"""));
+        var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"v":"same"}"""));
 
-        var bundle = await service.RefreshAsync(ConfigDomain.PlacementConfig, CancellationToken.None);
+        var bundle = await service.RefreshAsync(ConfigDomain.StorageConfig, CancellationToken.None);
 
         bundle.Should().BeNull();
         records.Verify(r => r.UpdateAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -255,7 +256,7 @@ public class ConfigDistributionServiceTests
         // No source registered for the requested domain.
         var service = CreateService(records);
 
-        var bundle = await service.RefreshAsync(ConfigDomain.PlacementConfig, CancellationToken.None);
+        var bundle = await service.RefreshAsync(ConfigDomain.StorageConfig, CancellationToken.None);
 
         bundle.Should().BeNull();
         records.Verify(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()),
@@ -361,8 +362,8 @@ public class ConfigDistributionServiceTests
         // network-providers, and no endpoints record exists yet — only the placement bundle is returned.
         var byDomain = new Dictionary<ConfigDomain, ConfigRecord>
         {
-            [ConfigDomain.PlacementConfig] = new()
-                { Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig, Version = 5, Payload = "placement" },
+            [ConfigDomain.StorageConfig] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig, Version = 5, Payload = "placement" },
             [ConfigDomain.NetworkProviders] = new()
                 { Id = Guid.NewGuid(), Domain = ConfigDomain.NetworkProviders, Version = 2, Payload = "network" },
             // No Endpoints record.
@@ -376,14 +377,14 @@ public class ConfigDistributionServiceTests
 
         var applied = new Dictionary<ConfigDomain, long>
         {
-            [ConfigDomain.PlacementConfig] = 3,   // behind: record is v5
+            [ConfigDomain.StorageConfig] = 3,   // behind: record is v5
             [ConfigDomain.NetworkProviders] = 2,  // current: record is v2
             // Endpoints: neither applied nor a record — skipped.
         };
         var bundles = await service.GetOutdatedBundlesAsync(ComponentType.VMHostAgent, applied, CancellationToken.None);
 
         bundles.Should().ContainSingle();
-        bundles[0].Domain.Should().Be(ConfigDomain.PlacementConfig);
+        bundles[0].Domain.Should().Be(ConfigDomain.StorageConfig);
         bundles[0].Version.Should().Be(5);
         bundles[0].Payload.Should().Be("placement");
     }

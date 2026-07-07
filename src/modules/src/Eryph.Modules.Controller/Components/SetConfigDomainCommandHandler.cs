@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Rebus;
 using JetBrains.Annotations;
 using Rebus.Bus;

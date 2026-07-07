@@ -1,17 +1,19 @@
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Modules.Controller.Components;
 
 namespace Eryph.Modules.Controller.Tests.Components;
 
 /// <summary>
-/// Verifies which domains may be operator-authored and that payloads are validated and canonicalized:
-/// the guard that keeps a wrong-domain or malformed write out of the distributed configuration.
+/// Verifies which domains may be operator-authored and that YAML payloads are validated and
+/// canonicalized: the guard that keeps a wrong-domain or malformed write out of the distributed
+/// configuration.
 /// </summary>
 public class ConfigDomainDescriptorsTests
 {
     [Fact]
-    public void PlacementConfig_is_authorable() =>
-        ConfigDomainDescriptors.IsAuthorable(ConfigDomain.PlacementConfig).Should().BeTrue();
+    public void StorageConfig_is_authorable() =>
+        ConfigDomainDescriptors.IsAuthorable(ConfigDomain.StorageConfig).Should().BeTrue();
 
     [Theory]
     [InlineData(ConfigDomain.NetworkProviders)]
@@ -21,12 +23,14 @@ public class ConfigDomainDescriptorsTests
         ConfigDomainDescriptors.IsAuthorable(domain).Should().BeFalse();
 
     [Fact]
-    public void TryCanonicalize_normalizes_whitespace_and_property_order()
+    public void TryCanonicalize_accepts_valid_yaml_and_normalizes_whitespace_and_order()
     {
+        // Flow style, reversed key order.
         var a = ConfigDomainDescriptors.TryCanonicalize(
-            ConfigDomain.PlacementConfig, """{  "Environments" : ["e1"] , "Datastores":  ["ds1"] }""", out var canonicalA);
+            ConfigDomain.StorageConfig, "environments: [e1]\ndatastores: [ds1]", out var canonicalA);
+        // Block style, declaration order, trailing newline.
         var b = ConfigDomainDescriptors.TryCanonicalize(
-            ConfigDomain.PlacementConfig, """{"Datastores":["ds1"],"Environments":["e1"]}""", out var canonicalB);
+            ConfigDomain.StorageConfig, "datastores:\n- ds1\nenvironments:\n- e1\n", out var canonicalB);
 
         a.Should().BeTrue();
         b.Should().BeTrue();
@@ -37,13 +41,14 @@ public class ConfigDomainDescriptorsTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData("not-json")]
-    [InlineData("null")]
-    [InlineData("""{"datastores":["ds1"]}""")] // wrong-cased member — would deserialize to an empty vocabulary
+    [InlineData("42")] // a scalar, not a mapping
+    [InlineData("datastores:\n- ds1\nunknown_key: x")] // unknown member — rejected (strict)
+    [InlineData("""{"Datastores":["ds1"]}""")] // wrong-cased key ('datastores' is the underscored name)
     public void TryCanonicalize_rejects_an_invalid_payload(string payload) =>
-        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.PlacementConfig, payload, out _).Should().BeFalse();
+        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.StorageConfig, payload, out _).Should().BeFalse();
 
     [Fact]
     public void TryCanonicalize_rejects_a_non_authorable_domain() =>
-        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.Endpoints, "{}", out _).Should().BeFalse();
+        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.NetworkProviders, "datastores: [ds1]", out _)
+            .Should().BeFalse();
 }

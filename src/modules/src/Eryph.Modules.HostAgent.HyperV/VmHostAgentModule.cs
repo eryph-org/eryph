@@ -209,7 +209,7 @@ public class VmHostAgentModule : WebModule
             // see the inbound-queue comment above). Empty when the listener is disabled (eryph-zero
             // and dev), so nothing is advertised then.
             BuildAdvertisedEndpoints(),
-            typeof(PlacementConfigRealizer),
+            typeof(StorageConfigRealizer),
             typeof(NetworkProvidersConfigRealizer),
             typeof(EndpointsConfigRealizer));
 
@@ -264,8 +264,8 @@ public class VmHostAgentModule : WebModule
         container.RegisterSingleton<IOVSService<OVSSwitchNode>, OVSNodeService<OVSSwitchNode>>();
 
         // Holds the controller-distributed placement vocabulary applied by
-        // PlacementConfigRealizer and enforced by the provisioning handlers.
-        container.RegisterSingleton<IPlacementConfigProvider, PlacementConfigProvider>();
+        // StorageConfigRealizer and enforced by the provisioning handlers.
+        container.RegisterSingleton<IStorageConfigProvider, StorageConfigProvider>();
 
         // Holds the controller-distributed deployment endpoints applied by
         // EndpointsConfigRealizer (the identity issuer etc.). Registered as the

@@ -6,7 +6,7 @@ namespace Eryph.Core;
 /// maps these names to concrete local paths itself (paths are agent-local); the
 /// controller addresses placement by these abstract names.
 /// </summary>
-public sealed class PlacementConfig
+public sealed class StorageConfig
 {
     public string[] Datastores { get; set; } = [];
 

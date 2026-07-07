@@ -16,7 +16,7 @@ namespace Eryph.Modules.Controller.Tests.Components;
 /// </summary>
 public class SetConfigDomainCommandHandlerTests
 {
-    private const string ValidPlacement = """{"Datastores":["ds1"]}""";
+    private const string ValidStorage = "datastores: [ds1]";
 
     private readonly Mock<ITaskMessaging> _messaging = new();
     private readonly Mock<IBus> _bus = new() { DefaultValue = DefaultValue.Mock };
@@ -39,15 +39,15 @@ public class SetConfigDomainCommandHandlerTests
     [Fact]
     public async Task Valid_set_stores_a_version_distributes_and_completes()
     {
-        await CreateHandler().Handle(Op(ConfigDomain.PlacementConfig, ValidPlacement));
+        await CreateHandler().Handle(Op(ConfigDomain.StorageConfig, ValidStorage));
 
         _store.Added.Should().ContainSingle();
-        _store.Added[0].domain.Should().Be(ConfigDomain.PlacementConfig);
+        _store.Added[0].domain.Should().Be(ConfigDomain.StorageConfig);
         _store.Added[0].author.Should().Be("alice");
 
         Mock.Get(_bus.Object.Advanced.Routing).Verify(r => r.Send(
                 QueueNames.Controllers,
-                It.Is<RefreshConfigDomainCommand>(c => c.Domain == ConfigDomain.PlacementConfig),
+                It.Is<RefreshConfigDomainCommand>(c => c.Domain == ConfigDomain.StorageConfig),
                 It.IsAny<IDictionary<string, string>>()),
             Times.Once);
         VerifyCompleted(Times.Once());
@@ -67,10 +67,10 @@ public class SetConfigDomainCommandHandlerTests
     [InlineData(null)]
     [InlineData("   ")]
     [InlineData("not-json")]
-    [InlineData("""{"datastores":["ds1"]}""")]
+    [InlineData("""{"Datastores":["ds1"]}""")] // wrong-cased key ('datastores' is the underscored name)
     public async Task Invalid_payload_is_not_stored_distributed_or_completed(string? payload)
     {
-        await CreateHandler().Handle(Op(ConfigDomain.PlacementConfig, payload));
+        await CreateHandler().Handle(Op(ConfigDomain.StorageConfig, payload));
 
         _store.Added.Should().BeEmpty();
         VerifyDistributed(Times.Never());

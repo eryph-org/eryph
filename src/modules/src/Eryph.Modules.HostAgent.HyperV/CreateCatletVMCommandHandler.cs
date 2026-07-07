@@ -25,7 +25,7 @@ internal class CreateCatletVMCommandHandler(
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
-    IPlacementConfigProvider placementConfigProvider)
+    IStorageConfigProvider placementConfigProvider)
     :
         CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>(engine, messaging, log)
 {
@@ -60,11 +60,11 @@ internal class CreateCatletVMCommandHandler(
             ? EryphConstants.DefaultEnvironmentName
             : config.Environment;
 
-        if (!PlacementConfigValidation.IsDataStoreAllowed(placement, dataStore))
+        if (!StorageConfigValidation.IsDataStoreAllowed(placement, dataStore))
             return LeftAsync<Error, Unit>(Error.New(
                 $"The data store '{dataStore}' is not part of the controller placement configuration."));
 
-        if (!PlacementConfigValidation.IsEnvironmentAllowed(placement, environment))
+        if (!StorageConfigValidation.IsEnvironmentAllowed(placement, environment))
             return LeftAsync<Error, Unit>(Error.New(
                 $"The environment '{environment}' is not part of the controller placement configuration."));
 

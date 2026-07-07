@@ -3,6 +3,7 @@ using Eryph.ModuleCore.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using Moq;
 
 namespace Eryph.Modules.Controller.Tests.Components;
@@ -108,18 +109,18 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-                { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 4 },
+                { [ConfigDomain.StorageConfig] = 5, [ConfigDomain.Endpoints] = 4 },
         };
         var (service, _) = Create(existing);
 
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.VMHostAgent,
                 known: new Dictionary<ConfigDomain, long>
-                    { [ConfigDomain.PlacementConfig] = 3, [ConfigDomain.Endpoints] = 9 }),
+                    { [ConfigDomain.StorageConfig] = 3, [ConfigDomain.Endpoints] = 9 }),
             CancellationToken.None);
 
         // Existing higher value is kept; reported higher value wins.
-        result.AppliedConfigVersions[ConfigDomain.PlacementConfig].Should().Be(5);
+        result.AppliedConfigVersions[ConfigDomain.StorageConfig].Should().Be(5);
         result.AppliedConfigVersions[ConfigDomain.Endpoints].Should().Be(9);
     }
 
@@ -137,7 +138,7 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Stale,
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.PlacementConfig] = 5 },
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 5 },
         };
         var (service, repo) = Create(existing);
 
@@ -168,7 +169,7 @@ public class ComponentRegistryServiceTests
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Active,
             AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-                { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 3 },
+                { [ConfigDomain.StorageConfig] = 5, [ConfigDomain.Endpoints] = 3 },
         };
         var (service, repo) = Create(existing);
 

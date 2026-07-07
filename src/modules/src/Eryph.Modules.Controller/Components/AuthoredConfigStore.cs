@@ -6,6 +6,7 @@ using Eryph.DistributedLock;
 using Eryph.Messages.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.Controller.Components;
 

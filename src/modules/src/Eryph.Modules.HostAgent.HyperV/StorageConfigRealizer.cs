@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
@@ -17,18 +16,18 @@ namespace Eryph.Modules.HostAgent;
 /// datastores/environments that the controller does not know — those can never be
 /// used for placement.
 /// </summary>
-internal sealed class PlacementConfigRealizer(
-    IPlacementConfigProvider placementConfigProvider,
+internal sealed class StorageConfigRealizer(
+    IStorageConfigProvider placementConfigProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
-    ILogger<PlacementConfigRealizer> logger)
+    ILogger<StorageConfigRealizer> logger)
     : IConfigRealizer
 {
-    public ConfigDomain Domain => ConfigDomain.PlacementConfig;
+    public ConfigDomain Domain => ConfigDomain.StorageConfig;
 
     public async Task ApplyAsync(long version, string payload, CancellationToken cancellationToken)
     {
-        var config = JsonSerializer.Deserialize<PlacementConfig>(payload) ?? new PlacementConfig();
+        var config = StorageConfigYamlSerializer.Deserialize(payload);
         placementConfigProvider.Update(config);
 
         logger.LogInformation(
@@ -38,7 +37,7 @@ internal sealed class PlacementConfigRealizer(
         await WarnAboutUnusedLocalConfig(config);
     }
 
-    private async Task WarnAboutUnusedLocalConfig(PlacementConfig distributed)
+    private async Task WarnAboutUnusedLocalConfig(StorageConfig distributed)
     {
         // Best-effort: read the local agent settings to surface datastores/environments
         // that are configured locally but not part of the distributed vocabulary. The
@@ -50,12 +49,12 @@ internal sealed class PlacementConfigRealizer(
         if (local is null)
             return;
 
-        foreach (var dataStore in PlacementConfigValidation.GetUnusedLocalDatastores(distributed, local))
+        foreach (var dataStore in StorageConfigValidation.GetUnusedLocalDatastores(distributed, local))
             logger.LogWarning(
                 "Local datastore '{DataStore}' is configured in agentsettings but is not part of the controller "
                 + "placement configuration; catlets cannot be placed on it.", dataStore);
 
-        foreach (var environment in PlacementConfigValidation.GetUnusedLocalEnvironments(distributed, local))
+        foreach (var environment in StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local))
             logger.LogWarning(
                 "Local environment '{Environment}' is configured in agentsettings but is not part of the controller "
                 + "placement configuration; catlets cannot be placed in it.", environment);

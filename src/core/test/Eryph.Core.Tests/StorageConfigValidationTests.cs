@@ -2,15 +2,15 @@ using Eryph.Core.VmAgent;
 
 namespace Eryph.Core.Tests;
 
-public class PlacementConfigValidationTests
+public class StorageConfigValidationTests
 {
     [Fact]
     public void Default_datastore_and_environment_are_always_allowed()
     {
-        var distributed = new PlacementConfig();
+        var distributed = new StorageConfig();
 
-        PlacementConfigValidation.IsDataStoreAllowed(distributed, "default").Should().BeTrue();
-        PlacementConfigValidation.IsEnvironmentAllowed(distributed, "default").Should().BeTrue();
+        StorageConfigValidation.IsDataStoreAllowed(distributed, "default").Should().BeTrue();
+        StorageConfigValidation.IsEnvironmentAllowed(distributed, "default").Should().BeTrue();
     }
 
     [Theory]
@@ -19,9 +19,9 @@ public class PlacementConfigValidationTests
     [InlineData("slow", false)]
     public void Datastore_is_allowed_only_when_in_the_distributed_vocabulary(string name, bool expected)
     {
-        var distributed = new PlacementConfig { Datastores = ["fast"], Environments = [] };
+        var distributed = new StorageConfig { Datastores = ["fast"], Environments = [] };
 
-        PlacementConfigValidation.IsDataStoreAllowed(distributed, name).Should().Be(expected);
+        StorageConfigValidation.IsDataStoreAllowed(distributed, name).Should().Be(expected);
     }
 
     [Theory]
@@ -29,15 +29,15 @@ public class PlacementConfigValidationTests
     [InlineData("prod", false)]
     public void Environment_is_allowed_only_when_in_the_distributed_vocabulary(string name, bool expected)
     {
-        var distributed = new PlacementConfig { Datastores = [], Environments = ["staging"] };
+        var distributed = new StorageConfig { Datastores = [], Environments = ["staging"] };
 
-        PlacementConfigValidation.IsEnvironmentAllowed(distributed, name).Should().Be(expected);
+        StorageConfigValidation.IsEnvironmentAllowed(distributed, name).Should().Be(expected);
     }
 
     [Fact]
     public void Unused_local_datastores_excludes_default_and_distributed_names()
     {
-        var distributed = new PlacementConfig { Datastores = ["fast"], Environments = [] };
+        var distributed = new StorageConfig { Datastores = ["fast"], Environments = [] };
         var local = new VmHostAgentConfiguration
         {
             Datastores =
@@ -47,14 +47,14 @@ public class PlacementConfigValidationTests
             ],
         };
 
-        PlacementConfigValidation.GetUnusedLocalDatastores(distributed, local)
+        StorageConfigValidation.GetUnusedLocalDatastores(distributed, local)
             .Should().BeEquivalentTo("slow");
     }
 
     [Fact]
     public void Unused_local_environments_lists_names_not_in_the_distributed_vocabulary()
     {
-        var distributed = new PlacementConfig { Datastores = [], Environments = ["staging"] };
+        var distributed = new StorageConfig { Datastores = [], Environments = ["staging"] };
         var local = new VmHostAgentConfiguration
         {
             Environments =
@@ -64,17 +64,17 @@ public class PlacementConfigValidationTests
             ],
         };
 
-        PlacementConfigValidation.GetUnusedLocalEnvironments(distributed, local)
+        StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local)
             .Should().BeEquivalentTo("prod");
     }
 
     [Fact]
     public void Unused_local_names_are_empty_when_no_local_config()
     {
-        var distributed = new PlacementConfig { Datastores = ["fast"], Environments = ["staging"] };
+        var distributed = new StorageConfig { Datastores = ["fast"], Environments = ["staging"] };
         var local = new VmHostAgentConfiguration();
 
-        PlacementConfigValidation.GetUnusedLocalDatastores(distributed, local).Should().BeEmpty();
-        PlacementConfigValidation.GetUnusedLocalEnvironments(distributed, local).Should().BeEmpty();
+        StorageConfigValidation.GetUnusedLocalDatastores(distributed, local).Should().BeEmpty();
+        StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local).Should().BeEmpty();
     }
 }

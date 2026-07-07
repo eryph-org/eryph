@@ -162,7 +162,7 @@ public class ControllerModule
         // EndpointsConfigSource reads the operator endpoint overrides from the host
         // configuration; register it explicitly rather than relying on auto cross-wiring.
         container.RegisterInstance(_configuration);
-        container.Collection.Register<IConfigSource>(typeof(PlacementConfigSource),
+        container.Collection.Register<IConfigSource>(typeof(StorageConfigSource),
             typeof(NetworkProvidersConfigSource), typeof(EndpointsConfigSource),
             typeof(OvnClusterConfigSource));
 

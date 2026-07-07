@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Eryph.Core;
 using Eryph.Core.Settings;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb.Model;
 using LanguageExt.Common;
@@ -19,14 +19,14 @@ namespace Eryph.Modules.Controller.Tests.Components;
 /// scoped store is resolved from the container in a dedicated scope, so the source is constructed with
 /// the container (mirrors EndpointsConfigSource).
 /// </summary>
-public class PlacementConfigSourceTests
+public class StorageConfigSourceTests
 {
-    private static PlacementConfigSource Create(AuthoredConfig? authored, IControllerSettingsManager settings)
+    private static StorageConfigSource Create(AuthoredConfig? authored, IControllerSettingsManager settings)
     {
         var container = new Container();
         container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
         container.RegisterInstance<IAuthoredConfigStore>(new StubStore(authored));
-        return new PlacementConfigSource(container, settings, NullLogger<PlacementConfigSource>.Instance);
+        return new StorageConfigSource(container, settings, NullLogger<StorageConfigSource>.Instance);
     }
 
     [Fact]
@@ -36,14 +36,14 @@ public class PlacementConfigSourceTests
         var source = Create(
             new AuthoredConfig
             {
-                Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig,
-                Scope = ConfigScope.Default, Version = 3, Payload = "authored-json",
+                Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig,
+                Scope = ConfigScope.Default, Version = 3, Payload = "authored-yaml",
             },
             settings.Object);
 
         var payload = await source.BuildPayloadAsync(default);
 
-        payload.Should().Be("authored-json");
+        payload.Should().Be("authored-yaml");
         settings.Verify(m => m.GetCurrentConfiguration(), Times.Never);
     }
 
@@ -54,14 +54,14 @@ public class PlacementConfigSourceTests
         settings.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, ControllerSettings>(new ControllerSettings
             {
-                Placement = new PlacementConfig { Datastores = ["ds1"], Environments = ["env1"] },
+                Storage = new StorageConfig { Datastores = ["ds1"], Environments = ["env1"] },
             }));
 
         var source = Create(null, settings.Object);
 
         var payload = await source.BuildPayloadAsync(default);
 
-        var placement = JsonSerializer.Deserialize<PlacementConfig>(payload)!;
+        var placement = StorageConfigYamlSerializer.Deserialize(payload);
         placement.Datastores.Should().BeEquivalentTo("ds1");
         placement.Environments.Should().BeEquivalentTo("env1");
     }
