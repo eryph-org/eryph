@@ -224,6 +224,117 @@ public class ComponentRegistryServiceTests
     }
 
     [Fact]
+    public async Task SetMetadata_assigns_environment_and_tags()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host",
+            InboundQueue = "q",
+        };
+        var (service, repo) = Create(existing);
+
+        var found = await service.SetMetadataAsync(
+            componentId, "prod", new Dictionary<string, string> { ["rack"] = "r1" }, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Environment.Should().Be("prod");
+        existing.Tags.Should().ContainKey("rack").WhoseValue.Should().Be("r1");
+        repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetMetadata_returns_false_for_an_unknown_component()
+    {
+        var (service, repo) = Create();
+
+        var found = await service.SetMetadataAsync(
+            Guid.NewGuid(), "prod", new Dictionary<string, string>(), CancellationToken.None);
+
+        found.Should().BeFalse();
+        repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Upsert_preserves_operator_assigned_metadata_across_re_registration()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host",
+            InboundQueue = "q",
+            Environment = "prod",
+            Tags = new Dictionary<string, string> { ["rack"] = "r1" },
+        };
+        var (service, _) = Create(existing);
+
+        // An agent re-registering must not clobber the operator's environment/tags assignment.
+        var result = await service.UpsertAsync(
+            RegisterCommand(componentId, ComponentType.VMHostAgent), CancellationToken.None);
+
+        result.Environment.Should().Be("prod");
+        result.Tags.Should().ContainKey("rack").WhoseValue.Should().Be("r1");
+    }
+
+    [Fact]
+    public async Task SetMetadata_replaces_the_tag_set_rather_than_merging()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+            Tags = new Dictionary<string, string> { ["rack"] = "r1", ["row"] = "a" },
+        };
+        var (service, _) = Create(existing);
+
+        await service.SetMetadataAsync(
+            componentId, "prod", new Dictionary<string, string> { ["zone"] = "z1" }, CancellationToken.None);
+
+        existing.Tags.Should().ContainSingle().Which.Key.Should().Be("zone");
+    }
+
+    [Fact]
+    public async Task SetMetadata_clears_the_environment_when_given_null_or_empty()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q", Environment = "prod",
+        };
+        var (service, _) = Create(existing);
+
+        await service.SetMetadataAsync(componentId, "", new Dictionary<string, string>(), CancellationToken.None);
+
+        existing.Environment.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SetMetadata_tolerates_a_null_tag_set()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+            Tags = new Dictionary<string, string> { ["old"] = "v" },
+        };
+        var (service, _) = Create(existing);
+
+        var found = await service.SetMetadataAsync(componentId, "prod", null!, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Tags.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task GetActive_excludes_components_past_the_heartbeat_timeout()
     {
         var (service, repo) = Create();

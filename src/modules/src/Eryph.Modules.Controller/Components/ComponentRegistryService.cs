@@ -149,6 +149,29 @@ internal sealed class ComponentRegistryService(
         return true;
     }
 
+    public async Task<bool> SetMetadataAsync(
+        Guid componentId,
+        string? environment,
+        IReadOnlyDictionary<string, string> tags,
+        CancellationToken cancellationToken)
+    {
+        var registration = await repository.GetBySpecAsync(
+            new ComponentRegistrationSpecs.GetByComponentId(componentId), cancellationToken);
+        if (registration is null)
+            return false;
+
+        // Operator-owned metadata: replace it wholesale. Registration/heartbeat never touch these
+        // fields, so an agent re-registering does not clobber the operator's assignment. Normalize
+        // an empty environment to null (one representation of "unassigned"); tolerate a null tag set.
+        registration.Environment = string.IsNullOrEmpty(environment) ? null : environment;
+        registration.Tags = tags is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(tags);
+
+        await repository.UpdateAsync(registration, cancellationToken);
+        return true;
+    }
+
     public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
     {
         var cutoff = DateTimeOffset.UtcNow - ComponentRegistrationDefaults.HeartbeatTimeout;

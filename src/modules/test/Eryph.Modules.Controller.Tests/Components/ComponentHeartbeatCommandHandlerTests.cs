@@ -173,6 +173,10 @@ public class ComponentHeartbeatCommandHandlerTests
     /// </summary>
     private sealed class StubRegistry(ComponentRegistration? heartbeatResult) : IComponentRegistryService
     {
+        public Task<bool> SetMetadataAsync(
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string> tags,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<ComponentRegistration?> RecordHeartbeatAsync(Guid componentId, Guid instanceId,
             IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
         {

@@ -274,6 +274,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Environment")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("InboundQueue")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -292,6 +295,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TagsJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

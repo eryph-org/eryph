@@ -54,6 +54,16 @@ internal interface IComponentRegistryService
     /// </summary>
     Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Assigns operator-owned targeting metadata (environment + tags) to a registered component.
+    /// Replaces the environment and the full tag set. Returns whether the component exists.
+    /// </summary>
+    Task<bool> SetMetadataAsync(
+        Guid componentId,
+        string? environment,
+        IReadOnlyDictionary<string, string> tags,
+        CancellationToken cancellationToken);
+
     /// <summary>The components currently considered alive (status Active).</summary>
     Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken);
 }

@@ -57,4 +57,21 @@ public class ComponentRegistration
 
     /// <summary>Service endpoints this component hosts and advertises (logical name → URL).</summary>
     public Dictionary<string, string> AdvertisedEndpoints { get; set; } = new();
+
+    /// <summary>Operator-assigned environment used to target scoped configuration; null if unassigned.
+    /// Operator-owned metadata (set via the management API), not reported by the component.</summary>
+    public string? Environment { get; set; }
+
+    internal string TagsJson
+    {
+        get => JsonSerializer.Serialize(Tags);
+        set => Tags = string.IsNullOrEmpty(value)
+            ? new Dictionary<string, string>()
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(value)
+              ?? new Dictionary<string, string>();
+    }
+
+    /// <summary>Operator-assigned tags (key → value) used to target scoped configuration.
+    /// Operator-owned metadata, not reported by the component.</summary>
+    public Dictionary<string, string> Tags { get; set; } = new();
 }
