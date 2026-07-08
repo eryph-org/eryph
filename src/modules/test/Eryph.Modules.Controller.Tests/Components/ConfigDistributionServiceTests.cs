@@ -97,7 +97,11 @@ public class ConfigDistributionServiceTests
     {
         var settings = new ControllerSettings
         {
-            Storage = new StorageConfig { Datastores = ["ds1"], Environments = ["env1"] },
+            Storage = new StorageConfig
+            {
+                Datastores = [new StorageDatastoreConfig { Name = "ds1", Path = @"D:\ds1" }],
+                Environments = [new StorageEnvironmentConfig { Name = "env1" }],
+            },
         };
 
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
@@ -116,8 +120,8 @@ public class ConfigDistributionServiceTests
         bundles[0].Version.Should().Be(1);
 
         var payload = StorageConfigYamlSerializer.Deserialize(bundles[0].Payload);
-        payload.Datastores.Should().BeEquivalentTo("ds1");
-        payload.Environments.Should().BeEquivalentTo("env1");
+        payload.Datastores.Should().ContainSingle().Which.Path.Should().Be(@"D:\ds1");
+        payload.Environments.Select(e => e.Name).Should().BeEquivalentTo("env1");
     }
 
     [Fact]

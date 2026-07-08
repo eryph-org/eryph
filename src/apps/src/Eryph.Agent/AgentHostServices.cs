@@ -45,11 +45,18 @@ internal sealed class AgentVmHostAgentConfigurationManager : IVmHostAgentConfigu
 {
     public EitherAsync<Error, VmHostAgentConfiguration> GetCurrentConfiguration(
         HostSettings hostSettings) =>
-        VmHostAgentConfiguration<RT>.readConfig(
-                Path.Combine(AppConfigPaths.GetVmHostAgentConfigPath(), "agentsettings.yml"),
-                hostSettings)
+        VmHostAgentConfiguration<RT>.readConfig(ConfigPath, hostSettings)
             .Run(RT.New())
             .ToEitherAsync();
+
+    public EitherAsync<Error, Unit> SaveConfiguration(
+        VmHostAgentConfiguration config, HostSettings hostSettings) =>
+        VmHostAgentConfiguration<RT>.saveConfig(config, ConfigPath, hostSettings)
+            .Run(RT.New())
+            .ToEitherAsync();
+
+    private static string ConfigPath =>
+        Path.Combine(AppConfigPaths.GetVmHostAgentConfigPath(), "agentsettings.yml");
 }
 
 /// <summary>

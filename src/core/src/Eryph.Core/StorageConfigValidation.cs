@@ -18,12 +18,12 @@ public static class StorageConfigValidation
     /// <summary>Whether the controller's placement vocabulary permits the datastore name.</summary>
     public static bool IsDataStoreAllowed(StorageConfig distributed, string dataStoreName) =>
         string.Equals(dataStoreName, EryphConstants.DefaultDataStoreName, StringComparison.OrdinalIgnoreCase)
-        || distributed.Datastores.Any(d => string.Equals(d, dataStoreName, StringComparison.OrdinalIgnoreCase));
+        || distributed.Datastores.Any(d => string.Equals(d.Name, dataStoreName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Whether the controller's placement vocabulary permits the environment name.</summary>
     public static bool IsEnvironmentAllowed(StorageConfig distributed, string environmentName) =>
         string.Equals(environmentName, EryphConstants.DefaultEnvironmentName, StringComparison.OrdinalIgnoreCase)
-        || distributed.Environments.Any(e => string.Equals(e, environmentName, StringComparison.OrdinalIgnoreCase));
+        || distributed.Environments.Any(e => string.Equals(e.Name, environmentName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Local datastore names that are not part of the distributed vocabulary and will

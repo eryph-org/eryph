@@ -54,7 +54,11 @@ public class StorageConfigSourceTests
         settings.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, ControllerSettings>(new ControllerSettings
             {
-                Storage = new StorageConfig { Datastores = ["ds1"], Environments = ["env1"] },
+                Storage = new StorageConfig
+                {
+                    Datastores = [new StorageDatastoreConfig { Name = "ds1", Path = @"D:\ds1" }],
+                    Environments = [new StorageEnvironmentConfig { Name = "env1" }],
+                },
             }));
 
         var source = Create(null, settings.Object);
@@ -62,8 +66,8 @@ public class StorageConfigSourceTests
         var payload = await source.BuildPayloadAsync(ConfigScope.Default, default);
 
         var placement = StorageConfigYamlSerializer.Deserialize(payload);
-        placement.Datastores.Should().BeEquivalentTo("ds1");
-        placement.Environments.Should().BeEquivalentTo("env1");
+        placement.Datastores.Should().ContainSingle().Which.Path.Should().Be(@"D:\ds1");
+        placement.Environments.Select(e => e.Name).Should().BeEquivalentTo("env1");
     }
 
     [Fact]

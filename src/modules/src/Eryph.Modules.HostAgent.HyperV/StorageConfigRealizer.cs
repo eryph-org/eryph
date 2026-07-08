@@ -9,12 +9,12 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.Modules.HostAgent;
 
 /// <summary>
-/// Applies the controller-distributed placement configuration: the datastore and
-/// environment name catalog the agent is allowed to serve. The agent maps these
-/// names to local paths itself (via <c>agentsettings.yml</c>); here it records the
-/// received vocabulary so provisioning can enforce it, and warns about local
-/// datastores/environments that the controller does not know — those can never be
-/// used for placement.
+/// Applies the controller-distributed storage configuration: the datastore and environment vocabulary
+/// the agent may serve, together with the concrete paths they map to. The received vocabulary is
+/// recorded so provisioning can enforce it, and the distributed paths are merged over the local
+/// <c>agentsettings.yml</c> (distributed wins) and written back, so the file becomes a cache of the
+/// distributed config and all path resolution keeps going through the single existing seam. Local
+/// datastores/environments the controller does not know are warned about — they can never be placed on.
 /// </summary>
 internal sealed class StorageConfigRealizer(
     IStorageConfigProvider placementConfigProvider,
@@ -31,24 +31,40 @@ internal sealed class StorageConfigRealizer(
         placementConfigProvider.Update(config);
 
         logger.LogInformation(
-            "Applied placement configuration v{Version}: {DatastoreCount} datastore(s), {EnvironmentCount} environment(s).",
+            "Applied storage configuration v{Version}: {DatastoreCount} datastore(s), {EnvironmentCount} environment(s).",
             version, config.Datastores.Length, config.Environments.Length);
 
-        await WarnAboutUnusedLocalConfig(config);
+        await MergeIntoLocalCache(config);
     }
 
-    private async Task WarnAboutUnusedLocalConfig(StorageConfig distributed)
+    private async Task MergeIntoLocalCache(StorageConfig distributed)
     {
-        // Best-effort: read the local agent settings to surface datastores/environments
-        // that are configured locally but not part of the distributed vocabulary. The
-        // agent does not reject them, but the controller will never place on them.
-        var local = await hostSettingsProvider.GetHostSettings()
-            .Bind(vmHostAgentConfigurationManager.GetCurrentConfiguration)
-            .Match(c => c, _ => null);
+        // Merge the distributed paths over the local config and persist the result to agentsettings.yml,
+        // so it survives restarts and is picked up by GetCurrentConfiguration and all path resolution.
+        var local = await (
+            from hostSettings in hostSettingsProvider.GetHostSettings()
+            from current in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+            from _ in vmHostAgentConfigurationManager.SaveConfiguration(
+                StorageConfigMerge.Apply(current, distributed), hostSettings)
+            select current
+        ).Match(
+            Right: current => (VmHostAgentConfiguration?)current,
+            Left: error =>
+            {
+                logger.LogWarning(
+                    "Could not write the distributed storage configuration to agentsettings: {Error}.",
+                    error.Message);
+                return null;
+            });
 
-        if (local is null)
-            return;
+        if (local is not null)
+            WarnAboutUnusedLocalConfig(distributed, local);
+    }
 
+    private void WarnAboutUnusedLocalConfig(StorageConfig distributed, VmHostAgentConfiguration local)
+    {
+        // Surface datastores/environments that are configured locally but not part of the distributed
+        // vocabulary. The agent does not reject them, but the controller will never place on them.
         foreach (var dataStore in StorageConfigValidation.GetUnusedLocalDatastores(distributed, local))
             logger.LogWarning(
                 "Local datastore '{DataStore}' is configured in agentsettings but is not part of the controller "

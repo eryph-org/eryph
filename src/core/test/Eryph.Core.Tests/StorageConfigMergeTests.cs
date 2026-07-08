@@ -1,0 +1,155 @@
+using System.Linq;
+using Eryph.Core.VmAgent;
+
+namespace Eryph.Core.Tests;
+
+public class StorageConfigMergeTests
+{
+    [Fact]
+    public void Distributed_default_paths_override_local_but_preserve_watch_flag()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Defaults = new VmHostAgentDefaultsConfiguration
+            {
+                Vms = @"C:\local\vms", Volumes = @"C:\local\volumes", WatchFileSystem = false,
+            },
+        };
+        var distributed = new StorageConfig
+        {
+            Defaults = new StorageDefaultsConfig { Vms = @"D:\dist\vms" }, // Volumes not set → keep local
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        merged.Defaults.Vms.Should().Be(@"D:\dist\vms");
+        merged.Defaults.Volumes.Should().Be(@"C:\local\volumes"); // preserved (distributed left it null)
+        merged.Defaults.WatchFileSystem.Should().BeFalse(); // local-only setting preserved
+    }
+
+    [Fact]
+    public void Null_distributed_defaults_keep_local_defaults()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Defaults = new VmHostAgentDefaultsConfiguration { Vms = @"C:\vms", Volumes = @"C:\vol" },
+        };
+
+        var merged = StorageConfigMerge.Apply(local, new StorageConfig());
+
+        merged.Defaults.Vms.Should().Be(@"C:\vms");
+        merged.Defaults.Volumes.Should().Be(@"C:\vol");
+    }
+
+    [Fact]
+    public void Distributed_datastore_path_overrides_the_local_datastore_of_the_same_name()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Datastores = [new VmHostAgentDataStoreConfiguration { Name = "fast", Path = @"C:\old", WatchFileSystem = false }],
+        };
+        var distributed = new StorageConfig
+        {
+            Datastores = [new StorageDatastoreConfig { Name = "fast", Path = @"D:\new" }],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        var fast = merged.Datastores!.Single(d => d.Name == "fast");
+        fast.Path.Should().Be(@"D:\new");
+        fast.WatchFileSystem.Should().BeFalse(); // preserved from the local entry
+    }
+
+    [Fact]
+    public void Distributed_datastore_is_added_when_absent_locally()
+    {
+        var local = new VmHostAgentConfiguration();
+        var distributed = new StorageConfig
+        {
+            Datastores = [new StorageDatastoreConfig { Name = "new", Path = @"D:\new" }],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        merged.Datastores!.Single(d => d.Name == "new").Path.Should().Be(@"D:\new");
+    }
+
+    [Fact]
+    public void Path_less_distributed_datastore_leaves_the_local_mapping_untouched()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Datastores = [new VmHostAgentDataStoreConfiguration { Name = "fast", Path = @"C:\keep" }],
+        };
+        var distributed = new StorageConfig
+        {
+            // vocabulary only — no path to contribute
+            Datastores = [new StorageDatastoreConfig { Name = "fast" }],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        merged.Datastores!.Single(d => d.Name == "fast").Path.Should().Be(@"C:\keep");
+    }
+
+    [Fact]
+    public void Local_datastore_not_in_distributed_is_kept()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Datastores = [new VmHostAgentDataStoreConfiguration { Name = "local-only", Path = @"C:\keep" }],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, new StorageConfig());
+
+        merged.Datastores!.Single().Name.Should().Be("local-only");
+    }
+
+    [Fact]
+    public void Environment_paths_are_merged_recursively_and_local_environments_are_kept()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
+                {
+                    Name = "staging",
+                    Defaults = new VmHostAgentDefaultsConfiguration { Vms = @"C:\stg\vms", Volumes = @"C:\stg\vol" },
+                    Datastores = [new VmHostAgentDataStoreConfiguration { Name = "fast", Path = @"C:\stg\old" }],
+                },
+                new VmHostAgentEnvironmentConfiguration { Name = "local-only-env" },
+            ],
+        };
+        var distributed = new StorageConfig
+        {
+            Environments =
+            [
+                new StorageEnvironmentConfig
+                {
+                    Name = "staging",
+                    Defaults = new StorageDefaultsConfig { Vms = @"D:\stg\vms" }, // override vms only
+                    Datastores = [new StorageDatastoreConfig { Name = "fast", Path = @"D:\stg\new" }],
+                },
+            ],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        var staging = merged.Environments!.Single(e => e.Name == "staging");
+        staging.Defaults.Vms.Should().Be(@"D:\stg\vms"); // overridden
+        staging.Defaults.Volumes.Should().Be(@"C:\stg\vol"); // preserved
+        staging.Datastores.Single(d => d.Name == "fast").Path.Should().Be(@"D:\stg\new");
+        merged.Environments!.Should().Contain(e => e.Name == "local-only-env"); // kept
+    }
+
+    [Fact]
+    public void Local_only_ovn_configuration_is_preserved()
+    {
+        var local = new VmHostAgentConfiguration { Ovn = new VmHostAgentOvnConfiguration() };
+
+        var merged = StorageConfigMerge.Apply(local, new StorageConfig());
+
+        merged.Ovn.Should().BeSameAs(local.Ovn);
+    }
+}
