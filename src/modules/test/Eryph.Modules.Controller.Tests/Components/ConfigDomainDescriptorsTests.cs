@@ -27,10 +27,10 @@ public class ConfigDomainDescriptorsTests
     {
         // Flow style, reversed key order.
         var a = ConfigDomainDescriptors.TryCanonicalize(
-            ConfigDomain.StorageConfig, "environments: [e1]\ndatastores: [ds1]", out var canonicalA);
+            ConfigDomain.StorageConfig, "environments: [{name: e1}]\ndatastores: [{name: ds1}]", out var canonicalA);
         // Block style, declaration order, trailing newline.
         var b = ConfigDomainDescriptors.TryCanonicalize(
-            ConfigDomain.StorageConfig, "datastores:\n- ds1\nenvironments:\n- e1\n", out var canonicalB);
+            ConfigDomain.StorageConfig, "datastores:\n- name: ds1\nenvironments:\n- name: e1\n", out var canonicalB);
 
         a.Should().BeTrue();
         b.Should().BeTrue();
@@ -42,7 +42,7 @@ public class ConfigDomainDescriptorsTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("42")] // a scalar, not a mapping
-    [InlineData("datastores:\n- ds1\nunknown_key: x")] // unknown member — rejected (strict)
+    [InlineData("datastores:\n- name: ds1\nunknown_key: x")] // unknown member — rejected (strict)
     [InlineData("""{"Datastores":["ds1"]}""")] // wrong-cased key ('datastores' is the underscored name)
     public void TryCanonicalize_rejects_an_invalid_payload(string payload) =>
         ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.StorageConfig, payload, out _).Should().BeFalse();

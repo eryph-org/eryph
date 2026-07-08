@@ -16,7 +16,7 @@ namespace Eryph.Modules.Controller.Tests.Components;
 /// </summary>
 public class SetConfigDomainCommandHandlerTests
 {
-    private const string ValidStorage = "datastores: [ds1]";
+    private const string ValidStorage = "datastores: [{name: ds1}]";
 
     private readonly Mock<ITaskMessaging> _messaging = new();
     private readonly Mock<IBus> _bus = new() { DefaultValue = DefaultValue.Mock };
