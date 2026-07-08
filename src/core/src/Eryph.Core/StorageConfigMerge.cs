@@ -43,16 +43,20 @@ public static class StorageConfigMerge
 
         foreach (var datastore in distributed)
         {
-            // A distributed datastore without a path is vocabulary only; it cannot supply a path, so
-            // leave any local mapping untouched (there is nothing to write for a path-less entry).
-            if (string.IsNullOrWhiteSpace(datastore.Path))
+            result.TryGetValue(datastore.Name, out var existing);
+
+            // A distributed datastore without a path is vocabulary only and keeps the local path; a
+            // path-less entry with no local mapping has nothing to write, so skip it. Either way, adopt
+            // the distributed (canonical) casing for the name — datastore path resolution downstream is
+            // case-sensitive, so the local name must match how the controller addresses it.
+            var path = string.IsNullOrWhiteSpace(datastore.Path) ? existing?.Path : datastore.Path;
+            if (string.IsNullOrWhiteSpace(path))
                 continue;
 
-            result.TryGetValue(datastore.Name, out var existing);
             result[datastore.Name] = new VmHostAgentDataStoreConfiguration
             {
                 Name = datastore.Name,
-                Path = datastore.Path,
+                Path = path,
                 WatchFileSystem = existing?.WatchFileSystem ?? true,
             };
         }

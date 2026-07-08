@@ -1,10 +1,15 @@
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
 
@@ -39,32 +44,43 @@ internal sealed class StorageConfigRealizer(
 
     private async Task MergeIntoLocalCache(StorageConfig distributed)
     {
-        // Merge the distributed paths over the local config and persist the result to agentsettings.yml,
-        // so it survives restarts and is picked up by GetCurrentConfiguration and all path resolution.
-        var local = await (
-            from hostSettings in hostSettingsProvider.GetHostSettings()
-            from current in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-            from _ in vmHostAgentConfigurationManager.SaveConfiguration(
-                StorageConfigMerge.Apply(current, distributed), hostSettings)
-            select current
-        ).Match(
-            Right: current => (VmHostAgentConfiguration?)current,
-            Left: error =>
-            {
-                logger.LogWarning(
-                    "Could not write the distributed storage configuration to agentsettings: {Error}.",
-                    error.Message);
-                return null;
-            });
+        // Merge the distributed paths over the local config, validate, and persist the result to
+        // agentsettings.yml so it survives restarts and is picked up by GetCurrentConfiguration and all
+        // path resolution. A read/validation/save failure must propagate: ConfigApplier turns a thrown
+        // exception into a failed ConfigAppliedEvent so the controller retries — swallowing it would
+        // leave the agent silently running the old paths while the controller believes it was applied.
+        var hostSettings = await hostSettingsProvider.GetHostSettings()
+            .Match(h => h, error => throw new InvalidOperationException(
+                $"Failed to read the host settings: {error.Message}"));
 
-        if (local is not null)
-            WarnAboutUnusedLocalConfig(distributed, local);
+        var local = await vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+            .Match(c => c, error => throw new InvalidOperationException(
+                $"Failed to read agentsettings: {error.Message}"));
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+        Validate(merged).Match(_ => unit, error => throw new InvalidOperationException(error.Message));
+
+        await vmHostAgentConfigurationManager.SaveConfiguration(merged, hostSettings)
+            .Match(_ => unit, error => throw new InvalidOperationException(
+                $"Failed to write the distributed storage configuration to agentsettings: {error.Message}"));
+
+        WarnAboutUnusedLocalConfig(distributed, local);
+        WarnAboutUnmappedDistributedDatastores(distributed, merged);
     }
+
+    // Reuse the agent-settings validation (duplicate names/paths, well-formed paths) so the controller
+    // path is not the least-validated writer of agentsettings.yml.
+    private static Either<Error, Unit> Validate(VmHostAgentConfiguration config) =>
+        VmHostAgentConfigurationValidations.ValidateVmHostAgentConfig(config)
+            .ToEither()
+            .MapLeft(issues => Error.New(
+                "The merged storage configuration is invalid.", Error.Many(issues.Map(i => i.ToError()))));
 
     private void WarnAboutUnusedLocalConfig(StorageConfig distributed, VmHostAgentConfiguration local)
     {
         // Surface datastores/environments that are configured locally but not part of the distributed
-        // vocabulary. The agent does not reject them, but the controller will never place on them.
+        // vocabulary. The agent does not reject them, but the controller will never place on them. Uses
+        // the pre-merge local config (what was genuinely local before this push), by design.
         foreach (var dataStore in StorageConfigValidation.GetUnusedLocalDatastores(distributed, local))
             logger.LogWarning(
                 "Local datastore '{DataStore}' is configured in agentsettings but is not part of the controller "
@@ -74,5 +90,23 @@ internal sealed class StorageConfigRealizer(
             logger.LogWarning(
                 "Local environment '{Environment}' is configured in agentsettings but is not part of the controller "
                 + "placement configuration; catlets cannot be placed in it.", environment);
+    }
+
+    private void WarnAboutUnmappedDistributedDatastores(
+        StorageConfig distributed, VmHostAgentConfiguration merged)
+    {
+        // The inverse warning: a datastore is in the distributed vocabulary (so placement considers it
+        // allowed) but has no path on this host even after the merge, so it would only fail opaquely at
+        // VM-create time. Flag it here instead.
+        var mappedWithPath = (merged.Datastores ?? [])
+            .Where(d => !string.IsNullOrWhiteSpace(d.Path))
+            .Select(d => d.Name)
+            .ToHashSet(System.StringComparer.OrdinalIgnoreCase);
+
+        foreach (var datastore in distributed.Datastores)
+            if (!mappedWithPath.Contains(datastore.Name))
+                logger.LogWarning(
+                    "Distributed datastore '{DataStore}' has no local path on this host; catlets cannot be placed "
+                    + "on it until a path is configured for it.", datastore.Name);
     }
 }

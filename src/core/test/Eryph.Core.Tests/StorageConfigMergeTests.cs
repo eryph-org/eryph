@@ -144,6 +144,44 @@ public class StorageConfigMergeTests
     }
 
     [Fact]
+    public void Distributed_casing_is_adopted_for_a_matched_local_datastore()
+    {
+        // Path resolution downstream is case-sensitive, so the merged local name must match the
+        // distributed (canonical) casing even when the distributed entry only supplies vocabulary.
+        var local = new VmHostAgentConfiguration
+        {
+            Datastores = [new VmHostAgentDataStoreConfiguration { Name = "Fast", Path = @"C:\fast" }],
+        };
+        var distributed = new StorageConfig
+        {
+            Datastores = [new StorageDatastoreConfig { Name = "fast" }], // vocabulary only, different casing
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        var datastore = merged.Datastores!.Should().ContainSingle().Subject;
+        datastore.Name.Should().Be("fast"); // canonical casing adopted
+        datastore.Path.Should().Be(@"C:\fast"); // local path preserved
+    }
+
+    [Fact]
+    public void Duplicate_distributed_datastore_names_collapse_to_the_last()
+    {
+        var distributed = new StorageConfig
+        {
+            Datastores =
+            [
+                new StorageDatastoreConfig { Name = "fast", Path = @"D:\first" },
+                new StorageDatastoreConfig { Name = "fast", Path = @"D:\second" },
+            ],
+        };
+
+        var merged = StorageConfigMerge.Apply(new VmHostAgentConfiguration(), distributed);
+
+        merged.Datastores!.Should().ContainSingle().Which.Path.Should().Be(@"D:\second");
+    }
+
+    [Fact]
     public void Local_only_ovn_configuration_is_preserved()
     {
         var local = new VmHostAgentConfiguration { Ovn = new VmHostAgentOvnConfiguration() };
