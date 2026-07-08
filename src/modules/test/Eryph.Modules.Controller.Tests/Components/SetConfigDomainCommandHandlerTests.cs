@@ -77,6 +77,53 @@ public class SetConfigDomainCommandHandlerTests
         VerifyCompleted(Times.Never());
     }
 
+    [Fact]
+    public async Task NetworkProviders_at_a_non_default_scope_is_rejected()
+    {
+        // NetworkProviders is the single global topology — only the default scope is meaningful. A
+        // non-default scope would be stored and resolved but distributed as the default value, so it
+        // must be rejected rather than silently mismanaged.
+        var op = new OperationTask<SetConfigDomainCommand>(
+            new SetConfigDomainCommand
+            {
+                Domain = ConfigDomain.NetworkProviders,
+                Scope = "env:edge",
+                Payload = "network_providers: []",
+                Author = "alice",
+            },
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow);
+
+        await CreateHandler().Handle(op);
+
+        _store.Added.Should().BeEmpty();
+        VerifyDistributed(Times.Never());
+        VerifyCompleted(Times.Never());
+    }
+
+    private const string ValidNetworkProviders =
+        "network_providers:\n"
+        + "- name: default\n"
+        + "  type: nat_overlay\n"
+        + "  bridge_name: br-nat\n"
+        + "  subnets:\n"
+        + "  - name: default\n"
+        + "    network: 10.249.248.0/22\n"
+        + "    gateway: 10.249.248.1\n"
+        + "    ip_pools:\n"
+        + "    - name: default\n"
+        + "      first_ip: 10.249.248.10\n"
+        + "      last_ip: 10.249.251.254\n";
+
+    [Fact]
+    public async Task NetworkProviders_at_the_default_scope_is_stored_and_completed()
+    {
+        await CreateHandler().Handle(Op(ConfigDomain.NetworkProviders, ValidNetworkProviders));
+
+        _store.Added.Should().ContainSingle()
+            .Which.domain.Should().Be(ConfigDomain.NetworkProviders);
+        VerifyCompleted(Times.Once());
+    }
+
     private sealed class FakeStore : IAuthoredConfigStore
     {
         public List<(ConfigDomain domain, string scope, string payload, string? author)> Added { get; } = [];

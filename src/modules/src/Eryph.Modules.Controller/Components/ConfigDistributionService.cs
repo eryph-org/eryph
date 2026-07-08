@@ -43,7 +43,9 @@ internal sealed class ConfigDistributionService(
     private async Task<string> ResolveScopeAsync(
         ConfigDomain domain, ComponentRegistration registration, CancellationToken cancellationToken)
     {
-        if (!ConfigDomainDescriptors.IsAuthorable(domain))
+        // System-derived and non-scopable domains (e.g. the single global network topology) only ever
+        // have a default-scope value, so never resolve a more-specific scope for them.
+        if (!ConfigDomainDescriptors.IsAuthorable(domain) || !ConfigDomainDescriptors.SupportsScopedAuthoring(domain))
             return ConfigScope.Default;
 
         // Walk the component's scopes most-specific first and stop at the first that has an authored

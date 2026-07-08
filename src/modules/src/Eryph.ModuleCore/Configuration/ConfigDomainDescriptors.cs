@@ -62,27 +62,52 @@ public static class ConfigDomainDescriptors
     public static bool IsAuthorable(ConfigDomain domain) => Authorable.ContainsKey(domain);
 
     /// <summary>
+    /// Whether an authorable domain can be authored at a non-default scope (env/tag/host). StorageConfig
+    /// is per-host/environment (paths differ per machine), so it is scoped; NetworkProviders is the
+    /// single global network topology the controller realizes once, so only the default scope is
+    /// meaningful — its source and the controller consumers read the default-scope value only.
+    /// </summary>
+    public static bool SupportsScopedAuthoring(ConfigDomain domain) => domain == ConfigDomain.StorageConfig;
+
+    /// <summary>
     /// Validates the payload against the domain's schema and returns its canonical serialization.
     /// Returns false when the domain is not authorable or the payload is invalid.
     /// </summary>
-    public static bool TryCanonicalize(ConfigDomain domain, string payload, out string canonical)
+    public static bool TryCanonicalize(ConfigDomain domain, string payload, out string canonical) =>
+        TryCanonicalize(domain, payload, out canonical, out _);
+
+    /// <summary>
+    /// As <see cref="TryCanonicalize(ConfigDomain,string,out string)"/>, also returning the specific
+    /// validation error (e.g. the network-provider validation detail) so it can be surfaced to the
+    /// operator instead of a generic message.
+    /// </summary>
+    public static bool TryCanonicalize(ConfigDomain domain, string payload, out string canonical, out string? error)
     {
         canonical = payload;
+        error = null;
+
         if (!Authorable.TryGetValue(domain, out var canonicalize))
+        {
+            error = $"The {domain} domain is system-derived and cannot be authored.";
             return false;
+        }
 
         // An empty document deserializes to an empty config; require the operator to actually provide
         // one so a blank submission cannot silently distribute an empty vocabulary.
         if (string.IsNullOrWhiteSpace(payload))
+        {
+            error = "The configuration payload is empty.";
             return false;
+        }
 
         try
         {
             canonical = canonicalize(payload);
             return true;
         }
-        catch (InvalidConfigException)
+        catch (InvalidConfigException ex)
         {
+            error = ex.Message;
             return false;
         }
     }

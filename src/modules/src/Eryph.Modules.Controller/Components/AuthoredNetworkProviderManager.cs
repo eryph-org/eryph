@@ -24,6 +24,12 @@ namespace Eryph.Modules.Controller.Components;
 /// solely by the authoring command, so the IP-pool cursor write-back (which persists runtime allocation
 /// state) does not append authored versions on every allocation. In eryph-zero there is no management
 /// API, so nothing is authored and this transparently returns the file value.
+/// <para>
+/// Note: once a value is authored, the local file is no longer an independent pre-authoring fallback —
+/// the change-tracking write-back mirrors the last-realized (authored) shape into it. There is no
+/// un-author/delete path today; a future "revert authoring" feature must not assume the file is a clean
+/// pre-authoring copy.
+/// </para>
 /// </remarks>
 internal sealed class AuthoredNetworkProviderManager(
     INetworkProviderManager inner,

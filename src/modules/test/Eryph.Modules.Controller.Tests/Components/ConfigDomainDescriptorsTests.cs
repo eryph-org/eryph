@@ -76,6 +76,32 @@ public class ConfigDomainDescriptorsTests
     }
 
     [Fact]
+    public void TryCanonicalize_returns_the_specific_validation_error_for_the_operator()
+    {
+        // Overlapping NAT subnets — the operator should get the validation detail, not a generic message.
+        const string payload =
+            "network_providers:\n"
+            + "- name: default\n"
+            + "  type: nat_overlay\n"
+            + "  bridge_name: br-a\n"
+            + "  subnets:\n"
+            + "  - name: default\n"
+            + "    network: 10.249.248.0/22\n"
+            + "- name: second\n"
+            + "  type: nat_overlay\n"
+            + "  bridge_name: br-b\n"
+            + "  subnets:\n"
+            + "  - name: default\n"
+            + "    network: 10.249.248.0/22\n";
+
+        var ok = ConfigDomainDescriptors.TryCanonicalize(
+            ConfigDomain.NetworkProviders, payload, out _, out var error);
+
+        ok.Should().BeFalse();
+        error.Should().Contain("network provider configuration is invalid");
+    }
+
+    [Fact]
     public void TryCanonicalize_accepts_valid_yaml_and_normalizes_whitespace_and_order()
     {
         // Flow style, reversed key order.

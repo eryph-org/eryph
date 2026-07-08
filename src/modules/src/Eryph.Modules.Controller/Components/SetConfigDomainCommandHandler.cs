@@ -44,11 +44,21 @@ internal sealed class SetConfigDomainCommandHandler(
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(command.Payload)
-            || !ConfigDomainDescriptors.TryCanonicalize(command.Domain, command.Payload, out var canonical))
+        // A domain that is not per-scope (e.g. the single global network topology) must be authored at
+        // the default scope only — its source and consumers read the default value, so a non-default
+        // scope would be stored and resolved but never actually distributed. Reject it loudly.
+        if (scope != ConfigScope.Default && !ConfigDomainDescriptors.SupportsScopedAuthoring(command.Domain))
         {
             await messaging.FailTask(message,
-                $"The payload is not a valid {command.Domain} configuration.");
+                $"The {command.Domain} domain can only be authored at the default scope.");
+            return;
+        }
+
+        if (!ConfigDomainDescriptors.TryCanonicalize(
+                command.Domain, command.Payload ?? "", out var canonical, out var error))
+        {
+            await messaging.FailTask(message,
+                error ?? $"The payload is not a valid {command.Domain} configuration.");
             return;
         }
 
