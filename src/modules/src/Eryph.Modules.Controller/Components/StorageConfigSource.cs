@@ -13,12 +13,13 @@ namespace Eryph.Modules.Controller.Components;
 /// <summary>
 /// Builds the <see cref="ConfigDomain.StorageConfig"/> payload. The operator-authored value (set via
 /// the management API and stored versioned) is authoritative once it exists; until the domain is first
-/// authored the source falls back to the Placement section of the controller settings file, so
-/// existing file-based deployments keep working unchanged.
+/// authored the source falls back to the host-wired <see cref="IStorageConfigDefaultsProvider"/> — the
+/// central controller settings in the split runtime, or the local <c>agentsettings.yml</c> in
+/// eryph-zero — so the same distributed config feeds both the agent and the gene pool.
 /// </summary>
 internal sealed class StorageConfigSource(
     Container container,
-    IControllerSettingsManager settingsManager,
+    IStorageConfigDefaultsProvider defaultsProvider,
     ILogger<StorageConfigSource> logger)
     : IConfigSource
 {
@@ -42,21 +43,21 @@ internal sealed class StorageConfigSource(
         if (scope != ConfigScope.Default)
             throw new InvalidOperationException($"No authored StorageConfig for scope '{scope}'.");
 
-        // Not yet authored via the management API — fall back to the controller settings file.
-        return await settingsManager.GetCurrentConfiguration()
+        // Not yet authored via the management API — fall back to the host-wired defaults source.
+        return await defaultsProvider.GetDefaultStorageConfig()
             .Match(
-                settings => StorageConfigYamlSerializer.Serialize(settings.Storage),
+                config => StorageConfigYamlSerializer.Serialize(config),
                 error =>
                 {
-                    // Never distribute a silently-empty placement vocabulary — that would make
-                    // agents reject every non-default datastore/environment. Fail the round
-                    // instead (mirrors NetworkProvidersConfigSource); agents keep their current
-                    // copy until the controller settings are readable again.
+                    // Never distribute a silently-empty storage vocabulary — that would make agents
+                    // reject every non-default datastore/environment. Fail the round instead (mirrors
+                    // NetworkProvidersConfigSource); agents keep their current copy until the source is
+                    // readable again.
                     logger.LogError(
-                        "Failed to read controller settings for {Domain}: {Error}.",
+                        "Failed to read the default storage configuration for {Domain}: {Error}.",
                         ConfigDomain.StorageConfig, error.Message);
                     throw new InvalidOperationException(
-                        $"Cannot distribute placement configuration: {error.Message}");
+                        $"Cannot distribute the storage configuration: {error.Message}");
                 });
     }
 }

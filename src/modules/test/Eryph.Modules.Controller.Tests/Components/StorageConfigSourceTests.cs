@@ -1,5 +1,4 @@
 using Eryph.Core;
-using Eryph.Core.Settings;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Configuration;
 using Eryph.Modules.Controller.Components;
@@ -14,93 +13,90 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.Controller.Tests.Components;
 
 /// <summary>
-/// The placement source is authoritative from the operator-authored store once a value exists, and
-/// falls back to the controller settings file until the domain is first authored via the API. The
-/// scoped store is resolved from the container in a dedicated scope, so the source is constructed with
-/// the container (mirrors EndpointsConfigSource).
+/// The storage source is authoritative from the operator-authored store once a value exists, and falls
+/// back to the host-wired <see cref="IStorageConfigDefaultsProvider"/> until the domain is first
+/// authored. The scoped store is resolved from the container in a dedicated scope, so the source is
+/// constructed with the container (mirrors EndpointsConfigSource).
 /// </summary>
 public class StorageConfigSourceTests
 {
-    private static StorageConfigSource Create(AuthoredConfig? authored, IControllerSettingsManager settings)
+    private static StorageConfigSource Create(AuthoredConfig? authored, IStorageConfigDefaultsProvider defaults)
     {
         var container = new Container();
         container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
         container.RegisterInstance<IAuthoredConfigStore>(new StubStore(authored));
-        return new StorageConfigSource(container, settings, NullLogger<StorageConfigSource>.Instance);
+        return new StorageConfigSource(container, defaults, NullLogger<StorageConfigSource>.Instance);
     }
 
     [Fact]
-    public async Task Uses_the_authored_value_when_present_without_reading_the_file()
+    public async Task Uses_the_authored_value_when_present_without_reading_the_defaults()
     {
-        var settings = new Mock<IControllerSettingsManager>();
+        var defaults = new Mock<IStorageConfigDefaultsProvider>();
         var source = Create(
             new AuthoredConfig
             {
                 Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig,
                 Scope = ConfigScope.Default, Version = 3, Payload = "authored-yaml",
             },
-            settings.Object);
+            defaults.Object);
 
         var payload = await source.BuildPayloadAsync(ConfigScope.Default, default);
 
         payload.Should().Be("authored-yaml");
-        settings.Verify(m => m.GetCurrentConfiguration(), Times.Never);
+        defaults.Verify(m => m.GetDefaultStorageConfig(), Times.Never);
     }
 
     [Fact]
-    public async Task Falls_back_to_the_settings_file_when_not_yet_authored()
+    public async Task Falls_back_to_the_host_defaults_when_not_yet_authored()
     {
-        var settings = new Mock<IControllerSettingsManager>();
-        settings.Setup(m => m.GetCurrentConfiguration())
-            .Returns(RightAsync<Error, ControllerSettings>(new ControllerSettings
+        var defaults = new Mock<IStorageConfigDefaultsProvider>();
+        defaults.Setup(m => m.GetDefaultStorageConfig())
+            .Returns(RightAsync<Error, StorageConfig>(new StorageConfig
             {
-                Storage = new StorageConfig
-                {
-                    Datastores = [new StorageDatastoreConfig { Name = "ds1", Path = @"D:\ds1" }],
-                    Environments = [new StorageEnvironmentConfig { Name = "env1" }],
-                },
+                Datastores = [new StorageDatastoreConfig { Name = "ds1", Path = @"D:\ds1" }],
+                Environments = [new StorageEnvironmentConfig { Name = "env1" }],
             }));
 
-        var source = Create(null, settings.Object);
+        var source = Create(null, defaults.Object);
 
         var payload = await source.BuildPayloadAsync(ConfigScope.Default, default);
 
-        var placement = StorageConfigYamlSerializer.Deserialize(payload);
-        placement.Datastores.Should().ContainSingle().Which.Path.Should().Be(@"D:\ds1");
-        placement.Environments.Select(e => e.Name).Should().BeEquivalentTo("env1");
+        var storage = StorageConfigYamlSerializer.Deserialize(payload);
+        storage.Datastores.Should().ContainSingle().Which.Path.Should().Be(@"D:\ds1");
+        storage.Environments.Select(e => e.Name).Should().BeEquivalentTo("env1");
     }
 
     [Fact]
     public async Task Uses_the_authored_value_at_a_non_default_scope()
     {
-        var settings = new Mock<IControllerSettingsManager>();
+        var defaults = new Mock<IStorageConfigDefaultsProvider>();
         var source = Create(
             new AuthoredConfig
             {
                 Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig,
                 Scope = "env:edge", Version = 1, Payload = "edge-yaml",
             },
-            settings.Object);
+            defaults.Object);
 
         var payload = await source.BuildPayloadAsync("env:edge", default);
 
         payload.Should().Be("edge-yaml");
-        settings.Verify(m => m.GetCurrentConfiguration(), Times.Never);
+        defaults.Verify(m => m.GetDefaultStorageConfig(), Times.Never);
     }
 
     [Fact]
-    public async Task Throws_for_an_unauthored_non_default_scope_instead_of_the_file_fallback()
+    public async Task Throws_for_an_unauthored_non_default_scope_instead_of_the_defaults_fallback()
     {
-        // The settings-file fallback is only valid for the default scope; a non-default scope with no
+        // The defaults fallback is only valid for the default scope; a non-default scope with no
         // authored value should never be materialized (resolution only picks authored scopes), so this
-        // is an invariant guard, not the file fallback.
-        var settings = new Mock<IControllerSettingsManager>();
-        var source = Create(null, settings.Object);
+        // is an invariant guard, not the fallback.
+        var defaults = new Mock<IStorageConfigDefaultsProvider>();
+        var source = Create(null, defaults.Object);
 
         var act = () => source.BuildPayloadAsync("env:edge", default);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
-        settings.Verify(m => m.GetCurrentConfiguration(), Times.Never);
+        defaults.Verify(m => m.GetDefaultStorageConfig(), Times.Never);
     }
 
     private sealed class StubStore(AuthoredConfig? current) : IAuthoredConfigStore

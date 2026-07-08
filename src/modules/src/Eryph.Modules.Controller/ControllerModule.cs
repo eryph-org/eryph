@@ -157,8 +157,11 @@ public class ControllerModule
         container.Collection.Register<IComponentBrokerProvisioner>(Array.Empty<Type>());
         container.Register<ConfigDistributionService>(Lifestyle.Scoped);
         container.Register<IAuthoredConfigStore, AuthoredConfigStore>(Lifestyle.Scoped);
-        // Controller settings (incl. the Placement section) are owned by the host.
+        // Controller settings (incl. the storage section) are owned by the host.
         container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());
+        // The default-scope storage config source is host-wired: the split runtime reads the central
+        // controller settings, eryph-zero reads the local agentsettings.yml (see IStorageConfigDefaultsProvider).
+        container.RegisterInstance(serviceProvider.GetRequiredService<IStorageConfigDefaultsProvider>());
         // EndpointsConfigSource reads the operator endpoint overrides from the host
         // configuration; register it explicitly rather than relying on auto cross-wiring.
         container.RegisterInstance(_configuration);

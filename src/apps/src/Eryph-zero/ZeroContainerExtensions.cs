@@ -59,6 +59,8 @@ internal static class ZeroContainerExtensions
             container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
             container.RegisterSingleton<IGenePoolApiKeyStore, ZeroGenePoolApiKeyStore>();
             container.Register<IHostSettingsProvider, HostSettingsProvider>();
+            // eryph-zero's storage config is the local agentsettings.yml (shared by agent + gene pool).
+            container.Register<IStorageConfigDefaultsProvider, AgentSettingsStorageConfigDefaultsProvider>();
             container.Register<IGenePoolPathProvider, HyperVGenePoolPathProvider>();
             container.RegisterSingleton<IApplicationInfoProvider, ZeroApplicationInfoProvider>();
 

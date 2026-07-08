@@ -20,6 +20,7 @@ internal static class ControllerContainerExtensions
     public static void Bootstrap(this Container container)
     {
         container.Register<IControllerSettingsManager, ControllerSettingsManager>();
+        container.Register<IStorageConfigDefaultsProvider, ControllerSettingsStorageConfigDefaultsProvider>();
         container.Register<INetworkProviderManager, NetworkProviderManager>();
 
         // Bridges the OVN control plane to the host-agent chassis. In the split runtime

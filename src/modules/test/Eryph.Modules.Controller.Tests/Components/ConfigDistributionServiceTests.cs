@@ -51,18 +51,18 @@ public class ConfigDistributionServiceTests
         ControllerSettings settings,
         Mock<IStateStoreRepository<ConfigRecord>> records)
     {
-        var settingsManager = new Mock<IControllerSettingsManager>();
-        settingsManager.Setup(m => m.GetCurrentConfiguration())
-            .Returns(RightAsync<Error, ControllerSettings>(settings));
+        var defaults = new Mock<IStorageConfigDefaultsProvider>();
+        defaults.Setup(m => m.GetDefaultStorageConfig())
+            .Returns(RightAsync<Error, StorageConfig>(settings.Storage));
 
         var container = new Container();
         container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-        // Nothing authored via the API, so StorageConfigSource falls back to the settings file. The
-        // scoped store is resolved from the container; IAuthoredConfigStore is internal so it is
+        // Nothing authored via the API, so StorageConfigSource falls back to the host defaults provider.
+        // The scoped store is resolved from the container; IAuthoredConfigStore is internal so it is
         // hand-stubbed.
         container.RegisterInstance<IAuthoredConfigStore>(Authored);
         var source = new StorageConfigSource(
-            container, settingsManager.Object, NullLogger<StorageConfigSource>.Instance);
+            container, defaults.Object, NullLogger<StorageConfigSource>.Instance);
         return new ConfigDistributionService(
             records.Object, NoOpRegistrations().Object, new IConfigSource[] { source }, Authored, NoOpLock());
     }
