@@ -36,8 +36,10 @@ internal sealed class GenePoolStorageConfigRealizer(
         var volumes = config.Defaults?.Volumes;
         if (string.IsNullOrWhiteSpace(volumes))
         {
-            // Nothing to derive the gene-pool root from; leave the local cache as-is (last-known or
-            // default) rather than clearing it, so the gene pool keeps working.
+            // Nothing to derive the gene-pool root from. Report success (not failure): the volumes path
+            // may legitimately be unauthored, and failing would make the controller retry the same
+            // payload forever. Leave the local cache as-is (last-known, or the provider's default on a
+            // fresh node) so the gene pool keeps working; a later push that sets the path corrects it.
             logger.LogWarning(
                 "Applied storage configuration v{Version} has no default volumes path; "
                 + "the gene pool storage path is left unchanged.", version);

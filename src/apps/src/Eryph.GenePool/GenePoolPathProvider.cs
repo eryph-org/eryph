@@ -9,14 +9,13 @@ namespace Eryph.GenePool;
 
 /// <summary>
 /// Resolves the gene pool storage path from the node-local <c>genepoolsettings.yml</c> (under the
-/// component config root). This is the gene-pool counterpart to the agent reading its
-/// <c>agentsettings.yml</c>, and the split that separates the gene pool's storage configuration from
-/// the agent's: the gene pool owns its own datastore setting instead of deriving it from the agent's
-/// host settings.
+/// component config root). That file is the gene pool's local CACHE of the controller-distributed
+/// storage config: <c>GenePoolStorageConfigRealizer</c> writes the resolved root into it (the default
+/// volumes path plus a <c>genepool</c> folder — the same storage the agent uses), and this provider
+/// reads it — the gene-pool counterpart to the agent caching its config in <c>agentsettings.yml</c>.
 /// <para>
-/// The file is the LOCAL copy of what the controller will distribute mid-term (groupable per
-/// environment); only local resolution is implemented now. A default file is written on first use so
-/// an operator has something to edit.
+/// Until the first storage-config push arrives, a default file is written so a fresh node has a usable
+/// path; the realizer then overwrites it with the distributed value.
 /// </para>
 /// </summary>
 internal sealed class GenePoolPathProvider : IGenePoolPathProvider

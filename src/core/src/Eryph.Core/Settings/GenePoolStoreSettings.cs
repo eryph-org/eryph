@@ -1,15 +1,12 @@
 namespace Eryph.Core.Settings;
 
 /// <summary>
-/// Gene pool node settings — the gene-pool counterpart to the agent's <c>agentsettings.yml</c> and the
-/// controller's <c>controllersettings.yml</c>. It holds where this node stores genes, split out from the
-/// agent's settings so the gene pool owns its own storage configuration instead of borrowing the agent's
-/// datastore.
-///
-/// This is the <b>local</b> copy of that configuration. Mid-term the controller owns and distributes it
-/// (groupable per environment, so independent environments can resolve their gene store differently) and
-/// each node keeps a local copy — mirroring how the NetworkProviders / Placement domains are modelled.
-/// Only the local file is read today; distribution is not implemented yet.
+/// Gene pool node settings — where this node stores genes. This is the node-local <b>cache</b> of the
+/// controller-distributed storage config: the gene pool derives its root from the same central storage
+/// config the agent uses (the default volumes path plus a <c>genepool</c> folder), which the
+/// storage-config realizer writes here and <c>GenePoolPathProvider</c> reads — mirroring how the agent
+/// caches its config in <c>agentsettings.yml</c>. Not operator-owned; a manual edit is overwritten on
+/// the next storage-config push.
 /// </summary>
 public sealed class GenePoolStoreSettings
 {
