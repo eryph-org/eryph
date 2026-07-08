@@ -54,13 +54,14 @@ public class GenePoolModule
         options.AddStartupHandler<StartBusModuleHandler>();
 
         // Opt in to controller-driven component registration so the controller can route gene
-        // operations to this component's inbound queue (and track its liveness). GenePool consumes
-        // no distributed config domains, so it registers no realizers — it registers only to be
-        // discoverable and routable. The inbound queue must equal the bus endpoint configured below.
+        // operations to this component's inbound queue (and track its liveness). The gene pool consumes
+        // the StorageConfig domain to learn its storage root; the realizer caches it locally. The
+        // inbound queue must equal the bus endpoint configured below.
         options.AddComponentRegistration(
             ComponentType.GenePoolAgent,
             $"{QueueNames.GenePool}.{Environment.MachineName}",
-            new Dictionary<string, string>());
+            new Dictionary<string, string>(),
+            typeof(GenePoolStorageConfigRealizer));
 
         options.AddLogging();
     }
@@ -74,6 +75,7 @@ public class GenePoolModule
         container.RegisterInstance(serviceProvider.GetRequiredService<IApplicationInfoProvider>());
         container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolApiKeyStore>());
         container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolPathProvider>());
+        container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolStorageSettingsManager>());
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
         // container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
         // container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();

@@ -20,6 +20,12 @@ public static class ComponentConfigEntitlements
             [ComponentType.VMHostAgent] =
                 [ConfigDomain.StorageConfig, ConfigDomain.NetworkProviders, ConfigDomain.Endpoints],
 
+            // The gene pool stores genes under the same storage the agent uses (its root is the
+            // default volumes path). It receives the storage configuration so it derives that root
+            // from central config instead of borrowing the agent's settings or duplicating them.
+            [ComponentType.GenePoolAgent] =
+                [ConfigDomain.StorageConfig],
+
             // The network component hosts the OVN databases; it receives the northbound cluster
             // topology (gateway chassis groups) and realizes it locally, so the controller never
             // writes the northbound cluster tables as a remote client.

@@ -152,7 +152,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(new ControllerSettings(), records);
 
         var bundles = await service.BuildSnapshotAsync(
-            Reg(ComponentType.GenePoolAgent), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            Reg(ComponentType.ComputeApi), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
 
         bundles.Should().BeEmpty();
     }
@@ -315,6 +315,17 @@ public class ConfigDistributionServiceTests
     }
 
     [Fact]
+    public void GenePool_component_is_entitled_to_the_StorageConfig_domain()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        var service = CreateService(records);
+
+        // The gene pool derives its storage root from the distributed storage config.
+        service.GetEntitledDomains(ComponentType.GenePoolAgent)
+            .Should().Contain(ConfigDomain.StorageConfig);
+    }
+
+    [Fact]
     public async Task GetOutdatedBundles_returns_the_bundle_for_a_domain_the_component_is_behind_on()
     {
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
@@ -442,7 +453,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(records);
 
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.GenePoolAgent), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            Reg(ComponentType.ComputeApi), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
 
         bundles.Should().BeEmpty();
         records.Verify(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()),

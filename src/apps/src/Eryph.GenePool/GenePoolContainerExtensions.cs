@@ -1,5 +1,6 @@
 using System;
 using Dbosoft.Rebus.Operations;
+using Eryph.AppCore;
 using Eryph.Core;
 using Eryph.Modules.GenePool.Genetics;
 using Eryph.Rebus;
@@ -19,9 +20,10 @@ internal static class GenePoolContainerExtensions
     {
         container.RegisterInstance(SelectGenePoolSettings());
         container.RegisterSingleton<IGenePoolApiKeyStore, GenePoolApiKeyStore>();
-        // Gene pool storage path comes from the node-local genepoolsettings.yml, not the agent's
-        // host settings (the gene pool owns its own datastore config).
+        // Gene pool storage path comes from the node-local genepoolsettings.yml, which is now the local
+        // cache of the controller-distributed storage config (written by GenePoolStorageConfigRealizer).
         container.RegisterSingleton<IGenePoolPathProvider, GenePoolPathProvider>();
+        container.RegisterSingleton<IGenePoolStorageSettingsManager, GenePoolStorageSettingsManager>();
         container.RegisterSingleton<IApplicationInfoProvider, GenePoolApplicationInfoProvider>();
         container.Register<INetworkProviderManager, NetworkProviderManager>();
 
