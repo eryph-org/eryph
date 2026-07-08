@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.Core;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Configuration;
 using Eryph.Rebus;
@@ -20,6 +21,7 @@ namespace Eryph.Modules.Controller.Components;
 internal sealed class SetConfigDomainCommandHandler(
     IBus bus,
     IAuthoredConfigStore store,
+    INetworkSyncService networkSyncService,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<SetConfigDomainCommand>>
 {
@@ -65,10 +67,29 @@ internal sealed class SetConfigDomainCommandHandler(
         await store.AddVersionAsync(
             command.Domain, scope, canonical, command.Author, CancellationToken.None);
 
-        // Re-evaluate the domain against its new authored value and push it to entitled components.
-        // The refresh no-ops if the canonical content did not actually change.
-        await bus.Advanced.Routing.Send(
-            QueueNames.Controllers, new RefreshConfigDomainCommand { Domain = command.Domain });
+        // NetworkProviders drives the controller's OWN network realization, so re-realize now against the
+        // just-authored value (SyncNetworks reads it through the authored-aware provider manager). That
+        // both applies it to OVN and re-evaluates + pushes NetworkProviders and OvnCluster to components,
+        // so it replaces the plain refresh. A realization failure fails the operation — the version is
+        // stored and will realize on the next sync, but the operator must know it did not apply now.
+        if (command.Domain == ConfigDomain.NetworkProviders)
+        {
+            var syncError = await networkSyncService.SyncNetworks(CancellationToken.None)
+                .Match(_ => "", error => error.Message);
+            if (!string.IsNullOrEmpty(syncError))
+            {
+                await messaging.FailTask(message,
+                    $"The network provider configuration was stored but could not be realized: {syncError}");
+                return;
+            }
+        }
+        else
+        {
+            // Re-evaluate the domain against its new authored value and push it to entitled components.
+            // The refresh no-ops if the canonical content did not actually change.
+            await bus.Advanced.Routing.Send(
+                QueueNames.Controllers, new RefreshConfigDomainCommand { Domain = command.Domain });
+        }
 
         await messaging.CompleteTask(message);
     }

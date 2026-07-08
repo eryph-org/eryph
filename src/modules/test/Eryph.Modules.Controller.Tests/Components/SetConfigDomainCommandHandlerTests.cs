@@ -1,10 +1,14 @@
 using Dbosoft.Rebus.Operations;
+using Eryph.Core;
 using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.Rebus;
 using Eryph.StateDb.Model;
+using LanguageExt;
+using LanguageExt.Common;
 using Moq;
 using Rebus.Bus;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.Components;
 
@@ -21,8 +25,14 @@ public class SetConfigDomainCommandHandlerTests
     private readonly Mock<ITaskMessaging> _messaging = new();
     private readonly Mock<IBus> _bus = new() { DefaultValue = DefaultValue.Mock };
     private readonly FakeStore _store = new();
+    private readonly Mock<INetworkSyncService> _networkSync = new();
 
-    private SetConfigDomainCommandHandler CreateHandler() => new(_bus.Object, _store, _messaging.Object);
+    public SetConfigDomainCommandHandlerTests() =>
+        _networkSync.Setup(s => s.SyncNetworks(It.IsAny<CancellationToken>()))
+            .Returns(RightAsync<Error, Unit>(unit));
+
+    private SetConfigDomainCommandHandler CreateHandler() =>
+        new(_bus.Object, _store, _networkSync.Object, _messaging.Object);
 
     private static OperationTask<SetConfigDomainCommand> Op(ConfigDomain domain, string? payload) =>
         new(new SetConfigDomainCommand { Domain = domain, Payload = payload, Author = "alice" },
@@ -115,13 +125,28 @@ public class SetConfigDomainCommandHandlerTests
         + "      last_ip: 10.249.251.254\n";
 
     [Fact]
-    public async Task NetworkProviders_at_the_default_scope_is_stored_and_completed()
+    public async Task NetworkProviders_at_the_default_scope_is_stored_realized_and_completed()
     {
         await CreateHandler().Handle(Op(ConfigDomain.NetworkProviders, ValidNetworkProviders));
 
-        _store.Added.Should().ContainSingle()
-            .Which.domain.Should().Be(ConfigDomain.NetworkProviders);
+        _store.Added.Should().ContainSingle().Which.domain.Should().Be(ConfigDomain.NetworkProviders);
+        // NetworkProviders re-realizes via SyncNetworks (which pushes the domains itself), so the
+        // generic refresh is not used.
+        _networkSync.Verify(s => s.SyncNetworks(It.IsAny<CancellationToken>()), Times.Once);
+        VerifyDistributed(Times.Never());
         VerifyCompleted(Times.Once());
+    }
+
+    [Fact]
+    public async Task NetworkProviders_realization_failure_fails_the_operation()
+    {
+        _networkSync.Setup(s => s.SyncNetworks(It.IsAny<CancellationToken>()))
+            .Returns(LeftAsync<Error, Unit>(Error.New("ovn unreachable")));
+
+        await CreateHandler().Handle(Op(ConfigDomain.NetworkProviders, ValidNetworkProviders));
+
+        _store.Added.Should().ContainSingle(); // stored — will realize on the next sync
+        VerifyCompleted(Times.Never());        // but the operation is reported failed
     }
 
     private sealed class FakeStore : IAuthoredConfigStore
