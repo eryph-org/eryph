@@ -166,6 +166,57 @@ public class IpPoolManagerTests(
         });
     }
 
+    // Regression: after a pool's range is moved/shrunk (e.g. by an authored network-provider config),
+    // the stored NextIp cursor can fall outside [FirstIp, LastIp]. AcquireIp must clamp back to the
+    // pool start instead of handing out (or crashing on) an address outside the range.
+    [Fact]
+    public async Task AcquireIp_NextIpBelowFirstIp_ClampsToPoolStart()
+    {
+        await WithScope(async (_, stateStore) =>
+        {
+            var pool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
+            pool!.FirstIp = "10.0.0.10";
+            pool.LastIp = "10.0.0.20";
+            pool.NextIp = "10.0.0.5"; // below FirstIp
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (poolManager, stateStore) =>
+        {
+            var result = await poolManager.AcquireIp(SubnetId, IpPoolName);
+
+            var assignment = result.Should().BeRight().Subject;
+            assignment.IpAddress.Should().Be("10.0.0.10");
+
+            var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
+            ipPool!.NextIp.Should().Be("10.0.0.11");
+        });
+    }
+
+    [Fact]
+    public async Task AcquireIp_NextIpAboveLastIp_ClampsToPoolStart()
+    {
+        await WithScope(async (_, stateStore) =>
+        {
+            var pool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
+            pool!.FirstIp = "10.0.0.10";
+            pool.LastIp = "10.0.0.20";
+            pool.NextIp = "10.0.0.250"; // above LastIp
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (poolManager, stateStore) =>
+        {
+            var result = await poolManager.AcquireIp(SubnetId, IpPoolName);
+
+            var assignment = result.Should().BeRight().Subject;
+            assignment.IpAddress.Should().Be("10.0.0.10");
+
+            var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
+            ipPool!.NextIp.Should().Be("10.0.0.11");
+        });
+    }
+
     private async Task WithScope(Func<IIpPoolManager, IStateStore, Task> func)
     {
         await using var scope = CreateScope();

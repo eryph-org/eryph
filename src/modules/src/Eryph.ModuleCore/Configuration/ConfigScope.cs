@@ -16,11 +16,120 @@ public static class ConfigScope
     /// <summary>The default (match-all) scope; lowest precedence.</summary>
     public const string Default = "";
 
-    public static string ForEnvironment(string environment) => $"env:{environment}";
+    /// <summary>The maximum length of a scope selector (matches the <c>Scope</c> column width).</summary>
+    public const int MaxLength = 255;
 
-    public static string ForTag(string key, string value) => $"tag:{key}={value}";
+    // env names and tag keys are eryph identifiers: case-insensitive, so canonicalize to lower case
+    // (mirrors CatletConfigNormalizer/EryphName) and trim, so authoring and resolution agree ordinally.
+    private static string NormalizeIdentifier(string value) => value.Trim().ToLowerInvariant();
 
-    public static string ForHost(Guid componentId) => $"host:{componentId}";
+    public static string ForEnvironment(string environment) =>
+        $"env:{NormalizeIdentifier(environment)}";
+
+    // Both key and value are normalized (trim + lower-case). Lower-casing the whole selector keeps
+    // matching consistent across providers — MariaDB's default case-insensitive collation and SQLite's
+    // binary comparison agree once every stored scope is already lower-case — without pinning a column
+    // collation. The key must not contain '=' (it would make the selector ambiguous with the value),
+    // which is enforced at the metadata boundary.
+    public static string ForTag(string key, string value) =>
+        $"tag:{NormalizeIdentifier(key)}={NormalizeIdentifier(value)}";
+
+    // Guid.ToString("D") is the canonical lower-case, hyphenated form.
+    public static string ForHost(Guid componentId) => $"host:{componentId:D}";
+
+    /// <summary>
+    /// Normalizes an operator-supplied scope selector to its canonical form (the exact string used for
+    /// storage and resolution), or reports why it is malformed. Canonicalization — not mere validation —
+    /// is what makes a resolvable scope: it lower-cases env/tag identifiers and reformats a host GUID so
+    /// an operator typo like <c>env:Prod</c> or <c>host:{GUID}</c> resolves instead of silently never
+    /// matching. Called at the authoring boundary before the value is stored.
+    /// </summary>
+    public static bool TryCanonicalize(string? scope, out string canonical, out string? error)
+    {
+        canonical = Default;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(scope))
+            return true; // default / match-all
+
+        scope = scope.Trim();
+
+        if (scope.StartsWith("env:", StringComparison.Ordinal))
+        {
+            var name = scope["env:".Length..].Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                error = "An environment scope requires a non-empty environment name.";
+                return false;
+            }
+
+            canonical = ForEnvironment(name);
+            return canonical.Length <= MaxLength || TooLong(out error);
+        }
+
+        if (scope.StartsWith("host:", StringComparison.Ordinal))
+        {
+            if (!Guid.TryParse(scope["host:".Length..], out var componentId))
+            {
+                error = "A host scope requires a valid component id (GUID).";
+                return false;
+            }
+
+            canonical = ForHost(componentId);
+            return true;
+        }
+
+        if (scope.StartsWith("tag:", StringComparison.Ordinal))
+        {
+            var rest = scope["tag:".Length..];
+            var separator = rest.IndexOf('=');
+            if (separator <= 0)
+            {
+                error = "A tag scope must be 'tag:key=value'.";
+                return false;
+            }
+
+            var key = rest[..separator].Trim();
+            var value = rest[(separator + 1)..].Trim();
+            if (!IsValidTagKey(key, out error))
+                return false;
+
+            canonical = ForTag(key, value);
+            return canonical.Length <= MaxLength || TooLong(out error);
+        }
+
+        error = $"'{scope}' is not a valid configuration scope (expected env:, tag: or host:).";
+        return false;
+
+        bool TooLong(out string? tooLongError)
+        {
+            tooLongError = $"The scope selector must be at most {MaxLength} characters.";
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Whether a tag key is well-formed: non-empty and free of the selector delimiters. A key containing
+    /// <c>=</c> would collide two distinct tags onto one selector (<c>tag:a=b=c</c>), so it is rejected
+    /// both here and at the component-metadata boundary.
+    /// </summary>
+    public static bool IsValidTagKey(string? key, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            error = "A tag key must not be empty.";
+            return false;
+        }
+
+        if (key.IndexOfAny(['=', ':']) >= 0 || key.Any(char.IsWhiteSpace))
+        {
+            error = "A tag key must not contain '=', ':' or whitespace.";
+            return false;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// The scopes a component can resolve to, most-specific first, always ending in
@@ -46,26 +155,5 @@ public static class ConfigScope
     /// Whether a string is a well-formed scope selector. Used to reject a malformed scope at the
     /// authoring boundary before it is stored (an unparseable scope could never be resolved).
     /// </summary>
-    public static bool IsValid(string? scope)
-    {
-        if (string.IsNullOrEmpty(scope))
-            return true; // default / match-all
-
-        if (scope.StartsWith("env:", StringComparison.Ordinal))
-            return !string.IsNullOrWhiteSpace(scope["env:".Length..]);
-
-        if (scope.StartsWith("host:", StringComparison.Ordinal))
-            return Guid.TryParse(scope["host:".Length..], out _);
-
-        if (scope.StartsWith("tag:", StringComparison.Ordinal))
-        {
-            var rest = scope["tag:".Length..];
-            var separator = rest.IndexOf('=');
-            // Non-whitespace key (value may be empty). A whitespace-only key could never match a real
-            // tag and would just create a permanently-unresolvable scope, so reject it here.
-            return separator > 0 && !string.IsNullOrWhiteSpace(rest[..separator]);
-        }
-
-        return false;
-    }
+    public static bool IsValid(string? scope) => TryCanonicalize(scope, out _, out _);
 }

@@ -28,6 +28,6 @@ internal sealed class ConfigAppliedEventHandler(
         }
 
         await registry.RecordAppliedAsync(
-            message.ComponentId, message.Domain, message.Version, CancellationToken.None);
+            message.ComponentId, message.Domain, message.Scope, message.Version, CancellationToken.None);
     }
 }

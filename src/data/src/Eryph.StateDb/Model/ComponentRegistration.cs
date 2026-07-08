@@ -37,31 +37,53 @@ public class ComponentRegistration
     internal string AppliedConfigVersionsJson
     {
         get => JsonSerializer.Serialize(AppliedConfigVersions);
-        set => AppliedConfigVersions = string.IsNullOrEmpty(value)
-            ? new Dictionary<ConfigDomain, long>()
-            : JsonSerializer.Deserialize<Dictionary<ConfigDomain, long>>(value)
-              ?? new Dictionary<ConfigDomain, long>();
+        set => AppliedConfigVersions = Deserialize(value);
     }
 
-    /// <summary>The config version this component has applied per domain.</summary>
-    public Dictionary<ConfigDomain, long> AppliedConfigVersions { get; set; } = new();
-
-    internal string DistributedConfigScopesJson
+    // Tolerate content that no longer parses (e.g. a renamed/removed ConfigDomain key from an older
+    // build): treat it as "nothing applied" rather than throwing, which would poison every read of this
+    // registration (heartbeat, upsert) and wedge the component out of the catalog.
+    private static Dictionary<ConfigDomain, Dictionary<string, long>> Deserialize(string? json)
     {
-        get => JsonSerializer.Serialize(DistributedConfigScopes);
-        set => DistributedConfigScopes = string.IsNullOrEmpty(value)
-            ? new Dictionary<ConfigDomain, string>()
-            : JsonSerializer.Deserialize<Dictionary<ConfigDomain, string>>(value)
-              ?? new Dictionary<ConfigDomain, string>();
+        if (string.IsNullOrEmpty(json))
+            return new();
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<ConfigDomain, Dictionary<string, long>>>(json) ?? new();
+        }
+        catch (JsonException)
+        {
+            return new();
+        }
     }
 
-    /// <summary>
-    /// The scope of the configuration this component was last distributed, per domain. Because a
-    /// component reports its applied version scope-blind and each (domain, scope) has an independent
-    /// version counter, a scope change is not detectable by version alone; recording the distributed
-    /// scope lets the controller force a re-distribution when a component's resolved scope changes.
-    /// </summary>
-    public Dictionary<ConfigDomain, string> DistributedConfigScopes { get; set; } = new();
+    /// <summary>The config version this component has applied, per domain and scope.</summary>
+    public Dictionary<ConfigDomain, Dictionary<string, long>> AppliedConfigVersions { get; set; } = new();
+
+    /// <summary>The applied version for a (domain, scope), or 0 when none was applied.</summary>
+    public long GetAppliedVersion(ConfigDomain domain, string scope) =>
+        AppliedConfigVersions.TryGetValue(domain, out var byScope)
+        && byScope.TryGetValue(scope, out var version)
+            ? version
+            : 0;
+
+    /// <summary>Records an applied version for a (domain, scope), keeping the highest seen.</summary>
+    public void SetAppliedVersion(ConfigDomain domain, string scope, long version)
+    {
+        if (!AppliedConfigVersions.TryGetValue(domain, out var byScope))
+            AppliedConfigVersions[domain] = byScope = new Dictionary<string, long>();
+        byScope[scope] = byScope.TryGetValue(scope, out var existing) && existing > version
+            ? existing
+            : version;
+    }
+
+    /// <summary>Replaces the applied versions from a component's reported set.</summary>
+    public void SetAppliedVersions(IEnumerable<AppliedConfigVersion> versions)
+    {
+        AppliedConfigVersions = new();
+        foreach (var version in versions)
+            SetAppliedVersion(version.Domain, version.Scope, version.Version);
+    }
 
     internal string AdvertisedEndpointsJson
     {

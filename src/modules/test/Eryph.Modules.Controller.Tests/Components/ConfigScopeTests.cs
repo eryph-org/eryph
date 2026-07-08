@@ -97,4 +97,93 @@ public class ConfigScopeTests
     {
         ConfigScope.IsValid(scope).Should().Be(expected);
     }
+
+    [Fact]
+    public void TryCanonicalize_lower_cases_and_trims_an_environment_scope()
+    {
+        var ok = ConfigScope.TryCanonicalize("env:Prod", out var canonical, out var error);
+
+        ok.Should().BeTrue();
+        canonical.Should().Be("env:prod");
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryCanonicalize_trims_surrounding_whitespace()
+    {
+        var ok = ConfigScope.TryCanonicalize("  env: Prod  ", out var canonical, out _);
+
+        ok.Should().BeTrue();
+        canonical.Should().Be("env:prod");
+    }
+
+    [Theory]
+    [InlineData("host:0F8FAD5B-D9CB-469F-A165-70867728950E")]
+    [InlineData("host:{0F8FAD5B-D9CB-469F-A165-70867728950E}")]
+    [InlineData("host:0F8FAD5BD9CB469FA16570867728950E")]
+    public void TryCanonicalize_normalizes_any_guid_format_to_the_lower_case_D_form(string scope)
+    {
+        var ok = ConfigScope.TryCanonicalize(scope, out var canonical, out _);
+
+        ok.Should().BeTrue();
+        canonical.Should().Be("host:0f8fad5b-d9cb-469f-a165-70867728950e");
+    }
+
+    [Fact]
+    public void TryCanonicalize_lower_cases_a_tag_key_and_value()
+    {
+        var ok = ConfigScope.TryCanonicalize("tag:Rack=R1", out var canonical, out _);
+
+        ok.Should().BeTrue();
+        canonical.Should().Be("tag:rack=r1");
+    }
+
+    [Fact]
+    public void TryCanonicalize_splits_a_tag_on_the_first_equals_sign()
+    {
+        var ok = ConfigScope.TryCanonicalize("tag:a=b=c", out var canonical, out _);
+
+        ok.Should().BeTrue();
+        canonical.Should().Be("tag:a=b=c");
+    }
+
+    [Theory]
+    [InlineData("a=b", false)]
+    [InlineData("a:b", false)]
+    [InlineData("a b", false)]
+    [InlineData("rack", true)]
+    public void IsValidTagKey_rejects_delimiters_and_whitespace(string key, bool expected)
+    {
+        ConfigScope.IsValidTagKey(key, out _).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public void TryCanonicalize_treats_an_empty_or_null_scope_as_the_default(string? scope)
+    {
+        var ok = ConfigScope.TryCanonicalize(scope, out var canonical, out var error);
+
+        ok.Should().BeTrue();
+        canonical.Should().Be("");
+        error.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("bogus")]
+    [InlineData("host:not-a-guid")]
+    public void TryCanonicalize_reports_an_error_for_a_malformed_scope(string scope)
+    {
+        var ok = ConfigScope.TryCanonicalize(scope, out _, out var error);
+
+        ok.Should().BeFalse();
+        error.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ForEnvironment_and_ForTag_produce_the_canonical_form()
+    {
+        ConfigScope.ForEnvironment("Prod").Should().Be("env:prod");
+        ConfigScope.ForTag("Rack", "R1").Should().Be("tag:rack=r1");
+    }
 }

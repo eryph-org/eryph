@@ -18,5 +18,5 @@ public class RequestConfigCommand
 
     public ComponentType ComponentType { get; set; }
 
-    public Dictionary<ConfigDomain, long> KnownConfigVersions { get; set; } = new();
+    public List<AppliedConfigVersion> KnownConfigVersions { get; set; } = new();
 }

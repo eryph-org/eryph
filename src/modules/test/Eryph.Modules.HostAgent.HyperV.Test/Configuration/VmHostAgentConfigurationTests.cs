@@ -435,6 +435,45 @@ public class VmHostAgentConfigurationTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task SaveConfig_ConfigWithWatchFileSystemDisabled_PreservesTheFlag()
+    {
+        // Regression: normalizePaths previously rebuilt VmHostAgentDefaultsConfiguration/
+        // VmHostAgentDataStoreConfiguration with a bare `new()`, silently resetting WatchFileSystem to
+        // its true default on every save (including every distributed storage-config apply).
+        var config = new VmHostAgentConfiguration
+        {
+            Defaults = new VmHostAgentDefaultsConfiguration
+            {
+                Vms = @"Z:\defaults\vms",
+                Volumes = @"Z:\defaults\volumes",
+                WatchFileSystem = false,
+            },
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration
+                {
+                    Name = "x",
+                    Path = @"Z:\x",
+                    WatchFileSystem = false,
+                },
+            ],
+        };
+
+        var result = await saveConfig(config, ConfigPath, _hostSettings).Run(_runtime);
+
+        result.Should().BeSuccess();
+
+        _fileMock.Verify(m => m.WriteAllText(
+                ConfigPath,
+                It.Is<string>(yaml =>
+                    yaml.Contains("watch_file_system: false")
+                    && !yaml.Contains("watch_file_system: true")),
+                Encoding.UTF8,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     public readonly struct TestRuntime(TestRuntimeEnv env) :
         HasFile<RT>,
         HasDirectory<RT>

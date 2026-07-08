@@ -26,6 +26,16 @@ internal sealed class SetComponentMetadataCommandHandler(
     {
         var command = message.Command;
 
+        // Reject tag keys that would produce an ambiguous scope selector before storing the metadata.
+        foreach (var key in command.Tags?.Keys ?? Enumerable.Empty<string>())
+        {
+            if (!ConfigScope.IsValidTagKey(key, out var tagError))
+            {
+                await messaging.FailTask(message, tagError!);
+                return;
+            }
+        }
+
         var found = await registry.SetMetadataAsync(
             command.ComponentId, command.Environment, command.Tags, CancellationToken.None);
 
@@ -35,16 +45,18 @@ internal sealed class SetComponentMetadataCommandHandler(
             return;
         }
 
-        // The new scope can select a different authored value for the component's authorable domains, so
-        // re-distribute them. The refresh re-evaluates each domain per component and only pushes to those
-        // whose resolved value actually changed, so refreshing every authorable entitled domain is safe.
+        // The new scope can select a different authored value for the component's scoped domains, so
+        // re-distribute them. Only per-scope domains are affected — a default-scope-only domain (e.g.
+        // NetworkProviders) resolves the same value regardless of environment/tags, so refreshing it
+        // would be a guaranteed no-op. The refresh re-evaluates per component and pushes only where the
+        // resolved value actually changed.
         var registration = await registry.GetAsync(command.ComponentId, CancellationToken.None);
         if (registration is not null)
         {
-            var authorableDomains = ComponentConfigEntitlements
+            var scopedDomains = ComponentConfigEntitlements
                 .GetEntitledDomains(registration.ComponentType)
-                .Where(ConfigDomainDescriptors.IsAuthorable);
-            foreach (var domain in authorableDomains)
+                .Where(ConfigDomainDescriptors.SupportsScopedAuthoring);
+            foreach (var domain in scopedDomains)
                 await bus.Advanced.Routing.Send(
                     QueueNames.Controllers, new RefreshConfigDomainCommand { Domain = domain });
         }

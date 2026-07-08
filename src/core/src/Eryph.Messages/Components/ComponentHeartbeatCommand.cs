@@ -15,7 +15,7 @@ public class ComponentHeartbeatCommand
 
     public Guid InstanceId { get; set; }
 
-    public Dictionary<ConfigDomain, long> AppliedConfigVersions { get; set; } = new();
+    public List<AppliedConfigVersion> AppliedConfigVersions { get; set; } = new();
 
     public DateTimeOffset Timestamp { get; set; }
 }

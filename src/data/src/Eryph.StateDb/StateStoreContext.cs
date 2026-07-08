@@ -443,12 +443,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<ComponentRegistration>()
             .Property(x => x.TagsJson);
 
-        modelBuilder.Entity<ComponentRegistration>()
-            .Ignore(x => x.DistributedConfigScopes);
-
-        modelBuilder.Entity<ComponentRegistration>()
-            .Property(x => x.DistributedConfigScopesJson);
-
         modelBuilder.Entity<ConfigRecord>()
             .HasKey(x => x.Id);
 

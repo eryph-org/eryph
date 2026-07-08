@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.Network;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Configuration;
 using Eryph.Rebus;
@@ -39,10 +40,10 @@ internal sealed class SetConfigDomainCommandHandler(
             return;
         }
 
-        var scope = command.Scope ?? ConfigScope.Default;
-        if (!ConfigScope.IsValid(scope))
+        if (!ConfigScope.TryCanonicalize(command.Scope, out var scope, out var scopeError))
         {
-            await messaging.FailTask(message, $"'{command.Scope}' is not a valid configuration scope.");
+            await messaging.FailTask(message,
+                scopeError ?? $"'{command.Scope}' is not a valid configuration scope.");
             return;
         }
 
@@ -74,12 +75,18 @@ internal sealed class SetConfigDomainCommandHandler(
         // stored and will realize on the next sync, but the operator must know it did not apply now.
         if (command.Domain == ConfigDomain.NetworkProviders)
         {
-            var syncError = await networkSyncService.SyncNetworks(CancellationToken.None)
-                .Match(_ => "", error => error.Message);
-            if (!string.IsNullOrEmpty(syncError))
+            // Realize against the just-authored value directly. It was written in this still-open unit of
+            // work, so re-reading it (as the no-argument SyncNetworks does, in its own DB scope) would
+            // still see the previous version and realize that instead.
+            var providerConfig = NetworkProvidersConfigYamlSerializer.Deserialize(canonical);
+            var realized = await networkSyncService
+                .SyncNetworks(providerConfig, CancellationToken.None)
+                .Match(_ => (Ok: true, Error: ""), error => (Ok: false, Error: error.Message));
+            if (!realized.Ok)
             {
                 await messaging.FailTask(message,
-                    $"The network provider configuration was stored but could not be realized: {syncError}");
+                    "The network provider configuration was stored but could not be realized: "
+                    + realized.Error);
                 return;
             }
         }

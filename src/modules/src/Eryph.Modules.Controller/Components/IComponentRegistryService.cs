@@ -28,15 +28,16 @@ internal interface IComponentRegistryService
     Task<ComponentRegistration?> RecordHeartbeatAsync(
         Guid componentId,
         Guid instanceId,
-        IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions,
+        IReadOnlyList<AppliedConfigVersion> appliedConfigVersions,
         CancellationToken cancellationToken);
 
     /// <summary>
     /// Records that a component applied a configuration version. Monotonic per
-    /// domain: an older or duplicate version is ignored, so a late acknowledgement
-    /// can never regress the recorded state.
+    /// (domain, scope): an older or duplicate version for the same scope is ignored, so a late
+    /// acknowledgement can never regress the recorded state.
     /// </summary>
-    Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version, CancellationToken cancellationToken);
+    Task RecordAppliedAsync(
+        Guid componentId, ConfigDomain domain, string scope, long version, CancellationToken cancellationToken);
 
     /// <summary>
     /// Removes a component's registration on its graceful shutdown, so it leaves the catalog
@@ -61,7 +62,7 @@ internal interface IComponentRegistryService
     Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
-        IReadOnlyDictionary<string, string> tags,
+        IReadOnlyDictionary<string, string>? tags,
         CancellationToken cancellationToken);
 
     /// <summary>The registration for a component, or <c>null</c> when it is not registered.</summary>

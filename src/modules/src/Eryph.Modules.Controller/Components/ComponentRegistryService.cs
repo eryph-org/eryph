@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -36,9 +37,9 @@ internal sealed class ComponentRegistryService(
                 Status = ComponentRegistrationStatus.Active,
                 RegisteredAt = DateTimeOffset.UtcNow,
                 LastHeartbeat = DateTimeOffset.UtcNow,
-                AppliedConfigVersions = new Dictionary<ConfigDomain, long>(command.KnownConfigVersions),
                 AdvertisedEndpoints = new Dictionary<string, string>(command.AdvertisedEndpoints),
             };
+            registration.SetAppliedVersions(command.KnownConfigVersions);
             await repository.AddAsync(registration, cancellationToken);
             return registration;
         }
@@ -51,9 +52,8 @@ internal sealed class ComponentRegistryService(
         existing.Status = ComponentRegistrationStatus.Active;
         existing.LastHeartbeat = DateTimeOffset.UtcNow;
         existing.AdvertisedEndpoints = new Dictionary<string, string>(command.AdvertisedEndpoints);
-        foreach (var (domain, version) in command.KnownConfigVersions)
-            if (!existing.AppliedConfigVersions.TryGetValue(domain, out var current) || version > current)
-                existing.AppliedConfigVersions[domain] = version;
+        foreach (var reported in command.KnownConfigVersions)
+            existing.SetAppliedVersion(reported.Domain, reported.Scope, reported.Version);
 
         await repository.UpdateAsync(existing, cancellationToken);
         return existing;
@@ -62,7 +62,7 @@ internal sealed class ComponentRegistryService(
     public async Task<ComponentRegistration?> RecordHeartbeatAsync(
         Guid componentId,
         Guid instanceId,
-        IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions,
+        IReadOnlyList<AppliedConfigVersion> appliedConfigVersions,
         CancellationToken cancellationToken)
     {
         var registration = await repository.GetBySpecAsync(
@@ -84,7 +84,7 @@ internal sealed class ComponentRegistryService(
         // The heartbeat reports the component's current applied state verbatim. On a
         // restart the component reports an empty/reset set, which must be reflected so
         // the controller's view does not lag behind reality.
-        registration.AppliedConfigVersions = new Dictionary<ConfigDomain, long>(appliedConfigVersions);
+        registration.SetAppliedVersions(appliedConfigVersions);
         await repository.UpdateAsync(registration, cancellationToken);
         return registration;
     }
@@ -92,6 +92,7 @@ internal sealed class ComponentRegistryService(
     public async Task RecordAppliedAsync(
         Guid componentId,
         ConfigDomain domain,
+        string scope,
         long version,
         CancellationToken cancellationToken)
     {
@@ -100,11 +101,10 @@ internal sealed class ComponentRegistryService(
         if (registration is null)
             return;
 
-        var current = registration.AppliedConfigVersions.GetValueOrDefault(domain, 0);
-        if (version <= current)
+        if (version <= registration.GetAppliedVersion(domain, scope))
             return;
 
-        registration.AppliedConfigVersions[domain] = version;
+        registration.SetAppliedVersion(domain, scope, version);
         await repository.UpdateAsync(registration, cancellationToken);
     }
 
@@ -152,7 +152,7 @@ internal sealed class ComponentRegistryService(
     public async Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
-        IReadOnlyDictionary<string, string> tags,
+        IReadOnlyDictionary<string, string>? tags,
         CancellationToken cancellationToken)
     {
         var registration = await repository.GetBySpecAsync(
@@ -161,12 +161,23 @@ internal sealed class ComponentRegistryService(
             return false;
 
         // Operator-owned metadata: replace it wholesale. Registration/heartbeat never touch these
-        // fields, so an agent re-registering does not clobber the operator's assignment. Normalize
-        // an empty environment to null (one representation of "unassigned"); tolerate a null tag set.
-        registration.Environment = string.IsNullOrEmpty(environment) ? null : environment;
-        registration.Tags = tags is null
-            ? new Dictionary<string, string>()
-            : new Dictionary<string, string>(tags);
+        // fields, so an agent re-registering does not clobber the operator's assignment. Normalize the
+        // environment (trim/lower-case, empty→null) and tag keys the same way the scope selectors are
+        // canonicalized, so a component resolves the value authored at env:/tag: scopes; reject tag keys
+        // that would produce an ambiguous selector.
+        registration.Environment = string.IsNullOrWhiteSpace(environment)
+            ? null
+            : environment.Trim().ToLowerInvariant();
+
+        var normalizedTags = new Dictionary<string, string>();
+        foreach (var tag in tags ?? new Dictionary<string, string>())
+        {
+            if (!ConfigScope.IsValidTagKey(tag.Key, out var tagError))
+                throw new InvalidOperationException(tagError);
+            normalizedTags[tag.Key.Trim().ToLowerInvariant()] = tag.Value?.Trim().ToLowerInvariant() ?? "";
+        }
+
+        registration.Tags = normalizedTags;
 
         // A scope change (from new environment/tags) is picked up by the distribution loop via the
         // component's recorded DistributedConfigScopes: when the resolved scope no longer matches the

@@ -31,6 +31,11 @@ internal class NetworkSyncService(
 {
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
         from providerConfig in providerManager.GetCurrentConfiguration()
+        from _ in SyncNetworks(providerConfig, cancellationToken)
+        select Unit.Default;
+
+    public EitherAsync<Error, Unit> SyncNetworks(
+        NetworkProvidersConfiguration providerConfig, CancellationToken cancellationToken) =>
         from _ in SyncNetworks(providerConfig).Run().ToEitherAsync()
         from _2 in PublishConfigDomainChanges().ToAsync()
         select Unit.Default;

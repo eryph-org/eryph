@@ -22,7 +22,7 @@ namespace Eryph.Modules.HostAgent;
 /// datastores/environments the controller does not know are warned about — they can never be placed on.
 /// </summary>
 internal sealed class StorageConfigRealizer(
-    IStorageConfigProvider placementConfigProvider,
+    IStorageConfigProvider storageConfigProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
     ILogger<StorageConfigRealizer> logger)
@@ -33,13 +33,18 @@ internal sealed class StorageConfigRealizer(
     public async Task ApplyAsync(long version, string payload, CancellationToken cancellationToken)
     {
         var config = StorageConfigYamlSerializer.Deserialize(payload);
-        placementConfigProvider.Update(config);
+
+        // Merge/validate/save first; only switch the enforced vocabulary and report success once the
+        // cache was actually written. Updating the provider before a failed save would make the agent
+        // reject placements against a vocabulary it never persisted while the controller sees the apply
+        // as failed.
+        await MergeIntoLocalCache(config);
+
+        storageConfigProvider.Update(config);
 
         logger.LogInformation(
             "Applied storage configuration v{Version}: {DatastoreCount} datastore(s), {EnvironmentCount} environment(s).",
-            version, config.Datastores.Length, config.Environments.Length);
-
-        await MergeIntoLocalCache(config);
+            version, (config.Datastores ?? []).Length, (config.Environments ?? []).Length);
     }
 
     private async Task MergeIntoLocalCache(StorageConfig distributed)
@@ -84,12 +89,12 @@ internal sealed class StorageConfigRealizer(
         foreach (var dataStore in StorageConfigValidation.GetUnusedLocalDatastores(distributed, local))
             logger.LogWarning(
                 "Local datastore '{DataStore}' is configured in agentsettings but is not part of the controller "
-                + "placement configuration; catlets cannot be placed on it.", dataStore);
+                + "storage configuration; catlets cannot be placed on it.", dataStore);
 
         foreach (var environment in StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local))
             logger.LogWarning(
                 "Local environment '{Environment}' is configured in agentsettings but is not part of the controller "
-                + "placement configuration; catlets cannot be placed in it.", environment);
+                + "storage configuration; catlets cannot be placed in it.", environment);
     }
 
     private void WarnAboutUnmappedDistributedDatastores(

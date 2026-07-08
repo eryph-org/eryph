@@ -128,6 +128,82 @@ public class ConfigDomainDescriptorsTests
 
     [Fact]
     public void TryCanonicalize_rejects_a_non_authorable_domain() =>
-        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.NetworkProviders, "datastores: [ds1]", out _)
+        // Endpoints is system-derived (built from controller state), unlike NetworkProviders which is
+        // authorable — using it here actually exercises the "not authorable" branch.
+        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.Endpoints, "datastores: [ds1]", out _)
             .Should().BeFalse();
+
+    [Fact]
+    public void StorageConfig_canonicalization_lower_cases_the_datastore_name()
+    {
+        const string payload = "datastores: [{name: Fast, path: \"D:\\\\fast\"}]";
+
+        var ok = ConfigDomainDescriptors.TryCanonicalize(
+            ConfigDomain.StorageConfig, payload, out var canonical);
+
+        ok.Should().BeTrue();
+        canonical.Should().Contain("name: fast");
+    }
+
+    [Fact]
+    public void StorageConfig_canonicalization_rejects_an_invalid_datastore_name()
+    {
+        const string payload = "datastores: [{name: \"bad name!\", path: \"D:\\\\x\"}]";
+
+        var ok = ConfigDomainDescriptors.TryCanonicalize(
+            ConfigDomain.StorageConfig, payload, out _, out var error);
+
+        ok.Should().BeFalse();
+        error.Should().Contain("invalid");
+    }
+
+    [Fact]
+    public void StorageConfig_canonicalization_rejects_a_non_fully_qualified_path()
+    {
+        const string payload = "datastores: [{name: fast, path: \"relative\\\\dir\"}]";
+
+        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.StorageConfig, payload, out _)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void StorageConfig_canonicalization_rejects_a_duplicate_datastore_name()
+    {
+        const string payload =
+            "datastores: [{name: fast, path: \"D:\\\\a\"}, {name: fast, path: \"D:\\\\b\"}]";
+
+        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.StorageConfig, payload, out _)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void StorageConfig_canonicalization_rejects_a_duplicate_datastore_path()
+    {
+        const string payload =
+            "datastores: [{name: a, path: \"D:\\\\same\"}, {name: b, path: \"D:\\\\same\"}]";
+
+        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.StorageConfig, payload, out _)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void StorageConfig_canonicalization_treats_a_null_document_as_empty_without_throwing()
+    {
+        // StorageConfigYamlSerializer.Deserialize coalesces a null document ("~") to an empty
+        // StorageConfig, so canonicalization succeeds instead of crashing the handler with an NRE.
+        var ok = ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.StorageConfig, "~", out var canonical, out var error);
+
+        ok.Should().BeTrue();
+        error.Should().BeNull();
+        canonical.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void NetworkProviders_canonicalization_rejects_a_null_document_without_throwing()
+    {
+        var ok = ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.NetworkProviders, "~", out _, out var error);
+
+        ok.Should().BeFalse();
+        error.Should().NotBeNull();
+    }
 }

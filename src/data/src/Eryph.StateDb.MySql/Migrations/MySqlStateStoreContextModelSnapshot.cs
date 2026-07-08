@@ -279,10 +279,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("DistributedConfigScopesJson")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Environment")
                         .HasColumnType("longtext");
 

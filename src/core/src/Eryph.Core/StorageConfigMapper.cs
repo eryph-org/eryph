@@ -23,7 +23,7 @@ public static class StorageConfigMapper
                 {
                     Name = e.Name,
                     Defaults = MapDefaults(e.Defaults),
-                    Datastores = e.Datastores
+                    Datastores = (e.Datastores ?? [])
                         .Select(d => new StorageDatastoreConfig { Name = d.Name, Path = d.Path })
                         .ToArray(),
                 })

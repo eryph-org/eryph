@@ -83,6 +83,10 @@ internal sealed class UnavailableNetworkSyncService : INetworkSyncService
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
         LeftAsync<Error, Unit>(NotAvailable);
 
+    public EitherAsync<Error, Unit> SyncNetworks(
+        NetworkProvidersConfiguration providerConfig, CancellationToken cancellationToken) =>
+        LeftAsync<Error, Unit>(NotAvailable);
+
     public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders) =>
         LeftAsync<Error, string[]>(NotAvailable);
 }

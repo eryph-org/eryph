@@ -9,7 +9,7 @@ namespace Eryph.Modules.HostAgent;
 /// </summary>
 internal interface IStorageConfigProvider
 {
-    /// <summary>The last applied placement configuration; empty until the first apply.</summary>
+    /// <summary>The last applied storage configuration; empty until the first apply.</summary>
     StorageConfig Current { get; }
 
     void Update(StorageConfig config);

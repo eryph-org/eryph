@@ -31,11 +31,50 @@ public static class ConfigDomainDescriptors
     private static readonly IReadOnlyDictionary<ConfigDomain, CanonicalizeDelegate> Authorable =
         new Dictionary<ConfigDomain, CanonicalizeDelegate>
         {
-            [ConfigDomain.StorageConfig] = payload =>
-                StorageConfigYamlSerializer.Serialize(StorageConfigYamlSerializer.Deserialize(payload)),
+            [ConfigDomain.StorageConfig] = CanonicalizeStorageConfig,
 
             [ConfigDomain.NetworkProviders] = CanonicalizeNetworkProviders,
         };
+
+    // The serializer only checks shape; the agent enforces the real rules on the merged result (name
+    // grammar, fully-qualified paths, no duplicates). Run those here so an invalid payload is rejected
+    // when authored instead of distributed to fail on every agent in a retry loop. Names are lower-cased
+    // to their canonical form (datastore/environment resolution is case-insensitive) so an authored
+    // 'Fast' cannot diverge from a catlet's 'fast'.
+    private static string CanonicalizeStorageConfig(string payload)
+    {
+        var config = StorageConfigYamlSerializer.Deserialize(payload);
+        NormalizeStorageNames(config);
+
+        var errors = StorageConfigValidation.Validate(config);
+        if (errors.Count > 0)
+            throw InvalidConfigExceptionFactory.Create(new Exception(
+                "The storage configuration is invalid: " + string.Join("; ", errors)));
+
+        return StorageConfigYamlSerializer.Serialize(config);
+    }
+
+    private static void NormalizeStorageNames(StorageConfig config)
+    {
+        config.Datastores ??= [];
+        config.Environments ??= [];
+
+        foreach (var datastore in config.Datastores)
+            if (datastore?.Name is not null)
+                datastore.Name = datastore.Name.Trim().ToLowerInvariant();
+
+        foreach (var environment in config.Environments)
+        {
+            if (environment is null)
+                continue;
+            if (environment.Name is not null)
+                environment.Name = environment.Name.Trim().ToLowerInvariant();
+            environment.Datastores ??= [];
+            foreach (var datastore in environment.Datastores)
+                if (datastore?.Name is not null)
+                    datastore.Name = datastore.Name.Trim().ToLowerInvariant();
+        }
+    }
 
     // Network provider config has richer semantic rules than the shape check the serializer does
     // (overlapping NAT subnets, per-type field restrictions, IP-pool bounds), so validate explicitly.
@@ -43,7 +82,9 @@ public static class ConfigDomainDescriptors
     // controller keeps the cursor in its own state, and authored versions must not churn on allocation.
     private static string CanonicalizeNetworkProviders(string payload)
     {
-        var config = NetworkProvidersConfigYamlSerializer.Deserialize(payload);
+        // A null document ("~"/"null") deserializes to null; treat it as an empty config so validation
+        // reports a proper error instead of throwing a NullReferenceException out of the handler.
+        var config = NetworkProvidersConfigYamlSerializer.Deserialize(payload) ?? new NetworkProvidersConfiguration();
 
         var validation = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
         if (validation.IsFail)
@@ -108,6 +149,14 @@ public static class ConfigDomainDescriptors
         catch (InvalidConfigException ex)
         {
             error = ex.Message;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // The canonicalizer validates untrusted operator input; any other failure (a serializer edge
+            // case, a null document) is still "this payload is invalid", not a reason to crash the
+            // handler with an unhandled bus exception. Report it as a validation error.
+            error = $"The {domain} configuration could not be parsed: {ex.Message}";
             return false;
         }
     }

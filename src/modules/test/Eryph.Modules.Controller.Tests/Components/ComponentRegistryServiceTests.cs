@@ -35,7 +35,7 @@ public class ComponentRegistryServiceTests
         Guid componentId,
         ComponentType type = ComponentType.Identity,
         Dictionary<string, string>? advertised = null,
-        Dictionary<ConfigDomain, long>? known = null) =>
+        List<AppliedConfigVersion>? known = null) =>
         new()
         {
             ComponentId = componentId,
@@ -44,7 +44,7 @@ public class ComponentRegistryServiceTests
             MachineName = "host.example.test",
             Version = "1.0",
             InboundQueue = "eryph.identity.host",
-            KnownConfigVersions = known ?? new Dictionary<ConfigDomain, long>(),
+            KnownConfigVersions = known ?? new List<AppliedConfigVersion>(),
             AdvertisedEndpoints = advertised ?? new Dictionary<string, string>(),
         };
 
@@ -57,7 +57,7 @@ public class ComponentRegistryServiceTests
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.Identity,
                 new Dictionary<string, string> { ["identity"] = "https://host/identity" },
-                new Dictionary<ConfigDomain, long> { [ConfigDomain.Endpoints] = 2 }),
+                new List<AppliedConfigVersion> { new() { Domain = ConfigDomain.Endpoints, Scope = "", Version = 2 } }),
             CancellationToken.None);
 
         repo.Verify(r => r.AddAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -65,7 +65,7 @@ public class ComponentRegistryServiceTests
         result.ComponentId.Should().Be(componentId);
         result.Status.Should().Be(ComponentRegistrationStatus.Active);
         result.AdvertisedEndpoints.Should().ContainKey("identity").WhoseValue.Should().Be("https://host/identity");
-        result.AppliedConfigVersions.Should().ContainKey(ConfigDomain.Endpoints).WhoseValue.Should().Be(2);
+        result.GetAppliedVersion(ConfigDomain.Endpoints, "").Should().Be(2);
     }
 
     [Fact]
@@ -108,20 +108,23 @@ public class ComponentRegistryServiceTests
             ComponentType = ComponentType.VMHostAgent,
             MachineName = "host",
             InboundQueue = "q",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-                { [ConfigDomain.StorageConfig] = 5, [ConfigDomain.Endpoints] = 4 },
         };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 5);
+        existing.SetAppliedVersion(ConfigDomain.Endpoints, "", 4);
         var (service, _) = Create(existing);
 
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.VMHostAgent,
-                known: new Dictionary<ConfigDomain, long>
-                    { [ConfigDomain.StorageConfig] = 3, [ConfigDomain.Endpoints] = 9 }),
+                known:
+                [
+                    new AppliedConfigVersion { Domain = ConfigDomain.StorageConfig, Scope = "", Version = 3 },
+                    new AppliedConfigVersion { Domain = ConfigDomain.Endpoints, Scope = "", Version = 9 },
+                ]),
             CancellationToken.None);
 
         // Existing higher value is kept; reported higher value wins.
-        result.AppliedConfigVersions[ConfigDomain.StorageConfig].Should().Be(5);
-        result.AppliedConfigVersions[ConfigDomain.Endpoints].Should().Be(9);
+        result.GetAppliedVersion(ConfigDomain.StorageConfig, "").Should().Be(5);
+        result.GetAppliedVersion(ConfigDomain.Endpoints, "").Should().Be(9);
     }
 
     [Fact]
@@ -138,14 +141,14 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Stale,
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 5 },
         };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 5);
         var (service, repo) = Create(existing);
 
         // A restart reports an empty/reset applied set; the heartbeat from the registered
         // instance must reflect it verbatim.
         var result = await service.RecordHeartbeatAsync(
-            componentId, instanceId, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            componentId, instanceId, new List<AppliedConfigVersion>(), CancellationToken.None);
 
         result.Should().BeSameAs(existing);
         repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
@@ -168,15 +171,15 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Active,
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-                { [ConfigDomain.StorageConfig] = 5, [ConfigDomain.Endpoints] = 3 },
         };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 5);
+        existing.SetAppliedVersion(ConfigDomain.Endpoints, "", 3);
         var (service, repo) = Create(existing);
 
         // A delayed heartbeat from a previous process instance (e.g. reordered on the broker)
         // must be ignored so it cannot revert InstanceId or applied-config state.
         var result = await service.RecordHeartbeatAsync(
-            componentId, staleInstance, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            componentId, staleInstance, new List<AppliedConfigVersion>(), CancellationToken.None);
 
         result.Should().BeNull();
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -191,7 +194,7 @@ public class ComponentRegistryServiceTests
 
         var result = await service.RecordHeartbeatAsync(
             Guid.NewGuid(), Guid.NewGuid(),
-            new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            new List<AppliedConfigVersion>(), CancellationToken.None);
 
         result.Should().BeNull();
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -208,18 +211,18 @@ public class ComponentRegistryServiceTests
             ComponentType = ComponentType.VMHostAgent,
             MachineName = "host",
             InboundQueue = "q",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.NetworkProviders] = 7 },
         };
+        existing.SetAppliedVersion(ConfigDomain.NetworkProviders, "", 7);
         var (service, repo) = Create(existing);
 
         // Older acknowledgement is ignored (no regression, no write).
-        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, 5, CancellationToken.None);
-        existing.AppliedConfigVersions[ConfigDomain.NetworkProviders].Should().Be(7);
+        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, "", 5, CancellationToken.None);
+        existing.GetAppliedVersion(ConfigDomain.NetworkProviders, "").Should().Be(7);
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
 
         // Newer acknowledgement advances and persists.
-        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, 9, CancellationToken.None);
-        existing.AppliedConfigVersions[ConfigDomain.NetworkProviders].Should().Be(9);
+        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, "", 9, CancellationToken.None);
+        existing.GetAppliedVersion(ConfigDomain.NetworkProviders, "").Should().Be(9);
         repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -257,16 +260,17 @@ public class ComponentRegistryServiceTests
             ComponentType = ComponentType.VMHostAgent,
             MachineName = "host",
             InboundQueue = "q",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 7 },
         };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 7);
         var (service, _) = Create(existing);
 
         await service.SetMetadataAsync(
             componentId, "edge", new Dictionary<string, string>(), CancellationToken.None);
 
-        // A scope change is reconciled by the distribution loop via DistributedConfigScopes, not by
-        // resetting the applied versions here (which a racing heartbeat could immediately undo).
-        existing.AppliedConfigVersions.Should().ContainKey(ConfigDomain.StorageConfig).WhoseValue.Should().Be(7);
+        // A scope change is naturally reconciled by the distribution loop, since applied versions are
+        // tracked per (domain, scope) — not by resetting them here (which a racing heartbeat could
+        // immediately undo).
+        existing.GetAppliedVersion(ConfigDomain.StorageConfig, "").Should().Be(7);
     }
 
     [Fact]

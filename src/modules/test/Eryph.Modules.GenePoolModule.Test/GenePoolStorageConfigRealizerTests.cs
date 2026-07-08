@@ -50,6 +50,20 @@ public class GenePoolStorageConfigRealizerTests
     }
 
     [Fact]
+    public async Task Apply_throws_and_does_not_save_when_the_default_volumes_path_is_not_fully_qualified()
+    {
+        var manager = new Mock<IGenePoolStorageSettingsManager>();
+
+        var realizer = new GenePoolStorageConfigRealizer(
+            manager.Object, NullLogger<GenePoolStorageConfigRealizer>.Instance);
+
+        await realizer.Invoking(r => r.ApplyAsync(1, Payload(@"relative\dir"), default))
+            .Should().ThrowAsync<System.InvalidOperationException>();
+
+        manager.Verify(m => m.SaveSettings(It.IsAny<GenePoolStoreSettings>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Apply_propagates_a_save_failure_so_the_apply_is_reported_as_failed()
     {
         var manager = new Mock<IGenePoolStorageSettingsManager>();

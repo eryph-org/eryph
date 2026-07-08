@@ -26,26 +26,23 @@ public class ConfigDistributionServiceTests
 
     // A default-scope registration (no environment/tags), so config resolves the default scope.
     private static ComponentRegistration Reg(
-        ComponentType type, Dictionary<ConfigDomain, long>? applied = null) =>
-        new()
+        ComponentType type, IEnumerable<AppliedConfigVersion>? applied = null)
+    {
+        var registration = new ComponentRegistration
         {
             ComponentId = Guid.NewGuid(),
             ComponentType = type,
             MachineName = "host",
             InboundQueue = "queue",
-            AppliedConfigVersions = applied ?? new Dictionary<ConfigDomain, long>(),
         };
-
-    // The registration repository is only written when a scope actually changes; a no-op mock suffices
-    // for the default-scope tests (the Reg() helper produces registrations with an empty Id, so persist
-    // is skipped anyway).
-    private static Mock<IStateStoreRepository<ComponentRegistration>> NoOpRegistrations()
-    {
-        var mock = new Mock<IStateStoreRepository<ComponentRegistration>>();
-        mock.Setup(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        return mock;
+        if (applied is not null)
+            registration.SetAppliedVersions(applied);
+        return registration;
     }
+
+    // Builds a single-entry applied-versions list at the default scope, the shape most tests need.
+    private static AppliedConfigVersion Applied(ConfigDomain domain, long version, string scope = "") =>
+        new() { Domain = domain, Scope = scope, Version = version };
 
     private static ConfigDistributionService CreateService(
         ControllerSettings settings,
@@ -64,13 +61,13 @@ public class ConfigDistributionServiceTests
         var source = new StorageConfigSource(
             container, defaults.Object, NullLogger<StorageConfigSource>.Instance);
         return new ConfigDistributionService(
-            records.Object, NoOpRegistrations().Object, new IConfigSource[] { source }, Authored, NoOpLock());
+            records.Object, new IConfigSource[] { source }, Authored, NoOpLock());
     }
 
     private static ConfigDistributionService CreateService(
         Mock<IStateStoreRepository<ConfigRecord>> records,
         params IConfigSource[] sources) =>
-        new(records.Object, NoOpRegistrations().Object, sources, Authored, NoOpLock());
+        new(records.Object, sources, Authored, NoOpLock());
 
     private sealed class EmptyAuthoredStore : IAuthoredConfigStore
     {
@@ -113,7 +110,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(settings, records);
 
         var bundles = await service.BuildSnapshotAsync(
-            Reg(ComponentType.VMHostAgent), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            Reg(ComponentType.VMHostAgent), new List<AppliedConfigVersion>(), CancellationToken.None);
 
         bundles.Should().ContainSingle();
         bundles[0].Domain.Should().Be(ConfigDomain.StorageConfig);
@@ -139,7 +136,7 @@ public class ConfigDistributionServiceTests
             new StubSource(ConfigDomain.NetworkProviders, "network_providers: []"));
 
         var bundles = await service.BuildSnapshotAsync(
-            Reg(ComponentType.VMHostAgent), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            Reg(ComponentType.VMHostAgent), new List<AppliedConfigVersion>(), CancellationToken.None);
 
         bundles.Select(b => b.Domain).Should().BeEquivalentTo(
             [ConfigDomain.StorageConfig, ConfigDomain.NetworkProviders]);
@@ -152,7 +149,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(new ControllerSettings(), records);
 
         var bundles = await service.BuildSnapshotAsync(
-            Reg(ComponentType.ComputeApi), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            Reg(ComponentType.ComputeApi), new List<AppliedConfigVersion>(), CancellationToken.None);
 
         bundles.Should().BeEmpty();
     }
@@ -175,7 +172,7 @@ public class ConfigDistributionServiceTests
 
         var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"v":1}"""));
 
-        var known = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 3 };
+        var known = new List<AppliedConfigVersion> { Applied(ConfigDomain.StorageConfig, 3) };
         var bundles = await service.BuildSnapshotAsync(Reg(ComponentType.VMHostAgent), known, CancellationToken.None);
 
         bundles.Should().BeEmpty();
@@ -203,7 +200,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"new":true}"""));
 
         // Component still holds v1; the source changed, so it must receive v2.
-        var known = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 1 };
+        var known = new List<AppliedConfigVersion> { Applied(ConfigDomain.StorageConfig, 1) };
         var bundles = await service.BuildSnapshotAsync(Reg(ComponentType.VMHostAgent), known, CancellationToken.None);
 
         bundles.Should().ContainSingle();
@@ -252,7 +249,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"v":"new"}"""));
 
         // The component holds the old v3; after the bump to v4 it is behind and receives it.
-        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 3 };
+        var applied = new List<AppliedConfigVersion> { Applied(ConfigDomain.StorageConfig, 3) };
         var bundle = await service.RefreshForComponentAsync(
             ConfigDomain.StorageConfig, Reg(ComponentType.VMHostAgent, applied), CancellationToken.None);
 
@@ -280,7 +277,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(records, new StubSource(ConfigDomain.StorageConfig, """{"v":"same"}"""));
 
         // Payload unchanged (record stays v5) and the component already applied v5 — nothing to push.
-        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 5 };
+        var applied = new List<AppliedConfigVersion> { Applied(ConfigDomain.StorageConfig, 5) };
         var bundle = await service.RefreshForComponentAsync(
             ConfigDomain.StorageConfig, Reg(ComponentType.VMHostAgent, applied), CancellationToken.None);
 
@@ -341,9 +338,9 @@ public class ConfigDistributionServiceTests
 
         var service = CreateService(records);
 
-        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.OvnCluster] = 1 };
+        var applied = new List<AppliedConfigVersion> { Applied(ConfigDomain.OvnCluster, 1) };
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.Network), applied, CancellationToken.None);
+            Reg(ComponentType.Network, applied), CancellationToken.None);
 
         bundles.Should().ContainSingle();
         bundles[0].Domain.Should().Be(ConfigDomain.OvnCluster);
@@ -366,9 +363,9 @@ public class ConfigDistributionServiceTests
 
         var service = CreateService(records, new StubSource(ConfigDomain.OvnCluster, "fresh-would-bump"));
 
-        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.OvnCluster] = 1 };
+        var applied = new List<AppliedConfigVersion> { Applied(ConfigDomain.OvnCluster, 1) };
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.Network), applied, CancellationToken.None);
+            Reg(ComponentType.Network, applied), CancellationToken.None);
 
         bundles.Should().ContainSingle();
         bundles[0].Version.Should().Be(3);
@@ -389,9 +386,9 @@ public class ConfigDistributionServiceTests
 
         var service = CreateService(records);
 
-        var applied = new Dictionary<ConfigDomain, long> { [ConfigDomain.OvnCluster] = 3 };
+        var applied = new List<AppliedConfigVersion> { Applied(ConfigDomain.OvnCluster, 3) };
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.Network), applied, CancellationToken.None);
+            Reg(ComponentType.Network, applied), CancellationToken.None);
 
         bundles.Should().BeEmpty();
     }
@@ -406,7 +403,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(records);
 
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.Network), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            Reg(ComponentType.Network), CancellationToken.None);
 
         bundles.Should().BeEmpty();
     }
@@ -431,14 +428,14 @@ public class ConfigDistributionServiceTests
 
         var service = CreateService(records);
 
-        var applied = new Dictionary<ConfigDomain, long>
+        var applied = new List<AppliedConfigVersion>
         {
-            [ConfigDomain.StorageConfig] = 3,   // behind: record is v5
-            [ConfigDomain.NetworkProviders] = 2,  // current: record is v2
+            Applied(ConfigDomain.StorageConfig, 3),   // behind: record is v5
+            Applied(ConfigDomain.NetworkProviders, 2),  // current: record is v2
             // Endpoints: neither applied nor a record — skipped.
         };
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.VMHostAgent), applied, CancellationToken.None);
+            Reg(ComponentType.VMHostAgent, applied), CancellationToken.None);
 
         bundles.Should().ContainSingle();
         bundles[0].Domain.Should().Be(ConfigDomain.StorageConfig);
@@ -453,7 +450,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(records);
 
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.ComputeApi), new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            Reg(ComponentType.ComputeApi), CancellationToken.None);
 
         bundles.Should().BeEmpty();
         records.Verify(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()),
@@ -464,9 +461,10 @@ public class ConfigDistributionServiceTests
     public async Task GetOutdatedBundles_forces_a_push_when_the_resolved_scope_changed_even_at_a_lower_version()
     {
         // The component was last distributed the default scope (applied v5) but is now assigned env:edge,
-        // whose independent counter is only at v1. A plain version comparison (1 <= 5) would wrongly skip
-        // it; the recorded distributed scope makes the change visible and forces the re-push. This is the
-        // regression guard for the scope-blind version-comparison hazard.
+        // whose independent counter is only at v1. A plain version comparison keyed only by domain would
+        // wrongly skip it; because applied versions are tracked per (domain, scope), the component's
+        // applied version at env:edge is 0, so the lower-numbered scoped record is still pushed. This is
+        // the regression guard for the scope-blind version-comparison hazard.
         var registration = new ComponentRegistration
         {
             Id = Guid.NewGuid(),
@@ -475,9 +473,8 @@ public class ConfigDistributionServiceTests
             MachineName = "edge-host",
             InboundQueue = "q",
             Environment = "edge",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 5 },
-            DistributedConfigScopes = new Dictionary<ConfigDomain, string> { [ConfigDomain.StorageConfig] = "" },
         };
+        registration.SetAppliedVersion(ConfigDomain.StorageConfig, "", 5);
 
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
         records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()))
@@ -490,19 +487,15 @@ public class ConfigDistributionServiceTests
                     }
                     : null);
 
-        var registrations = NoOpRegistrations();
         var service = new ConfigDistributionService(
-            records.Object, registrations.Object, [], new ScopedAuthoredStore(ConfigDomain.StorageConfig, "env:edge"), NoOpLock());
+            records.Object, [], new ScopedAuthoredStore(ConfigDomain.StorageConfig, "env:edge"), NoOpLock());
 
-        var bundles = await service.GetOutdatedBundlesAsync(
-            registration, registration.AppliedConfigVersions, CancellationToken.None);
+        var bundles = await service.GetOutdatedBundlesAsync(registration, CancellationToken.None);
 
         bundles.Should().ContainSingle();
         bundles[0].Domain.Should().Be(ConfigDomain.StorageConfig);
+        bundles[0].Scope.Should().Be("env:edge");
         bundles[0].Version.Should().Be(1);
-        // The resolved scope is now recorded, so the next comparison stays within the env:edge counter.
-        registration.DistributedConfigScopes[ConfigDomain.StorageConfig].Should().Be("env:edge");
-        registrations.Verify(r => r.UpdateAsync(registration, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>Reports an authored value only for the given domain + scope, else none.</summary>

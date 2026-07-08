@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Eryph.Core.VmAgent;
 
@@ -19,8 +20,8 @@ public static class StorageConfigMerge
         new()
         {
             Defaults = MergeDefaults(local.Defaults, distributed.Defaults),
-            Datastores = MergeDatastores(local.Datastores, distributed.Datastores),
-            Environments = MergeEnvironments(local.Environments, distributed.Environments),
+            Datastores = MergeDatastores(local.Datastores, distributed.Datastores ?? []),
+            Environments = MergeEnvironments(local.Environments, distributed.Environments ?? []),
             Ovn = local.Ovn,
         };
 
@@ -38,7 +39,21 @@ public static class StorageConfigMerge
     private static VmHostAgentDataStoreConfiguration[] MergeDatastores(
         VmHostAgentDataStoreConfiguration[]? local, StorageDatastoreConfig[] distributed)
     {
+        var distributedNames = distributed
+            .Select(d => d.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var distributedPaths = distributed
+            .Where(d => !string.IsNullOrWhiteSpace(d.Path))
+            .Select(d => NormalizePath(d.Path!))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var result = (local ?? [])
+            // Drop a stale local-only datastore whose path was reassigned to a distributed name (e.g. a
+            // rename keeping the same path): keeping both would fail duplicate-path validation and wedge
+            // the apply forever. The distributed entry is authoritative for that path.
+            .Where(d => distributedNames.Contains(d.Name)
+                        || string.IsNullOrWhiteSpace(d.Path)
+                        || !distributedPaths.Contains(NormalizePath(d.Path)))
             .ToDictionary(d => d.Name, d => d, StringComparer.OrdinalIgnoreCase);
 
         foreach (var datastore in distributed)
@@ -73,6 +88,16 @@ public static class StorageConfigMerge
         foreach (var environment in distributed)
         {
             result.TryGetValue(environment.Name, out var existing);
+
+            // A vocabulary-only environment (name, no paths) with no local counterpart must not be
+            // materialized into agentsettings: StorageNames path resolution enumerates every
+            // environment's defaults and throws on a null default path, so a path-less entry would break
+            // inventory of ordinary default-store VMs host-wide. The name is still an allowed placement
+            // target via the distributed vocabulary; it just needs a path (at a more specific scope)
+            // before anything can be placed in it.
+            if (existing is null && !ContributesPaths(environment))
+                continue;
+
             result[environment.Name] = new VmHostAgentEnvironmentConfiguration
             {
                 Name = environment.Name,
@@ -84,6 +109,14 @@ public static class StorageConfigMerge
 
         return result.Values.ToArray();
     }
+
+    private static bool ContributesPaths(StorageEnvironmentConfig environment) =>
+        !string.IsNullOrWhiteSpace(environment.Defaults?.Vms)
+        || !string.IsNullOrWhiteSpace(environment.Defaults?.Volumes)
+        || (environment.Datastores ?? []).Any(d => !string.IsNullOrWhiteSpace(d?.Path));
+
+    private static string NormalizePath(string path) =>
+        Path.TrimEndingDirectorySeparator(path).ToLowerInvariant();
 
     private static string? Coalesce(string? preferred, string? fallback) =>
         string.IsNullOrWhiteSpace(preferred) ? fallback : preferred;

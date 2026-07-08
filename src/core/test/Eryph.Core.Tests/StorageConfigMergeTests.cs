@@ -182,6 +182,57 @@ public class StorageConfigMergeTests
     }
 
     [Fact]
+    public void Vocabulary_only_distributed_environment_without_a_local_counterpart_is_not_materialized()
+    {
+        var distributed = new StorageConfig
+        {
+            // name only — no defaults paths, no datastore paths
+            Environments = [new StorageEnvironmentConfig { Name = "edge" }],
+        };
+
+        var merged = StorageConfigMerge.Apply(new VmHostAgentConfiguration(), distributed);
+
+        merged.Environments.Should().NotContain(e => e.Name == "edge");
+    }
+
+    [Fact]
+    public void Vocabulary_only_distributed_environment_with_a_local_counterpart_is_kept()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Environments = [new VmHostAgentEnvironmentConfiguration { Name = "edge" }],
+        };
+        var distributed = new StorageConfig
+        {
+            Environments = [new StorageEnvironmentConfig { Name = "edge" }],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        merged.Environments!.Should().Contain(e => e.Name == "edge");
+    }
+
+    [Fact]
+    public void Rename_that_collides_on_path_drops_the_stale_local_name()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Datastores = [new VmHostAgentDataStoreConfiguration { Name = "fast", Path = @"D:\d" }],
+        };
+        var distributed = new StorageConfig
+        {
+            // Same path, new name — a rename.
+            Datastores = [new StorageDatastoreConfig { Name = "quick", Path = @"D:\d" }],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        merged.Datastores!.Should().ContainSingle();
+        merged.Datastores!.Should().Contain(d => d.Name == "quick" && d.Path == @"D:\d");
+        merged.Datastores!.Should().NotContain(d => d.Name == "fast");
+    }
+
+    [Fact]
     public void Local_only_ovn_configuration_is_preserved()
     {
         var local = new VmHostAgentConfiguration { Ovn = new VmHostAgentOvnConfiguration() };

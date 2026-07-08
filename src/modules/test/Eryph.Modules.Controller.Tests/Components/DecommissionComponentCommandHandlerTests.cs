@@ -92,10 +92,10 @@ public class DecommissionComponentCommandHandlerTests
             => throw new NotSupportedException();
 
         public Task<ComponentRegistration?> RecordHeartbeatAsync(Guid componentId, Guid instanceId,
-            IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
+            IReadOnlyList<AppliedConfigVersion> appliedConfigVersions, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
-        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version,
+        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, string scope, long version,
             CancellationToken cancellationToken)
             => throw new NotSupportedException();
 

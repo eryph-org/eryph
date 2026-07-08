@@ -116,10 +116,10 @@ public class SetComponentMetadataCommandHandlerTests
             => throw new NotSupportedException();
 
         public Task<ComponentRegistration?> RecordHeartbeatAsync(
-            Guid componentId, Guid instanceId, IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions,
+            Guid componentId, Guid instanceId, IReadOnlyList<AppliedConfigVersion> appliedConfigVersions,
             CancellationToken ct) => throw new NotSupportedException();
 
-        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version, CancellationToken ct)
+        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, string scope, long version, CancellationToken ct)
             => throw new NotSupportedException();
 
         public Task<bool> DeregisterAsync(Guid componentId, Guid instanceId, CancellationToken ct)

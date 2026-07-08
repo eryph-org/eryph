@@ -1,5 +1,6 @@
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.Network;
 using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.Rebus;
@@ -28,7 +29,8 @@ public class SetConfigDomainCommandHandlerTests
     private readonly Mock<INetworkSyncService> _networkSync = new();
 
     public SetConfigDomainCommandHandlerTests() =>
-        _networkSync.Setup(s => s.SyncNetworks(It.IsAny<CancellationToken>()))
+        _networkSync.Setup(s => s.SyncNetworks(
+                It.IsAny<NetworkProvidersConfiguration>(), It.IsAny<CancellationToken>()))
             .Returns(RightAsync<Error, Unit>(unit));
 
     private SetConfigDomainCommandHandler CreateHandler() =>
@@ -130,9 +132,10 @@ public class SetConfigDomainCommandHandlerTests
         await CreateHandler().Handle(Op(ConfigDomain.NetworkProviders, ValidNetworkProviders));
 
         _store.Added.Should().ContainSingle().Which.domain.Should().Be(ConfigDomain.NetworkProviders);
-        // NetworkProviders re-realizes via SyncNetworks (which pushes the domains itself), so the
-        // generic refresh is not used.
-        _networkSync.Verify(s => s.SyncNetworks(It.IsAny<CancellationToken>()), Times.Once);
+        // NetworkProviders re-realizes via SyncNetworks with the just-authored config (which pushes the
+        // domains itself), so the generic refresh is not used and the stale re-read overload is not called.
+        _networkSync.Verify(s => s.SyncNetworks(
+            It.IsAny<NetworkProvidersConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
         VerifyDistributed(Times.Never());
         VerifyCompleted(Times.Once());
     }
@@ -140,7 +143,8 @@ public class SetConfigDomainCommandHandlerTests
     [Fact]
     public async Task NetworkProviders_realization_failure_fails_the_operation()
     {
-        _networkSync.Setup(s => s.SyncNetworks(It.IsAny<CancellationToken>()))
+        _networkSync.Setup(s => s.SyncNetworks(
+                It.IsAny<NetworkProvidersConfiguration>(), It.IsAny<CancellationToken>()))
             .Returns(LeftAsync<Error, Unit>(Error.New("ovn unreachable")));
 
         await CreateHandler().Handle(Op(ConfigDomain.NetworkProviders, ValidNetworkProviders));

@@ -25,7 +25,6 @@ namespace Eryph.Modules.Controller.Components;
 /// </remarks>
 internal sealed class ConfigDistributionService(
     IStateStoreRepository<ConfigRecord> records,
-    IStateStoreRepository<ComponentRegistration> registrations,
     IEnumerable<IConfigSource> sources,
     IAuthoredConfigStore authoredStore,
     IDistributedLockScopeHolder lockHolder)
@@ -69,44 +68,50 @@ internal sealed class ConfigDistributionService(
     /// </summary>
     public async Task<List<ConfigBundle>> BuildSnapshotAsync(
         ComponentRegistration registration,
-        IReadOnlyDictionary<ConfigDomain, long> knownVersions,
+        IReadOnlyList<AppliedConfigVersion> knownVersions,
         CancellationToken cancellationToken)
     {
+        // The component reports its known versions per (domain, scope); index them for lookup. The
+        // reported set is authoritative for the pull path (it may be a fresh/reset component), so it is
+        // used instead of the stored registration state.
+        var known = new Dictionary<(ConfigDomain, string), long>();
+        foreach (var version in knownVersions)
+        {
+            var key = (version.Domain, version.Scope);
+            known[key] = Math.Max(known.GetValueOrDefault(key), version.Version);
+        }
+
         var bundles = new List<ConfigBundle>();
         foreach (var domain in GetEntitledDomains(registration.ComponentType))
         {
             var bundle = await ResolveBundleAsync(
-                domain, registration, knownVersions, materialize: true, cancellationToken);
+                domain, registration,
+                (d, s) => known.GetValueOrDefault((d, s)), materialize: true, cancellationToken);
             if (bundle is not null)
                 bundles.Add(bundle);
         }
 
-        if (bundles.Count > 0)
-            await PersistDistributedScopesAsync(registration, cancellationToken);
         return bundles;
     }
 
     /// <summary>
     /// Heartbeat drift: compares a component against the already-materialized records at its resolved
-    /// scopes. Does not re-evaluate the sources (no materialization), but does force a re-push when the
-    /// resolved scope changed since the component was last distributed.
+    /// scopes. Does not re-evaluate the sources (no materialization). A component moved to a new scope
+    /// has applied version 0 there, so it is naturally re-pushed the scope's current record.
     /// </summary>
     public async Task<List<ConfigBundle>> GetOutdatedBundlesAsync(
         ComponentRegistration registration,
-        IReadOnlyDictionary<ConfigDomain, long> appliedVersions,
         CancellationToken cancellationToken)
     {
         var bundles = new List<ConfigBundle>();
         foreach (var domain in GetEntitledDomains(registration.ComponentType))
         {
             var bundle = await ResolveBundleAsync(
-                domain, registration, appliedVersions, materialize: false, cancellationToken);
+                domain, registration, registration.GetAppliedVersion, materialize: false, cancellationToken);
             if (bundle is not null)
                 bundles.Add(bundle);
         }
 
-        if (bundles.Count > 0)
-            await PersistDistributedScopesAsync(registration, cancellationToken);
         return bundles;
     }
 
@@ -115,26 +120,22 @@ internal sealed class ConfigDistributionService(
     /// does not already hold it; <c>null</c> otherwise (already current, or no source).
     /// </summary>
     public async Task<ConfigBundle?> RefreshForComponentAsync(
-        ConfigDomain domain, ComponentRegistration registration, CancellationToken cancellationToken)
-    {
-        var bundle = await ResolveBundleAsync(
-            domain, registration, registration.AppliedConfigVersions, materialize: true, cancellationToken);
-        if (bundle is not null)
-            await PersistDistributedScopesAsync(registration, cancellationToken);
-        return bundle;
-    }
+        ConfigDomain domain, ComponentRegistration registration, CancellationToken cancellationToken) =>
+        await ResolveBundleAsync(
+            domain, registration, registration.GetAppliedVersion, materialize: true, cancellationToken);
 
     /// <summary>
-    /// Decides whether a component needs the current value of a domain and, if so, returns the bundle and
-    /// records the resolved scope on the registration (in memory). A push is due when the component's
-    /// resolved scope changed since it was last distributed — a scope change is invisible to a plain
-    /// version comparison because each (domain, scope) has an independent counter — or when it is behind
-    /// the current version within the same scope.
+    /// Decides whether a component needs the current value of a domain and, if so, returns the bundle.
+    /// The component's applied version is looked up for the RESOLVED scope; because each (domain, scope)
+    /// has an independent counter, a component moved to a new scope has applied 0 there and is correctly
+    /// pushed that scope's record even when its version is lower than what the component applied under
+    /// its previous scope. The bundle carries the scope so the component tracks and acknowledges per
+    /// scope in turn.
     /// </summary>
     private async Task<ConfigBundle?> ResolveBundleAsync(
         ConfigDomain domain,
         ComponentRegistration registration,
-        IReadOnlyDictionary<ConfigDomain, long> appliedVersions,
+        Func<ConfigDomain, string, long> getAppliedVersion,
         bool materialize,
         CancellationToken cancellationToken)
     {
@@ -147,29 +148,16 @@ internal sealed class ConfigDistributionService(
         if (record is null)
             return null;
 
-        // A recorded distributed scope that differs from the resolved one means the component was moved
-        // onto a different authored value; its applied version belongs to the old scope's counter and is
-        // not comparable, so force the push. An absent entry (never distributed / pre-upgrade row) falls
-        // back to the version comparison, which is correct when the scope has not changed.
-        var lastScope = registration.DistributedConfigScopes.GetValueOrDefault(domain);
-        var scopeChanged = lastScope is not null && lastScope != scope;
-
-        var applied = appliedVersions.GetValueOrDefault(domain, 0);
-        if (!scopeChanged && record.Version <= applied)
+        if (record.Version <= getAppliedVersion(domain, scope))
             return null;
 
-        registration.DistributedConfigScopes[domain] = scope;
-        return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
-    }
-
-    // Saves the registration when its distributed-scope map was touched. Skips the synthetic fallback
-    // registration used for an as-yet-unregistered requester (no persistent identity) so it is not
-    // inserted; that component records its scopes once it is properly registered.
-    private async Task PersistDistributedScopesAsync(
-        ComponentRegistration registration, CancellationToken cancellationToken)
-    {
-        if (registration.Id != Guid.Empty)
-            await registrations.UpdateAsync(registration, cancellationToken);
+        return new ConfigBundle
+        {
+            Domain = domain,
+            Scope = scope,
+            Version = record.Version,
+            Payload = record.Payload,
+        };
     }
 
     /// <summary>

@@ -46,6 +46,14 @@ internal sealed class GenePoolStorageConfigRealizer(
             return;
         }
 
+        // The controller validates authored paths, but the gene pool is a second consumer of the same
+        // payload and must not be the least-validated writer: reject a non-fully-qualified volumes path
+        // rather than write a cwd-relative gene-pool root while the agent rejects the same payload.
+        if (!Path.IsPathFullyQualified(volumes))
+            throw new InvalidOperationException(
+                $"The distributed default volumes path '{volumes}' is not fully qualified; "
+                + "the gene pool storage path cannot be derived from it.");
+
         var genePoolPath = Path.Combine(volumes, GenePoolFolderName);
 
         // A write failure must propagate: ConfigApplier turns the thrown exception into a failed

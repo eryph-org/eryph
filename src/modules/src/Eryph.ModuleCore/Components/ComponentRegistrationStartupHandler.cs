@@ -76,7 +76,7 @@ internal sealed class ComponentRegistrationStartupHandler(
                     MachineName = identity.MachineName,
                     Version = identity.Version,
                     InboundQueue = identity.InboundQueue,
-                    KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
+                    KnownConfigVersions = state.GetApplied().ToList(),
                     AdvertisedEndpoints = ResolveAdvertisedEndpoints(),
                 });
 
@@ -87,7 +87,7 @@ internal sealed class ComponentRegistrationStartupHandler(
                 {
                     ComponentId = identity.ComponentId,
                     ComponentType = identity.ComponentType,
-                    KnownConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
+                    KnownConfigVersions = state.GetApplied().ToList(),
                 });
 
                 logger.LogInformation(
