@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Components;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -14,6 +15,7 @@ namespace Eryph.Modules.Controller.Components;
 [UsedImplicitly]
 internal sealed class RequestConfigCommandHandler(
     IBus bus,
+    IComponentRegistryService registry,
     ConfigDistributionService distribution)
     : IHandleMessages<RequestConfigCommand>
 {
@@ -25,8 +27,21 @@ internal sealed class RequestConfigCommandHandler(
         // actor cannot claim a more privileged ComponentType — is part of the component
         // authentication phase; deriving it from the registration would not help until then,
         // since an unauthenticated actor could forge the registration too.
+
+        // The startup handler registers before it requests config, so the registration exists and
+        // carries the operator-assigned scope (environment/tags). If it is somehow missing, fall back
+        // to a synthetic default-scope registration so the component still gets the global values.
+        var registration = await registry.GetAsync(message.ComponentId, CancellationToken.None)
+            ?? new ComponentRegistration
+            {
+                ComponentId = message.ComponentId,
+                ComponentType = message.ComponentType,
+                MachineName = string.Empty,
+                InboundQueue = string.Empty,
+            };
+
         var bundles = await distribution.BuildSnapshotAsync(
-            message.ComponentType, message.KnownConfigVersions, CancellationToken.None);
+            registration, message.KnownConfigVersions, CancellationToken.None);
 
         if (bundles.Count == 0)
             return;

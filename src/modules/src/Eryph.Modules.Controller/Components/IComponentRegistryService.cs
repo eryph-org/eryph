@@ -64,6 +64,9 @@ internal interface IComponentRegistryService
         IReadOnlyDictionary<string, string> tags,
         CancellationToken cancellationToken);
 
+    /// <summary>The registration for a component, or <c>null</c> when it is not registered.</summary>
+    Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken);
+
     /// <summary>The components currently considered alive (status Active).</summary>
     Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken);
 }

@@ -24,18 +24,23 @@ internal sealed class StorageConfigSource(
 {
     public ConfigDomain Domain => ConfigDomain.StorageConfig;
 
-    public async Task<string> BuildPayloadAsync(CancellationToken cancellationToken)
+    public async Task<string> BuildPayloadAsync(string scope, CancellationToken cancellationToken)
     {
-        // The authored value (operator-set via the management API) is authoritative once it exists.
+        // The authored value (operator-set via the management API) at this scope is authoritative.
         // The store is scoped, so resolve it in a dedicated scope — this source may be built outside a
         // request scope (mirrors EndpointsConfigSource).
-        await using (var scope = AsyncScopedLifestyle.BeginScope(container))
+        await using (var diScope = AsyncScopedLifestyle.BeginScope(container))
         {
-            var authored = await scope.GetInstance<IAuthoredConfigStore>()
-                .GetCurrentAsync(ConfigDomain.StorageConfig, ConfigScope.Default, cancellationToken);
+            var authored = await diScope.GetInstance<IAuthoredConfigStore>()
+                .GetCurrentAsync(ConfigDomain.StorageConfig, scope, cancellationToken);
             if (authored is not null)
                 return authored.Payload;
         }
+
+        // A non-default scope is only materialized when it has an authored value, so an unauthored
+        // non-default scope is a caller error; the default scope falls back to the settings file.
+        if (scope != ConfigScope.Default)
+            throw new InvalidOperationException($"No authored StorageConfig for scope '{scope}'.");
 
         // Not yet authored via the management API — fall back to the controller settings file.
         return await settingsManager.GetCurrentConfiguration()

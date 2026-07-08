@@ -12,5 +12,10 @@ internal interface IConfigSource
 {
     ConfigDomain Domain { get; }
 
-    Task<string> BuildPayloadAsync(CancellationToken cancellationToken);
+    /// <summary>
+    /// Builds the payload for the domain at the given scope. Authorable domains read the operator's
+    /// value at that scope; system-derived domains are global and are only materialized at the
+    /// default scope.
+    /// </summary>
+    Task<string> BuildPayloadAsync(string scope, CancellationToken cancellationToken);
 }

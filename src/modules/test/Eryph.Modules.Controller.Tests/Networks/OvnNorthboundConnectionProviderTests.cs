@@ -150,6 +150,9 @@ public class OvnNorthboundConnectionProviderTests
         public Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
+        public Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
         public Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
             => Task.FromResult(active);
     }

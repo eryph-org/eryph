@@ -102,6 +102,9 @@ public class DecommissionComponentCommandHandlerTests
         public Task<bool> DeregisterAsync(Guid componentId, Guid instanceId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
+        public Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
         public Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
             => throw new NotSupportedException();
     }

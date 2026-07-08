@@ -247,6 +247,29 @@ public class ComponentRegistryServiceTests
     }
 
     [Fact]
+    public async Task SetMetadata_leaves_applied_config_versions_untouched()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host",
+            InboundQueue = "q",
+            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.StorageConfig] = 7 },
+        };
+        var (service, _) = Create(existing);
+
+        await service.SetMetadataAsync(
+            componentId, "edge", new Dictionary<string, string>(), CancellationToken.None);
+
+        // A scope change is reconciled by the distribution loop via DistributedConfigScopes, not by
+        // resetting the applied versions here (which a racing heartbeat could immediately undo).
+        existing.AppliedConfigVersions.Should().ContainKey(ConfigDomain.StorageConfig).WhoseValue.Should().Be(7);
+    }
+
+    [Fact]
     public async Task SetMetadata_returns_false_for_an_unknown_component()
     {
         var (service, repo) = Create();

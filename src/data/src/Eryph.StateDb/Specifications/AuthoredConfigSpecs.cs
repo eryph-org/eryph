@@ -12,10 +12,16 @@ public static class AuthoredConfigSpecs
     {
         public GetCurrent(ConfigDomain domain, string scope)
         {
+            Domain = domain;
+            Scope = scope;
             Query.Where(x => x.Domain == domain && x.Scope == scope)
                 .OrderByDescending(x => x.Version)
                 .Take(1);
         }
+
+        public ConfigDomain Domain { get; }
+
+        public string Scope { get; }
     }
 
     /// <summary>A specific authored version for a domain/scope, or none.</summary>

@@ -31,7 +31,7 @@ internal sealed class EndpointsConfigSource(
 {
     public ConfigDomain Domain => ConfigDomain.Endpoints;
 
-    public async Task<string> BuildPayloadAsync(CancellationToken cancellationToken)
+    public async Task<string> BuildPayloadAsync(string scope, CancellationToken cancellationToken)
     {
         var endpoints = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -39,9 +39,9 @@ internal sealed class EndpointsConfigSource(
         // owned by one host; if several advertise the same name the last one wins, but the
         // operator override below has the final say either way. The registry is scoped, so
         // resolve it in a dedicated scope (this source may be built outside a request scope).
-        await using (var scope = AsyncScopedLifestyle.BeginScope(container))
+        await using (var diScope = AsyncScopedLifestyle.BeginScope(container))
         {
-            var registry = scope.GetInstance<IComponentRegistryService>();
+            var registry = diScope.GetInstance<IComponentRegistryService>();
             var components = await registry.GetActiveAsync(cancellationToken);
             // Order deterministically so a duplicate advertised endpoint name resolves the same
             // way every build (GetActiveAsync gives no ordering guarantee) — otherwise the payload

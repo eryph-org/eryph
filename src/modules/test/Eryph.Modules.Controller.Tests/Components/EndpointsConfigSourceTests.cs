@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb.Model;
 using Microsoft.Extensions.Configuration;
@@ -54,7 +55,7 @@ public class EndpointsConfigSourceTests
 
     private static async Task<Dictionary<string, string>> Build(EndpointsConfigSource source)
     {
-        var payload = await source.BuildPayloadAsync(CancellationToken.None);
+        var payload = await source.BuildPayloadAsync(ConfigScope.Default, CancellationToken.None);
         return JsonSerializer.Deserialize<Dictionary<string, string>>(payload)!;
     }
 
@@ -160,6 +161,9 @@ public class EndpointsConfigSourceTests
             => throw new NotSupportedException();
 
         public Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)

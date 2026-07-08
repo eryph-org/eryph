@@ -168,9 +168,18 @@ internal sealed class ComponentRegistryService(
             ? new Dictionary<string, string>()
             : new Dictionary<string, string>(tags);
 
+        // A scope change (from new environment/tags) is picked up by the distribution loop via the
+        // component's recorded DistributedConfigScopes: when the resolved scope no longer matches the
+        // last-distributed one, a re-push is forced regardless of the (per-scope, non-comparable)
+        // applied version. So the applied versions are left untouched here.
+
         await repository.UpdateAsync(registration, cancellationToken);
         return true;
     }
+
+    public Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken) =>
+        repository.GetBySpecAsync(
+            new ComponentRegistrationSpecs.GetByComponentId(componentId), cancellationToken);
 
     public async Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)
     {

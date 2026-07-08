@@ -1,8 +1,12 @@
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
+using Eryph.Rebus;
 using JetBrains.Annotations;
+using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Components;
@@ -13,6 +17,7 @@ namespace Eryph.Modules.Controller.Components;
 /// </summary>
 [UsedImplicitly]
 internal sealed class SetComponentMetadataCommandHandler(
+    IBus bus,
     IComponentRegistryService registry,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<SetComponentMetadataCommand>>
@@ -28,6 +33,20 @@ internal sealed class SetComponentMetadataCommandHandler(
         {
             await messaging.FailTask(message, $"Component {command.ComponentId} is not registered.");
             return;
+        }
+
+        // The new scope can select a different authored value for the component's authorable domains, so
+        // re-distribute them. The refresh re-evaluates each domain per component and only pushes to those
+        // whose resolved value actually changed, so refreshing every authorable entitled domain is safe.
+        var registration = await registry.GetAsync(command.ComponentId, CancellationToken.None);
+        if (registration is not null)
+        {
+            var authorableDomains = ComponentConfigEntitlements
+                .GetEntitledDomains(registration.ComponentType)
+                .Where(ConfigDomainDescriptors.IsAuthorable);
+            foreach (var domain in authorableDomains)
+                await bus.Advanced.Routing.Send(
+                    QueueNames.Controllers, new RefreshConfigDomainCommand { Domain = domain });
         }
 
         await messaging.CompleteTask(message);

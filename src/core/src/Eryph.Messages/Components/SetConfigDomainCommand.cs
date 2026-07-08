@@ -15,6 +15,12 @@ public class SetConfigDomainCommand : IHasCorrelationId
 
     public ConfigDomain Domain { get; set; }
 
+    /// <summary>
+    /// The scope selector this value is authored for (see <c>ConfigScope</c>): <c>null</c>/empty for
+    /// the default (match-all), or <c>env:</c>/<c>tag:</c>/<c>host:</c> to target a subset of components.
+    /// </summary>
+    public string? Scope { get; set; }
+
     public string? Payload { get; set; }
 
     /// <summary>The authoring principal, for audit/UI.</summary>

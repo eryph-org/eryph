@@ -41,7 +41,7 @@ public class StorageConfigSourceTests
             },
             settings.Object);
 
-        var payload = await source.BuildPayloadAsync(default);
+        var payload = await source.BuildPayloadAsync(ConfigScope.Default, default);
 
         payload.Should().Be("authored-yaml");
         settings.Verify(m => m.GetCurrentConfiguration(), Times.Never);
@@ -59,11 +59,44 @@ public class StorageConfigSourceTests
 
         var source = Create(null, settings.Object);
 
-        var payload = await source.BuildPayloadAsync(default);
+        var payload = await source.BuildPayloadAsync(ConfigScope.Default, default);
 
         var placement = StorageConfigYamlSerializer.Deserialize(payload);
         placement.Datastores.Should().BeEquivalentTo("ds1");
         placement.Environments.Should().BeEquivalentTo("env1");
+    }
+
+    [Fact]
+    public async Task Uses_the_authored_value_at_a_non_default_scope()
+    {
+        var settings = new Mock<IControllerSettingsManager>();
+        var source = Create(
+            new AuthoredConfig
+            {
+                Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig,
+                Scope = "env:edge", Version = 1, Payload = "edge-yaml",
+            },
+            settings.Object);
+
+        var payload = await source.BuildPayloadAsync("env:edge", default);
+
+        payload.Should().Be("edge-yaml");
+        settings.Verify(m => m.GetCurrentConfiguration(), Times.Never);
+    }
+
+    [Fact]
+    public async Task Throws_for_an_unauthored_non_default_scope_instead_of_the_file_fallback()
+    {
+        // The settings-file fallback is only valid for the default scope; a non-default scope with no
+        // authored value should never be materialized (resolution only picks authored scopes), so this
+        // is an invariant guard, not the file fallback.
+        var settings = new Mock<IControllerSettingsManager>();
+        var source = Create(null, settings.Object);
+
+        var act = () => source.BuildPayloadAsync("env:edge", default);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        settings.Verify(m => m.GetCurrentConfiguration(), Times.Never);
     }
 
     private sealed class StubStore(AuthoredConfig? current) : IAuthoredConfigStore

@@ -13,128 +13,182 @@ using Eryph.StateDb.Specifications;
 namespace Eryph.Modules.Controller.Components;
 
 /// <summary>
-/// Decides which configuration domains a component type is entitled to and builds
-/// the versioned bundles to send it, materializing a <see cref="ConfigRecord"/>
-/// per domain on first use.
+/// Resolves the configuration a component receives and materializes the per-(domain, scope)
+/// <see cref="ConfigRecord"/> for it. A component gets the most-specific authored value among the
+/// scopes it selects (its environment, tags and host id); system-derived domains are global (default
+/// scope). Resolution is entirely controller-side — a component still receives one payload per domain.
 /// </summary>
 /// <remarks>
-/// The read-modify-write in <c>EnsureCurrentRecordAsync</c> is serialized per domain by a
-/// distributed lock. The controller processes bus messages on multiple Rebus workers (and a
-/// cluster may run multiple controllers), so without it two concurrent first-touches of the
-/// same domain could both observe no record and insert, colliding on the unique
-/// <c>ConfigRecord.Domain</c> index, or lose a concurrent version bump. The lock is held for
-/// the remainder of the message unit of work.
+/// The read-modify-write in <c>EnsureCurrentRecordAsync</c> is serialized per (domain, scope) by a
+/// distributed lock, so concurrent workers/controllers cannot both insert (unique-index collision) or
+/// lose a version bump. The lock is held for the remainder of the message unit of work.
 /// </remarks>
 internal sealed class ConfigDistributionService(
     IStateStoreRepository<ConfigRecord> records,
+    IStateStoreRepository<ComponentRegistration> registrations,
     IEnumerable<IConfigSource> sources,
+    IAuthoredConfigStore authoredStore,
     IDistributedLockScopeHolder lockHolder)
 {
-    // A first-touch/version-bump touches only the state DB and should be near-instant; a long
-    // wait means contention or a stuck unit of work, so fail (and let the bus retry) rather
-    // than block a worker indefinitely.
     private static readonly TimeSpan LockTimeout = TimeSpan.FromMinutes(1);
 
     public ConfigDomain[] GetEntitledDomains(ComponentType componentType) =>
         ComponentConfigEntitlements.GetEntitledDomains(componentType);
 
     /// <summary>
-    /// Builds the snapshot bundles a component is entitled to and does not already
-    /// hold at the current version.
+    /// The scope a component resolves for a domain: the most-specific scope it selects that has an
+    /// authored value, else the default scope (system-derived / settings fallback). Only authorable
+    /// domains can have a non-default scope.
+    /// </summary>
+    private async Task<string> ResolveScopeAsync(
+        ConfigDomain domain, ComponentRegistration registration, CancellationToken cancellationToken)
+    {
+        if (!ConfigDomainDescriptors.IsAuthorable(domain))
+            return ConfigScope.Default;
+
+        // Walk the component's scopes most-specific first and stop at the first that has an authored
+        // value. The default scope is the terminal fallback and is not probed here: whether it has an
+        // authored value is irrelevant (the source builds the default from the authored value or the
+        // settings file), so returning it unconditionally is correct.
+        foreach (var scope in ConfigScope.ResolutionOrder(registration))
+        {
+            if (scope == ConfigScope.Default)
+                break;
+            if (await authoredStore.GetCurrentAsync(domain, scope, cancellationToken) is not null)
+                return scope;
+        }
+
+        return ConfigScope.Default;
+    }
+
+    /// <summary>
+    /// Builds the snapshot bundles a component is entitled to and does not already hold, resolving each
+    /// domain at the component's scope and materializing the record on first use.
     /// </summary>
     public async Task<List<ConfigBundle>> BuildSnapshotAsync(
-        ComponentType componentType,
+        ComponentRegistration registration,
         IReadOnlyDictionary<ConfigDomain, long> knownVersions,
         CancellationToken cancellationToken)
     {
         var bundles = new List<ConfigBundle>();
-        foreach (var domain in GetEntitledDomains(componentType))
+        foreach (var domain in GetEntitledDomains(registration.ComponentType))
         {
-            // Re-evaluate the source on every pull so a request always reflects the
-            // current controller settings — not a record frozen at first use.
-            var (record, _) = await EnsureCurrentRecordAsync(domain, cancellationToken);
-            if (record is null)
-                continue;
-
-            var known = knownVersions.GetValueOrDefault(domain, 0);
-            if (record.Version > known)
-                bundles.Add(new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload });
+            var bundle = await ResolveBundleAsync(
+                domain, registration, knownVersions, materialize: true, cancellationToken);
+            if (bundle is not null)
+                bundles.Add(bundle);
         }
 
+        if (bundles.Count > 0)
+            await PersistDistributedScopesAsync(registration, cancellationToken);
         return bundles;
     }
 
     /// <summary>
-    /// Compares a component's reported applied versions against the current materialized records
-    /// and returns the bundles for the entitled domains where it is behind — <b>without</b>
-    /// re-evaluating the sources or taking the per-domain lock. Used by heartbeat drift
-    /// reconciliation: unlike <see cref="BuildSnapshotAsync"/> (the startup pull, which re-reads the
-    /// sources to guarantee freshness), this reflects only what the push path already published, so
-    /// it stays a cheap, lock-free read that runs on every heartbeat. A source that changed without a
-    /// refresh trigger is a separate concern (the record, not the component, is then stale).
+    /// Heartbeat drift: compares a component against the already-materialized records at its resolved
+    /// scopes. Does not re-evaluate the sources (no materialization), but does force a re-push when the
+    /// resolved scope changed since the component was last distributed.
     /// </summary>
     public async Task<List<ConfigBundle>> GetOutdatedBundlesAsync(
-        ComponentType componentType,
+        ComponentRegistration registration,
         IReadOnlyDictionary<ConfigDomain, long> appliedVersions,
         CancellationToken cancellationToken)
     {
         var bundles = new List<ConfigBundle>();
-        foreach (var domain in GetEntitledDomains(componentType))
+        foreach (var domain in GetEntitledDomains(registration.ComponentType))
         {
-            var record = await records.GetBySpecAsync(
-                new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
-            if (record is null)
-                continue;
-
-            var applied = appliedVersions.GetValueOrDefault(domain, 0);
-            if (record.Version > applied)
-                bundles.Add(new ConfigBundle
-                {
-                    Domain = domain, Version = record.Version, Payload = record.Payload,
-                });
+            var bundle = await ResolveBundleAsync(
+                domain, registration, appliedVersions, materialize: false, cancellationToken);
+            if (bundle is not null)
+                bundles.Add(bundle);
         }
 
+        if (bundles.Count > 0)
+            await PersistDistributedScopesAsync(registration, cancellationToken);
         return bundles;
     }
 
     /// <summary>
-    /// Re-evaluates a domain against its source and returns the new bundle when the
-    /// payload changed — or <c>null</c> when nothing changed (so the push path can
-    /// skip publishing). The pull path uses <see cref="EnsureCurrentRecordAsync"/>
-    /// directly because it must send the current record even when this call did not
-    /// change it.
+    /// Re-evaluates a domain at the component's resolved scope and returns the bundle when the component
+    /// does not already hold it; <c>null</c> otherwise (already current, or no source).
     /// </summary>
-    public async Task<ConfigBundle?> RefreshAsync(ConfigDomain domain, CancellationToken cancellationToken)
+    public async Task<ConfigBundle?> RefreshForComponentAsync(
+        ConfigDomain domain, ComponentRegistration registration, CancellationToken cancellationToken)
     {
-        var (record, changed) = await EnsureCurrentRecordAsync(domain, cancellationToken);
-        if (record is null || !changed)
-            return null;
-
-        return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
+        var bundle = await ResolveBundleAsync(
+            domain, registration, registration.AppliedConfigVersions, materialize: true, cancellationToken);
+        if (bundle is not null)
+            await PersistDistributedScopesAsync(registration, cancellationToken);
+        return bundle;
     }
 
     /// <summary>
-    /// Materializes the record from its source: creates it on first use, bumps the
-    /// version when the payload changed, and otherwise leaves it untouched. Returns
-    /// the current record (reflecting the latest source) and whether this call
-    /// changed it, or <c>(null, false)</c> when no source owns the domain.
+    /// Decides whether a component needs the current value of a domain and, if so, returns the bundle and
+    /// records the resolved scope on the registration (in memory). A push is due when the component's
+    /// resolved scope changed since it was last distributed — a scope change is invisible to a plain
+    /// version comparison because each (domain, scope) has an independent counter — or when it is behind
+    /// the current version within the same scope.
+    /// </summary>
+    private async Task<ConfigBundle?> ResolveBundleAsync(
+        ConfigDomain domain,
+        ComponentRegistration registration,
+        IReadOnlyDictionary<ConfigDomain, long> appliedVersions,
+        bool materialize,
+        CancellationToken cancellationToken)
+    {
+        var scope = await ResolveScopeAsync(domain, registration, cancellationToken);
+
+        var record = materialize
+            ? (await EnsureCurrentRecordAsync(domain, scope, cancellationToken)).Record
+            : await records.GetBySpecAsync(
+                new ConfigRecordSpecs.GetByDomainAndScope(domain, scope), cancellationToken);
+        if (record is null)
+            return null;
+
+        // A recorded distributed scope that differs from the resolved one means the component was moved
+        // onto a different authored value; its applied version belongs to the old scope's counter and is
+        // not comparable, so force the push. An absent entry (never distributed / pre-upgrade row) falls
+        // back to the version comparison, which is correct when the scope has not changed.
+        var lastScope = registration.DistributedConfigScopes.GetValueOrDefault(domain);
+        var scopeChanged = lastScope is not null && lastScope != scope;
+
+        var applied = appliedVersions.GetValueOrDefault(domain, 0);
+        if (!scopeChanged && record.Version <= applied)
+            return null;
+
+        registration.DistributedConfigScopes[domain] = scope;
+        return new ConfigBundle { Domain = domain, Version = record.Version, Payload = record.Payload };
+    }
+
+    // Saves the registration when its distributed-scope map was touched. Skips the synthetic fallback
+    // registration used for an as-yet-unregistered requester (no persistent identity) so it is not
+    // inserted; that component records its scopes once it is properly registered.
+    private async Task PersistDistributedScopesAsync(
+        ComponentRegistration registration, CancellationToken cancellationToken)
+    {
+        if (registration.Id != Guid.Empty)
+            await registrations.UpdateAsync(registration, cancellationToken);
+    }
+
+    /// <summary>
+    /// Materializes the record for (domain, scope) from its source: creates it on first use, bumps the
+    /// version when the payload changed, otherwise leaves it untouched.
     /// </summary>
     private async Task<(ConfigRecord? Record, bool Changed)> EnsureCurrentRecordAsync(
-        ConfigDomain domain, CancellationToken cancellationToken)
+        ConfigDomain domain, string scope, CancellationToken cancellationToken)
     {
         var source = sources.FirstOrDefault(s => s.Domain == domain);
         if (source is null)
             return (null, false);
 
-        // Serialize the whole build-read-modify-write for this domain so concurrent
-        // workers/controllers cannot both insert (unique-index collision), lose a version
-        // bump, or overwrite a newer payload with an older one. The payload is built under the
-        // lock too: a slower builder acquiring the lock later would otherwise revert the record
-        // to its stale payload. Held until the message unit of work completes.
-        await lockHolder.AcquireLock($"config-domain-{domain}", LockTimeout);
+        // Serialize the whole build-read-modify-write for this (domain, scope). The scope is
+        // percent-escaped so a selector cannot introduce an invalid lock-file character.
+        await lockHolder.AcquireLock(
+            $"config-domain-{domain}-{Uri.EscapeDataString(scope)}", LockTimeout);
 
-        var payload = await source.BuildPayloadAsync(cancellationToken);
-        var record = await records.GetBySpecAsync(new ConfigRecordSpecs.GetByDomain(domain), cancellationToken);
+        var payload = await source.BuildPayloadAsync(scope, cancellationToken);
+        var record = await records.GetBySpecAsync(
+            new ConfigRecordSpecs.GetByDomainAndScope(domain, scope), cancellationToken);
 
         if (record is null)
         {
@@ -142,6 +196,7 @@ internal sealed class ConfigDistributionService(
             {
                 Id = Guid.NewGuid(),
                 Domain = domain,
+                Scope = scope,
                 Version = 1,
                 Payload = payload,
                 LastUpdated = DateTimeOffset.UtcNow,

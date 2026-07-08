@@ -20,7 +20,7 @@ internal sealed class NetworkProvidersConfigSource(
 {
     public ConfigDomain Domain => ConfigDomain.NetworkProviders;
 
-    public Task<string> BuildPayloadAsync(CancellationToken cancellationToken) =>
+    public Task<string> BuildPayloadAsync(string scope, CancellationToken cancellationToken) =>
         networkProviderManager.GetCurrentConfigurationYaml()
             .Match(
                 yaml => yaml,

@@ -46,7 +46,7 @@ internal sealed class ComponentHeartbeatCommandHandler(
         // Reconcile against the applied state as recorded (the returned registration), not the raw
         // message, so drift detection stays aligned with whatever the registry accepted.
         var outdated = await distribution.GetOutdatedBundlesAsync(
-            registration.ComponentType, registration.AppliedConfigVersions, CancellationToken.None);
+            registration, registration.AppliedConfigVersions, CancellationToken.None);
         if (outdated.Count == 0)
             return;
 

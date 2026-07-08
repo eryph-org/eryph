@@ -37,6 +37,13 @@ internal sealed class SetConfigDomainCommandHandler(
             return;
         }
 
+        var scope = command.Scope ?? ConfigScope.Default;
+        if (!ConfigScope.IsValid(scope))
+        {
+            await messaging.FailTask(message, $"'{command.Scope}' is not a valid configuration scope.");
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(command.Payload)
             || !ConfigDomainDescriptors.TryCanonicalize(command.Domain, command.Payload, out var canonical))
         {
@@ -46,7 +53,7 @@ internal sealed class SetConfigDomainCommandHandler(
         }
 
         await store.AddVersionAsync(
-            command.Domain, ConfigScope.Default, canonical, command.Author, CancellationToken.None);
+            command.Domain, scope, canonical, command.Author, CancellationToken.None);
 
         // Re-evaluate the domain against its new authored value and push it to entitled components.
         // The refresh no-ops if the canonical content did not actually change.

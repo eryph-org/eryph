@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Eryph.Core.Network;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Modules.Controller.Components;
 using Eryph.Modules.Controller.Networks;
 using LanguageExt;
@@ -30,7 +31,7 @@ public class OvnClusterConfigSourceTests
         string group, Seq<(string ChassisName, short Priority)> chassis)
     {
         var source = new OvnClusterConfigSource(new FakeTopology(group, chassis));
-        var json = await source.BuildPayloadAsync(CancellationToken.None);
+        var json = await source.BuildPayloadAsync(ConfigScope.Default, CancellationToken.None);
         return JsonSerializer.Deserialize<OvnClusterConfig>(json)!;
     }
 

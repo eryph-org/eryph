@@ -46,6 +46,23 @@ public class ComponentRegistration
     /// <summary>The config version this component has applied per domain.</summary>
     public Dictionary<ConfigDomain, long> AppliedConfigVersions { get; set; } = new();
 
+    internal string DistributedConfigScopesJson
+    {
+        get => JsonSerializer.Serialize(DistributedConfigScopes);
+        set => DistributedConfigScopes = string.IsNullOrEmpty(value)
+            ? new Dictionary<ConfigDomain, string>()
+            : JsonSerializer.Deserialize<Dictionary<ConfigDomain, string>>(value)
+              ?? new Dictionary<ConfigDomain, string>();
+    }
+
+    /// <summary>
+    /// The scope of the configuration this component was last distributed, per domain. Because a
+    /// component reports its applied version scope-blind and each (domain, scope) has an independent
+    /// version counter, a scope change is not detectable by version alone; recording the distributed
+    /// scope lets the controller force a re-distribution when a component's resolved scope changes.
+    /// </summary>
+    public Dictionary<ConfigDomain, string> DistributedConfigScopes { get; set; } = new();
+
     internal string AdvertisedEndpointsJson
     {
         get => JsonSerializer.Serialize(AdvertisedEndpoints);
