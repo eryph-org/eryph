@@ -296,6 +296,62 @@ public class NetworkProvidersConfigRealizerTests(
         });
     }
 
+    [Fact]
+    public async Task RealizeConfigAsync_ConfigWithoutCursor_PreservesTheExistingDbCursor()
+    {
+        // Realize once with a config that carries the cursor, then simulate the controller advancing it
+        // through IP allocation.
+        await WithScope(async (realizer, _) => { await realizer.RealizeConfigAsync(_simpleConfig, CancellationToken.None); });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            var subnet = (await stateStore.For<ProviderSubnet>().ListAsync(new GetAllSubnets())).Single();
+            subnet.IpPools.Single().NextIp = "10.249.248.15";
+            await stateStore.For<ProviderSubnet>().SaveChangesAsync();
+        });
+
+        // Re-realize with authored DEFINITIONS that carry no cursor (as the authored store stores them).
+        var authoredDefinitions = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-nat",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = "default",
+                            Network = "10.249.248.0/24",
+                            Gateway = "10.249.248.1",
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = "default",
+                                    FirstIp = "10.249.248.10",
+                                    NextIp = null, // definitions only
+                                    LastIp = "10.249.248.19",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        await WithScope(async (realizer, _) => { await realizer.RealizeConfigAsync(authoredDefinitions, CancellationToken.None); });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            var pool = (await stateStore.For<ProviderSubnet>().ListAsync(new GetAllSubnets())).Single().IpPools.Single();
+            // The allocation cursor is preserved, not reset to FirstIp.
+            pool.NextIp.Should().Be("10.249.248.15");
+        });
+    }
+
     private async Task WithScope(Func<INetworkProvidersConfigRealizer, IStateStore, Task> func)
     {
         await using var scope = CreateScope();

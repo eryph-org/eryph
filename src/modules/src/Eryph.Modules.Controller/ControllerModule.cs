@@ -171,6 +171,9 @@ public class ControllerModule
 
         //use network services from host
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
+        // Overlay the operator-authored NetworkProviders value on the read path so the controller's own
+        // network realization and the distributed payload stay in step with what agents receive.
+        container.RegisterDecorator<INetworkProviderManager, AuthoredNetworkProviderManager>();
 
         container.ConfigureRebus(configurer => configurer
             .Serialization(s => s.UseEryphSettings())

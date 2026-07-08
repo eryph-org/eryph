@@ -482,7 +482,7 @@ public class ConfigDistributionServiceTests
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
         records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ConfigRecordSpecs.GetByDomainAndScope spec, CancellationToken _) =>
-                spec.Scope == "env:edge"
+                spec is { Domain: ConfigDomain.StorageConfig, Scope: "env:edge" }
                     ? new ConfigRecord
                     {
                         Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig,
@@ -492,7 +492,7 @@ public class ConfigDistributionServiceTests
 
         var registrations = NoOpRegistrations();
         var service = new ConfigDistributionService(
-            records.Object, registrations.Object, [], new ScopedAuthoredStore("env:edge"), NoOpLock());
+            records.Object, registrations.Object, [], new ScopedAuthoredStore(ConfigDomain.StorageConfig, "env:edge"), NoOpLock());
 
         var bundles = await service.GetOutdatedBundlesAsync(
             registration, registration.AppliedConfigVersions, CancellationToken.None);
@@ -505,12 +505,12 @@ public class ConfigDistributionServiceTests
         registrations.Verify(r => r.UpdateAsync(registration, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    /// <summary>Reports an authored value only for the given scopes (any domain), else none.</summary>
-    private sealed class ScopedAuthoredStore(params string[] authoredScopes) : IAuthoredConfigStore
+    /// <summary>Reports an authored value only for the given domain + scope, else none.</summary>
+    private sealed class ScopedAuthoredStore(ConfigDomain authoredDomain, string authoredScope) : IAuthoredConfigStore
     {
         public Task<AuthoredConfig?> GetCurrentAsync(
             ConfigDomain domain, string scope, CancellationToken cancellationToken)
-            => Task.FromResult(authoredScopes.Contains(scope)
+            => Task.FromResult(domain == authoredDomain && scope == authoredScope
                 ? new AuthoredConfig { Id = Guid.NewGuid(), Domain = domain, Scope = scope, Version = 1, Payload = "x" }
                 : null);
 

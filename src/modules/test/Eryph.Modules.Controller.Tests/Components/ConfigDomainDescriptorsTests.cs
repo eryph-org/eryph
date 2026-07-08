@@ -11,16 +11,69 @@ namespace Eryph.Modules.Controller.Tests.Components;
 /// </summary>
 public class ConfigDomainDescriptorsTests
 {
-    [Fact]
-    public void StorageConfig_is_authorable() =>
-        ConfigDomainDescriptors.IsAuthorable(ConfigDomain.StorageConfig).Should().BeTrue();
+    [Theory]
+    [InlineData(ConfigDomain.StorageConfig)]
+    [InlineData(ConfigDomain.NetworkProviders)]
+    public void Operator_authorable_domains(ConfigDomain domain) =>
+        ConfigDomainDescriptors.IsAuthorable(domain).Should().BeTrue();
 
     [Theory]
-    [InlineData(ConfigDomain.NetworkProviders)]
     [InlineData(ConfigDomain.Endpoints)]
     [InlineData(ConfigDomain.OvnCluster)]
     public void System_derived_domains_are_not_authorable(ConfigDomain domain) =>
         ConfigDomainDescriptors.IsAuthorable(domain).Should().BeFalse();
+
+    [Fact]
+    public void NetworkProviders_canonicalization_validates_and_strips_the_ip_pool_cursor()
+    {
+        // A valid overlay provider with an IP pool carrying a runtime next-IP cursor.
+        const string payload =
+            "network_providers:\n"
+            + "- name: default\n"
+            + "  type: nat_overlay\n"
+            + "  bridge_name: br-nat\n"
+            + "  subnets:\n"
+            + "  - name: default\n"
+            + "    network: 10.249.248.0/22\n"
+            + "    gateway: 10.249.248.1\n"
+            + "    ip_pools:\n"
+            + "    - name: default\n"
+            + "      first_ip: 10.249.248.10\n"
+            + "      next_ip: 10.249.248.42\n"
+            + "      last_ip: 10.249.251.254\n";
+
+        var ok = ConfigDomainDescriptors.TryCanonicalize(
+            ConfigDomain.NetworkProviders, payload, out var canonical);
+
+        ok.Should().BeTrue();
+        // The cursor is runtime state, not authored config, so it is stripped from the canonical form.
+        canonical.Should().NotContain("next_ip");
+        canonical.Should().Contain("first_ip");
+    }
+
+    [Fact]
+    public void NetworkProviders_canonicalization_rejects_a_semantically_invalid_payload()
+    {
+        // Overlapping NAT subnets across providers — rejected by NetworkProvidersConfigValidations,
+        // which the serializer's shape check alone would not catch.
+        const string payload =
+            "network_providers:\n"
+            + "- name: default\n"
+            + "  type: nat_overlay\n"
+            + "  bridge_name: br-a\n"
+            + "  subnets:\n"
+            + "  - name: default\n"
+            + "    network: 10.249.248.0/22\n"
+            + "- name: second\n"
+            + "  type: nat_overlay\n"
+            + "  bridge_name: br-b\n"
+            + "  subnets:\n"
+            + "  - name: default\n"
+            + "    network: 10.249.248.0/22\n";
+
+        ConfigDomainDescriptors.TryCanonicalize(ConfigDomain.NetworkProviders, payload, out _)
+            .Should().BeFalse();
+    }
 
     [Fact]
     public void TryCanonicalize_accepts_valid_yaml_and_normalizes_whitespace_and_order()

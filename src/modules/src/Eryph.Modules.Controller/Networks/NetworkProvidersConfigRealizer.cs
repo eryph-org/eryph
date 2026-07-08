@@ -83,7 +83,11 @@ public class NetworkProvidersConfigRealizer(IStateStore stateStore) : INetworkPr
                     foundIpPools.Add(ipPoolEntity);
 
                     ipPoolEntity.FirstIp = ipPool.FirstIp;
-                    ipPoolEntity.NextIp = ipPool.NextIp ?? ipPool.FirstIp;
+                    // The next-IP cursor is runtime allocation state, not authored config. Take it from
+                    // the config only when it carries one (the local p_networks.yml still does); when the
+                    // config is authored definitions without a cursor, keep the existing DB cursor so
+                    // re-realizing an authored change does not restart allocation and hand out used IPs.
+                    ipPoolEntity.NextIp = ipPool.NextIp ?? ipPoolEntity.NextIp ?? ipPool.FirstIp;
                     ipPoolEntity.LastIp = ipPool.LastIp;
 
                     var invalidAssignments = FindInvalidAssignments(ipPoolEntity);

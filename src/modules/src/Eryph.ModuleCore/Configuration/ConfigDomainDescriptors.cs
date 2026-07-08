@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Eryph.ConfigModel;
+using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
+using Eryph.Core.Network;
 using Eryph.Messages.Components;
+using LanguageExt;
 
 namespace Eryph.ModuleCore.Configuration;
 
@@ -29,11 +33,31 @@ public static class ConfigDomainDescriptors
         {
             [ConfigDomain.StorageConfig] = payload =>
                 StorageConfigYamlSerializer.Serialize(StorageConfigYamlSerializer.Deserialize(payload)),
-            // Next domains to make authorable (see plan: all config authoring in one place):
-            //   NetworkProviders -> NetworkProvidersConfigYamlSerializer, once the controller's own
-            //   INetworkProviderManager consumption is unified onto the authored store so the controller
-            //   and the agents read the same authored value.
+
+            [ConfigDomain.NetworkProviders] = CanonicalizeNetworkProviders,
         };
+
+    // Network provider config has richer semantic rules than the shape check the serializer does
+    // (overlapping NAT subnets, per-type field restrictions, IP-pool bounds), so validate explicitly.
+    // The IP-pool next-IP cursor is runtime allocation state, not authored config, so strip it — the
+    // controller keeps the cursor in its own state, and authored versions must not churn on allocation.
+    private static string CanonicalizeNetworkProviders(string payload)
+    {
+        var config = NetworkProvidersConfigYamlSerializer.Deserialize(payload);
+
+        var validation = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+        if (validation.IsFail)
+            throw InvalidConfigExceptionFactory.Create(new Exception(
+                "The network provider configuration is invalid: "
+                + string.Join("; ", validation.FailToSeq().Map(issue => issue.Message))));
+
+        foreach (var provider in config.NetworkProviders ?? [])
+        foreach (var subnet in provider.Subnets ?? [])
+        foreach (var pool in subnet.IpPools ?? [])
+            pool.NextIp = null;
+
+        return NetworkProvidersConfigYamlSerializer.Serialize(config);
+    }
 
     public static bool IsAuthorable(ConfigDomain domain) => Authorable.ContainsKey(domain);
 
