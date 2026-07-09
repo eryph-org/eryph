@@ -81,7 +81,7 @@ internal sealed class SetConfigDomainCommandHandler(
             var providerConfig = NetworkProvidersConfigYamlSerializer.Deserialize(canonical);
             var realized = await networkSyncService
                 .SyncNetworks(providerConfig, CancellationToken.None)
-                .Match(_ => (Ok: true, Error: ""), error => (Ok: false, Error: error.Message));
+                .Match(_ => (Ok: true, Error: ""), e => (Ok: false, Error: e.Message));
             if (!realized.Ok)
             {
                 await messaging.FailTask(message,

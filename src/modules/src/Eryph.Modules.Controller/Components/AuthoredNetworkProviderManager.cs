@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using Eryph.Core;
 using Eryph.Core.Network;

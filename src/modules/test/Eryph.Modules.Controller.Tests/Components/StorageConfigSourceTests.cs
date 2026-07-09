@@ -63,7 +63,7 @@ public class StorageConfigSourceTests
 
         var storage = StorageConfigYamlSerializer.Deserialize(payload);
         storage.Datastores.Should().ContainSingle().Which.Path.Should().Be(@"D:\ds1");
-        storage.Environments.Select(e => e.Name).Should().BeEquivalentTo("env1");
+        storage.Environments.Should().ContainSingle().Which.Name.Should().Be("env1");
     }
 
     [Fact]

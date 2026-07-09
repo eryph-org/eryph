@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Eryph.Core.VmAgent;
@@ -20,8 +19,8 @@ public static class StorageConfigMerge
         new()
         {
             Defaults = MergeDefaults(local.Defaults, distributed.Defaults),
-            Datastores = MergeDatastores(local.Datastores, distributed.Datastores ?? []),
-            Environments = MergeEnvironments(local.Environments, distributed.Environments ?? []),
+            Datastores = MergeDatastores(local.Datastores, distributed.Datastores),
+            Environments = MergeEnvironments(local.Environments, distributed.Environments),
             Ovn = local.Ovn,
         };
 
@@ -37,14 +36,17 @@ public static class StorageConfigMerge
             };
 
     private static VmHostAgentDataStoreConfiguration[] MergeDatastores(
-        VmHostAgentDataStoreConfiguration[]? local, StorageDatastoreConfig[] distributed)
+        VmHostAgentDataStoreConfiguration[]? local, StorageDatastoreConfig[]? distributed)
     {
-        var distributedNames = distributed
+        var distributedItems = distributed ?? [];
+        var distributedNames = distributedItems
             .Select(d => d.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var distributedPaths = distributed
-            .Where(d => !string.IsNullOrWhiteSpace(d.Path))
-            .Select(d => NormalizePath(d.Path!))
+        var distributedPaths = distributedItems
+            .Select(d => d.Path)
+            .OfType<string>()
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(NormalizePath)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var result = (local ?? [])
@@ -56,7 +58,7 @@ public static class StorageConfigMerge
                         || !distributedPaths.Contains(NormalizePath(d.Path)))
             .ToDictionary(d => d.Name, d => d, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var datastore in distributed)
+        foreach (var datastore in distributedItems)
         {
             result.TryGetValue(datastore.Name, out var existing);
 
@@ -80,12 +82,12 @@ public static class StorageConfigMerge
     }
 
     private static VmHostAgentEnvironmentConfiguration[] MergeEnvironments(
-        VmHostAgentEnvironmentConfiguration[]? local, StorageEnvironmentConfig[] distributed)
+        VmHostAgentEnvironmentConfiguration[]? local, StorageEnvironmentConfig[]? distributed)
     {
         var result = (local ?? [])
             .ToDictionary(e => e.Name, e => e, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var environment in distributed)
+        foreach (var environment in distributed ?? [])
         {
             result.TryGetValue(environment.Name, out var existing);
 
@@ -113,7 +115,7 @@ public static class StorageConfigMerge
     private static bool ContributesPaths(StorageEnvironmentConfig environment) =>
         !string.IsNullOrWhiteSpace(environment.Defaults?.Vms)
         || !string.IsNullOrWhiteSpace(environment.Defaults?.Volumes)
-        || (environment.Datastores ?? []).Any(d => !string.IsNullOrWhiteSpace(d?.Path));
+        || (environment.Datastores ?? []).Any(d => !string.IsNullOrWhiteSpace(d.Path));
 
     private static string NormalizePath(string path) =>
         Path.TrimEndingDirectorySeparator(path).ToLowerInvariant();

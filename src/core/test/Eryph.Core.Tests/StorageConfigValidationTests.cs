@@ -104,22 +104,6 @@ public class StorageConfigValidationTests
     }
 
     [Fact]
-    public void Validate_reports_a_null_datastore_entry_without_throwing()
-    {
-        var config = new StorageConfig
-        {
-            Datastores = [null!],
-            Environments = [],
-        };
-
-        IReadOnlyList<string> errors = [];
-        Action act = () => errors = StorageConfigValidation.Validate(config);
-
-        act.Should().NotThrow();
-        errors.Should().NotBeEmpty();
-    }
-
-    [Fact]
     public void Validate_rejects_duplicate_datastore_names_case_insensitively()
     {
         var config = new StorageConfig

@@ -35,7 +35,7 @@ public class StorageConfigMapperTests
         var prod = storage.Environments.Should().ContainSingle().Subject;
         prod.Name.Should().Be("prod");
         prod.Defaults!.Vms.Should().Be(@"E:\prod\vms");
-        prod.Datastores.Single().Path.Should().Be(@"E:\prod\fast");
+        prod.Datastores.Should().ContainSingle().Which.Path.Should().Be(@"E:\prod\fast");
         // StorageConfig has no place for WatchFileSystem/OVN — they are agent-local and not distributed.
     }
 

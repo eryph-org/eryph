@@ -12,9 +12,12 @@ public sealed class StorageConfig
     /// <summary>Global default VM/volume base paths; null leaves the agent's local/host defaults.</summary>
     public StorageDefaultsConfig? Defaults { get; set; }
 
-    public StorageDatastoreConfig[] Datastores { get; set; } = [];
+    // Nullable because this is a deserialized (YAML) contract: an omitted section or an explicit
+    // `datastores: ~` deserializes the array to null, which the non-null annotation would hide. Consumers
+    // coalesce with `?? []`. (A null list *item* is malformed input, caught as an invalid payload.)
+    public StorageDatastoreConfig[]? Datastores { get; set; } = [];
 
-    public StorageEnvironmentConfig[] Environments { get; set; } = [];
+    public StorageEnvironmentConfig[]? Environments { get; set; } = [];
 }
 
 /// <summary>
@@ -44,5 +47,5 @@ public sealed class StorageEnvironmentConfig
 
     public StorageDefaultsConfig? Defaults { get; set; }
 
-    public StorageDatastoreConfig[] Datastores { get; set; } = [];
+    public StorageDatastoreConfig[]? Datastores { get; set; } = [];
 }

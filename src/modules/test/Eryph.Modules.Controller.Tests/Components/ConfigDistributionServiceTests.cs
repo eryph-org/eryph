@@ -118,7 +118,7 @@ public class ConfigDistributionServiceTests
 
         var payload = StorageConfigYamlSerializer.Deserialize(bundles[0].Payload);
         payload.Datastores.Should().ContainSingle().Which.Path.Should().Be(@"D:\ds1");
-        payload.Environments.Select(e => e.Name).Should().BeEquivalentTo("env1");
+        payload.Environments.Should().ContainSingle().Which.Name.Should().Be("env1");
     }
 
     [Fact]

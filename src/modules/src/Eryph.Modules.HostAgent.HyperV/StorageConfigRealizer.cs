@@ -106,7 +106,7 @@ internal sealed class StorageConfigRealizer(
         var mappedWithPath = (merged.Datastores ?? [])
             .Where(d => !string.IsNullOrWhiteSpace(d.Path))
             .Select(d => d.Name)
-            .ToHashSet(System.StringComparer.OrdinalIgnoreCase);
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var datastore in distributed.Datastores ?? [])
             if (!mappedWithPath.Contains(datastore.Name))

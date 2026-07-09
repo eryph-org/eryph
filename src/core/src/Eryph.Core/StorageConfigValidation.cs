@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using Eryph.Core.VmAgent;
 
@@ -38,42 +37,30 @@ public static class StorageConfigValidation
     }
 
     private static void ValidateEnvironments(
-        StorageEnvironmentConfig[] environments, List<string> errors)
+        StorageEnvironmentConfig[]? environments, List<string> errors)
     {
-        foreach (var environment in environments)
+        foreach (var environment in environments ?? [])
         {
-            if (environment is null)
-            {
-                errors.Add("An environment entry must not be null.");
-                continue;
-            }
-
             ValidateName("environment", environment.Name, n => new EnvironmentName(n), errors);
             ValidateDefaults(environment.Defaults, $"environment '{environment.Name}'", errors);
             ValidateDatastores(environment.Datastores, $"environment '{environment.Name}' ", errors);
         }
 
         ValidateNoDuplicateNames(
-            environments.Where(e => e is not null).Select(e => e.Name), "environment", errors);
+            (environments ?? []).Select(e => e.Name), "environment", errors);
     }
 
     private static void ValidateDatastores(
-        StorageDatastoreConfig[] datastores, string context, List<string> errors)
+        StorageDatastoreConfig[]? datastores, string context, List<string> errors)
     {
-        foreach (var datastore in datastores)
+        foreach (var datastore in datastores ?? [])
         {
-            if (datastore is null)
-            {
-                errors.Add($"A {context}datastore entry must not be null.");
-                continue;
-            }
-
             ValidateName($"{context}datastore", datastore.Name, n => new DataStoreName(n), errors);
             ValidatePath($"{context}datastore '{datastore.Name}'", datastore.Path, errors);
         }
 
         ValidateNoDuplicateNames(
-            datastores.Where(d => d is not null).Select(d => d.Name), $"{context}datastore", errors);
+            (datastores ?? []).Select(d => d.Name), $"{context}datastore", errors);
     }
 
     private static void ValidateDefaults(
@@ -109,9 +96,9 @@ public static class StorageConfigValidation
 
     /// <summary>
     /// Whether a path is a well-formed, fully-qualified storage path. Uses the OS-agnostic Windows-path
-    /// check (not <see cref="System.IO.Path.IsPathFullyQualified"/>, which would reject a valid Windows
-    /// path when evaluated on Linux) so every consumer — controller authoring, the agent, and the gene
-    /// pool, any of which may run cross-platform — agrees.
+    /// check (not <c>System.IO.Path.IsPathFullyQualified</c>, which would reject a valid Windows path
+    /// when evaluated on Linux) so every consumer — controller authoring, the agent, and the gene pool,
+    /// any of which may run cross-platform — agrees.
     /// </summary>
     public static bool IsFullyQualifiedPath(string? path) =>
         !string.IsNullOrWhiteSpace(path) && Validations.ValidateWindowsPath(path, "path").IsSuccess;
@@ -142,11 +129,12 @@ public static class StorageConfigValidation
     private static void ValidateNoDuplicatePaths(StorageConfig config, List<string> errors)
     {
         var paths = CollectPaths(config.Defaults)
-            .Concat(config.Datastores.Where(d => d is not null).Select(d => d.Path))
-            .Concat(config.Environments.Where(e => e is not null).SelectMany(e =>
-                CollectPaths(e.Defaults).Concat(e.Datastores.Where(d => d is not null).Select(d => d.Path))))
+            .Concat((config.Datastores ?? []).Select(d => d.Path))
+            .Concat((config.Environments ?? []).SelectMany(e =>
+                CollectPaths(e.Defaults).Concat((e.Datastores ?? []).Select(d => d.Path))))
+            .OfType<string>()
             .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(p => System.IO.Path.TrimEndingDirectorySeparator(p!).ToLowerInvariant());
+            .Select(p => System.IO.Path.TrimEndingDirectorySeparator(p).ToLowerInvariant());
 
         foreach (var duplicate in paths.GroupBy(p => p).Where(g => g.Count() > 1).Select(g => g.Key))
             errors.Add($"The path '{duplicate}' is not unique.");
@@ -158,12 +146,14 @@ public static class StorageConfigValidation
     /// <summary>Whether the controller's placement vocabulary permits the datastore name.</summary>
     public static bool IsDataStoreAllowed(StorageConfig distributed, string dataStoreName) =>
         string.Equals(dataStoreName, EryphConstants.DefaultDataStoreName, StringComparison.OrdinalIgnoreCase)
-        || distributed.Datastores.Any(d => string.Equals(d.Name, dataStoreName, StringComparison.OrdinalIgnoreCase));
+        || (distributed.Datastores ?? [])
+            .Any(d => string.Equals(d.Name, dataStoreName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Whether the controller's placement vocabulary permits the environment name.</summary>
     public static bool IsEnvironmentAllowed(StorageConfig distributed, string environmentName) =>
         string.Equals(environmentName, EryphConstants.DefaultEnvironmentName, StringComparison.OrdinalIgnoreCase)
-        || distributed.Environments.Any(e => string.Equals(e.Name, environmentName, StringComparison.OrdinalIgnoreCase));
+        || (distributed.Environments ?? [])
+            .Any(e => string.Equals(e.Name, environmentName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Local datastore names that are not part of the distributed vocabulary and will

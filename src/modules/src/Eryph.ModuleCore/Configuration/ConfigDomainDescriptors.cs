@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Components;
-using LanguageExt;
 
 namespace Eryph.ModuleCore.Configuration;
 
@@ -60,19 +58,14 @@ public static class ConfigDomainDescriptors
         config.Environments ??= [];
 
         foreach (var datastore in config.Datastores)
-            if (datastore?.Name is not null)
-                datastore.Name = datastore.Name.Trim().ToLowerInvariant();
+            datastore.Name = datastore.Name.Trim().ToLowerInvariant();
 
         foreach (var environment in config.Environments)
         {
-            if (environment is null)
-                continue;
-            if (environment.Name is not null)
-                environment.Name = environment.Name.Trim().ToLowerInvariant();
+            environment.Name = environment.Name.Trim().ToLowerInvariant();
             environment.Datastores ??= [];
             foreach (var datastore in environment.Datastores)
-                if (datastore?.Name is not null)
-                    datastore.Name = datastore.Name.Trim().ToLowerInvariant();
+                datastore.Name = datastore.Name.Trim().ToLowerInvariant();
         }
     }
 
