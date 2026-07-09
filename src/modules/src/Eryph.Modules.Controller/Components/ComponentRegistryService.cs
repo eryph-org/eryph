@@ -152,7 +152,7 @@ internal sealed class ComponentRegistryService(
     public async Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
-        IReadOnlyDictionary<string, string>? tags,
+        IReadOnlyDictionary<string, string?>? tags,
         CancellationToken cancellationToken)
     {
         var registration = await repository.GetBySpecAsync(
@@ -174,7 +174,8 @@ internal sealed class ComponentRegistryService(
         {
             if (!ConfigScope.IsValidTagKey(tag.Key, out var tagError))
                 throw new InvalidOperationException(tagError);
-            normalizedTags[tag.Key.Trim().ToLowerInvariant()] = tag.Value.Trim().ToLowerInvariant();
+            // A null value is a valid selector value (empty); normalize it to "" rather than throwing.
+            normalizedTags[tag.Key.Trim().ToLowerInvariant()] = tag.Value?.Trim().ToLowerInvariant() ?? "";
         }
 
         registration.Tags = normalizedTags;

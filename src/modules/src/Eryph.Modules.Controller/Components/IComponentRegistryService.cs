@@ -68,7 +68,7 @@ internal interface IComponentRegistryService
     Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
-        IReadOnlyDictionary<string, string>? tags,
+        IReadOnlyDictionary<string, string?>? tags,
         CancellationToken cancellationToken);
 
     /// <summary>The registration for a component, or <c>null</c> when it is not registered.</summary>
