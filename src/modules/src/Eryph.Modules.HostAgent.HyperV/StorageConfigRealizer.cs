@@ -78,8 +78,11 @@ internal sealed class StorageConfigRealizer(
     private static Either<Error, Unit> Validate(VmHostAgentConfiguration config) =>
         VmHostAgentConfigurationValidations.ValidateVmHostAgentConfig(config)
             .ToEither()
+            // Fold the individual issues into the message so surfacing it (Message) does not drop the
+            // detail — the reason a merged config was rejected must reach the operator.
             .MapLeft(issues => Error.New(
-                "The merged storage configuration is invalid.", Error.Many(issues.Map(i => i.ToError()))));
+                "The merged storage configuration is invalid: "
+                + string.Join("; ", issues.Map(i => i.Message))));
 
     private void WarnAboutUnusedLocalConfig(StorageConfig distributed, VmHostAgentConfiguration local)
     {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +17,13 @@ internal sealed class ComponentConfigState : IComponentConfigState
     public long GetAppliedVersion(ConfigDomain domain, string scope) =>
         _applied.GetValueOrDefault((domain, scope), 0);
 
+    // Ordered by (domain, scope) so the reported list is deterministic: ConcurrentDictionary enumeration
+    // order is not stable, and this list is sent in heartbeats and persisted, so an unstable order would
+    // cause spurious registration updates on every beat even when the content is unchanged.
     public IReadOnlyList<AppliedConfigVersion> GetApplied() =>
         _applied
+            .OrderBy(kv => kv.Key.Domain)
+            .ThenBy(kv => kv.Key.Scope, StringComparer.Ordinal)
             .Select(kv => new AppliedConfigVersion
             {
                 Domain = kv.Key.Domain,
