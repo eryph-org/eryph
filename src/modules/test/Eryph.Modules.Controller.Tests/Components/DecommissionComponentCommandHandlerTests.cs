@@ -76,7 +76,7 @@ public class DecommissionComponentCommandHandlerTests
     private sealed class StubRegistry(bool revokeResult) : IComponentRegistryService
     {
         public Task<bool> SetMetadataAsync(
-            Guid componentId, string? environment, IReadOnlyDictionary<string, string>? tags,
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string?>? tags,
             CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public List<Guid> Revoked { get; } = [];

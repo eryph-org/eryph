@@ -34,7 +34,7 @@ public class SetComponentMetadataCommandHandlerTests
             {
                 ComponentId = componentId,
                 Environment = "prod",
-                Tags = new Dictionary<string, string> { ["rack"] = "r1" },
+                Tags = new Dictionary<string, string?> { ["rack"] = "r1" },
             },
             Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow);
 
@@ -93,7 +93,7 @@ public class SetComponentMetadataCommandHandlerTests
     }
 
     private OperationTask<SetComponentMetadataCommand> OpWith(
-        Guid componentId, string? environment, Dictionary<string, string> tags) =>
+        Guid componentId, string? environment, Dictionary<string, string?> tags) =>
         new(new SetComponentMetadataCommand
             {
                 ComponentId = componentId,
@@ -129,51 +129,51 @@ public class SetComponentMetadataCommandHandlerTests
     public async Task A_tag_key_containing_an_equals_sign_is_rejected()
     {
         await AssertRejected(OpWith(
-            Guid.NewGuid(), null, new Dictionary<string, string> { ["k=v"] = "r1" }));
+            Guid.NewGuid(), null, new Dictionary<string, string?> { ["k=v"] = "r1" }));
     }
 
     [Fact]
     public async Task A_tag_key_containing_a_colon_is_rejected()
     {
         await AssertRejected(OpWith(
-            Guid.NewGuid(), null, new Dictionary<string, string> { ["k:v"] = "r1" }));
+            Guid.NewGuid(), null, new Dictionary<string, string?> { ["k:v"] = "r1" }));
     }
 
     [Fact]
     public async Task A_tag_key_containing_whitespace_is_rejected()
     {
         await AssertRejected(OpWith(
-            Guid.NewGuid(), null, new Dictionary<string, string> { ["k v"] = "r1" }));
+            Guid.NewGuid(), null, new Dictionary<string, string?> { ["k v"] = "r1" }));
     }
 
     [Fact]
     public async Task An_environment_exceeding_the_max_length_is_rejected()
     {
         await AssertRejected(OpWith(
-            Guid.NewGuid(), new string('a', 300), new Dictionary<string, string>()));
+            Guid.NewGuid(), new string('a', 300), new Dictionary<string, string?>()));
     }
 
     [Fact]
     public async Task A_tag_whose_canonical_selector_exceeds_the_max_length_is_rejected()
     {
         await AssertRejected(OpWith(
-            Guid.NewGuid(), null, new Dictionary<string, string> { ["k"] = new string('b', 300) }));
+            Guid.NewGuid(), null, new Dictionary<string, string?> { ["k"] = new string('b', 300) }));
     }
 
     private sealed class StubRegistry(bool found) : IComponentRegistryService
     {
         public Guid LastComponentId { get; private set; }
         public string? LastEnvironment { get; private set; }
-        public IReadOnlyDictionary<string, string> LastTags { get; private set; } = new Dictionary<string, string>();
+        public IReadOnlyDictionary<string, string?> LastTags { get; private set; } = new Dictionary<string, string?>();
         public ComponentRegistration? Registration { get; init; }
 
         public Task<bool> SetMetadataAsync(
-            Guid componentId, string? environment, IReadOnlyDictionary<string, string>? tags,
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string?>? tags,
             CancellationToken cancellationToken)
         {
             LastComponentId = componentId;
             LastEnvironment = environment;
-            LastTags = tags ?? new Dictionary<string, string>();
+            LastTags = tags ?? new Dictionary<string, string?>();
             return Task.FromResult(found);
         }
 

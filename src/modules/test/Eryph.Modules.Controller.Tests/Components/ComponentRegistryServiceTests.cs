@@ -241,7 +241,7 @@ public class ComponentRegistryServiceTests
         var (service, repo) = Create(existing);
 
         var found = await service.SetMetadataAsync(
-            componentId, "prod", new Dictionary<string, string> { ["rack"] = "r1" }, CancellationToken.None);
+            componentId, "prod", new Dictionary<string, string?> { ["rack"] = "r1" }, CancellationToken.None);
 
         found.Should().BeTrue();
         existing.Environment.Should().Be("prod");
@@ -265,7 +265,7 @@ public class ComponentRegistryServiceTests
         var (service, _) = Create(existing);
 
         await service.SetMetadataAsync(
-            componentId, "edge", new Dictionary<string, string>(), CancellationToken.None);
+            componentId, "edge", new Dictionary<string, string?>(), CancellationToken.None);
 
         // A scope change is naturally reconciled by the distribution loop, since applied versions are
         // tracked per (domain, scope) — not by resetting them here (which a racing heartbeat could
@@ -274,12 +274,32 @@ public class ComponentRegistryServiceTests
     }
 
     [Fact]
+    public async Task SetMetadata_normalizes_a_null_tag_value_to_empty_without_throwing()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+        };
+        var (service, _) = Create(existing);
+
+        // A deserialized message can carry a null tag value; it is normalized to the empty selector value.
+        var found = await service.SetMetadataAsync(
+            componentId, null, new Dictionary<string, string?> { ["rack"] = null }, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Tags.Should().ContainKey("rack");
+        existing.Tags["rack"].Should().Be("");
+    }
+
+    [Fact]
     public async Task SetMetadata_returns_false_for_an_unknown_component()
     {
         var (service, repo) = Create();
 
         var found = await service.SetMetadataAsync(
-            Guid.NewGuid(), "prod", new Dictionary<string, string>(), CancellationToken.None);
+            Guid.NewGuid(), "prod", new Dictionary<string, string?>(), CancellationToken.None);
 
         found.Should().BeFalse();
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -322,7 +342,7 @@ public class ComponentRegistryServiceTests
         var (service, _) = Create(existing);
 
         await service.SetMetadataAsync(
-            componentId, "prod", new Dictionary<string, string> { ["zone"] = "z1" }, CancellationToken.None);
+            componentId, "prod", new Dictionary<string, string?> { ["zone"] = "z1" }, CancellationToken.None);
 
         existing.Tags.Should().ContainSingle().Which.Key.Should().Be("zone");
     }
@@ -338,7 +358,7 @@ public class ComponentRegistryServiceTests
         };
         var (service, _) = Create(existing);
 
-        await service.SetMetadataAsync(componentId, "", new Dictionary<string, string>(), CancellationToken.None);
+        await service.SetMetadataAsync(componentId, "", new Dictionary<string, string?>(), CancellationToken.None);
 
         existing.Environment.Should().BeNull();
     }

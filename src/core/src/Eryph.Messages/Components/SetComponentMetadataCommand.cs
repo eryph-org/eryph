@@ -18,6 +18,8 @@ public class SetComponentMetadataCommand : IHasCorrelationId
     /// <summary>The environment to assign, or null to clear it.</summary>
     public string? Environment { get; set; }
 
-    /// <summary>The complete replacement tag set (key → value); a null set is treated as no tags.</summary>
-    public Dictionary<string, string>? Tags { get; set; } = new();
+    /// <summary>The complete replacement tag set (key → value). A null set is treated as no tags; a null
+    /// value as an empty one. The value type is nullable because this message is populated by
+    /// deserialization, which can yield null values regardless of the domain intent.</summary>
+    public Dictionary<string, string?>? Tags { get; set; } = new();
 }

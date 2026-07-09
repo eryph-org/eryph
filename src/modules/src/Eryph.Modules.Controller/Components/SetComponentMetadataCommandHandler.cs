@@ -39,7 +39,7 @@ internal sealed class SetComponentMetadataCommandHandler(
             return;
         }
 
-        foreach (var tag in command.Tags ?? new Dictionary<string, string>())
+        foreach (var tag in command.Tags ?? new Dictionary<string, string?>())
         {
             // Validate the raw key first: reconstructing "tag:key=value" and canonicalizing splits on the
             // first '=', so a key containing '=' would otherwise be silently reinterpreted as part of the
