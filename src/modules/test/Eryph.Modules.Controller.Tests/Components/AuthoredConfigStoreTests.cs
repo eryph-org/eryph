@@ -113,13 +113,14 @@ public abstract class AuthoredConfigStoreTests(ITestOutputHelper outputHelper, I
     [Fact]
     public async Task Versions_are_independent_per_scope()
     {
-        await AddVersion(ConfigDomain.NetworkProviders, ConfigScope.Default, "default-1");
-        await AddVersion(ConfigDomain.NetworkProviders, "environment=prod", "prod-1");
-        await AddVersion(ConfigDomain.NetworkProviders, "environment=prod", "prod-2");
+        var prodScope = ConfigScope.ForEnvironment("prod");
+        await AddVersion(ConfigDomain.StorageConfig, ConfigScope.Default, "default-1");
+        await AddVersion(ConfigDomain.StorageConfig, prodScope, "prod-1");
+        await AddVersion(ConfigDomain.StorageConfig, prodScope, "prod-2");
 
-        (await GetCurrent(ConfigDomain.NetworkProviders, ConfigScope.Default))!.Version.Should().Be(1);
+        (await GetCurrent(ConfigDomain.StorageConfig, ConfigScope.Default))!.Version.Should().Be(1);
 
-        var prod = await GetCurrent(ConfigDomain.NetworkProviders, "environment=prod");
+        var prod = await GetCurrent(ConfigDomain.StorageConfig, prodScope);
         prod!.Version.Should().Be(2);
         prod.Payload.Should().Be("prod-2");
     }

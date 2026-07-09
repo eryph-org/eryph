@@ -107,14 +107,22 @@ public static class StorageConfigValidation
         }
     }
 
-    // Paths are optional; validate the shape (fully-qualified) only where a path is present. Uses the
-    // OS-agnostic Windows-path check because the controller authoring this may run on Linux.
+    /// <summary>
+    /// Whether a path is a well-formed, fully-qualified storage path. Uses the OS-agnostic Windows-path
+    /// check (not <see cref="System.IO.Path.IsPathFullyQualified"/>, which would reject a valid Windows
+    /// path when evaluated on Linux) so every consumer — controller authoring, the agent, and the gene
+    /// pool, any of which may run cross-platform — agrees.
+    /// </summary>
+    public static bool IsFullyQualifiedPath(string? path) =>
+        !string.IsNullOrWhiteSpace(path) && Validations.ValidateWindowsPath(path, "path").IsSuccess;
+
+    // Paths are optional; validate the shape (fully-qualified) only where a path is present.
     private static void ValidatePath(string context, string? path, List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(path))
             return;
 
-        if (Validations.ValidateWindowsPath(path, context).IsFail)
+        if (!IsFullyQualifiedPath(path))
             errors.Add($"The {context} path '{path}' must be a valid, fully-qualified path.");
     }
 

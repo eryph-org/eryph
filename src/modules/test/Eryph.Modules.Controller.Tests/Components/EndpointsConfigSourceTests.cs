@@ -142,7 +142,7 @@ public class EndpointsConfigSourceTests
     private sealed class StubRegistry(IReadOnlyList<ComponentRegistration> active) : IComponentRegistryService
     {
         public Task<bool> SetMetadataAsync(
-            Guid componentId, string? environment, IReadOnlyDictionary<string, string> tags,
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string>? tags,
             CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<ComponentRegistration> UpsertAsync(RegisterComponentCommand command,

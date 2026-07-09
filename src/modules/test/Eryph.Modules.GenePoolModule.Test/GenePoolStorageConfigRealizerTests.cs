@@ -50,6 +50,25 @@ public class GenePoolStorageConfigRealizerTests
     }
 
     [Fact]
+    public async Task Apply_accepts_a_windows_absolute_default_volumes_path_regardless_of_the_running_os()
+    {
+        GenePoolStoreSettings? saved = null;
+        var manager = new Mock<IGenePoolStorageSettingsManager>();
+        manager.Setup(m => m.SaveSettings(It.IsAny<GenePoolStoreSettings>()))
+            .Callback<GenePoolStoreSettings>(s => saved = s)
+            .Returns(RightAsync<Error, Unit>(unit));
+
+        var realizer = new GenePoolStorageConfigRealizer(
+            manager.Object, NullLogger<GenePoolStorageConfigRealizer>.Instance);
+
+        await realizer.Invoking(r => r.ApplyAsync(1, Payload(@"C:\eryph\volumes"), default))
+            .Should().NotThrowAsync();
+
+        saved.Should().NotBeNull();
+        saved!.Path.Should().Be(Path.Combine(@"C:\eryph\volumes", "genepool"));
+    }
+
+    [Fact]
     public async Task Apply_throws_and_does_not_save_when_the_default_volumes_path_is_not_fully_qualified()
     {
         var manager = new Mock<IGenePoolStorageSettingsManager>();

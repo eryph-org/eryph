@@ -108,7 +108,7 @@ internal sealed class StorageConfigRealizer(
             .Select(d => d.Name)
             .ToHashSet(System.StringComparer.OrdinalIgnoreCase);
 
-        foreach (var datastore in distributed.Datastores)
+        foreach (var datastore in distributed.Datastores ?? [])
             if (!mappedWithPath.Contains(datastore.Name))
                 logger.LogWarning(
                     "Distributed datastore '{DataStore}' has no local path on this host; catlets cannot be placed "

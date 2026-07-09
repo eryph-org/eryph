@@ -64,6 +64,27 @@ public class StorageConfigRealizerTests
             .Should().ThrowAsync<System.InvalidOperationException>();
     }
 
+    [Fact]
+    public async Task Apply_does_not_throw_when_the_distributed_datastores_are_null()
+    {
+        // Regression guard: a payload like "datastores: ~" deserializes Datastores to null. The warn
+        // loops over distributed/local datastores must tolerate that instead of NREing.
+        const string nullDatastoresPayload = "datastores: ~\n";
+
+        var manager = new Mock<IVmHostAgentConfigurationManager>();
+        manager.Setup(m => m.GetCurrentConfiguration(It.IsAny<Core.HostSettings>()))
+            .Returns(RightAsync<Error, VmHostAgentConfiguration>(new VmHostAgentConfiguration()));
+        manager.Setup(m => m.SaveConfiguration(It.IsAny<VmHostAgentConfiguration>(), It.IsAny<Core.HostSettings>()))
+            .Returns(RightAsync<Error, Unit>(unit));
+
+        var realizer = new StorageConfigRealizer(
+            new StubStorageConfigProvider(), HostSettings().Object, manager.Object,
+            NullLogger<StorageConfigRealizer>.Instance);
+
+        await realizer.Invoking(r => r.ApplyAsync(1, nullDatastoresPayload, default))
+            .Should().NotThrowAsync();
+    }
+
     // IStorageConfigProvider is internal; hand-stubbed (Moq cannot proxy internal interfaces here).
     private sealed class StubStorageConfigProvider : IStorageConfigProvider
     {

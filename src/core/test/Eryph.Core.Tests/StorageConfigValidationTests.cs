@@ -77,4 +77,91 @@ public class StorageConfigValidationTests
         StorageConfigValidation.GetUnusedLocalDatastores(distributed, local).Should().BeEmpty();
         StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local).Should().BeEmpty();
     }
+
+    [Fact]
+    public void Validate_accepts_a_well_formed_config()
+    {
+        var config = new StorageConfig
+        {
+            Defaults = new StorageDefaultsConfig { Vms = @"D:\vms", Volumes = @"D:\volumes" },
+            Datastores = [new StorageDatastoreConfig { Name = "fast", Path = @"D:\fast" }],
+            Environments = [],
+        };
+
+        StorageConfigValidation.Validate(config).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validate_rejects_an_invalid_environment_name()
+    {
+        var config = new StorageConfig
+        {
+            Datastores = [],
+            Environments = [new StorageEnvironmentConfig { Name = "bad env!" }],
+        };
+
+        StorageConfigValidation.Validate(config).Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Validate_reports_a_null_datastore_entry_without_throwing()
+    {
+        var config = new StorageConfig
+        {
+            Datastores = [null!],
+            Environments = [],
+        };
+
+        IReadOnlyList<string> errors = [];
+        Action act = () => errors = StorageConfigValidation.Validate(config);
+
+        act.Should().NotThrow();
+        errors.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Validate_rejects_duplicate_datastore_names_case_insensitively()
+    {
+        var config = new StorageConfig
+        {
+            Datastores =
+            [
+                new StorageDatastoreConfig { Name = "Fast", Path = @"D:\fast1" },
+                new StorageDatastoreConfig { Name = "fast", Path = @"D:\fast2" },
+            ],
+            Environments = [],
+        };
+
+        StorageConfigValidation.Validate(config).Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Validate_rejects_a_duplicate_path_between_an_environments_defaults_and_a_datastore()
+    {
+        var config = new StorageConfig
+        {
+            Datastores = [],
+            Environments =
+            [
+                new StorageEnvironmentConfig
+                {
+                    Name = "staging",
+                    Defaults = new StorageDefaultsConfig { Vms = @"D:\shared" },
+                    Datastores = [new StorageDatastoreConfig { Name = "fast", Path = @"D:\shared" }],
+                },
+            ],
+        };
+
+        StorageConfigValidation.Validate(config).Should().NotBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(@"D:\x", true)]
+    [InlineData(@"relative\x", false)]
+    [InlineData(null, false)]
+    [InlineData("  ", false)]
+    public void IsFullyQualifiedPath_checks_well_formedness_in_an_os_agnostic_way(string? path, bool expected)
+    {
+        StorageConfigValidation.IsFullyQualifiedPath(path).Should().Be(expected);
+    }
 }

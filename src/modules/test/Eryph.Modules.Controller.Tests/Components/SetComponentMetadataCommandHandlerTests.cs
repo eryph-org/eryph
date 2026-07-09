@@ -92,6 +92,74 @@ public class SetComponentMetadataCommandHandlerTests
             It.IsAny<string>(), It.IsAny<object>(), It.IsAny<IDictionary<string, string>?>()), Times.Never());
     }
 
+    private OperationTask<SetComponentMetadataCommand> OpWith(
+        Guid componentId, string? environment, Dictionary<string, string> tags) =>
+        new(new SetComponentMetadataCommand
+            {
+                ComponentId = componentId,
+                Environment = environment,
+                Tags = tags,
+            },
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow);
+
+    private async Task AssertRejected(OperationTask<SetComponentMetadataCommand> op)
+    {
+        var registry = new StubRegistry(found: true)
+        {
+            Registration = new ComponentRegistration
+            {
+                ComponentId = op.Command.ComponentId,
+                ComponentType = ComponentType.VMHostAgent,
+                MachineName = "host1",
+                InboundQueue = "q",
+            },
+        };
+        var handler = new SetComponentMetadataCommandHandler(_bus.Object, registry, _messaging.Object);
+
+        await handler.Handle(op);
+
+        registry.LastComponentId.Should().Be(Guid.Empty);
+        VerifyCompleted(Times.Never());
+    }
+
+    // A tag key containing '=' must be rejected via the explicit raw-key check: reconstructing
+    // "tag:{key}={value}" and canonicalizing splits on the first '=', so without the raw-key check
+    // "k=v" would be silently reinterpreted as key "k" / value "v=..." instead of being rejected.
+    [Fact]
+    public async Task A_tag_key_containing_an_equals_sign_is_rejected()
+    {
+        await AssertRejected(OpWith(
+            Guid.NewGuid(), null, new Dictionary<string, string> { ["k=v"] = "r1" }));
+    }
+
+    [Fact]
+    public async Task A_tag_key_containing_a_colon_is_rejected()
+    {
+        await AssertRejected(OpWith(
+            Guid.NewGuid(), null, new Dictionary<string, string> { ["k:v"] = "r1" }));
+    }
+
+    [Fact]
+    public async Task A_tag_key_containing_whitespace_is_rejected()
+    {
+        await AssertRejected(OpWith(
+            Guid.NewGuid(), null, new Dictionary<string, string> { ["k v"] = "r1" }));
+    }
+
+    [Fact]
+    public async Task An_environment_exceeding_the_max_length_is_rejected()
+    {
+        await AssertRejected(OpWith(
+            Guid.NewGuid(), new string('a', 300), new Dictionary<string, string>()));
+    }
+
+    [Fact]
+    public async Task A_tag_whose_canonical_selector_exceeds_the_max_length_is_rejected()
+    {
+        await AssertRejected(OpWith(
+            Guid.NewGuid(), null, new Dictionary<string, string> { ["k"] = new string('b', 300) }));
+    }
+
     private sealed class StubRegistry(bool found) : IComponentRegistryService
     {
         public Guid LastComponentId { get; private set; }
@@ -100,12 +168,12 @@ public class SetComponentMetadataCommandHandlerTests
         public ComponentRegistration? Registration { get; init; }
 
         public Task<bool> SetMetadataAsync(
-            Guid componentId, string? environment, IReadOnlyDictionary<string, string> tags,
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string>? tags,
             CancellationToken cancellationToken)
         {
             LastComponentId = componentId;
             LastEnvironment = environment;
-            LastTags = tags;
+            LastTags = tags ?? new Dictionary<string, string>();
             return Task.FromResult(found);
         }
 

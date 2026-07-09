@@ -18,12 +18,18 @@ internal interface IComponentRegistryService
     /// <summary>
     /// Refreshes liveness from a periodic heartbeat and reconciles the recorded
     /// applied-config state with what the component reports. The heartbeat is the
-    /// component's authoritative current state: a restart (signalled by a new
-    /// <paramref name="instanceId"/>) resets <paramref name="appliedConfigVersions"/>,
-    /// so this overwrites rather than merges. Returns the updated registration, or
-    /// <c>null</c> when the component is not registered or the heartbeat is from a
-    /// superseded instance — in which case nothing is recorded and the caller must not
-    /// act on it (e.g. drift reconciliation).
+    /// component's authoritative current state, so this OVERWRITES rather than merges:
+    /// a restart (signalled by a new <paramref name="instanceId"/>) resets
+    /// <paramref name="appliedConfigVersions"/> to an empty/reduced set, and the
+    /// overwrite lets the next heartbeat re-drive distribution even if the restart-time
+    /// pull snapshot was lost. The trade-off is that a delayed heartbeat can briefly
+    /// regress the recorded version behind a newer <c>RecordAppliedAsync</c> ack from
+    /// the same instance; this is bounded to one heartbeat interval, self-heals on the
+    /// next beat, and is masked downstream by the component's own per-(domain, scope)
+    /// apply-skip, so it never causes an incorrect apply. Returns the updated
+    /// registration, or <c>null</c> when the component is not registered or the heartbeat
+    /// is from a superseded instance — in which case nothing is recorded and the caller
+    /// must not act on it (e.g. drift reconciliation).
     /// </summary>
     Task<ComponentRegistration?> RecordHeartbeatAsync(
         Guid componentId,

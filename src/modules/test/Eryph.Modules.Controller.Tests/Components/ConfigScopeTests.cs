@@ -186,4 +186,24 @@ public class ConfigScopeTests
         ConfigScope.ForEnvironment("Prod").Should().Be("env:prod");
         ConfigScope.ForTag("Rack", "R1").Should().Be("tag:rack=r1");
     }
+
+    [Fact]
+    public void TryCanonicalize_rejects_an_environment_scope_exceeding_the_max_length()
+    {
+        var ok = ConfigScope.TryCanonicalize("env:" + new string('a', 300), out _, out var error);
+
+        ok.Should().BeFalse();
+        error.Should().NotBeNull();
+        error.Should().Contain(ConfigScope.MaxLength.ToString());
+    }
+
+    [Fact]
+    public void TryCanonicalize_rejects_a_tag_scope_exceeding_the_max_length()
+    {
+        var ok = ConfigScope.TryCanonicalize("tag:k=" + new string('b', 300), out _, out var error);
+
+        ok.Should().BeFalse();
+        error.Should().NotBeNull();
+        error.Should().Contain(ConfigScope.MaxLength.ToString());
+    }
 }

@@ -48,8 +48,10 @@ internal sealed class GenePoolStorageConfigRealizer(
 
         // The controller validates authored paths, but the gene pool is a second consumer of the same
         // payload and must not be the least-validated writer: reject a non-fully-qualified volumes path
-        // rather than write a cwd-relative gene-pool root while the agent rejects the same payload.
-        if (!Path.IsPathFullyQualified(volumes))
+        // rather than write a cwd-relative gene-pool root while the agent rejects the same payload. Use
+        // the same OS-agnostic check as the controller/agent — the gene pool may run cross-platform, and
+        // System.IO.Path.IsPathFullyQualified would reject a valid Windows path when evaluated on Linux.
+        if (!StorageConfigValidation.IsFullyQualifiedPath(volumes))
             throw new InvalidOperationException(
                 $"The distributed default volumes path '{volumes}' is not fully qualified; "
                 + "the gene pool storage path cannot be derived from it.");
