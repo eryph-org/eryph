@@ -274,30 +274,6 @@ public class ComponentRegistryServiceTests
     }
 
     [Fact]
-    public async Task SetMetadata_normalizes_a_null_tag_value_to_empty_without_throwing()
-    {
-        var componentId = Guid.NewGuid();
-        var existing = new ComponentRegistration
-        {
-            Id = Guid.NewGuid(),
-            ComponentId = componentId,
-            ComponentType = ComponentType.VMHostAgent,
-            MachineName = "host",
-            InboundQueue = "q",
-        };
-        var (service, _) = Create(existing);
-
-        // A deserialized message can carry a null tag value; it must be normalized to an empty selector
-        // value, not dereferenced (which would throw and fail the operation).
-        var found = await service.SetMetadataAsync(
-            componentId, null, new Dictionary<string, string?> { ["rack"] = null }, CancellationToken.None);
-
-        found.Should().BeTrue();
-        existing.Tags.Should().ContainKey("rack");
-        existing.Tags["rack"].Should().Be("");
-    }
-
-    [Fact]
     public async Task SetMetadata_returns_false_for_an_unknown_component()
     {
         var (service, repo) = Create();

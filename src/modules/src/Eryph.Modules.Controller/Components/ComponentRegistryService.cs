@@ -152,7 +152,7 @@ internal sealed class ComponentRegistryService(
     public async Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
-        IReadOnlyDictionary<string, string?>? tags,
+        IReadOnlyDictionary<string, string>? tags,
         CancellationToken cancellationToken)
     {
         var registration = await repository.GetBySpecAsync(
@@ -174,7 +174,10 @@ internal sealed class ComponentRegistryService(
         {
             if (!ConfigScope.IsValidTagKey(tag.Key, out var tagError))
                 throw new InvalidOperationException(tagError);
-            // A null value is a valid selector value (empty); normalize it to "" rather than throwing.
+            // Tag values are non-null in the domain, but a deserialized wire message can still carry a
+            // null value; normalize it to the empty selector value rather than dereferencing it. (The
+            // null-conditional looks redundant against the non-null annotation — it is a deliberate guard
+            // at the deserialization boundary.)
             normalizedTags[tag.Key.Trim().ToLowerInvariant()] = tag.Value?.Trim().ToLowerInvariant() ?? "";
         }
 
