@@ -37,19 +37,20 @@ public class ComponentRegistration
     internal string AppliedConfigVersionsJson
     {
         get => JsonSerializer.Serialize(AppliedConfigVersions);
-        set => AppliedConfigVersions = Deserialize(value);
+        set => AppliedConfigVersions = DeserializeOrEmpty<Dictionary<ConfigDomain, Dictionary<string, long>>>(value);
     }
 
-    // Tolerate content that no longer parses (e.g. a renamed/removed ConfigDomain key from an older
-    // build): treat it as "nothing applied" rather than throwing, which would poison every read of this
+    // Tolerate content that no longer parses (e.g. a renamed/removed ConfigDomain key from an older build,
+    // or a corrupted value): treat it as empty rather than throwing, which would poison every read of this
     // registration (heartbeat, upsert) and wedge the component out of the catalog.
-    private static Dictionary<ConfigDomain, Dictionary<string, long>> Deserialize(string? json)
+    private static T DeserializeOrEmpty<T>(string? json)
+        where T : new()
     {
         if (string.IsNullOrEmpty(json))
             return new();
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<ConfigDomain, Dictionary<string, long>>>(json) ?? new();
+            return JsonSerializer.Deserialize<T>(json) ?? new();
         }
         catch (JsonException)
         {
@@ -88,10 +89,7 @@ public class ComponentRegistration
     internal string AdvertisedEndpointsJson
     {
         get => JsonSerializer.Serialize(AdvertisedEndpoints);
-        set => AdvertisedEndpoints = string.IsNullOrEmpty(value)
-            ? new Dictionary<string, string>()
-            : JsonSerializer.Deserialize<Dictionary<string, string>>(value)
-              ?? new Dictionary<string, string>();
+        set => AdvertisedEndpoints = DeserializeOrEmpty<Dictionary<string, string>>(value);
     }
 
     /// <summary>Service endpoints this component hosts and advertises (logical name → URL).</summary>
@@ -104,10 +102,7 @@ public class ComponentRegistration
     internal string TagsJson
     {
         get => JsonSerializer.Serialize(Tags);
-        set => Tags = string.IsNullOrEmpty(value)
-            ? new Dictionary<string, string>()
-            : JsonSerializer.Deserialize<Dictionary<string, string>>(value)
-              ?? new Dictionary<string, string>();
+        set => Tags = DeserializeOrEmpty<Dictionary<string, string>>(value);
     }
 
     /// <summary>Operator-assigned tags (key → value) used to target scoped configuration.
