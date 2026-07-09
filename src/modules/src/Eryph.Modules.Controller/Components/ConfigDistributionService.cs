@@ -125,6 +125,45 @@ internal sealed class ConfigDistributionService(
             domain, registration, registration.GetAppliedVersion, materialize: true, cancellationToken);
 
     /// <summary>
+    /// Re-evaluates a domain for a set of components and returns the bundles for those that are not
+    /// already current at their resolved scope. Each distinct resolved scope is materialized only once,
+    /// so the source payload is built once per scope rather than once per recipient — important for a
+    /// source that enumerates the fleet (e.g. Endpoints), where per-component materialization would be
+    /// O(components²).
+    /// </summary>
+    public async Task<IReadOnlyList<(ComponentRegistration Component, ConfigBundle Bundle)>> RefreshForComponentsAsync(
+        ConfigDomain domain,
+        IEnumerable<ComponentRegistration> components,
+        CancellationToken cancellationToken)
+    {
+        var results = new List<(ComponentRegistration, ConfigBundle)>();
+        var recordsByScope = new Dictionary<string, ConfigRecord?>();
+
+        foreach (var component in components)
+        {
+            var scope = await ResolveScopeAsync(domain, component, cancellationToken);
+            if (!recordsByScope.TryGetValue(scope, out var record))
+            {
+                record = (await EnsureCurrentRecordAsync(domain, scope, cancellationToken)).Record;
+                recordsByScope[scope] = record;
+            }
+
+            if (record is null || record.Version <= component.GetAppliedVersion(domain, scope))
+                continue;
+
+            results.Add((component, new ConfigBundle
+            {
+                Domain = domain,
+                Scope = scope,
+                Version = record.Version,
+                Payload = record.Payload,
+            }));
+        }
+
+        return results;
+    }
+
+    /// <summary>
     /// Decides whether a component needs the current value of a domain and, if so, returns the bundle.
     /// The component's applied version is looked up for the RESOLVED scope; because each (domain, scope)
     /// has an independent counter, a component moved to a new scope has applied 0 there and is correctly

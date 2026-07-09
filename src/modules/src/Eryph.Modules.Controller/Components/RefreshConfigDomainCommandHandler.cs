@@ -25,30 +25,25 @@ internal sealed class RefreshConfigDomainCommandHandler(
     public async Task Handle(RefreshConfigDomainCommand message)
     {
         // Resolution is per component: two components can select different authored values (scopes) of
-        // the same domain, so the domain is re-evaluated at each recipient's scope. A component that is
-        // already current at its scope is skipped (the refresh returns null for it).
+        // the same domain, so the domain is re-evaluated at each recipient's scope. Distinct scopes are
+        // materialized once (the source payload is built once per scope, not per recipient); a component
+        // already current at its scope is not returned.
         var components = await registry.GetActiveAsync(CancellationToken.None);
-        var recipients = 0;
-        foreach (var component in components)
-        {
-            if (!distribution.GetEntitledDomains(component.ComponentType).Contains(message.Domain))
-                continue;
+        var entitled = components
+            .Where(c => distribution.GetEntitledDomains(c.ComponentType).Contains(message.Domain));
 
-            var bundle = await distribution.RefreshForComponentAsync(
-                message.Domain, component, CancellationToken.None);
-            if (bundle is null)
-                continue;
+        var outdated = await distribution.RefreshForComponentsAsync(
+            message.Domain, entitled, CancellationToken.None);
 
+        foreach (var (component, bundle) in outdated)
             await bus.Advanced.Routing.Send(component.InboundQueue, new PushConfigCommand
             {
                 ComponentId = component.ComponentId,
                 Bundle = bundle,
             });
-            recipients++;
-        }
 
         logger.LogInformation(
             "Refreshed {Domain} and pushed it to {Recipients} subscriber(s).",
-            message.Domain, recipients);
+            message.Domain, outdated.Count);
     }
 }

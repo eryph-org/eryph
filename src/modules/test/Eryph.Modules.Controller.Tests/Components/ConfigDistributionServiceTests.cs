@@ -230,6 +230,33 @@ public class ConfigDistributionServiceTests
     }
 
     [Fact]
+    public async Task RefreshForComponents_builds_the_payload_once_per_resolved_scope()
+    {
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecord?)null);
+        records.Setup(r => r.AddAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecord record, CancellationToken _) => record);
+
+        var source = new StubSource(ConfigDomain.StorageConfig, """{"v":1}""");
+        var service = CreateService(records, source);
+
+        // All three components resolve the default scope, so the source payload must be built once, not
+        // once per recipient (which would be O(components²) for a fleet-enumerating source).
+        var components = new[]
+        {
+            Reg(ComponentType.VMHostAgent),
+            Reg(ComponentType.VMHostAgent),
+            Reg(ComponentType.VMHostAgent),
+        };
+        var outdated = await service.RefreshForComponentsAsync(
+            ConfigDomain.StorageConfig, components, CancellationToken.None);
+
+        outdated.Should().HaveCount(3);
+        source.BuildCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Refresh_bumps_version_and_pushes_when_payload_changed()
     {
         var existing = new ConfigRecord
@@ -519,9 +546,14 @@ public class ConfigDistributionServiceTests
     /// <summary>A config source whose payload the test controls directly.</summary>
     private sealed class StubSource(ConfigDomain domain, string payload) : IConfigSource
     {
+        public int BuildCount { get; private set; }
+
         public ConfigDomain Domain => domain;
 
-        public Task<string> BuildPayloadAsync(string scope, CancellationToken cancellationToken) =>
-            Task.FromResult(payload);
+        public Task<string> BuildPayloadAsync(string scope, CancellationToken cancellationToken)
+        {
+            BuildCount++;
+            return Task.FromResult(payload);
+        }
     }
 }

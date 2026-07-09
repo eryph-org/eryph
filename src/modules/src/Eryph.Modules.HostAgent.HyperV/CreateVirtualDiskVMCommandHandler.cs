@@ -62,13 +62,13 @@ internal class CreateVirtualDiskVMCommandHandler(
     // always allowed.
     private EitherAsync<Error, Unit> ValidatePlacement(string dataStore, string environment)
     {
-        var placement = storageConfigProvider.Current;
+        var storageConfig = storageConfigProvider.Current;
 
-        if (!StorageConfigValidation.IsDataStoreAllowed(placement, dataStore))
+        if (!StorageConfigValidation.IsDataStoreAllowed(storageConfig, dataStore))
             return LeftAsync<Error, Unit>(Error.New(
                 $"The data store '{dataStore}' is not part of the controller storage configuration."));
 
-        if (!StorageConfigValidation.IsEnvironmentAllowed(placement, environment))
+        if (!StorageConfigValidation.IsEnvironmentAllowed(storageConfig, environment))
             return LeftAsync<Error, Unit>(Error.New(
                 $"The environment '{environment}' is not part of the controller storage configuration."));
 
