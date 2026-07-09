@@ -139,7 +139,8 @@ public class StorageConfigMergeTests
         var staging = merged.Environments!.Single(e => e.Name == "staging");
         staging.Defaults.Vms.Should().Be(@"D:\stg\vms"); // overridden
         staging.Defaults.Volumes.Should().Be(@"C:\stg\vol"); // preserved
-        staging.Datastores.Single(d => d.Name == "fast").Path.Should().Be(@"D:\stg\new");
+        staging.Datastores.Should().ContainSingle(d => d.Name == "fast")
+            .Which.Path.Should().Be(@"D:\stg\new");
         merged.Environments!.Should().Contain(e => e.Name == "local-only-env"); // kept
     }
 

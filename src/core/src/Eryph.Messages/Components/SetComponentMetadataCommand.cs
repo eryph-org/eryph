@@ -18,6 +18,6 @@ public class SetComponentMetadataCommand : IHasCorrelationId
     /// <summary>The environment to assign, or null to clear it.</summary>
     public string? Environment { get; set; }
 
-    /// <summary>The complete replacement tag set (key → value).</summary>
-    public Dictionary<string, string> Tags { get; set; } = new();
+    /// <summary>The complete replacement tag set (key → value); null is treated as no tags.</summary>
+    public Dictionary<string, string>? Tags { get; set; } = new();
 }

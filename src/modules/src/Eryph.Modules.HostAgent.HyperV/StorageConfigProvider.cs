@@ -21,5 +21,5 @@ internal sealed class StorageConfigProvider : IStorageConfigProvider
 
     public StorageConfig Current => _current;
 
-    public void Update(StorageConfig config) => _current = config ?? new StorageConfig();
+    public void Update(StorageConfig config) => _current = config;
 }

@@ -75,9 +75,9 @@ public static class ConfigDomainDescriptors
     // controller keeps the cursor in its own state, and authored versions must not churn on allocation.
     private static string CanonicalizeNetworkProviders(string payload)
     {
-        // A null document ("~"/"null") deserializes to null; treat it as an empty config so validation
-        // reports a proper error instead of throwing a NullReferenceException out of the handler.
-        var config = NetworkProvidersConfigYamlSerializer.Deserialize(payload) ?? new NetworkProvidersConfiguration();
+        // A null document ("~"/"null") deserializes to an empty config (the serializer coalesces), which
+        // then fails validation with a proper error instead of throwing out of the handler.
+        var config = NetworkProvidersConfigYamlSerializer.Deserialize(payload);
 
         var validation = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
         if (validation.IsFail)

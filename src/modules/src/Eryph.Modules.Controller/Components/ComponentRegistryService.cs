@@ -174,7 +174,7 @@ internal sealed class ComponentRegistryService(
         {
             if (!ConfigScope.IsValidTagKey(tag.Key, out var tagError))
                 throw new InvalidOperationException(tagError);
-            normalizedTags[tag.Key.Trim().ToLowerInvariant()] = tag.Value?.Trim().ToLowerInvariant() ?? "";
+            normalizedTags[tag.Key.Trim().ToLowerInvariant()] = tag.Value.Trim().ToLowerInvariant();
         }
 
         registration.Tags = normalizedTags;

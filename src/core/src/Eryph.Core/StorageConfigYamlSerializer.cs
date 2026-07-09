@@ -31,7 +31,7 @@ public static class StorageConfigYamlSerializer
     {
         try
         {
-            return Deserializer.Value.Deserialize<StorageConfig>(yaml) ?? new StorageConfig();
+            return Deserializer.Value.Deserialize<StorageConfig?>(yaml) ?? new StorageConfig();
         }
         catch (Exception ex)
         {

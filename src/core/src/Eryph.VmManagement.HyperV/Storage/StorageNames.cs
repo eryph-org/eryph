@@ -138,7 +138,7 @@ public readonly record struct StorageNames
                 ? defaultDatastoreConfig
                 : match(from envConfig in vmHostAgentConfig.Environments
                     where envConfig.Name == environment
-                    from envDsConfig in envConfig.Datastores
+                    from envDsConfig in envConfig.Datastores ?? []
                     where envDsConfig.Name == dataStore
                     select envDsConfig,
                     () => defaultDatastoreConfig,
