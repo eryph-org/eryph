@@ -187,6 +187,11 @@ public class VmHostAgentModule : WebModule
         options.AddHostedService<VmRemovalWatcherService>();
         options.AddHostedService<VmStateChangeWatcherService>();
         options.AddHostedService<DiskStoresChangeWatcherService>();
+        // Expose the running watcher singleton via its abstraction so the storage-config realizer can
+        // restart it after a distributed datastore-path change (the same effect the interactive
+        // agent-settings sync has).
+        options.Container.RegisterSingleton<IDiskStoresChangeWatcher>(
+            () => options.Container.GetInstance<DiskStoresChangeWatcherService>());
 
         // Opt in to controller-driven configuration distribution. The agent
         // registers on its own inbound queue and subscribes to the placement
@@ -209,7 +214,7 @@ public class VmHostAgentModule : WebModule
             // see the inbound-queue comment above). Empty when the listener is disabled (eryph-zero
             // and dev), so nothing is advertised then.
             BuildAdvertisedEndpoints(),
-            typeof(PlacementConfigRealizer),
+            typeof(StorageConfigRealizer),
             typeof(NetworkProvidersConfigRealizer),
             typeof(EndpointsConfigRealizer));
 
@@ -264,8 +269,8 @@ public class VmHostAgentModule : WebModule
         container.RegisterSingleton<IOVSService<OVSSwitchNode>, OVSNodeService<OVSSwitchNode>>();
 
         // Holds the controller-distributed placement vocabulary applied by
-        // PlacementConfigRealizer and enforced by the provisioning handlers.
-        container.RegisterSingleton<IPlacementConfigProvider, PlacementConfigProvider>();
+        // StorageConfigRealizer and enforced by the provisioning handlers.
+        container.RegisterSingleton<IStorageConfigProvider, StorageConfigProvider>();
 
         // Holds the controller-distributed deployment endpoints applied by
         // EndpointsConfigRealizer (the identity issuer etc.). Registered as the

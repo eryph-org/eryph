@@ -1,11 +1,10 @@
 using System;
 using Ardalis.Specification;
-using Eryph.Messages.Components;
 using Eryph.StateDb.Model;
 
-namespace Eryph.Modules.Controller.Components;
+namespace Eryph.StateDb.Specifications;
 
-internal static class ComponentRegistrationSpecs
+public static class ComponentRegistrationSpecs
 {
     public sealed class GetByComponentId : Specification<ComponentRegistration>,
         ISingleResultSpecification<ComponentRegistration>
@@ -23,19 +22,14 @@ internal static class ComponentRegistrationSpecs
             Query.Where(x => x.Status == ComponentRegistrationStatus.Active);
         }
     }
-}
 
-internal static class ConfigRecordSpecs
-{
-    public sealed class GetByDomain : Specification<ConfigRecord>,
-        ISingleResultSpecification<ConfigRecord>
+    /// <summary>All registered components, ordered by type then machine name.</summary>
+    public sealed class GetAll : Specification<ComponentRegistration>
     {
-        public GetByDomain(ConfigDomain domain)
+        public GetAll()
         {
-            Domain = domain;
-            Query.Where(x => x.Domain == domain);
+            Query.OrderBy(x => x.ComponentType)
+                .ThenBy(x => x.MachineName);
         }
-
-        public ConfigDomain Domain { get; }
     }
 }

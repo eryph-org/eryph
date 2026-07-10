@@ -156,17 +156,24 @@ public class ControllerModule
         // component deletes its broker user. The decommission handler resolves whatever is registered.
         container.Collection.Register<IComponentBrokerProvisioner>(Array.Empty<Type>());
         container.Register<ConfigDistributionService>(Lifestyle.Scoped);
-        // Controller settings (incl. the Placement section) are owned by the host.
+        container.Register<IAuthoredConfigStore, AuthoredConfigStore>(Lifestyle.Scoped);
+        // Controller settings (incl. the storage section) are owned by the host.
         container.RegisterInstance(serviceProvider.GetRequiredService<IControllerSettingsManager>());
+        // The default-scope storage config source is host-wired: the split runtime reads the central
+        // controller settings, eryph-zero reads the local agentsettings.yml (see IStorageConfigDefaultsProvider).
+        container.RegisterInstance(serviceProvider.GetRequiredService<IStorageConfigDefaultsProvider>());
         // EndpointsConfigSource reads the operator endpoint overrides from the host
         // configuration; register it explicitly rather than relying on auto cross-wiring.
         container.RegisterInstance(_configuration);
-        container.Collection.Register<IConfigSource>(typeof(PlacementConfigSource),
+        container.Collection.Register<IConfigSource>(typeof(StorageConfigSource),
             typeof(NetworkProvidersConfigSource), typeof(EndpointsConfigSource),
             typeof(OvnClusterConfigSource));
 
         //use network services from host
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
+        // Overlay the operator-authored NetworkProviders value on the read path so the controller's own
+        // network realization and the distributed payload stay in step with what agents receive.
+        container.RegisterDecorator<INetworkProviderManager, AuthoredNetworkProviderManager>();
 
         container.ConfigureRebus(configurer => configurer
             .Serialization(s => s.UseEryphSettings())

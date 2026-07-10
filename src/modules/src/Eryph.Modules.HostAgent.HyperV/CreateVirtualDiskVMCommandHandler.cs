@@ -22,7 +22,7 @@ internal class CreateVirtualDiskVMCommandHandler(
     IPowershellEngine engine,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
-    IPlacementConfigProvider placementConfigProvider)
+    IStorageConfigProvider storageConfigProvider)
     : IHandleMessages<OperationTask<CreateVirtualDiskVMCommand>>
 {
     public Task Handle(OperationTask<CreateVirtualDiskVMCommand> message) =>
@@ -62,15 +62,15 @@ internal class CreateVirtualDiskVMCommandHandler(
     // always allowed.
     private EitherAsync<Error, Unit> ValidatePlacement(string dataStore, string environment)
     {
-        var placement = placementConfigProvider.Current;
+        var storageConfig = storageConfigProvider.Current;
 
-        if (!PlacementConfigValidation.IsDataStoreAllowed(placement, dataStore))
+        if (!StorageConfigValidation.IsDataStoreAllowed(storageConfig, dataStore))
             return LeftAsync<Error, Unit>(Error.New(
-                $"The data store '{dataStore}' is not part of the controller placement configuration."));
+                $"The data store '{dataStore}' is not part of the controller storage configuration."));
 
-        if (!PlacementConfigValidation.IsEnvironmentAllowed(placement, environment))
+        if (!StorageConfigValidation.IsEnvironmentAllowed(storageConfig, environment))
             return LeftAsync<Error, Unit>(Error.New(
-                $"The environment '{environment}' is not part of the controller placement configuration."));
+                $"The environment '{environment}' is not part of the controller storage configuration."));
 
         return RightAsync<Error, Unit>(unit);
     }

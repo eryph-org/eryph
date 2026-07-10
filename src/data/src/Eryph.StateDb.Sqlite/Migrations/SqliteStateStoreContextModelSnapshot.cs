@@ -17,6 +17,41 @@ namespace Eryph.StateDb.Sqlite.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
 
+            modelBuilder.Entity("Eryph.StateDb.Model.AuthoredConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Domain", "Scope", "Version")
+                        .IsUnique();
+
+                    b.ToTable("AuthoredConfigs", (string)null);
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.CatletDrive", b =>
                 {
                     b.Property<string>("Id")
@@ -37,7 +72,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("CatletId");
 
-                    b.ToTable("CatletDrives");
+                    b.ToTable("CatletDrives", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadata", b =>
@@ -73,7 +108,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasIndex("SpecificationId")
                         .IsUnique();
 
-                    b.ToTable("Metadata");
+                    b.ToTable("Metadata", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadataGene", b =>
@@ -100,7 +135,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("UniqueGeneIndex");
 
-                    b.ToTable("MetadataGenes");
+                    b.ToTable("MetadataGenes", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkAdapter", b =>
@@ -123,7 +158,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("CatletId", "Id");
 
-                    b.ToTable("CatletNetworkAdapters");
+                    b.ToTable("CatletNetworkAdapters", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersion", b =>
@@ -157,7 +192,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("SpecificationId");
 
-                    b.ToTable("CatletSpecificationVersions");
+                    b.ToTable("CatletSpecificationVersions", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionVariant", b =>
@@ -181,7 +216,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("SpecificationVersionId");
 
-                    b.ToTable("CatletSpecificationVersionVariant");
+                    b.ToTable("CatletSpecificationVersionVariant", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecificationVersionVariantGene", b =>
@@ -215,7 +250,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("UniqueGeneIndex");
 
-                    b.ToTable("CatletSpecificationVersionVariantGenes");
+                    b.ToTable("CatletSpecificationVersionVariantGenes", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ComponentRegistration", b =>
@@ -239,6 +274,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Environment")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("InboundQueue")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -260,6 +298,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TagsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Version")
                         .HasColumnType("TEXT");
 
@@ -268,7 +310,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasIndex("ComponentId")
                         .IsUnique();
 
-                    b.ToTable("ComponentRegistrations");
+                    b.ToTable("ComponentRegistrations", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ConfigRecord", b =>
@@ -288,15 +330,19 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("Version")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Domain")
+                    b.HasIndex("Domain", "Scope")
                         .IsUnique();
 
-                    b.ToTable("ConfigRecords");
+                    b.ToTable("ConfigRecords", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
@@ -343,7 +389,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasIndex("UniqueGeneIndex", "LastSeenAgent")
                         .IsUnique();
 
-                    b.ToTable("Genes");
+                    b.ToTable("Genes", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
@@ -372,7 +418,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("SubnetId");
 
-                    b.ToTable("IpAssignment");
+                    b.ToTable("IpAssignment", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("IpAssignment");
 
@@ -409,7 +455,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("SubnetId");
 
-                    b.ToTable("IpPools");
+                    b.ToTable("IpPools", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.NetworkPort", b =>
@@ -442,7 +488,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasIndex("MacAddress")
                         .IsUnique();
 
-                    b.ToTable("NetworkPorts");
+                    b.ToTable("NetworkPorts", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("NetworkPort");
 
@@ -473,7 +519,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("TaskId");
 
-                    b.ToTable("Logs");
+                    b.ToTable("Logs", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.OperationModel", b =>
@@ -515,7 +561,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Operations");
+                    b.ToTable("Operations", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.OperationProjectModel", b =>
@@ -536,7 +582,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("OperationProjectModel");
+                    b.ToTable("OperationProjectModel", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.OperationResourceModel", b =>
@@ -558,7 +604,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("OperationId");
 
-                    b.ToTable("OperationResources");
+                    b.ToTable("OperationResources", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.OperationTaskModel", b =>
@@ -616,7 +662,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("OperationTasks");
+                    b.ToTable("OperationTasks", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Project", b =>
@@ -639,7 +685,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Projects");
+                    b.ToTable("Projects", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ProjectRoleAssignment", b =>
@@ -662,7 +708,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasAlternateKey("ProjectId", "IdentityId", "RoleId");
 
-                    b.ToTable("ProjectRoles");
+                    b.ToTable("ProjectRoles", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ReportedNetwork", b =>
@@ -710,7 +756,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("CatletId");
 
-                    b.ToTable("ReportedNetworks");
+                    b.ToTable("ReportedNetworks", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Resource", b =>
@@ -765,7 +811,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Subnet");
+                    b.ToTable("Subnet", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("Subnet");
 
@@ -794,7 +840,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("TaskId");
 
-                    b.ToTable("TaskProgress");
+                    b.ToTable("TaskProgress", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Tenant", b =>
@@ -805,7 +851,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenants");
+                    b.ToTable("Tenants", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPoolAssignment", b =>
@@ -934,7 +980,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasIndex("SpecificationId")
                         .IsUnique();
 
-                    b.ToTable("Catlets");
+                    b.ToTable("Catlets", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletFarm", b =>
@@ -944,7 +990,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<DateTime>("LastInventory")
                         .HasColumnType("TEXT");
 
-                    b.ToTable("CatletFarms");
+                    b.ToTable("CatletFarms", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletSpecification", b =>
@@ -955,7 +1001,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.ToTable("CatletSpecifications");
+                    b.ToTable("CatletSpecifications", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
@@ -1024,7 +1070,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("UniqueGeneIndex");
 
-                    b.ToTable("VirtualDisks");
+                    b.ToTable("VirtualDisks", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
@@ -1038,7 +1084,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.ToTable("VirtualNetworks");
+                    b.ToTable("VirtualNetworks", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ProviderSubnet", b =>
@@ -1121,7 +1167,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.ToTable("NetworkPorts", t =>
+                    b.ToTable("NetworkPorts", null, t =>
                         {
                             t.Property("PoolName")
                                 .HasColumnName("ProviderRouterPort_PoolName");

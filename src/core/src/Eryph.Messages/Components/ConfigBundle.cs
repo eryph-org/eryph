@@ -10,6 +10,14 @@ public sealed class ConfigBundle
 {
     public ConfigDomain Domain { get; set; }
 
+    /// <summary>
+    /// The scope selector this bundle was resolved for (empty = default). The receiving component tracks
+    /// its applied version per (domain, scope) and echoes the scope in its acknowledgement, so a bundle
+    /// resolved from a different scope (with an independent, possibly lower version counter) is not
+    /// mistaken for one it already applied.
+    /// </summary>
+    public string Scope { get; set; } = "";
+
     public long Version { get; set; }
 
     public string Payload { get; set; } = "";

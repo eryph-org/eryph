@@ -75,6 +75,10 @@ public class DecommissionComponentCommandHandlerTests
 
     private sealed class StubRegistry(bool revokeResult) : IComponentRegistryService
     {
+        public Task<bool> SetMetadataAsync(
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string?>? tags,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public List<Guid> Revoked { get; } = [];
 
         public Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken)
@@ -88,14 +92,17 @@ public class DecommissionComponentCommandHandlerTests
             => throw new NotSupportedException();
 
         public Task<ComponentRegistration?> RecordHeartbeatAsync(Guid componentId, Guid instanceId,
-            IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
+            IReadOnlyList<AppliedConfigVersion> appliedConfigVersions, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
-        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version,
+        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, string scope, long version,
             CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<bool> DeregisterAsync(Guid componentId, Guid instanceId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)

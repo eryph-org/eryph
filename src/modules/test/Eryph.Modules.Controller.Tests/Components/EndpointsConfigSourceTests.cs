@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Eryph.Messages.Components;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb.Model;
 using Microsoft.Extensions.Configuration;
@@ -54,7 +55,7 @@ public class EndpointsConfigSourceTests
 
     private static async Task<Dictionary<string, string>> Build(EndpointsConfigSource source)
     {
-        var payload = await source.BuildPayloadAsync(CancellationToken.None);
+        var payload = await source.BuildPayloadAsync(ConfigScope.Default, CancellationToken.None);
         return JsonSerializer.Deserialize<Dictionary<string, string>>(payload)!;
     }
 
@@ -140,15 +141,19 @@ public class EndpointsConfigSourceTests
     /// </summary>
     private sealed class StubRegistry(IReadOnlyList<ComponentRegistration> active) : IComponentRegistryService
     {
+        public Task<bool> SetMetadataAsync(
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string?>? tags,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<ComponentRegistration> UpsertAsync(RegisterComponentCommand command,
             CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<ComponentRegistration?> RecordHeartbeatAsync(Guid componentId, Guid instanceId,
-            IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
+            IReadOnlyList<AppliedConfigVersion> appliedConfigVersions, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
-        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version,
+        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, string scope, long version,
             CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
@@ -156,6 +161,9 @@ public class EndpointsConfigSourceTests
             => throw new NotSupportedException();
 
         public Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)

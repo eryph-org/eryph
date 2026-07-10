@@ -27,8 +27,9 @@ public class RegisterComponentCommand
     /// <summary>The bus queue the controller routes configuration to.</summary>
     public string InboundQueue { get; set; } = "";
 
-    /// <summary>Config versions the component already has, so the controller can send only deltas.</summary>
-    public Dictionary<ConfigDomain, long> KnownConfigVersions { get; set; } = new();
+    /// <summary>Config versions the component already has (per domain and scope), so the controller can
+    /// send only deltas.</summary>
+    public List<AppliedConfigVersion> KnownConfigVersions { get; set; } = new();
 
     /// <summary>
     /// Service endpoints this component hosts and advertises to the deployment (logical

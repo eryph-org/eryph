@@ -97,6 +97,9 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         {
             Vms = normalizePath(config?.Vms),
             Volumes = normalizePath(config?.Volumes),
+            // Preserve the local-only watch flag; a bare new() would silently reset it to the true default
+            // on every save (and every distributed storage-config apply writes agentsettings).
+            WatchFileSystem = config?.WatchFileSystem ?? true,
         };
 
     private static VmHostAgentDataStoreConfiguration normalizePaths(
@@ -105,6 +108,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         {
             Name = config.Name,
             Path = normalizePath(config.Path) ?? "",
+            WatchFileSystem = config.WatchFileSystem,
         };
 
     private static VmHostAgentEnvironmentConfiguration normalizePaths(
@@ -137,6 +141,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
                 StringComparison.OrdinalIgnoreCase)
                 ? null
                 : defaults.Volumes,
+            WatchFileSystem = defaults.WatchFileSystem,
         };
 
     private static VmHostAgentConfiguration applyHostDefaults(

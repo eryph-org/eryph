@@ -42,6 +42,14 @@ internal class IpPoolManager(
         var poolSize = (int)(IPNetwork2.ToBigInteger(lastIp) - firstIpBigInt) + 1;
         var nextNumber = (int)(IPNetwork2.ToBigInteger(nextIp) - firstIpBigInt);
 
+        // The cursor can fall outside the pool after its range was moved or shrunk: an authored network
+        // provider config carries no cursor, so the previous (now out-of-range) DB cursor is preserved.
+        // Left unchecked, a negative or past-the-end number is treated as "free" and would hand out an
+        // address outside [FirstIp, LastIp]. Fall back to the pool start; the free-slot search below then
+        // finds a valid address and the stored cursor is recomputed in range.
+        if (nextNumber < 0 || nextNumber >= poolSize)
+            nextNumber = 0;
+
         var totalAssigned = await stateStore.Read<IpPoolAssignment>()
             .CountAsync(new IpPoolSpecs.GetAssignments(pool.Id), cancellationToken);
 

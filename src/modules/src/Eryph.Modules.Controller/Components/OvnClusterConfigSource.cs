@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +20,7 @@ internal sealed class OvnClusterConfigSource(
 {
     public ConfigDomain Domain => ConfigDomain.OvnCluster;
 
-    public Task<string> BuildPayloadAsync(CancellationToken cancellationToken)
+    public Task<string> BuildPayloadAsync(string scope, CancellationToken cancellationToken)
     {
         var config = new OvnClusterConfig
         {

@@ -114,6 +114,11 @@ public static class EryphConstants
             new(Scopes.IdentityWrite, [Audiences.IdentityApi], "Grants write access to the identity API"),
             new(Scopes.IdentityClientsRead, [Audiences.IdentityApi], "Grants read access for identity clients"),
             new(Scopes.IdentityClientsWrite, [Audiences.IdentityApi], "Grants write access for identity clients"),
+
+            // The management API is served only by full/server deployments (not eryph-zero), but its
+            // audience and scopes live here so identity issues and validates them uniformly.
+            new(Scopes.ManagementRead, [Audiences.ManagementApi], "Grants read access to the management API"),
+            new(Scopes.ManagementWrite, [Audiences.ManagementApi], "Grants write access to the management API"),
         ];
 
         public static readonly string SecuritySchemeId = "oauth2";
@@ -122,6 +127,7 @@ public static class EryphConstants
         {
             public static readonly string ComputeApi = "compute_api";
             public static readonly string IdentityApi = "identity_api";
+            public static readonly string ManagementApi = "management_api";
         }
 
         public static class Scopes
@@ -141,6 +147,9 @@ public static class EryphConstants
             public static readonly string IdentityWrite = "identity:write";
             public static readonly string IdentityClientsRead = "identity:clients:read";
             public static readonly string IdentityClientsWrite = "identity:clients:write";
+
+            public static readonly string ManagementRead = "management:read";
+            public static readonly string ManagementWrite = "management:write";
         }
 
         public record Scope(string Name, IReadOnlyList<string> Resources, string Description);

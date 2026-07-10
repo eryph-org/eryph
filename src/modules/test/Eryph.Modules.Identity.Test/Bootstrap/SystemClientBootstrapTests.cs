@@ -28,6 +28,7 @@ public class SystemClientBootstrapTests
     [
         EryphConstants.Authorization.Scopes.ComputeWrite,
         EryphConstants.Authorization.Scopes.IdentityWrite,
+        EryphConstants.Authorization.Scopes.ManagementWrite,
     ];
 
     [Fact]

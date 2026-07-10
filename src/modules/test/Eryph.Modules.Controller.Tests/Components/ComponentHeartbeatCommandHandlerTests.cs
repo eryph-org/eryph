@@ -3,6 +3,8 @@ using Eryph.Messages.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Rebus.Bus;
 
@@ -20,19 +22,38 @@ public class ComponentHeartbeatCommandHandlerTests
     private static readonly Guid InstanceId = Guid.NewGuid();
 
     private static ConfigDistributionService Distribution(Mock<IStateStoreRepository<ConfigRecord>> records) =>
-        new(records.Object, [], new Mock<IDistributedLockScopeHolder>().Object);
+        new(records.Object, [], new EmptyAuthoredStore(), new Mock<IDistributedLockScopeHolder>().Object,
+            NullLogger<ConfigDistributionService>.Instance);
+
+    // Nothing authored, so every domain resolves the default scope. IAuthoredConfigStore is internal
+    // and cannot be proxied by Moq, so it is hand-stubbed.
+    private sealed class EmptyAuthoredStore : IAuthoredConfigStore
+    {
+        public Task<AuthoredConfig?> GetCurrentAsync(
+            ConfigDomain domain, string scope, CancellationToken cancellationToken)
+            => Task.FromResult<AuthoredConfig?>(null);
+
+        public Task<AuthoredConfig> AddVersionAsync(
+            ConfigDomain domain, string scope, string payload, string? author, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<AuthoredConfig>> GetHistoryAsync(
+            ConfigDomain domain, string scope, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+    }
 
     private static ComponentHeartbeatCommand Heartbeat(long appliedOvnClusterVersion) =>
         new()
         {
             ComponentId = ComponentId,
             InstanceId = InstanceId,
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-                { [ConfigDomain.OvnCluster] = appliedOvnClusterVersion },
+            AppliedConfigVersions =
+                [new AppliedConfigVersion { Domain = ConfigDomain.OvnCluster, Scope = "", Version = appliedOvnClusterVersion }],
         };
 
-    private static ComponentRegistration NetworkRegistration() =>
-        new()
+    private static ComponentRegistration NetworkRegistration()
+    {
+        var registration = new ComponentRegistration
         {
             Id = Guid.NewGuid(),
             ComponentId = ComponentId,
@@ -40,16 +61,18 @@ public class ComponentHeartbeatCommandHandlerTests
             InstanceId = InstanceId,
             MachineName = "net",
             InboundQueue = "net-inbound",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.OvnCluster] = 1 },
         };
+        registration.SetAppliedVersion(ConfigDomain.OvnCluster, "", 1);
+        return registration;
+    }
 
     private static Mock<IStateStoreRepository<ConfigRecord>> RecordsAt(long ovnClusterVersion)
     {
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
-        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ConfigRecord
             {
-                Id = Guid.NewGuid(), Domain = ConfigDomain.OvnCluster, Version = ovnClusterVersion, Payload = "p",
+                Id = Guid.NewGuid(), Domain = ConfigDomain.OvnCluster, Scope = "", Version = ovnClusterVersion, Payload = "p",
             });
         return records;
     }
@@ -91,19 +114,18 @@ public class ComponentHeartbeatCommandHandlerTests
             InstanceId = InstanceId,
             MachineName = "host",
             InboundQueue = "host-inbound",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long>(),
         };
         var byDomain = new Dictionary<ConfigDomain, ConfigRecord>
         {
-            [ConfigDomain.PlacementConfig] = new()
-                { Id = Guid.NewGuid(), Domain = ConfigDomain.PlacementConfig, Version = 5, Payload = "placement" },
+            [ConfigDomain.StorageConfig] = new()
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.StorageConfig, Scope = "", Version = 5, Payload = "storage" },
             [ConfigDomain.NetworkProviders] = new()
-                { Id = Guid.NewGuid(), Domain = ConfigDomain.NetworkProviders, Version = 2, Payload = "network" },
+                { Id = Guid.NewGuid(), Domain = ConfigDomain.NetworkProviders, Scope = "", Version = 2, Payload = "network" },
             // No Endpoints record.
         };
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
-        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ConfigRecordSpecs.GetByDomain spec, CancellationToken _) =>
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecordSpecs.GetByDomainAndScope spec, CancellationToken _) =>
                 byDomain.GetValueOrDefault(spec.Domain));
 
         var registry = new StubRegistry(registration);
@@ -114,18 +136,18 @@ public class ComponentHeartbeatCommandHandlerTests
         {
             ComponentId = ComponentId,
             InstanceId = InstanceId,
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-            {
-                [ConfigDomain.PlacementConfig] = 3,   // behind: record is v5
-                [ConfigDomain.NetworkProviders] = 2,  // current: record is v2
-            },
+            AppliedConfigVersions =
+            [
+                new AppliedConfigVersion { Domain = ConfigDomain.StorageConfig, Scope = "", Version = 3 },   // behind: record is v5
+                new AppliedConfigVersion { Domain = ConfigDomain.NetworkProviders, Scope = "", Version = 2 },  // current: record is v2
+            ],
         });
 
         Mock.Get(bus.Object.Advanced.Routing).Verify(r => r.Send(
                 "host-inbound",
                 It.Is<ConfigSnapshotCommand>(c =>
                     c.Bundles.Count == 1
-                    && c.Bundles[0].Domain == ConfigDomain.PlacementConfig
+                    && c.Bundles[0].Domain == ConfigDomain.StorageConfig
                     && c.Bundles[0].Version == 5),
                 It.IsAny<IDictionary<string, string>>()),
             Times.Once);
@@ -160,7 +182,7 @@ public class ComponentHeartbeatCommandHandlerTests
         await handler.Handle(Heartbeat(1));
 
         records.Verify(r => r.GetBySpecAsync(
-            It.IsAny<ConfigRecordSpecs.GetByDomain>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()), Times.Never);
         Mock.Get(bus.Object.Advanced.Routing).Verify(r => r.Send(
                 It.IsAny<string>(), It.IsAny<object>(), It.IsAny<IDictionary<string, string>>()),
             Times.Never);
@@ -172,13 +194,16 @@ public class ComponentHeartbeatCommandHandlerTests
     /// </summary>
     private sealed class StubRegistry(ComponentRegistration? heartbeatResult) : IComponentRegistryService
     {
+        public Task<bool> SetMetadataAsync(
+            Guid componentId, string? environment, IReadOnlyDictionary<string, string?>? tags,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<ComponentRegistration?> RecordHeartbeatAsync(Guid componentId, Guid instanceId,
-            IReadOnlyDictionary<ConfigDomain, long> appliedConfigVersions, CancellationToken cancellationToken)
+            IReadOnlyList<AppliedConfigVersion> appliedConfigVersions, CancellationToken cancellationToken)
         {
             // Mirror the real service: the recorded registration reflects the heartbeat's applied state,
             // which is what the handler reconciles against.
-            if (heartbeatResult is not null)
-                heartbeatResult.AppliedConfigVersions = new Dictionary<ConfigDomain, long>(appliedConfigVersions);
+            heartbeatResult?.SetAppliedVersions(appliedConfigVersions);
             return Task.FromResult(heartbeatResult);
         }
 
@@ -186,7 +211,7 @@ public class ComponentHeartbeatCommandHandlerTests
             CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
-        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, long version,
+        public Task RecordAppliedAsync(Guid componentId, ConfigDomain domain, string scope, long version,
             CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
@@ -194,6 +219,9 @@ public class ComponentHeartbeatCommandHandlerTests
             => throw new NotSupportedException();
 
         public Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<ComponentRegistration?> GetAsync(Guid componentId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<IReadOnlyList<ComponentRegistration>> GetActiveAsync(CancellationToken cancellationToken)

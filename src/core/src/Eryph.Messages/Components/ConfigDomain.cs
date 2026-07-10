@@ -23,7 +23,7 @@ public enum ConfigDomain
     /// vocabulary). Paths stay agent-local; capability matching and placement
     /// decisions are runtime, not distributed config.
     /// </summary>
-    PlacementConfig,
+    StorageConfig,
 
     /// <summary>
     /// Controller-owned network-provider configuration (the provider/bridge/subnet/

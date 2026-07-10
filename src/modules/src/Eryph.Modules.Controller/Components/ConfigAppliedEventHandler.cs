@@ -9,7 +9,7 @@ namespace Eryph.Modules.Controller.Components;
 
 /// <summary>
 /// Records a component's acknowledgement that it applied a configuration version
-/// (monotonic per domain), or logs a failure.
+/// (monotonic per (domain, scope)), or logs a failure.
 /// </summary>
 [UsedImplicitly]
 internal sealed class ConfigAppliedEventHandler(
@@ -28,6 +28,6 @@ internal sealed class ConfigAppliedEventHandler(
         }
 
         await registry.RecordAppliedAsync(
-            message.ComponentId, message.Domain, message.Version, CancellationToken.None);
+            message.ComponentId, message.Domain, message.Scope, message.Version, CancellationToken.None);
     }
 }

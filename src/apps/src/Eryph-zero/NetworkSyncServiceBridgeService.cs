@@ -30,6 +30,14 @@ internal class NetworkSyncServiceBridgeService(IModuleHost<ControllerModule> con
             .SyncNetworks(cancellationToken);
     }
 
+    public EitherAsync<Error, Unit> SyncNetworks(
+        NetworkProvidersConfiguration providerConfig, CancellationToken cancellationToken)
+    {
+        return controllerModule.Services.GetRequiredService<Container>()
+            .GetInstance<INetworkSyncService>()
+            .SyncNetworks(providerConfig, cancellationToken);
+    }
+
     public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders)
     {
         return controllerModule.Services.GetRequiredService<Container>()

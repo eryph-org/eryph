@@ -75,7 +75,7 @@ internal sealed class ComponentHeartbeatService(
                 {
                     ComponentId = identity.ComponentId,
                     InstanceId = identity.InstanceId,
-                    AppliedConfigVersions = state.GetApplied().ToDictionary(kv => kv.Key, kv => kv.Value),
+                    AppliedConfigVersions = state.GetApplied().ToList(),
                     Timestamp = DateTimeOffset.UtcNow,
                 });
             }

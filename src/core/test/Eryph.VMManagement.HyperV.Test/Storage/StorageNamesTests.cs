@@ -293,6 +293,136 @@ public class StorageNamesTests
 
             result.Should().BeLeft().Which.Message.Should().Be("The datastore missing-datastore is not configured");
         }
+
+        [Fact]
+        public async Task ResolveVmStorageBasePath_EnvironmentsIsNullAndEnvironmentIsNotDefault_DoesNotThrow()
+        {
+            var vmHostAgentConfiguration = new VmHostAgentConfiguration
+            {
+                Defaults = new VmHostAgentDefaultsConfiguration
+                {
+                    Volumes = @"x:\default\test\volumes\eryph",
+                    Vms = @"x:\default\test\vms\eryph",
+                },
+                Environments = null,
+            };
+
+            var storageNames = new StorageNames
+            {
+                EnvironmentName = "qa",
+                DataStoreName = "default",
+                ProjectName = "default",
+            };
+
+            var result = await storageNames.ResolveVmStorageBasePath(vmHostAgentConfiguration);
+
+            result.Should().BeLeft().Which.Message.Should().Be("The environment qa is not configured");
+        }
+
+        [Fact]
+        public async Task ResolveVmStorageBasePath_NamedDatastoreEnvironmentIsNotConfiguredLocally_ReturnsErrorInsteadOfDefaultPath()
+        {
+            var storageNames = new StorageNames
+            {
+                EnvironmentName = "missing-environment",
+                DataStoreName = "cluster",
+                ProjectName = "default",
+            };
+
+            var result = await storageNames.ResolveVmStorageBasePath(_vmHostAgentConfiguration);
+
+            result.Should().BeLeft().Which.Message.Should().Be("The environment missing-environment is not configured");
+        }
+
+        [Fact]
+        public void FromVmPath_EnvironmentIsDatastoresOnly_DoesNotThrowAndResolvesTopLevelDefault()
+        {
+            var vmHostAgentConfiguration = new VmHostAgentConfiguration
+            {
+                Defaults = new VmHostAgentDefaultsConfiguration
+                {
+                    Volumes = @"x:\default\test\volumes\eryph",
+                    Vms = @"x:\default\test\vms\eryph",
+                },
+                Environments =
+                [
+                    new VmHostAgentEnvironmentConfiguration
+                    {
+                        Name = "edge",
+                        Defaults = new VmHostAgentDefaultsConfiguration
+                        {
+                            Vms = null,
+                            Volumes = null,
+                        },
+                        Datastores =
+                        [
+                            new VmHostAgentDataStoreConfiguration
+                            {
+                                Name = "edge-store",
+                                Path = @"x:\edge\test",
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            var act = () => StorageNames.FromVmPath(
+                @"x:\default\test\vms\eryph\a6rkklnznsow", vmHostAgentConfiguration);
+
+            act.Should().NotThrow();
+
+            var (names, storageIdentifier) = act();
+
+            names.EnvironmentName.Should().BeSome().Which.Should().Be("default");
+            names.DataStoreName.Should().BeSome().Which.Should().Be("default");
+            names.ProjectName.Should().BeSome().Which.Should().Be("default");
+            storageIdentifier.Should().BeSome().Which.Should().Be("a6rkklnznsow");
+        }
+
+        [Fact]
+        public void FromVhdPath_EnvironmentIsDatastoresOnly_DoesNotThrowAndResolvesTopLevelDefault()
+        {
+            var vmHostAgentConfiguration = new VmHostAgentConfiguration
+            {
+                Defaults = new VmHostAgentDefaultsConfiguration
+                {
+                    Volumes = @"x:\default\test\volumes\eryph",
+                    Vms = @"x:\default\test\vms\eryph",
+                },
+                Environments =
+                [
+                    new VmHostAgentEnvironmentConfiguration
+                    {
+                        Name = "edge",
+                        Defaults = new VmHostAgentDefaultsConfiguration
+                        {
+                            Vms = null,
+                            Volumes = null,
+                        },
+                        Datastores =
+                        [
+                            new VmHostAgentDataStoreConfiguration
+                            {
+                                Name = "edge-store",
+                                Path = @"x:\edge\test",
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            var act = () => StorageNames.FromVhdPath(
+                @"x:\default\test\volumes\eryph\a6rkklnznsow", vmHostAgentConfiguration);
+
+            act.Should().NotThrow();
+
+            var (names, storageIdentifier) = act();
+
+            names.EnvironmentName.Should().BeSome().Which.Should().Be("default");
+            names.DataStoreName.Should().BeSome().Which.Should().Be("default");
+            names.ProjectName.Should().BeSome().Which.Should().Be("default");
+            storageIdentifier.Should().BeSome().Which.Should().Be("a6rkklnznsow");
+        }
     }
 
     public class DefaultVmHostAgentConfiguration

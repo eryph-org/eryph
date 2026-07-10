@@ -22,6 +22,41 @@ namespace Eryph.StateDb.MySql.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Eryph.StateDb.Model.AuthoredConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Domain", "Scope", "Version")
+                        .IsUnique();
+
+                    b.ToTable("AuthoredConfigs");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.CatletDrive", b =>
                 {
                     b.Property<string>("Id")
@@ -244,6 +279,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Environment")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("InboundQueue")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -262,6 +300,10 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("TagsJson")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -293,12 +335,16 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
                     b.Property<long>("Version")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Domain")
+                    b.HasIndex("Domain", "Scope")
                         .IsUnique();
 
                     b.ToTable("ConfigRecords");

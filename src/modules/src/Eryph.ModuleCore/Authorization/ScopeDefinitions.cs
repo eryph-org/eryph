@@ -33,4 +33,14 @@ public static class ScopeDefinitions
         EryphConstants.Authorization.Scopes.IdentityClientsRead,
         EryphConstants.Authorization.Scopes.IdentityClientsWrite,
     ];
+
+    /// <summary>
+    /// All scopes that need policies in the management API module. These scopes control access to
+    /// operator-authored configuration (full/server deployments only).
+    /// </summary>
+    public static readonly string[] ManagementApiScopes =
+    [
+        EryphConstants.Authorization.Scopes.ManagementRead,
+        EryphConstants.Authorization.Scopes.ManagementWrite,
+    ];
 }

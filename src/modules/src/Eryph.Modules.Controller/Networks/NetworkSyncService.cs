@@ -31,6 +31,16 @@ internal class NetworkSyncService(
 {
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
         from providerConfig in providerManager.GetCurrentConfiguration()
+        from _ in SyncNetworks(providerConfig, cancellationToken)
+        select Unit.Default;
+
+    // Realizes against the passed config directly (see the interface doc). Note: PublishConfigDomainChanges
+    // distributes to agents via the normal post-commit RefreshConfigDomainCommand, which re-reads the
+    // authored value from the store — so it is subject to the same send-before-commit race as every other
+    // domain's refresh (the tracked dual-write issue), not a NetworkProviders-specific problem. Only the
+    // controller's own OVN realization needed the direct config to avoid re-reading its uncommitted write.
+    public EitherAsync<Error, Unit> SyncNetworks(
+        NetworkProvidersConfiguration providerConfig, CancellationToken cancellationToken) =>
         from _ in SyncNetworks(providerConfig).Run().ToEitherAsync()
         from _2 in PublishConfigDomainChanges().ToAsync()
         select Unit.Default;

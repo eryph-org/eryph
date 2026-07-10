@@ -63,6 +63,7 @@ public class SystemClientBootstrapRelationalTests
             {
                 EryphConstants.Authorization.Scopes.ComputeWrite,
                 EryphConstants.Authorization.Scopes.IdentityWrite,
+                EryphConstants.Authorization.Scopes.ManagementWrite,
             });
             row.AppRoles.Should().Contain(EryphConstants.SuperAdminRole);
             CertificateMatchesKey(row.Certificate, keyStore.Peek()).Should().BeTrue();

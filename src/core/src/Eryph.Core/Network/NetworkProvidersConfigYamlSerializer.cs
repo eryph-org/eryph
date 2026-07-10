@@ -28,7 +28,10 @@ public static class NetworkProvidersConfigYamlSerializer
     {
         try
         {
-            return Deserializer.Value.Deserialize<NetworkProvidersConfiguration>(yaml);
+            // Deserialize to a nullable target — YamlDotNet returns null for a null/empty document —
+            // and coalesce so the method's non-null contract actually holds (callers do not guard).
+            return Deserializer.Value.Deserialize<NetworkProvidersConfiguration?>(yaml)
+                   ?? new NetworkProvidersConfiguration();
         }
         catch (Exception ex)
         {

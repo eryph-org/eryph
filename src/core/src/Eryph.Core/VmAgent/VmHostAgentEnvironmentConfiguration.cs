@@ -8,6 +8,7 @@ public class VmHostAgentEnvironmentConfiguration
 
     public VmHostAgentDefaultsConfiguration Defaults { get; init; } = new();
 
-    public VmHostAgentDataStoreConfiguration[] Datastores { get; init; } =
-        [];
+    // Nullable to match the top-level VmHostAgentConfiguration.Datastores: this is a deserialized
+    // (agentsettings.yml) contract, so an omitted section deserializes to null; consumers coalesce.
+    public VmHostAgentDataStoreConfiguration[]? Datastores { get; init; } = [];
 }

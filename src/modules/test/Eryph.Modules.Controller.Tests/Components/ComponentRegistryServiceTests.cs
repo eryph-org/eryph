@@ -3,6 +3,7 @@ using Eryph.ModuleCore.Components;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using Moq;
 
 namespace Eryph.Modules.Controller.Tests.Components;
@@ -34,7 +35,7 @@ public class ComponentRegistryServiceTests
         Guid componentId,
         ComponentType type = ComponentType.Identity,
         Dictionary<string, string>? advertised = null,
-        Dictionary<ConfigDomain, long>? known = null) =>
+        List<AppliedConfigVersion>? known = null) =>
         new()
         {
             ComponentId = componentId,
@@ -43,7 +44,7 @@ public class ComponentRegistryServiceTests
             MachineName = "host.example.test",
             Version = "1.0",
             InboundQueue = "eryph.identity.host",
-            KnownConfigVersions = known ?? new Dictionary<ConfigDomain, long>(),
+            KnownConfigVersions = known ?? new List<AppliedConfigVersion>(),
             AdvertisedEndpoints = advertised ?? new Dictionary<string, string>(),
         };
 
@@ -56,7 +57,7 @@ public class ComponentRegistryServiceTests
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.Identity,
                 new Dictionary<string, string> { ["identity"] = "https://host/identity" },
-                new Dictionary<ConfigDomain, long> { [ConfigDomain.Endpoints] = 2 }),
+                new List<AppliedConfigVersion> { new() { Domain = ConfigDomain.Endpoints, Scope = "", Version = 2 } }),
             CancellationToken.None);
 
         repo.Verify(r => r.AddAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -64,7 +65,7 @@ public class ComponentRegistryServiceTests
         result.ComponentId.Should().Be(componentId);
         result.Status.Should().Be(ComponentRegistrationStatus.Active);
         result.AdvertisedEndpoints.Should().ContainKey("identity").WhoseValue.Should().Be("https://host/identity");
-        result.AppliedConfigVersions.Should().ContainKey(ConfigDomain.Endpoints).WhoseValue.Should().Be(2);
+        result.GetAppliedVersion(ConfigDomain.Endpoints, "").Should().Be(2);
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public class ComponentRegistryServiceTests
     }
 
     [Fact]
-    public async Task Upsert_merges_known_versions_taking_the_higher_value()
+    public async Task Upsert_overwrites_the_applied_versions_with_the_reported_set()
     {
         var componentId = Guid.NewGuid();
         var existing = new ComponentRegistration
@@ -107,20 +108,24 @@ public class ComponentRegistryServiceTests
             ComponentType = ComponentType.VMHostAgent,
             MachineName = "host",
             InboundQueue = "q",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-                { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 4 },
         };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 5);
+        existing.SetAppliedVersion(ConfigDomain.Endpoints, "", 4);
         var (service, _) = Create(existing);
 
         var result = await service.UpsertAsync(
             RegisterCommand(componentId, ComponentType.VMHostAgent,
-                known: new Dictionary<ConfigDomain, long>
-                    { [ConfigDomain.PlacementConfig] = 3, [ConfigDomain.Endpoints] = 9 }),
+                known:
+                [
+                    new AppliedConfigVersion { Domain = ConfigDomain.StorageConfig, Scope = "", Version = 3 },
+                ]),
             CancellationToken.None);
 
-        // Existing higher value is kept; reported higher value wins.
-        result.AppliedConfigVersions[ConfigDomain.PlacementConfig].Should().Be(5);
-        result.AppliedConfigVersions[ConfigDomain.Endpoints].Should().Be(9);
+        // The registration command reports the component's authoritative current state, so it replaces
+        // the stored set wholesale — a restart reporting fewer/lower versions must not retain the old
+        // ones (which would make the controller skip pushing config the fresh instance no longer holds).
+        result.GetAppliedVersion(ConfigDomain.StorageConfig, "").Should().Be(3);
+        result.GetAppliedVersion(ConfigDomain.Endpoints, "").Should().Be(0);
     }
 
     [Fact]
@@ -137,14 +142,14 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Stale,
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.PlacementConfig] = 5 },
         };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 5);
         var (service, repo) = Create(existing);
 
         // A restart reports an empty/reset applied set; the heartbeat from the registered
         // instance must reflect it verbatim.
         var result = await service.RecordHeartbeatAsync(
-            componentId, instanceId, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            componentId, instanceId, new List<AppliedConfigVersion>(), CancellationToken.None);
 
         result.Should().BeSameAs(existing);
         repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
@@ -167,15 +172,15 @@ public class ComponentRegistryServiceTests
             MachineName = "host",
             InboundQueue = "q",
             Status = ComponentRegistrationStatus.Active,
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long>
-                { [ConfigDomain.PlacementConfig] = 5, [ConfigDomain.Endpoints] = 3 },
         };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 5);
+        existing.SetAppliedVersion(ConfigDomain.Endpoints, "", 3);
         var (service, repo) = Create(existing);
 
         // A delayed heartbeat from a previous process instance (e.g. reordered on the broker)
         // must be ignored so it cannot revert InstanceId or applied-config state.
         var result = await service.RecordHeartbeatAsync(
-            componentId, staleInstance, new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            componentId, staleInstance, new List<AppliedConfigVersion>(), CancellationToken.None);
 
         result.Should().BeNull();
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -190,7 +195,7 @@ public class ComponentRegistryServiceTests
 
         var result = await service.RecordHeartbeatAsync(
             Guid.NewGuid(), Guid.NewGuid(),
-            new Dictionary<ConfigDomain, long>(), CancellationToken.None);
+            new List<AppliedConfigVersion>(), CancellationToken.None);
 
         result.Should().BeNull();
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -207,19 +212,195 @@ public class ComponentRegistryServiceTests
             ComponentType = ComponentType.VMHostAgent,
             MachineName = "host",
             InboundQueue = "q",
-            AppliedConfigVersions = new Dictionary<ConfigDomain, long> { [ConfigDomain.NetworkProviders] = 7 },
         };
+        existing.SetAppliedVersion(ConfigDomain.NetworkProviders, "", 7);
         var (service, repo) = Create(existing);
 
         // Older acknowledgement is ignored (no regression, no write).
-        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, 5, CancellationToken.None);
-        existing.AppliedConfigVersions[ConfigDomain.NetworkProviders].Should().Be(7);
+        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, "", 5, CancellationToken.None);
+        existing.GetAppliedVersion(ConfigDomain.NetworkProviders, "").Should().Be(7);
         repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
 
         // Newer acknowledgement advances and persists.
-        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, 9, CancellationToken.None);
-        existing.AppliedConfigVersions[ConfigDomain.NetworkProviders].Should().Be(9);
+        await service.RecordAppliedAsync(componentId, ConfigDomain.NetworkProviders, "", 9, CancellationToken.None);
+        existing.GetAppliedVersion(ConfigDomain.NetworkProviders, "").Should().Be(9);
         repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetMetadata_assigns_environment_and_tags()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host",
+            InboundQueue = "q",
+        };
+        var (service, repo) = Create(existing);
+
+        var found = await service.SetMetadataAsync(
+            componentId, "prod", new Dictionary<string, string?> { ["rack"] = "r1" }, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Environment.Should().Be("prod");
+        existing.Tags.Should().ContainKey("rack").WhoseValue.Should().Be("r1");
+        repo.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetMetadata_leaves_applied_config_versions_untouched()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host",
+            InboundQueue = "q",
+        };
+        existing.SetAppliedVersion(ConfigDomain.StorageConfig, "", 7);
+        var (service, _) = Create(existing);
+
+        await service.SetMetadataAsync(
+            componentId, "edge", new Dictionary<string, string?>(), CancellationToken.None);
+
+        // A scope change is naturally reconciled by the distribution loop, since applied versions are
+        // tracked per (domain, scope) — not by resetting them here (which a racing heartbeat could
+        // immediately undo).
+        existing.GetAppliedVersion(ConfigDomain.StorageConfig, "").Should().Be(7);
+    }
+
+    [Fact]
+    public async Task SetMetadata_normalizes_a_null_tag_value_to_empty_without_throwing()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+        };
+        var (service, _) = Create(existing);
+
+        // A deserialized message can carry a null tag value; it is normalized to the empty selector value.
+        var found = await service.SetMetadataAsync(
+            componentId, null, new Dictionary<string, string?> { ["rack"] = null }, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Tags.Should().ContainKey("rack");
+        existing.Tags["rack"].Should().Be("");
+    }
+
+    [Fact]
+    public async Task SetMetadata_trims_a_tag_key_instead_of_rejecting_it()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+        };
+        var (service, _) = Create(existing);
+
+        // A whitespace-padded key must be trimmed and accepted (matching the operation handler), not
+        // throw — otherwise a value that passes the handler would throw here on a re-entrant path.
+        var found = await service.SetMetadataAsync(
+            componentId, null, new Dictionary<string, string?> { [" rack "] = "r1" }, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Tags.Should().ContainKey("rack");
+        existing.Tags["rack"].Should().Be("r1");
+    }
+
+    [Fact]
+    public async Task SetMetadata_returns_false_for_an_unknown_component()
+    {
+        var (service, repo) = Create();
+
+        var found = await service.SetMetadataAsync(
+            Guid.NewGuid(), "prod", new Dictionary<string, string?>(), CancellationToken.None);
+
+        found.Should().BeFalse();
+        repo.Verify(r => r.UpdateAsync(It.IsAny<ComponentRegistration>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Upsert_preserves_operator_assigned_metadata_across_re_registration()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(),
+            ComponentId = componentId,
+            ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host",
+            InboundQueue = "q",
+            Environment = "prod",
+            Tags = new Dictionary<string, string> { ["rack"] = "r1" },
+        };
+        var (service, _) = Create(existing);
+
+        // An agent re-registering must not clobber the operator's environment/tags assignment.
+        var result = await service.UpsertAsync(
+            RegisterCommand(componentId, ComponentType.VMHostAgent), CancellationToken.None);
+
+        result.Environment.Should().Be("prod");
+        result.Tags.Should().ContainKey("rack").WhoseValue.Should().Be("r1");
+    }
+
+    [Fact]
+    public async Task SetMetadata_replaces_the_tag_set_rather_than_merging()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+            Tags = new Dictionary<string, string> { ["rack"] = "r1", ["row"] = "a" },
+        };
+        var (service, _) = Create(existing);
+
+        await service.SetMetadataAsync(
+            componentId, "prod", new Dictionary<string, string?> { ["zone"] = "z1" }, CancellationToken.None);
+
+        existing.Tags.Should().ContainSingle().Which.Key.Should().Be("zone");
+    }
+
+    [Fact]
+    public async Task SetMetadata_clears_the_environment_when_given_null_or_empty()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q", Environment = "prod",
+        };
+        var (service, _) = Create(existing);
+
+        await service.SetMetadataAsync(componentId, "", new Dictionary<string, string?>(), CancellationToken.None);
+
+        existing.Environment.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SetMetadata_tolerates_a_null_tag_set()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+            Tags = new Dictionary<string, string> { ["old"] = "v" },
+        };
+        var (service, _) = Create(existing);
+
+        var found = await service.SetMetadataAsync(componentId, "prod", null!, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Tags.Should().BeEmpty();
     }
 
     [Fact]
