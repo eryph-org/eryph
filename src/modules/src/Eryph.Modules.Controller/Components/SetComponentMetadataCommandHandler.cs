@@ -41,16 +41,18 @@ internal sealed class SetComponentMetadataCommandHandler(
 
         foreach (var tag in command.Tags ?? new Dictionary<string, string?>())
         {
-            // Validate the raw key first: reconstructing "tag:key=value" and canonicalizing splits on the
-            // first '=', so a key containing '=' would otherwise be silently reinterpreted as part of the
-            // value instead of being rejected. Then check the whole selector's form and length.
-            if (!ConfigScope.IsValidTagKey(tag.Key, out var tagKeyError))
+            // Validate the trimmed key first (matching the authoring boundary, which trims before
+            // validating): reconstructing "tag:key=value" and canonicalizing splits on the first '=', so
+            // a key containing '=' would otherwise be silently reinterpreted as part of the value instead
+            // of being rejected. Then check the whole selector's form and length.
+            var key = tag.Key?.Trim();
+            if (!ConfigScope.IsValidTagKey(key, out var tagKeyError))
             {
                 await messaging.FailTask(message, tagKeyError!);
                 return;
             }
 
-            if (!ConfigScope.TryCanonicalize($"tag:{tag.Key}={tag.Value}", out _, out var tagError))
+            if (!ConfigScope.TryCanonicalize($"tag:{key}={tag.Value}", out _, out var tagError))
             {
                 await messaging.FailTask(message, tagError!);
                 return;

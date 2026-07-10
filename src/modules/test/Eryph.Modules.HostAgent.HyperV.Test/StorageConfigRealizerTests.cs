@@ -1,5 +1,6 @@
 using Eryph.Core;
 using Eryph.Core.VmAgent;
+using Eryph.Modules.HostAgent.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -36,7 +37,7 @@ public class StorageConfigRealizerTests
 
         var realizer = new StorageConfigRealizer(
             new StubStorageConfigProvider(), HostSettings().Object, manager.Object,
-            NullLogger<StorageConfigRealizer>.Instance);
+            new NoOpDiskStoresChangeWatcher(), NullLogger<StorageConfigRealizer>.Instance);
 
         await realizer.ApplyAsync(1, Payload, default);
 
@@ -58,7 +59,7 @@ public class StorageConfigRealizerTests
 
         var realizer = new StorageConfigRealizer(
             new StubStorageConfigProvider(), HostSettings().Object, manager.Object,
-            NullLogger<StorageConfigRealizer>.Instance);
+            new NoOpDiskStoresChangeWatcher(), NullLogger<StorageConfigRealizer>.Instance);
 
         await realizer.Invoking(r => r.ApplyAsync(1, Payload, default))
             .Should().ThrowAsync<System.InvalidOperationException>();
@@ -79,7 +80,7 @@ public class StorageConfigRealizerTests
 
         var realizer = new StorageConfigRealizer(
             new StubStorageConfigProvider(), HostSettings().Object, manager.Object,
-            NullLogger<StorageConfigRealizer>.Instance);
+            new NoOpDiskStoresChangeWatcher(), NullLogger<StorageConfigRealizer>.Instance);
 
         await realizer.Invoking(r => r.ApplyAsync(1, nullDatastoresPayload, default))
             .Should().NotThrowAsync();
@@ -91,5 +92,10 @@ public class StorageConfigRealizerTests
         public StorageConfig Current { get; private set; } = new();
 
         public void Update(StorageConfig config) => Current = config;
+    }
+
+    private sealed class NoOpDiskStoresChangeWatcher : IDiskStoresChangeWatcher
+    {
+        public Task Restart() => Task.CompletedTask;
     }
 }

@@ -57,15 +57,22 @@ public static class ConfigDomainDescriptors
         config.Datastores ??= [];
         config.Environments ??= [];
 
+        // A null list item or `name: ~` leaves Name null; leave it for Validate to reject with a proper
+        // "must not be empty" message rather than NRE-ing here on Trim().
         foreach (var datastore in config.Datastores)
-            datastore.Name = datastore.Name.Trim().ToLowerInvariant();
+            if (datastore?.Name is not null)
+                datastore.Name = datastore.Name.Trim().ToLowerInvariant();
 
         foreach (var environment in config.Environments)
         {
-            environment.Name = environment.Name.Trim().ToLowerInvariant();
+            if (environment is null)
+                continue;
+            if (environment.Name is not null)
+                environment.Name = environment.Name.Trim().ToLowerInvariant();
             environment.Datastores ??= [];
             foreach (var datastore in environment.Datastores)
-                datastore.Name = datastore.Name.Trim().ToLowerInvariant();
+                if (datastore?.Name is not null)
+                    datastore.Name = datastore.Name.Trim().ToLowerInvariant();
         }
     }
 
@@ -126,8 +133,10 @@ public static class ConfigDomainDescriptors
             return false;
         }
 
-        // An empty document deserializes to an empty config; require the operator to actually provide
-        // one so a blank submission cannot silently distribute an empty vocabulary.
+        // A blank/whitespace payload is no input at all — reject it. A payload that PARSES to an empty
+        // config (e.g. `{}`) is a valid "default-only vocabulary" (the same value the settings fallback
+        // produces for a host with no named datastores), so it is accepted; the empty vocabulary is a
+        // legitimate, if destructive, authoring choice, not a silent accident.
         if (string.IsNullOrWhiteSpace(payload))
         {
             error = "The configuration payload is empty.";

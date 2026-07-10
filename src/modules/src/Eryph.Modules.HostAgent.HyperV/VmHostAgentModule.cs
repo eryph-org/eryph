@@ -187,6 +187,11 @@ public class VmHostAgentModule : WebModule
         options.AddHostedService<VmRemovalWatcherService>();
         options.AddHostedService<VmStateChangeWatcherService>();
         options.AddHostedService<DiskStoresChangeWatcherService>();
+        // Expose the running watcher singleton via its abstraction so the storage-config realizer can
+        // restart it after a distributed datastore-path change (the same effect the interactive
+        // agent-settings sync has).
+        options.Container.RegisterSingleton<IDiskStoresChangeWatcher>(
+            () => options.Container.GetInstance<DiskStoresChangeWatcherService>());
 
         // Opt in to controller-driven configuration distribution. The agent
         // registers on its own inbound queue and subscribes to the placement

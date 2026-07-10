@@ -24,17 +24,19 @@ internal sealed class ConfigApplier(
 {
     public async Task ApplyAsync(ConfigBundle bundle)
     {
+        // The scope is a deserialized wire field; a null (malformed sender) is the default scope.
+        var scope = bundle.Scope ?? "";
+
         // Bundles can arrive out of order or duplicated (broker redelivery, or a snapshot and a
-        // targeted push racing). Skip any bundle that is not newer than what we already applied so
-        // a delayed older version cannot revert in-memory config (e.g. the endpoint resolver or
-        // placement provider) to stale data. The applied-version state is monotonic and the
-        // controller's RecordApplied is too, so re-acknowledging a stale bundle is unnecessary.
-        var applied = state.GetAppliedVersion(bundle.Domain, bundle.Scope);
+        // targeted push racing). Skip any bundle that is not newer than what we already applied FOR THE
+        // SAME SCOPE so a delayed older version cannot revert in-memory config to stale data. A bundle
+        // for a different scope is always applied (it is the new effective config for the domain).
+        var applied = state.GetAppliedVersion(bundle.Domain, scope);
         if (bundle.Version <= applied)
         {
             logger.LogDebug(
                 "Skipping configuration {Domain} (scope '{Scope}') version {Version}; already applied version {Applied}.",
-                bundle.Domain, bundle.Scope, bundle.Version, applied);
+                bundle.Domain, scope, bundle.Version, applied);
             return;
         }
 
@@ -54,7 +56,7 @@ internal sealed class ConfigApplier(
             try
             {
                 await realizer.ApplyAsync(bundle.Version, bundle.Payload, CancellationToken.None);
-                state.SetApplied(bundle.Domain, bundle.Scope, bundle.Version);
+                state.SetApplied(bundle.Domain, scope, bundle.Version);
             }
             catch (Exception ex)
             {
@@ -69,7 +71,7 @@ internal sealed class ConfigApplier(
         {
             ComponentId = identity.ComponentId,
             Domain = bundle.Domain,
-            Scope = bundle.Scope,
+            Scope = scope,
             Version = bundle.Version,
             Success = success,
             Error = error,

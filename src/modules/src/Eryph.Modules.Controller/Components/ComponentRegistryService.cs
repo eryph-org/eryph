@@ -37,7 +37,8 @@ internal sealed class ComponentRegistryService(
                 Status = ComponentRegistrationStatus.Active,
                 RegisteredAt = DateTimeOffset.UtcNow,
                 LastHeartbeat = DateTimeOffset.UtcNow,
-                AdvertisedEndpoints = new Dictionary<string, string>(command.AdvertisedEndpoints),
+                AdvertisedEndpoints = new Dictionary<string, string>(
+                    command.AdvertisedEndpoints ?? new Dictionary<string, string>()),
             };
             registration.SetAppliedVersions(command.KnownConfigVersions);
             await repository.AddAsync(registration, cancellationToken);
@@ -51,7 +52,8 @@ internal sealed class ComponentRegistryService(
         existing.InboundQueue = command.InboundQueue;
         existing.Status = ComponentRegistrationStatus.Active;
         existing.LastHeartbeat = DateTimeOffset.UtcNow;
-        existing.AdvertisedEndpoints = new Dictionary<string, string>(command.AdvertisedEndpoints);
+        existing.AdvertisedEndpoints = new Dictionary<string, string>(
+            command.AdvertisedEndpoints ?? new Dictionary<string, string>());
         // Overwrite (not merge) the applied versions: the registration command reports the component's
         // authoritative current state, exactly like a heartbeat. A restart re-registers with a fresh
         // (often empty) set, which must replace the stored state — merging would leave the controller

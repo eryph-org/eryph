@@ -30,7 +30,7 @@ internal sealed class RegisterComponentCommandHandler(
         // A component that hosts endpoints contributes them to the Endpoints domain.
         // Re-evaluate and push so already-registered components pick up the new
         // advertiser; the refresh is a no-op when the aggregated content is unchanged.
-        if (message.AdvertisedEndpoints.Count > 0)
+        if (message.AdvertisedEndpoints is { Count: > 0 })
             await bus.Advanced.Routing.Send(
                 QueueNames.Controllers,
                 new RefreshConfigDomainCommand { Domain = ConfigDomain.Endpoints });

@@ -30,37 +30,42 @@ public readonly record struct StorageNames
         string path,
         VmHostAgentConfiguration vmHostAgentConfig)
     {
-        return FromPath(path, vmHostAgentConfig, defaults => defaults.Vms ?? throw new InvalidOperationException("VM path configuration is missing"));
+        return FromPath(path, vmHostAgentConfig, defaults => defaults.Vms);
     }
 
     public static (StorageNames Names, Option<string> StorageIdentifier) FromVhdPath(
         string path,
         VmHostAgentConfiguration vmHostAgentConfig) =>
-        FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes ?? throw new InvalidOperationException("Volume path configuration is missing"));
+        FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes);
 
     private static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
         string path,
         VmHostAgentConfiguration vmHostAgentConfig,
-        Func<VmHostAgentDefaultsConfiguration, string> getDefault)
+        Func<VmHostAgentDefaultsConfiguration, string?> getDefault)
     {
         return match(
             from pathCandidate in append(
-                    vmHostAgentConfig.Environments.ToSeq().SelectMany(
-                        e => e.Datastores.ToSeq(),
-                        (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
-                    vmHostAgentConfig.Environments.ToSeq().Map(e => (
+                    (vmHostAgentConfig.Environments ?? []).ToSeq().SelectMany(
+                        e => (e.Datastores ?? []).ToSeq(),
+                        (e, ds) => (Environment: e.Name, Datastore: ds.Name, Path: (string?)ds.Path)),
+                    (vmHostAgentConfig.Environments ?? []).ToSeq().Map(e => (
                         Environment: e.Name,
                         Datastore: EryphConstants.DefaultDataStoreName,
                         Path: getDefault(e.Defaults))),
-                    vmHostAgentConfig.Datastores.ToSeq().Map(ds => (
+                    (vmHostAgentConfig.Datastores ?? []).ToSeq().Map(ds => (
                         Environment: EryphConstants.DefaultEnvironmentName,
                         Datastore: ds.Name,
-                        ds.Path)),
+                        Path: (string?)ds.Path)),
                     Seq1((
                         Environment: EryphConstants.DefaultEnvironmentName,
                         Datastore: EryphConstants.DefaultDataStoreName,
                         Path: getDefault(vmHostAgentConfig.Defaults)))
-                ).Map(pc => from relativePath in PathUtils.GetContainedPath(pc.Path, path)
+                )
+                // Skip candidates with no configured path (e.g. an environment that contributes only
+                // datastores and has no default paths) instead of throwing, so one such environment
+                // cannot break path resolution for every VM/disk under the global default store.
+                .Map(pc => from candidatePath in Optional(pc.Path)
+                    from relativePath in PathUtils.GetContainedPath(candidatePath, path)
                     select (pc.Environment, pc.Datastore, RelativePath: relativePath))
                 .Somes()
                 .HeadOrNone()
@@ -134,17 +139,27 @@ public readonly record struct StorageNames
             : from defaultDatastoreConfig in Optional(vmHostAgentConfig.Datastores).ToSeq().Flatten()
                 .Where(ds => ds.Name == dataStore)
                 .HeadOrLeft(Error.New($"The datastore {dataStore} is not configured"))
-            let datastoreConfig = environment == EryphConstants.DefaultEnvironmentName
-                ? defaultDatastoreConfig
-                : match(from envConfig in vmHostAgentConfig.Environments
-                    where envConfig.Name == environment
-                    from envDsConfig in envConfig.Datastores ?? []
-                    where envDsConfig.Name == dataStore
-                    select envDsConfig,
-                    () => defaultDatastoreConfig,
-                    l => l.Head)
+            from datastoreConfig in ResolveDataStoreInEnvironment(
+                dataStore, environment, defaultDatastoreConfig, vmHostAgentConfig)
             select (datastoreConfig.Path, datastoreConfig.Path);
     }
+
+    // Resolves the datastore configuration to use within an environment. A non-default environment must
+    // exist locally — otherwise placement would silently fall back to the DEFAULT environment's datastore
+    // path, landing the VM/disk in the wrong environment's storage. When the environment exists but does
+    // not override the datastore, it inherits the top-level datastore.
+    private static Either<Error, VmHostAgentDataStoreConfiguration> ResolveDataStoreInEnvironment(
+        string dataStore,
+        string environment,
+        VmHostAgentDataStoreConfiguration defaultDatastoreConfig,
+        VmHostAgentConfiguration vmHostAgentConfig) =>
+        environment == EryphConstants.DefaultEnvironmentName
+            ? Right<Error, VmHostAgentDataStoreConfiguration>(defaultDatastoreConfig)
+            : from envConfig in Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
+                .Where(e => e.Name == environment)
+                .HeadOrLeft(Error.New($"The environment {environment} is not configured"))
+            select (envConfig.Datastores ?? [])
+                .FirstOrDefault(d => d.Name == dataStore) ?? defaultDatastoreConfig;
 
     private static string JoinPathAndProject(string dsPath, string projectName)
     {

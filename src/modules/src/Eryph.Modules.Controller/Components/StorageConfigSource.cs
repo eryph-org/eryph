@@ -44,9 +44,9 @@ internal sealed class StorageConfigSource(
             throw new InvalidOperationException($"No authored StorageConfig for scope '{scope}'.");
 
         // Not yet authored via the management API — fall back to the host-wired defaults source.
-        return await defaultsProvider.GetDefaultStorageConfig()
+        var config = await defaultsProvider.GetDefaultStorageConfig()
             .Match(
-                config => StorageConfigYamlSerializer.Serialize(config),
+                c => c,
                 error =>
                 {
                     // Never distribute a silently-empty storage vocabulary — that would make agents
@@ -59,5 +59,22 @@ internal sealed class StorageConfigSource(
                     throw new InvalidOperationException(
                         $"Cannot distribute the storage configuration: {error.Message}");
                 });
+
+        // Run the settings-derived config through the same canonicalization (name lower-casing +
+        // validation) the authored path uses, so a mixed-case or invalid controllersettings/agentsettings
+        // Storage section fails here with a clear error instead of being distributed verbatim and rejected
+        // on every agent — the source must not be the least-validated writer.
+        if (!ConfigDomainDescriptors.TryCanonicalize(
+                ConfigDomain.StorageConfig, StorageConfigYamlSerializer.Serialize(config),
+                out var canonical, out var canonicalizeError))
+        {
+            logger.LogError(
+                "The default storage configuration for {Domain} is invalid: {Error}.",
+                ConfigDomain.StorageConfig, canonicalizeError);
+            throw new InvalidOperationException(
+                $"Cannot distribute the storage configuration: {canonicalizeError}");
+        }
+
+        return canonical;
     }
 }

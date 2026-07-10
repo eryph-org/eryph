@@ -21,7 +21,7 @@ public sealed class DiskStoresChangeWatcherService(
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigManager,
     InventoryConfig inventoryConfig)
-    : IHostedService, IDisposable
+    : IHostedService, IDiskStoresChangeWatcher, IDisposable
 {
     // The semaphore is not disposed as it can block waiting tasks forever
     // and block the application shutdown. As this service is a singleton,

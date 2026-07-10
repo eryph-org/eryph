@@ -41,33 +41,53 @@ public class ComponentRegistration
         set => AppliedConfigVersions = DeserializeAppliedVersions(value);
     }
 
-    // Applied versions were once stored flat (Dictionary&lt;ConfigDomain, long&gt;) before versions became
-    // per-scope. Read the current nested shape, and on a shape mismatch fall back to migrating the legacy
-    // flat shape into the default scope ("") rather than dropping it — dropping would make the controller
-    // re-push every domain to every component on upgrade. A genuinely unparseable value (e.g. a
-    // renamed/removed ConfigDomain key) still resets to empty, which is tolerated.
+    // The value is stored keyed by ConfigDomain, which has been renamed (PlacementConfig → StorageConfig)
+    // and reshaped (flat Dictionary&lt;ConfigDomain, long&gt; → per-scope nested) over this domain's history.
+    // Parse it shape- and name-tolerantly so an upgraded value is MIGRATED rather than dropped: dropping
+    // would make the controller re-push every domain to every component. Each entry is read independently:
+    // - a numeric value is the legacy flat version, migrated into the default scope ("");
+    // - an object value is the current per-scope map;
+    // - the legacy "PlacementConfig" key is mapped to "StorageConfig";
+    // - a genuinely unknown key or unparseable entry is skipped (not fatal to the rest).
     private static Dictionary<ConfigDomain, Dictionary<string, long>> DeserializeAppliedVersions(string? json)
     {
         if (string.IsNullOrEmpty(json))
             return new();
+
+        Dictionary<string, JsonElement>? raw;
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<ConfigDomain, Dictionary<string, long>>>(json) ?? new();
+            raw = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
         }
         catch (JsonException)
         {
+            return new();
+        }
+        if (raw is null)
+            return new();
+
+        var result = new Dictionary<ConfigDomain, Dictionary<string, long>>();
+        foreach (var (rawKey, value) in raw)
+        {
+            var key = rawKey == "PlacementConfig" ? nameof(ConfigDomain.StorageConfig) : rawKey;
+            if (!Enum.TryParse<ConfigDomain>(key, out var domain))
+                continue;
+
             try
             {
-                var legacy = JsonSerializer.Deserialize<Dictionary<ConfigDomain, long>>(json);
-                return legacy is null
-                    ? new()
-                    : legacy.ToDictionary(kv => kv.Key, kv => new Dictionary<string, long> { [""] = kv.Value });
+                if (value.ValueKind == JsonValueKind.Number)
+                    result[domain] = new Dictionary<string, long> { [""] = value.GetInt64() };
+                else if (value.ValueKind == JsonValueKind.Object
+                         && value.Deserialize<Dictionary<string, long>>() is { } byScope)
+                    result[domain] = byScope;
             }
             catch (JsonException)
             {
-                return new();
+                // Skip this entry but keep the rest.
             }
         }
+
+        return result;
     }
 
     // Tolerate content that no longer parses (e.g. a renamed/removed key from an older build, or a
@@ -94,26 +114,33 @@ public class ComponentRegistration
     /// <summary>The applied version for a (domain, scope), or 0 when none was applied.</summary>
     public long GetAppliedVersion(ConfigDomain domain, string scope) =>
         AppliedConfigVersions.TryGetValue(domain, out var byScope)
-        && byScope.TryGetValue(scope, out var version)
+        && byScope.TryGetValue(scope ?? "", out var version)
             ? version
             : 0;
 
-    /// <summary>Records an applied version for a (domain, scope), keeping the highest seen.</summary>
+    /// <summary>
+    /// Records an applied version for a (domain, scope). A domain has exactly one effective scope, so a
+    /// version for a DIFFERENT scope replaces the domain's entry; a version for the same scope keeps the
+    /// highest seen. This mirrors the component's own one-scope-per-domain state, so a reverted scope is
+    /// never treated as "already applied".
+    /// </summary>
     public void SetAppliedVersion(ConfigDomain domain, string scope, long version)
     {
-        if (!AppliedConfigVersions.TryGetValue(domain, out var byScope))
-            AppliedConfigVersions[domain] = byScope = new Dictionary<string, long>();
-        byScope[scope] = byScope.TryGetValue(scope, out var existing) && existing > version
-            ? existing
-            : version;
+        scope ??= "";
+        if (AppliedConfigVersions.TryGetValue(domain, out var byScope)
+            && byScope.TryGetValue(scope, out var existing) && existing >= version)
+            return;
+
+        AppliedConfigVersions[domain] = new Dictionary<string, long> { [scope] = version };
     }
 
-    /// <summary>Replaces the applied versions from a component's reported set.</summary>
-    public void SetAppliedVersions(IEnumerable<AppliedConfigVersion> versions)
+    /// <summary>Replaces the applied versions from a component's reported set (null entries skipped).</summary>
+    public void SetAppliedVersions(IEnumerable<AppliedConfigVersion>? versions)
     {
         AppliedConfigVersions = new();
-        foreach (var version in versions)
-            SetAppliedVersion(version.Domain, version.Scope, version.Version);
+        foreach (var version in versions ?? [])
+            if (version is not null)
+                SetAppliedVersion(version.Domain, version.Scope ?? "", version.Version);
     }
 
     internal string AdvertisedEndpointsJson
@@ -132,7 +159,11 @@ public class ComponentRegistration
     internal string TagsJson
     {
         get => JsonSerializer.Serialize(Tags);
-        set => Tags = DeserializeOrEmpty<Dictionary<string, string>>(value);
+        // Coalesce null tag values to empty: a hand-edited/corrupt row can carry a JSON null (which the
+        // non-null value annotation does not stop System.Text.Json from producing), and a null value
+        // would NRE in scope resolution and poison every distribution read of this registration.
+        set => Tags = DeserializeOrEmpty<Dictionary<string, string?>>(value)
+            .ToDictionary(kv => kv.Key, kv => kv.Value ?? "");
     }
 
     /// <summary>Operator-assigned tags (key → value) used to target scoped configuration.

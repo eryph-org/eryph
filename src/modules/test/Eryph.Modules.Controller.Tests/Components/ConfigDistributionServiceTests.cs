@@ -61,13 +61,15 @@ public class ConfigDistributionServiceTests
         var source = new StorageConfigSource(
             container, defaults.Object, NullLogger<StorageConfigSource>.Instance);
         return new ConfigDistributionService(
-            records.Object, new IConfigSource[] { source }, Authored, NoOpLock());
+            records.Object, new IConfigSource[] { source }, Authored, NoOpLock(),
+            NullLogger<ConfigDistributionService>.Instance);
     }
 
     private static ConfigDistributionService CreateService(
         Mock<IStateStoreRepository<ConfigRecord>> records,
         params IConfigSource[] sources) =>
-        new(records.Object, sources, Authored, NoOpLock());
+        new(records.Object, sources, Authored, NoOpLock(),
+            NullLogger<ConfigDistributionService>.Instance);
 
     private sealed class EmptyAuthoredStore : IAuthoredConfigStore
     {
@@ -515,7 +517,8 @@ public class ConfigDistributionServiceTests
                     : null);
 
         var service = new ConfigDistributionService(
-            records.Object, [], new ScopedAuthoredStore(ConfigDomain.StorageConfig, "env:edge"), NoOpLock());
+            records.Object, [], new ScopedAuthoredStore(ConfigDomain.StorageConfig, "env:edge"), NoOpLock(),
+            NullLogger<ConfigDistributionService>.Instance);
 
         var bundles = await service.GetOutdatedBundlesAsync(registration, CancellationToken.None);
 

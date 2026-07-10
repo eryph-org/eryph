@@ -4,6 +4,7 @@ using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Rebus.Bus;
 
@@ -21,7 +22,8 @@ public class ComponentHeartbeatCommandHandlerTests
     private static readonly Guid InstanceId = Guid.NewGuid();
 
     private static ConfigDistributionService Distribution(Mock<IStateStoreRepository<ConfigRecord>> records) =>
-        new(records.Object, [], new EmptyAuthoredStore(), new Mock<IDistributedLockScopeHolder>().Object);
+        new(records.Object, [], new EmptyAuthoredStore(), new Mock<IDistributedLockScopeHolder>().Object,
+            NullLogger<ConfigDistributionService>.Instance);
 
     // Nothing authored, so every domain resolves the default scope. IAuthoredConfigStore is internal
     // and cannot be proxied by Moq, so it is hand-stubbed.

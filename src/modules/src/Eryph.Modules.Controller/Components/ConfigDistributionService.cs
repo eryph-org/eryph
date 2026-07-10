@@ -9,6 +9,7 @@ using Eryph.ModuleCore.Configuration;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Components;
 
@@ -27,7 +28,8 @@ internal sealed class ConfigDistributionService(
     IStateStoreRepository<ConfigRecord> records,
     IEnumerable<IConfigSource> sources,
     IAuthoredConfigStore authoredStore,
-    IDistributedLockScopeHolder lockHolder)
+    IDistributedLockScopeHolder lockHolder,
+    ILogger<ConfigDistributionService> logger)
 {
     private static readonly TimeSpan LockTimeout = TimeSpan.FromMinutes(1);
 
@@ -73,18 +75,22 @@ internal sealed class ConfigDistributionService(
     {
         // The component reports its known versions per (domain, scope); index them for lookup. The
         // reported set is authoritative for the pull path (it may be a fresh/reset component), so it is
-        // used instead of the stored registration state.
+        // used instead of the stored registration state. A null Scope (malformed sender) is the default.
         var known = new Dictionary<(ConfigDomain, string), long>();
-        foreach (var version in knownVersions)
+        foreach (var version in knownVersions ?? [])
         {
-            var key = (version.Domain, version.Scope);
+            if (version is null)
+                continue;
+            var key = (version.Domain, version.Scope ?? "");
             known[key] = Math.Max(known.GetValueOrDefault(key), version.Version);
         }
 
         var bundles = new List<ConfigBundle>();
         foreach (var domain in GetEntitledDomains(registration.ComponentType))
         {
-            var bundle = await ResolveBundleAsync(
+            // Isolate per domain: one source that cannot build its payload (e.g. an unreadable settings
+            // section) must not starve the component of the OTHER domains' config.
+            var bundle = await TryResolveBundleAsync(
                 domain, registration,
                 (d, s) => known.GetValueOrDefault((d, s)), materialize: true, cancellationToken);
             if (bundle is not null)
@@ -92,6 +98,29 @@ internal sealed class ConfigDistributionService(
         }
 
         return bundles;
+    }
+
+    // Wraps ResolveBundleAsync so a single domain's failure is logged and skipped rather than failing the
+    // whole snapshot/refresh (which would deliver no domains at all).
+    private async Task<ConfigBundle?> TryResolveBundleAsync(
+        ConfigDomain domain,
+        ComponentRegistration registration,
+        Func<ConfigDomain, string, long> getAppliedVersion,
+        bool materialize,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ResolveBundleAsync(
+                domain, registration, getAppliedVersion, materialize, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to resolve configuration domain {Domain} for component {ComponentId}; "
+                + "skipping it and delivering the other domains.", domain, registration.ComponentId);
+            return null;
+        }
     }
 
     /// <summary>
@@ -106,7 +135,7 @@ internal sealed class ConfigDistributionService(
         var bundles = new List<ConfigBundle>();
         foreach (var domain in GetEntitledDomains(registration.ComponentType))
         {
-            var bundle = await ResolveBundleAsync(
+            var bundle = await TryResolveBundleAsync(
                 domain, registration, registration.GetAppliedVersion, materialize: false, cancellationToken);
             if (bundle is not null)
                 bundles.Add(bundle);
@@ -136,18 +165,27 @@ internal sealed class ConfigDistributionService(
         IEnumerable<ComponentRegistration> components,
         CancellationToken cancellationToken)
     {
-        var results = new List<(ComponentRegistration, ConfigBundle)>();
-        var recordsByScope = new Dictionary<string, ConfigRecord?>();
-
+        // Resolve every component's scope first (no locks), then materialize each DISTINCT scope once in
+        // a deterministic (sorted) order. Sorting matters: EnsureCurrentRecordAsync holds a per-scope lock
+        // until the unit of work completes, so two concurrent refreshes materializing the same set of
+        // scopes in different orders could otherwise deadlock until the lock timeout.
+        var componentScopes = new List<(ComponentRegistration Component, string Scope)>();
         foreach (var component in components)
-        {
-            var scope = await ResolveScopeAsync(domain, component, cancellationToken);
-            if (!recordsByScope.TryGetValue(scope, out var record))
-            {
-                record = (await EnsureCurrentRecordAsync(domain, scope, cancellationToken)).Record;
-                recordsByScope[scope] = record;
-            }
+            componentScopes.Add((component, await ResolveScopeAsync(domain, component, cancellationToken)));
 
+        var recordsByScope = new Dictionary<string, ConfigRecord?>();
+        foreach (var scope in componentScopes
+                     .Select(cs => cs.Scope)
+                     .Distinct()
+                     .OrderBy(s => s, StringComparer.Ordinal))
+        {
+            recordsByScope[scope] = (await EnsureCurrentRecordAsync(domain, scope, cancellationToken)).Record;
+        }
+
+        var results = new List<(ComponentRegistration, ConfigBundle)>();
+        foreach (var (component, scope) in componentScopes)
+        {
+            var record = recordsByScope[scope];
             if (record is null || record.Version <= component.GetAppliedVersion(domain, scope))
                 continue;
 
@@ -210,10 +248,10 @@ internal sealed class ConfigDistributionService(
         if (source is null)
             return (null, false);
 
-        // Serialize the whole build-read-modify-write for this (domain, scope). The scope is
-        // percent-escaped so a selector cannot introduce an invalid lock-file character.
-        await lockHolder.AcquireLock(
-            $"config-domain-{domain}-{Uri.EscapeDataString(scope)}", LockTimeout);
+        // Serialize the whole build-read-modify-write for this (domain, scope), and share the lock with
+        // the authoring path so this materialization blocks until an in-flight authoring commit for the
+        // same (domain, scope) is visible (see ConfigDistributionLock).
+        await lockHolder.AcquireLock(ConfigDistributionLock.ForDomainScope(domain, scope), LockTimeout);
 
         var payload = await source.BuildPayloadAsync(scope, cancellationToken);
         var record = await records.GetBySpecAsync(

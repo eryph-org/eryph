@@ -54,7 +54,9 @@ public static class ConfigScope
 
         scope = scope.Trim();
 
-        if (scope.StartsWith("env:", StringComparison.Ordinal))
+        // The prefix is matched case-insensitively so `Env:`/`HOST:` are accepted; the value after the
+        // prefix is canonicalized (lower-cased/reformatted) below.
+        if (scope.StartsWith("env:", StringComparison.OrdinalIgnoreCase))
         {
             var name = scope["env:".Length..].Trim();
             if (string.IsNullOrEmpty(name))
@@ -67,7 +69,7 @@ public static class ConfigScope
             return canonical.Length <= MaxLength || TooLong(out error);
         }
 
-        if (scope.StartsWith("host:", StringComparison.Ordinal))
+        if (scope.StartsWith("host:", StringComparison.OrdinalIgnoreCase))
         {
             if (!Guid.TryParse(scope["host:".Length..], out var componentId))
             {
@@ -79,7 +81,7 @@ public static class ConfigScope
             return true;
         }
 
-        if (scope.StartsWith("tag:", StringComparison.Ordinal))
+        if (scope.StartsWith("tag:", StringComparison.OrdinalIgnoreCase))
         {
             var rest = scope["tag:".Length..];
             var separator = rest.IndexOf('=');

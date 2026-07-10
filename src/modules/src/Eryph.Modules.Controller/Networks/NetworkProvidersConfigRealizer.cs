@@ -82,6 +82,19 @@ public class NetworkProvidersConfigRealizer(IStateStore stateStore) : INetworkPr
                 {
                     foundIpPools.Add(ipPoolEntity);
 
+                    // Changing the FIRST IP of a pool that already has assignments is not supported:
+                    // assignments are numbered relative to the first IP, so re-basing the range would let
+                    // the allocator hand out a duplicate in-range address. Reject it rather than silently
+                    // corrupt allocation. Growing/shrinking at the LAST IP is fine (numbers are unaffected;
+                    // out-of-range assignments are pruned below).
+                    if (!string.Equals(ipPoolEntity.FirstIp, ipPool.FirstIp, StringComparison.OrdinalIgnoreCase)
+                        && ipPoolEntity.IpAssignments.Any())
+                    {
+                        throw new InvalidOperationException(
+                            $"Changing the first IP of IP pool '{ipPool.Name}' is not supported while it "
+                            + "has assignments. Remove its assignments or create a new pool.");
+                    }
+
                     ipPoolEntity.FirstIp = ipPool.FirstIp;
                     // The next-IP cursor is runtime allocation state, not authored config. Take it from
                     // the config only when it carries one (the local p_networks.yml still does); when the

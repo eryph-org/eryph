@@ -46,15 +46,14 @@ internal sealed class AuthoredConfigStore(
         ConfigDomain domain, string scope, string payload, string? author, CancellationToken cancellationToken)
     {
         // Serialize appends per domain/scope on this controller so two concurrent authors do not read
-        // the same current version and both allocate the same next one. The lock is host-local (the
-        // provider is file-based, so the name must be a valid filename on every platform — notably no
-        // ':' on Windows; the scope is percent-escaped so future selectors cannot introduce invalid
-        // characters). Across multiple controllers the real guard is the unique (Domain, Scope, Version)
-        // index: a colliding insert is rejected and the message unit of work retries, re-reading the
-        // committed version and allocating the next one — the write converges, it is not lost. Held
-        // until the message unit of work completes.
-        await lockHolder.AcquireLock(
-            $"authored-config-{domain}-{Uri.EscapeDataString(scope)}", LockTimeout);
+        // the same current version and both allocate the same next one. This is the SAME lock the
+        // distribution materialization takes, so a config-refresh that races this still-open unit of work
+        // blocks until the authored version is committed rather than distributing the previous value (see
+        // ConfigDistributionLock). Across multiple controllers the real guard is the unique
+        // (Domain, Scope, Version) index: a colliding insert is rejected and the message unit of work
+        // retries, re-reading the committed version and allocating the next one — the write converges, it
+        // is not lost. Held until the message unit of work completes.
+        await lockHolder.AcquireLock(ConfigDistributionLock.ForDomainScope(domain, scope), LockTimeout);
 
         var current = await repository.GetBySpecAsync(
             new AuthoredConfigSpecs.GetCurrent(domain, scope), cancellationToken);

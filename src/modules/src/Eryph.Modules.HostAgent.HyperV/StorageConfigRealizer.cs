@@ -6,6 +6,7 @@ using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
+using Eryph.Modules.HostAgent.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ internal sealed class StorageConfigRealizer(
     IStorageConfigProvider storageConfigProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
+    IDiskStoresChangeWatcher diskStoresChangeWatcher,
     ILogger<StorageConfigRealizer> logger)
     : IConfigRealizer
 {
@@ -45,6 +47,18 @@ internal sealed class StorageConfigRealizer(
         logger.LogInformation(
             "Applied storage configuration v{Version}: {DatastoreCount} datastore(s), {EnvironmentCount} environment(s).",
             version, (config.Datastores ?? []).Length, (config.Environments ?? []).Length);
+
+        // The datastore paths may have changed; restart the disk-store watcher so it inventories the new
+        // locations (the same effect the interactive agent-settings sync has). Best-effort — the config
+        // is already applied, so a watcher hiccup must not fail the apply.
+        try
+        {
+            await diskStoresChangeWatcher.Restart();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to restart the disk-store watcher after a storage-config apply.");
+        }
     }
 
     private async Task MergeIntoLocalCache(StorageConfig distributed)
