@@ -140,11 +140,13 @@ public static class StorageConfigMerge
         {
             result.TryGetValue(environment.Name, out var existing);
 
-            // A vocabulary-only environment (name, no paths) with no local counterpart must not be
-            // materialized: it would be a name with no usable path. The name is still an allowed
-            // placement target via the distributed vocabulary; it just needs a path (at a more specific
-            // scope) before anything can be placed in it.
-            if (existing is null && !ContributesPaths(environment))
+            // A distributed environment with no local counterpart is only materialized if it supplies
+            // BOTH default paths: the agent requires every environment to have default Vms and Volumes
+            // paths, so an environment that carries only a name or only datastores cannot form a valid
+            // environment on its own (materializing it would fail validation and wedge the apply). The
+            // name is still an allowed placement target via the distributed vocabulary; it becomes usable
+            // once a more specific scope (or the local config) supplies its default paths.
+            if (existing is null && !ProvidesDefaultPaths(environment))
                 continue;
 
             result[environment.Name] = new VmHostAgentEnvironmentConfiguration
@@ -194,10 +196,9 @@ public static class StorageConfigMerge
     private static string? ClaimedToNull(string? path, HashSet<string> claimed) =>
         !string.IsNullOrWhiteSpace(path) && claimed.Contains(NormalizePath(path)) ? null : path;
 
-    private static bool ContributesPaths(StorageEnvironmentConfig environment) =>
+    private static bool ProvidesDefaultPaths(StorageEnvironmentConfig environment) =>
         !string.IsNullOrWhiteSpace(environment.Defaults?.Vms)
-        || !string.IsNullOrWhiteSpace(environment.Defaults?.Volumes)
-        || (environment.Datastores ?? []).Any(d => !string.IsNullOrWhiteSpace(d.Path));
+        && !string.IsNullOrWhiteSpace(environment.Defaults?.Volumes);
 
     private static string NormalizePath(string path) =>
         Path.TrimEndingDirectorySeparator(path).ToLowerInvariant();

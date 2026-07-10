@@ -242,4 +242,129 @@ public class StorageConfigMergeTests
 
         merged.Ovn.Should().BeSameAs(local.Ovn);
     }
+
+    [Fact]
+    public void Cross_level_move_from_datastore_to_top_level_defaults_drops_the_stale_datastore()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Datastores = [new VmHostAgentDataStoreConfiguration { Name = "fast", Path = @"D:\pool" }],
+        };
+        var distributed = new StorageConfig
+        {
+            // The path moves from the "fast" datastore to the top-level VM default; "fast" is dropped.
+            Defaults = new StorageDefaultsConfig { Vms = @"D:\pool" },
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        merged.Defaults.Vms.Should().Be(@"D:\pool");
+        merged.Datastores.Should().NotContain(d => d.Name == "fast");
+
+        VmHostAgentConfigurationValidations.ValidateVmHostAgentConfig(merged).IsFail.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Environment_rename_that_collides_on_path_drops_the_stale_local_environment_path()
+    {
+        var local = new VmHostAgentConfiguration
+        {
+            Environments =
+            [
+                new VmHostAgentEnvironmentConfiguration
+                {
+                    Name = "old",
+                    Defaults = new VmHostAgentDefaultsConfiguration { Vms = @"D:\old\vms", Volumes = @"D:\old\vol" },
+                    Datastores = [new VmHostAgentDataStoreConfiguration { Name = "shared", Path = @"D:\shared" }],
+                },
+            ],
+        };
+        var distributed = new StorageConfig
+        {
+            Environments =
+            [
+                new StorageEnvironmentConfig
+                {
+                    Name = "new",
+                    Defaults = new StorageDefaultsConfig { Vms = @"D:\new\vms", Volumes = @"D:\new\vol" },
+                    Datastores = [new StorageDatastoreConfig { Name = "shared", Path = @"D:\shared" }],
+                },
+            ],
+        };
+
+        var merged = StorageConfigMerge.Apply(local, distributed);
+
+        // The renamed environment is materialized; the stale local one keeps its own defaults but its
+        // shared datastore path (now owned by "new") is pruned, so the merged result has no duplicate
+        // path and passes the agent's global validation instead of wedging the apply loop.
+        merged.Environments!.Should().Contain(e => e.Name == "new");
+        var oldEnvironment = merged.Environments!.SingleOrDefault(e => e.Name == "old");
+        if (oldEnvironment is not null)
+            oldEnvironment.Datastores.Should().NotContain(d => d.Path == @"D:\shared");
+
+        CollectAllPaths(merged).Should().OnlyHaveUniqueItems();
+        VmHostAgentConfigurationValidations.ValidateVmHostAgentConfig(merged).IsFail.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Distributed_environment_without_default_paths_and_no_local_counterpart_is_not_materialized()
+    {
+        // The agent requires every environment to have default Vms/Volumes paths, so an environment that
+        // carries only datastores cannot form a valid environment on its own; the merge must NOT
+        // materialize it (doing so would fail ValidateVmHostAgentConfig and wedge the apply retry loop).
+        var distributed = new StorageConfig
+        {
+            Environments =
+            [
+                new StorageEnvironmentConfig
+                {
+                    Name = "edge",
+                    Datastores = [new StorageDatastoreConfig { Name = "edge-store", Path = @"D:\edge" }],
+                },
+            ],
+        };
+
+        var merged = StorageConfigMerge.Apply(new VmHostAgentConfiguration(), distributed);
+
+        merged.Environments.Should().NotContain(e => e.Name == "edge");
+    }
+
+    [Fact]
+    public void Distributed_environment_with_full_defaults_is_materialized_and_passes_validation()
+    {
+        var distributed = new StorageConfig
+        {
+            Environments =
+            [
+                new StorageEnvironmentConfig
+                {
+                    Name = "edge",
+                    Defaults = new StorageDefaultsConfig { Vms = @"D:\edge\vms", Volumes = @"D:\edge\vol" },
+                    Datastores = [new StorageDatastoreConfig { Name = "edge-store", Path = @"D:\edge\store" }],
+                },
+            ],
+        };
+
+        var merged = StorageConfigMerge.Apply(new VmHostAgentConfiguration(), distributed);
+
+        merged.Environments.Should().ContainSingle(e => e.Name == "edge");
+        VmHostAgentConfigurationValidations.ValidateVmHostAgentConfig(merged).IsFail.Should().BeFalse();
+    }
+
+    private static string[] CollectAllPaths(VmHostAgentConfiguration config)
+    {
+        var paths = new List<string?> { config.Defaults.Vms, config.Defaults.Volumes };
+        paths.AddRange((config.Datastores ?? []).Select(d => d.Path));
+        foreach (var environment in config.Environments ?? [])
+        {
+            paths.Add(environment.Defaults.Vms);
+            paths.Add(environment.Defaults.Volumes);
+            paths.AddRange((environment.Datastores ?? []).Select(d => d.Path));
+        }
+
+        return paths
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => System.IO.Path.TrimEndingDirectorySeparator(p!).ToLowerInvariant())
+            .ToArray();
+    }
 }

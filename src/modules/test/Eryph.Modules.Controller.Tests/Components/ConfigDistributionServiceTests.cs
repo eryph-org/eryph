@@ -259,6 +259,43 @@ public class ConfigDistributionServiceTests
     }
 
     [Fact]
+    public async Task RefreshForComponents_returns_the_correct_per_component_scope_for_heterogeneous_components()
+    {
+        // Two components resolve DIFFERENT scopes for the same domain: one has no environment (default
+        // scope), the other is assigned "edge" and has an authored value there. Each component's bundle
+        // must carry its own resolved scope, not the scope resolved for some other component in the batch.
+        var records = new Mock<IStateStoreRepository<ConfigRecord>>();
+        records.Setup(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecord?)null);
+        records.Setup(r => r.AddAsync(It.IsAny<ConfigRecord>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigRecord record, CancellationToken _) => record);
+
+        var source = new StubSource(ConfigDomain.StorageConfig, """{"v":1}""");
+        var service = new ConfigDistributionService(
+            records.Object, [source], new ScopedAuthoredStore(ConfigDomain.StorageConfig, "env:edge"), NoOpLock(),
+            NullLogger<ConfigDistributionService>.Instance);
+
+        var defaultComponent = Reg(ComponentType.VMHostAgent);
+        var edgeComponent = new ComponentRegistration
+        {
+            ComponentId = Guid.NewGuid(),
+            ComponentType = ComponentType.VMHostAgent,
+            MachineName = "edge-host",
+            InboundQueue = "q",
+            Environment = "edge",
+        };
+
+        var outdated = await service.RefreshForComponentsAsync(
+            ConfigDomain.StorageConfig, [defaultComponent, edgeComponent], CancellationToken.None);
+
+        outdated.Should().HaveCount(2);
+        outdated.Should().ContainSingle(x => x.Component == defaultComponent && x.Bundle.Scope == "");
+        outdated.Should().ContainSingle(x => x.Component == edgeComponent && x.Bundle.Scope == "env:edge");
+        // One build per DISTINCT resolved scope, not per component.
+        source.BuildCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task Refresh_bumps_version_and_pushes_when_payload_changed()
     {
         var existing = new ConfigRecord

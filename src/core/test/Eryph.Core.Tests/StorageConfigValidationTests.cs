@@ -148,4 +148,50 @@ public class StorageConfigValidationTests
     {
         StorageConfigValidation.IsFullyQualifiedPath(path).Should().Be(expected);
     }
+
+    [Fact]
+    public void Validate_rejects_a_datastore_named_default()
+    {
+        var config = new StorageConfig
+        {
+            Datastores = [new StorageDatastoreConfig { Name = "default", Path = @"D:\default" }],
+            Environments = [],
+        };
+
+        StorageConfigValidation.Validate(config).Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Validate_rejects_an_environment_named_default()
+    {
+        var config = new StorageConfig
+        {
+            Datastores = [],
+            Environments = [new StorageEnvironmentConfig { Name = "default" }],
+        };
+
+        StorageConfigValidation.Validate(config).Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Validate_rejects_an_environment_datastore_not_declared_at_the_top_level()
+    {
+        var config = new StorageConfig
+        {
+            Datastores = [],
+            Environments =
+            [
+                new StorageEnvironmentConfig
+                {
+                    Name = "staging",
+                    Datastores = [new StorageDatastoreConfig { Name = "fast", Path = @"D:\fast" }],
+                },
+            ],
+        };
+
+        var errors = StorageConfigValidation.Validate(config);
+
+        errors.Should().NotBeEmpty();
+        errors.Should().Contain(e => e.Contains("not declared in the top-level"));
+    }
 }

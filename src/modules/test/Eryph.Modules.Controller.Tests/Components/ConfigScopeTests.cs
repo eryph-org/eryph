@@ -206,4 +206,43 @@ public class ConfigScopeTests
         error.Should().NotBeNull();
         error.Should().Contain(ConfigScope.MaxLength.ToString());
     }
+
+    [Theory]
+    [InlineData("Env:Prod", "env:prod")]
+    [InlineData("HOST:0F8FAD5B-D9CB-469F-A165-70867728950E", "host:0f8fad5b-d9cb-469f-a165-70867728950e")]
+    [InlineData("TAG:Rack=R1", "tag:rack=r1")]
+    public void TryCanonicalize_accepts_upper_case_prefixes(string scope, string expectedCanonical)
+    {
+        var ok = ConfigScope.TryCanonicalize(scope, out var canonical, out var error);
+
+        ok.Should().BeTrue();
+        canonical.Should().Be(expectedCanonical);
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryCanonicalize_accepts_an_environment_scope_at_exactly_the_max_length()
+    {
+        // "env:" (4 chars) + 251 chars = 255 = ConfigScope.MaxLength.
+        var scope = "env:" + new string('a', 251);
+
+        var ok = ConfigScope.TryCanonicalize(scope, out var canonical, out var error);
+
+        ok.Should().BeTrue();
+        canonical.Length.Should().Be(ConfigScope.MaxLength);
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryCanonicalize_rejects_an_environment_scope_one_char_over_the_max_length()
+    {
+        // "env:" (4 chars) + 252 chars = 256 = ConfigScope.MaxLength + 1.
+        var scope = "env:" + new string('a', 252);
+
+        var ok = ConfigScope.TryCanonicalize(scope, out _, out var error);
+
+        ok.Should().BeFalse();
+        error.Should().NotBeNull();
+        error.Should().Contain(ConfigScope.MaxLength.ToString());
+    }
 }
