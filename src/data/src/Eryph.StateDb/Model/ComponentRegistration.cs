@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Eryph.Messages.Components;
 
@@ -37,11 +38,40 @@ public class ComponentRegistration
     internal string AppliedConfigVersionsJson
     {
         get => JsonSerializer.Serialize(AppliedConfigVersions);
-        set => AppliedConfigVersions = DeserializeOrEmpty<Dictionary<ConfigDomain, Dictionary<string, long>>>(value);
+        set => AppliedConfigVersions = DeserializeAppliedVersions(value);
     }
 
-    // Tolerate content that no longer parses (e.g. a renamed/removed ConfigDomain key from an older build,
-    // or a corrupted value): treat it as empty rather than throwing, which would poison every read of this
+    // Applied versions were once stored flat (Dictionary&lt;ConfigDomain, long&gt;) before versions became
+    // per-scope. Read the current nested shape, and on a shape mismatch fall back to migrating the legacy
+    // flat shape into the default scope ("") rather than dropping it — dropping would make the controller
+    // re-push every domain to every component on upgrade. A genuinely unparseable value (e.g. a
+    // renamed/removed ConfigDomain key) still resets to empty, which is tolerated.
+    private static Dictionary<ConfigDomain, Dictionary<string, long>> DeserializeAppliedVersions(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return new();
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<ConfigDomain, Dictionary<string, long>>>(json) ?? new();
+        }
+        catch (JsonException)
+        {
+            try
+            {
+                var legacy = JsonSerializer.Deserialize<Dictionary<ConfigDomain, long>>(json);
+                return legacy is null
+                    ? new()
+                    : legacy.ToDictionary(kv => kv.Key, kv => new Dictionary<string, long> { [""] = kv.Value });
+            }
+            catch (JsonException)
+            {
+                return new();
+            }
+        }
+    }
+
+    // Tolerate content that no longer parses (e.g. a renamed/removed key from an older build, or a
+    // corrupted value): treat it as empty rather than throwing, which would poison every read of this
     // registration (heartbeat, upsert) and wedge the component out of the catalog.
     private static T DeserializeOrEmpty<T>(string? json)
         where T : new()

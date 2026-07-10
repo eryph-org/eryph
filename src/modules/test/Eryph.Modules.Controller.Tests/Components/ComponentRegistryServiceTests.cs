@@ -98,7 +98,7 @@ public class ComponentRegistryServiceTests
     }
 
     [Fact]
-    public async Task Upsert_merges_known_versions_taking_the_higher_value()
+    public async Task Upsert_overwrites_the_applied_versions_with_the_reported_set()
     {
         var componentId = Guid.NewGuid();
         var existing = new ComponentRegistration
@@ -118,13 +118,14 @@ public class ComponentRegistryServiceTests
                 known:
                 [
                     new AppliedConfigVersion { Domain = ConfigDomain.StorageConfig, Scope = "", Version = 3 },
-                    new AppliedConfigVersion { Domain = ConfigDomain.Endpoints, Scope = "", Version = 9 },
                 ]),
             CancellationToken.None);
 
-        // Existing higher value is kept; reported higher value wins.
-        result.GetAppliedVersion(ConfigDomain.StorageConfig, "").Should().Be(5);
-        result.GetAppliedVersion(ConfigDomain.Endpoints, "").Should().Be(9);
+        // The registration command reports the component's authoritative current state, so it replaces
+        // the stored set wholesale — a restart reporting fewer/lower versions must not retain the old
+        // ones (which would make the controller skip pushing config the fresh instance no longer holds).
+        result.GetAppliedVersion(ConfigDomain.StorageConfig, "").Should().Be(3);
+        result.GetAppliedVersion(ConfigDomain.Endpoints, "").Should().Be(0);
     }
 
     [Fact]
