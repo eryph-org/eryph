@@ -81,9 +81,11 @@ public class ComponentRegistration
                          && value.Deserialize<Dictionary<string, long>>() is { } byScope)
                     result[domain] = byScope;
             }
-            catch (JsonException)
+            catch (Exception)
             {
-                // Skip this entry but keep the rest.
+                // Skip this entry but keep the rest. Catch broadly (not just JsonException): GetInt64 on a
+                // malformed/out-of-range number throws FormatException/InvalidOperationException, and the
+                // whole point here is that no corrupt entry can wedge reads of the registration.
             }
         }
 

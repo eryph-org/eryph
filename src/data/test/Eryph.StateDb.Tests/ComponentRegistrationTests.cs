@@ -78,4 +78,17 @@ public class ComponentRegistrationTests
 
         registration.AppliedConfigVersions.Should().BeEmpty();
     }
+
+    [Fact]
+    public void AppliedConfigVersions_skips_an_out_of_range_number_but_keeps_the_rest()
+    {
+        // A malformed/out-of-range number (JsonElement.GetInt64 throws a non-JsonException) must not
+        // wedge reads of the whole registration.
+        var registration = Empty();
+
+        registration.AppliedConfigVersionsJson = """{"StorageConfig":99999999999999999999,"Endpoints":9}""";
+
+        registration.GetAppliedVersion(ConfigDomain.Endpoints, "").Should().Be(9);
+        registration.AppliedConfigVersions.Should().ContainSingle();
+    }
 }

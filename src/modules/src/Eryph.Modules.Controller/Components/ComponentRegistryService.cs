@@ -177,11 +177,14 @@ internal sealed class ComponentRegistryService(
         var normalizedTags = new Dictionary<string, string>();
         foreach (var tag in tags ?? new Dictionary<string, string?>())
         {
-            if (!ConfigScope.IsValidTagKey(tag.Key, out var tagError))
+            // Validate the TRIMMED key, matching the operation handler (which trims before validating) —
+            // otherwise a key like " rack " would pass the handler and throw here, turning a user error
+            // into an unhandled exception. A null value (deserialization can produce one) is normalized
+            // to the empty selector value; the stored tag set has non-null values.
+            var key = tag.Key.Trim();
+            if (!ConfigScope.IsValidTagKey(key, out var tagError))
                 throw new InvalidOperationException(tagError);
-            // A null value (deserialization can produce one) is normalized to the empty selector value;
-            // the stored tag set has non-null values.
-            normalizedTags[tag.Key.Trim().ToLowerInvariant()] = tag.Value?.Trim().ToLowerInvariant() ?? "";
+            normalizedTags[key.ToLowerInvariant()] = tag.Value?.Trim().ToLowerInvariant() ?? "";
         }
 
         registration.Tags = normalizedTags;

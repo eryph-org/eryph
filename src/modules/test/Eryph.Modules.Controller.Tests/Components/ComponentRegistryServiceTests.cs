@@ -295,6 +295,27 @@ public class ComponentRegistryServiceTests
     }
 
     [Fact]
+    public async Task SetMetadata_trims_a_tag_key_instead_of_rejecting_it()
+    {
+        var componentId = Guid.NewGuid();
+        var existing = new ComponentRegistration
+        {
+            Id = Guid.NewGuid(), ComponentId = componentId, ComponentType = ComponentType.VMHostAgent,
+            MachineName = "host", InboundQueue = "q",
+        };
+        var (service, _) = Create(existing);
+
+        // A whitespace-padded key must be trimmed and accepted (matching the operation handler), not
+        // throw — otherwise a value that passes the handler would throw here on a re-entrant path.
+        var found = await service.SetMetadataAsync(
+            componentId, null, new Dictionary<string, string?> { [" rack "] = "r1" }, CancellationToken.None);
+
+        found.Should().BeTrue();
+        existing.Tags.Should().ContainKey("rack");
+        existing.Tags["rack"].Should().Be("r1");
+    }
+
+    [Fact]
     public async Task SetMetadata_returns_false_for_an_unknown_component()
     {
         var (service, repo) = Create();
