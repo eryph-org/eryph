@@ -12,6 +12,63 @@ namespace Eryph.StateDb.Sqlite.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AuthoredConfigs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Domain = table.Column<string>(type: "TEXT", nullable: false),
+                    Scope = table.Column<string>(type: "TEXT", nullable: false),
+                    Version = table.Column<long>(type: "INTEGER", nullable: false),
+                    Payload = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedBy = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuthoredConfigs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ComponentRegistrations",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ComponentId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ComponentType = table.Column<string>(type: "TEXT", nullable: false),
+                    InstanceId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MachineName = table.Column<string>(type: "TEXT", nullable: false),
+                    Version = table.Column<string>(type: "TEXT", nullable: true),
+                    InboundQueue = table.Column<string>(type: "TEXT", nullable: false),
+                    Status = table.Column<string>(type: "TEXT", nullable: false),
+                    RegisteredAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastHeartbeat = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    AppliedConfigVersionsJson = table.Column<string>(type: "TEXT", nullable: false),
+                    AdvertisedEndpointsJson = table.Column<string>(type: "TEXT", nullable: false),
+                    Environment = table.Column<string>(type: "TEXT", nullable: true),
+                    TagsJson = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ComponentRegistrations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConfigRecords",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Domain = table.Column<string>(type: "TEXT", nullable: false),
+                    Scope = table.Column<string>(type: "TEXT", nullable: false),
+                    Version = table.Column<long>(type: "INTEGER", nullable: false),
+                    Payload = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConfigRecords", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Genes",
                 columns: table => new
                 {
@@ -57,6 +114,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     TenantId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     StatusMessage = table.Column<string>(type: "TEXT", nullable: true),
+                    RequestedBy = table.Column<string>(type: "TEXT", nullable: true),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    EndedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                     LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false),
                     ResultData = table.Column<string>(type: "TEXT", nullable: true),
                     ResultType = table.Column<string>(type: "TEXT", nullable: true)
@@ -215,12 +276,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ParentTaskId = table.Column<Guid>(type: "TEXT", nullable: false),
                     OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    AgentName = table.Column<string>(type: "TEXT", nullable: true),
+                    RoutedTo = table.Column<string>(type: "TEXT", nullable: true),
                     Name = table.Column<string>(type: "TEXT", nullable: true),
                     DisplayName = table.Column<string>(type: "TEXT", nullable: true),
                     ReferenceType = table.Column<int>(type: "INTEGER", nullable: true),
                     ReferenceId = table.Column<string>(type: "TEXT", nullable: true),
                     ReferenceProjectName = table.Column<string>(type: "TEXT", nullable: true),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    EndedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                     LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false),
                     ProjectId = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
@@ -508,6 +572,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     DnsDomain = table.Column<string>(type: "TEXT", nullable: true),
                     Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),
                     ProviderName = table.Column<string>(type: "TEXT", nullable: true),
+                    Gateway = table.Column<string>(type: "TEXT", nullable: true),
+                    ProviderSubnet_MTU = table.Column<int>(type: "INTEGER", nullable: true),
+                    ProviderSubnet_DnsServersV4 = table.Column<string>(type: "TEXT", nullable: true),
                     NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
                     DhcpLeaseTime = table.Column<int>(type: "INTEGER", nullable: true),
                     MTU = table.Column<int>(type: "INTEGER", nullable: true),
@@ -700,6 +767,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_AuthoredConfigs_Domain_Scope_Version",
+                table: "AuthoredConfigs",
+                columns: new[] { "Domain", "Scope", "Version" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CatletDrives_AttachedDiskId",
                 table: "CatletDrives",
                 column: "AttachedDiskId");
@@ -749,6 +822,18 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_CatletSpecificationVersionVariantGenes_UniqueGeneIndex",
                 table: "CatletSpecificationVersionVariantGenes",
                 column: "UniqueGeneIndex");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ComponentRegistrations_ComponentId",
+                table: "ComponentRegistrations",
+                column: "ComponentId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConfigRecords_Domain_Scope",
+                table: "ConfigRecords",
+                columns: new[] { "Domain", "Scope" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
@@ -896,6 +981,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "AuthoredConfigs");
+
+            migrationBuilder.DropTable(
                 name: "CatletDrives");
 
             migrationBuilder.DropTable(
@@ -903,6 +991,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "CatletSpecificationVersionVariantGenes");
+
+            migrationBuilder.DropTable(
+                name: "ComponentRegistrations");
+
+            migrationBuilder.DropTable(
+                name: "ConfigRecords");
 
             migrationBuilder.DropTable(
                 name: "Genes");
