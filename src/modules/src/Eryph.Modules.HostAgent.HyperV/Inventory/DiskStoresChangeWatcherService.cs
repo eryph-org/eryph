@@ -9,6 +9,7 @@ using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
+using Rebus.Transport;
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
 using Unit = System.Reactive.Unit;
@@ -135,13 +136,28 @@ public sealed class DiskStoresChangeWatcherService(
             .Select(ObservePath)
             .Merge()
             .Throttle(inventoryConfig.DiskEventDelay)
-            .Select(_ => Observable.FromAsync(() => bus.SendLocal(new DiskStoresChangedEvent()))
+            .Select(_ => Observable.FromAsync(SendChangedEvent)
                 .Catch((Exception ex) =>
                 {
                     logger.LogError(ex, "Could not send Rebus event for disk store change");
                     return Observable.Return(Unit.Default);
                 }))
             .Concat();
+
+    // This reactive pipeline is a standalone background publisher, but it runs on a pooled
+    // execution context that may have captured an ambient Rebus transaction context from an
+    // unrelated message handler (e.g. a gene-extraction worker whose .vhdx writes triggered
+    // these very events). By the time the throttled send runs, that transaction is committed,
+    // so enlisting the send in it throws "Cannot add OnCommit action on a completed transaction
+    // context" - and the event is dropped. Sending inside a dedicated scope gives it a fresh,
+    // independent transaction regardless of what ambient context is flowing.
+    private async Task<Unit> SendChangedEvent()
+    {
+        using var scope = new RebusTransactionScope();
+        await bus.SendLocal(new DiskStoresChangedEvent());
+        await scope.CompleteAsync();
+        return Unit.Default;
+    }
 
     private IObservable<FileSystemEventArgs> ObservePath(string path) =>
         Observable.Defer(() =>
