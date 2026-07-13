@@ -173,7 +173,11 @@ public class ControllerModule
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
         // Overlay the operator-authored NetworkProviders value on the read path so the controller's own
         // network realization and the distributed payload stay in step with what agents receive.
-        container.RegisterDecorator<INetworkProviderManager, AuthoredNetworkProviderManager>();
+        // Singleton to match the wrapped instance and the singleton consumers (e.g. NetworkSyncService):
+        // RegisterDecorator defaults to Transient, which would make those singletons capture a transient.
+        // The decorator only holds the singleton inner + Container and resolves the scoped authored store
+        // in its own scope, so a singleton lifestyle is safe.
+        container.RegisterDecorator<INetworkProviderManager, AuthoredNetworkProviderManager>(Lifestyle.Singleton);
 
         container.ConfigureRebus(configurer => configurer
             .Serialization(s => s.UseEryphSettings())
