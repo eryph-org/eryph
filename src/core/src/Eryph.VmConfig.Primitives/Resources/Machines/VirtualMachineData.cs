@@ -11,6 +11,13 @@ public class VirtualMachineData : MachineData
     public VmStatus Status { get; set; }
     public TimeSpan UpTime { get; set; }
 
+    /// <summary>
+    /// The provisioning status read from the guest during inventory. Null when
+    /// it could not be determined (e.g. the VM is not running or guest-services
+    /// has not reported it).
+    /// </summary>
+    public ProvisioningStatus? ProvisioningStatus { get; set; }
+
     public string? DataStore { get; set; }
     public string? ProjectName { get; set; }
     public Guid? ProjectId { get; set; }

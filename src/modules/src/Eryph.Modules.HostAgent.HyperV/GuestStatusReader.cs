@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eryph.GuestServices.Core;
 using Eryph.GuestServices.HvDataExchange.Host;
+using Eryph.Modules.HostAgent.Inventory;
 
 namespace Eryph.Modules.HostAgent;
 
@@ -24,11 +25,6 @@ public interface IGuestStatusReader
 /// </summary>
 public sealed class GuestStatusReader(IHostDataExchange hostDataExchange) : IGuestStatusReader
 {
-    // The single provisioning-state value written by the guest (egs on Windows,
-    // the cloud-init status watcher on Linux). Not a published guest-services
-    // constant, so the key is spelled out here.
-    private const string ProvisioningStateKey = "eryph.provisioning.state";
-
     public async Task<GuestStatus> ReadAsync(Guid vmId)
     {
         // Status/version/provisioning are in the Guest pool (guest -> host); the
@@ -38,7 +34,10 @@ public sealed class GuestStatusReader(IHostDataExchange hostDataExchange) : IGue
         return new GuestStatus(
             guest.GetValueOrDefault(Constants.StatusKey),
             guest.GetValueOrDefault(Constants.VersionKey),
-            guest.GetValueOrDefault(ProvisioningStateKey),
+            // The single provisioning-state value written by the guest (egs on
+            // Windows, the cloud-init status watcher on Linux). Not a published
+            // guest-services constant, so it lives on ProvisioningStateMapper.
+            guest.GetValueOrDefault(ProvisioningStateMapper.ProvisioningStateKey),
             external.GetValueOrDefault(Constants.ShellKey),
             external.GetValueOrDefault(Constants.ShellArgsKey));
     }

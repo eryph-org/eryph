@@ -16,7 +16,7 @@
   </ItemGroup>
   <PropertyGroup>
     <!-- Guest-services libraries (hvsocket + KVP). TODO: track the stable feed version on release. -->
-    <GuestServicesVersion>0.4.0-preview.4</GuestServicesVersion>
+    <GuestServicesVersion>0.6.0</GuestServicesVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Hosting" Version="2.1.0" />

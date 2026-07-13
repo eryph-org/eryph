@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using CatletStatus = Eryph.StateDb.Model.CatletStatus;
+using CatletProvisioningStatus = Eryph.StateDb.Model.CatletProvisioningStatus;
 
 namespace Eryph.Modules.ComputeApi.Model.V1;
 
@@ -18,6 +19,12 @@ public class Catlet
     public required Project Project { get; set; }
 
     public required CatletStatus Status { get; set; }
+
+    /// <summary>
+    /// The provisioning status of the catlet as reported by guest-services.
+    /// Tracked automatically; <c>Unknown</c> until guest-services reports a state.
+    /// </summary>
+    public required CatletProvisioningStatus ProvisioningStatus { get; set; }
 
     /// <summary>
     /// Indicates that the catlet has been created with an old

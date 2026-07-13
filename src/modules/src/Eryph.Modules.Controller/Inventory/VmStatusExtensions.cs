@@ -18,4 +18,18 @@ internal static class VmStatusExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(vmStatus), vmStatus,
                 $"The status {vmStatus} is not supported"),
         };
+
+    public static CatletProvisioningStatus ToCatletProvisioningStatus(
+        this ProvisioningStatus provisioningStatus) =>
+        provisioningStatus switch
+        {
+            ProvisioningStatus.Unknown => CatletProvisioningStatus.Unknown,
+            ProvisioningStatus.Started => CatletProvisioningStatus.Started,
+            ProvisioningStatus.Running => CatletProvisioningStatus.Running,
+            ProvisioningStatus.RebootPending => CatletProvisioningStatus.RebootPending,
+            ProvisioningStatus.Completed => CatletProvisioningStatus.Completed,
+            ProvisioningStatus.Failed => CatletProvisioningStatus.Failed,
+            _ => throw new ArgumentOutOfRangeException(nameof(provisioningStatus), provisioningStatus,
+                $"The provisioning status {provisioningStatus} is not supported"),
+        };
 }

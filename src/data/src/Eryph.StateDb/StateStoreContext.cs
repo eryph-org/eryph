@@ -163,6 +163,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Property(e => e.Features)
             .HasSetConversion();
 
+        // Store the provisioning status by name (not ordinal) so reordering/adding
+        // enum values cannot reinterpret existing rows.
+        modelBuilder.Entity<Catlet>()
+            .Property(x => x.ProvisioningStatus)
+            .HasConversion<string>();
+
         modelBuilder.Entity<Catlet>()
             .HasIndex(c => c.SpecificationId)
             .IsUnique();
