@@ -15,6 +15,82 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "AuthoredConfigs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Domain = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Scope = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Version = table.Column<long>(type: "bigint", nullable: false),
+                    Payload = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    CreatedBy = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuthoredConfigs", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "ComponentRegistrations",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ComponentId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ComponentType = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    InstanceId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    MachineName = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Version = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    InboundQueue = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Status = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RegisteredAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    LastHeartbeat = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    AppliedConfigVersionsJson = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    AdvertisedEndpointsJson = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    TagsJson = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ComponentRegistrations", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "ConfigRecords",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Domain = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Scope = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Version = table.Column<long>(type: "bigint", nullable: false),
+                    Payload = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastUpdated = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConfigRecords", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Genes",
                 columns: table => new
                 {
@@ -70,6 +146,11 @@ namespace Eryph.StateDb.MySql.Migrations
                     Status = table.Column<int>(type: "int", nullable: false),
                     StatusMessage = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    RequestedBy = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Created = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    StartedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    EndedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     LastUpdated = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     ResultData = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -248,7 +329,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     ParentTaskId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     OperationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    AgentName = table.Column<string>(type: "longtext", nullable: true)
+                    RoutedTo = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Name = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -259,6 +340,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ReferenceProjectName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    Created = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    StartedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    EndedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     LastUpdated = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     ProjectId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
@@ -599,6 +683,11 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ProviderName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    Gateway = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ProviderSubnet_MTU = table.Column<int>(type: "int", nullable: true),
+                    ProviderSubnet_DnsServersV4 = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     NetworkId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     DhcpLeaseTime = table.Column<int>(type: "int", nullable: true),
                     MTU = table.Column<int>(type: "int", nullable: true),
@@ -828,6 +917,12 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AuthoredConfigs_Domain_Scope_Version",
+                table: "AuthoredConfigs",
+                columns: new[] { "Domain", "Scope", "Version" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CatletDrives_AttachedDiskId",
                 table: "CatletDrives",
                 column: "AttachedDiskId");
@@ -877,6 +972,18 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_CatletSpecificationVersionVariantGenes_UniqueGeneIndex",
                 table: "CatletSpecificationVersionVariantGenes",
                 column: "UniqueGeneIndex");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ComponentRegistrations_ComponentId",
+                table: "ComponentRegistrations",
+                column: "ComponentId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConfigRecords_Domain_Scope",
+                table: "ConfigRecords",
+                columns: new[] { "Domain", "Scope" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
@@ -1024,6 +1131,9 @@ namespace Eryph.StateDb.MySql.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "AuthoredConfigs");
+
+            migrationBuilder.DropTable(
                 name: "CatletDrives");
 
             migrationBuilder.DropTable(
@@ -1031,6 +1141,12 @@ namespace Eryph.StateDb.MySql.Migrations
 
             migrationBuilder.DropTable(
                 name: "CatletSpecificationVersionVariantGenes");
+
+            migrationBuilder.DropTable(
+                name: "ComponentRegistrations");
+
+            migrationBuilder.DropTable(
+                name: "ConfigRecords");
 
             migrationBuilder.DropTable(
                 name: "Genes");

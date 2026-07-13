@@ -12,18 +12,53 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20260530173728_AddComponentAdvertisedEndpoints")]
-    partial class AddComponentAdvertisedEndpoints
+    [Migration("20260712223739_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+
+            modelBuilder.Entity("Eryph.StateDb.Model.AuthoredConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Domain", "Scope", "Version")
+                        .IsUnique();
+
+                    b.ToTable("AuthoredConfigs");
+                });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletDrive", b =>
                 {
@@ -243,8 +278,12 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid>("ComponentId")
                         .HasColumnType("char(36)");
 
-                    b.Property<int>("ComponentType")
-                        .HasColumnType("int");
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Environment")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("InboundQueue")
                         .IsRequired()
@@ -263,8 +302,13 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<DateTimeOffset>("RegisteredAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("TagsJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Version")
                         .HasColumnType("longtext");
@@ -283,8 +327,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<int>("Domain")
-                        .HasColumnType("int");
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
 
                     b.Property<DateTimeOffset>("LastUpdated")
                         .HasColumnType("datetime(6)");
@@ -293,12 +338,16 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
                     b.Property<long>("Version")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Domain")
+                    b.HasIndex("Domain", "Scope")
                         .IsUnique();
 
                     b.ToTable("ConfigRecords");
@@ -379,7 +428,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("IpAssignment");
 
-                    b.HasDiscriminator().HasValue("IpAssignment");
+                    b.HasDiscriminator<string>("Discriminator").HasValue("IpAssignment");
 
                     b.UseTphMappingStrategy();
                 });
@@ -449,7 +498,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("NetworkPorts");
 
-                    b.HasDiscriminator().HasValue("NetworkPort");
+                    b.HasDiscriminator<string>("Discriminator").HasValue("NetworkPort");
 
                     b.UseTphMappingStrategy();
                 });
@@ -487,15 +536,27 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<DateTimeOffset>("LastUpdated")
                         .IsConcurrencyToken()
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RequestedBy")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("ResultData")
                         .HasColumnType("longtext");
 
                     b.Property<string>("ResultType")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -560,11 +621,14 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("AgentName")
-                        .HasColumnType("longtext");
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("DisplayName")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTimeOffset>("LastUpdated")
                         .IsConcurrencyToken()
@@ -590,6 +654,12 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<int?>("ReferenceType")
                         .HasColumnType("int");
+
+                    b.Property<string>("RoutedTo")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -751,7 +821,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("Subnet");
 
-                    b.HasDiscriminator().HasValue("Subnet");
+                    b.HasDiscriminator<string>("Discriminator").HasValue("Subnet");
 
                     b.UseTphMappingStrategy();
                 });
@@ -1028,6 +1098,17 @@ namespace Eryph.StateDb.MySql.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.ProviderSubnet", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Subnet");
+
+                    b.Property<string>("DnsServersV4")
+                        .HasColumnType("longtext")
+                        .HasColumnName("ProviderSubnet_DnsServersV4");
+
+                    b.Property<string>("Gateway")
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("MTU")
+                        .HasColumnType("int")
+                        .HasColumnName("ProviderSubnet_MTU");
 
                     b.Property<string>("ProviderName")
                         .IsRequired()
