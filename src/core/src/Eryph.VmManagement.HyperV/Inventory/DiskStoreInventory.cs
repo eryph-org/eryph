@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Disks;
@@ -13,6 +12,13 @@ namespace Eryph.VmManagement.Inventory;
 
 public static class DiskStoreInventory
 {
+    /// <summary>
+    /// Error code marking the inventory of a virtual disk that exists on disk but could not be read
+    /// because it is currently in use (transiently locked). Callers treat this as a benign, expected
+    /// condition rather than an inventory failure - see <see cref="ClassifyInventoryError"/>.
+    /// </summary>
+    public const int DiskInUseErrorCode = 30001;
+
     public static Aff<Seq<Either<Error, DiskInfo>>> InventoryStores(
         IFileSystemService fileSystemService,
         IPowershellEngine powershellEngine,
@@ -39,26 +45,33 @@ public static class DiskStoreInventory
         string path) =>
         from vhdFiles in Eff(() => fileSystemService.GetFiles(path, "*.vhdx", SearchOption.AllDirectories))
         from diskInfos in vhdFiles.ToSeq()
-            .Map(vhdFile => InventoryDisk(powershellEngine, vmHostAgentConfig, vhdFile))
+            .Map(vhdFile => InventoryDisk(fileSystemService, powershellEngine, vmHostAgentConfig, vhdFile))
             .SequenceParallel()
         select diskInfos;
 
     private static Aff<Either<Error, DiskInfo>> InventoryDisk(
+        IFileSystemService fileSystemService,
         IPowershellEngine powershellEngine,
         VmHostAgentConfiguration vmHostAgentConfig,
         string diskPath) =>
-        // A VHD can be transiently locked while another operation uses it - most commonly a genepool
-        // base disk being attached as the parent of a new catlet's differencing disk, or a .vhdx still
-        // being written by a concurrent gene extraction. Get-VHD then fails with "the object is in use".
-        // Retry a few times (starting immediately) to ride out that short-lived lock instead of dropping
-        // the disk from the inventory pass, which would log a spurious error and trigger a needless
-        // disk-existence recheck on the controller. A genuinely unreadable disk still fails and is caught.
-        from diskSettings in retry(
-                                 Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(3),
-                                 DiskStorageSettings.FromVhdPath(powershellEngine, vmHostAgentConfig, diskPath)
-                                     .ToAff(identity))
+        from diskSettings in DiskStorageSettings.FromVhdPath(powershellEngine, vmHostAgentConfig, diskPath)
+                                 .ToAff(identity)
                                  .Map(Right<Error, DiskStorageSettings>)
                              | @catch(e => SuccessAff(Left<Error, DiskStorageSettings>(
-                                 Error.New($"Inventory of virtual disk '{diskPath}' failed", e))))
+                                 ClassifyInventoryError(fileSystemService, diskPath, e))))
         select diskSettings.Map(s => s.CreateDiskInfo());
+
+    // A VHD that cannot be read but still exists on disk is almost always transiently locked by a
+    // concurrent operation - most commonly a genepool base disk being attached as the parent of a new
+    // catlet's differencing disk, so Get-VHD fails with "the object is in use". That lock can outlast any
+    // reasonable retry and is a benign, expected condition, not an inventory failure: the disk is picked
+    // up again on a later pass once the lock clears. Mark it with a dedicated code so callers log it
+    // quietly. A disk whose file is genuinely gone (or otherwise broken) keeps the normal failure error.
+    private static Error ClassifyInventoryError(
+        IFileSystemService fileSystemService,
+        string diskPath,
+        Error error) =>
+        fileSystemService.FileExists(diskPath)
+            ? Error.New(DiskInUseErrorCode, $"Virtual disk '{diskPath}' is currently in use and was skipped.", error)
+            : Error.New($"Inventory of virtual disk '{diskPath}' failed", error);
 }

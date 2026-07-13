@@ -63,7 +63,12 @@ internal class InventoryRequestedEventHandler(
         from __ in diskInfos.Lefts()
             .Map(e =>
             {
-                log.LogError(e, "Inventory of virtual disk failed");
+                if (e.Code == DiskStoreInventory.DiskInUseErrorCode)
+                    // The disk exists but is temporarily locked (e.g. a genepool base disk in use as a
+                    // differencing parent). Benign - it is inventoried again on a later pass.
+                    log.LogDebug(e, "Skipping inventory of a virtual disk that is currently in use");
+                else
+                    log.LogError(e, "Inventory of virtual disk failed");
                 return SuccessEff(unit);
             })
             .Sequence()

@@ -58,7 +58,10 @@ public class CheckDisksExistsCommandHandler(
                     select shouldRemove,
                 error =>
                 {
-                    logger.LogWarning(error, "Failed to check disk '{Path}'", fullPath);
+                    // The file exists (checked above) but Get-VHD could not read it - almost always a
+                    // transient lock (e.g. a genepool base disk in use as a differencing parent). Keep the
+                    // disk (do not report it missing) and log quietly: this is an expected, benign race.
+                    logger.LogDebug(error, "Could not read disk '{Path}' as it is currently in use; keeping it", fullPath);
                     return RightAsync<Error, bool>(false);
                 })
         select Some(diskInfo).Filter(_ => shouldRemove);
