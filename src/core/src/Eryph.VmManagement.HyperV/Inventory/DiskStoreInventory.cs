@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Disks;
@@ -46,8 +47,16 @@ public static class DiskStoreInventory
         IPowershellEngine powershellEngine,
         VmHostAgentConfiguration vmHostAgentConfig,
         string diskPath) =>
-        from diskSettings in DiskStorageSettings.FromVhdPath(powershellEngine, vmHostAgentConfig, diskPath)
-                                 .ToAff(identity)
+        // A VHD can be transiently locked while another operation uses it - most commonly a genepool
+        // base disk being attached as the parent of a new catlet's differencing disk, or a .vhdx still
+        // being written by a concurrent gene extraction. Get-VHD then fails with "the object is in use".
+        // Retry a few times (starting immediately) to ride out that short-lived lock instead of dropping
+        // the disk from the inventory pass, which would log a spurious error and trigger a needless
+        // disk-existence recheck on the controller. A genuinely unreadable disk still fails and is caught.
+        from diskSettings in retry(
+                                 Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(2)) & Schedule.recurs(3),
+                                 DiskStorageSettings.FromVhdPath(powershellEngine, vmHostAgentConfig, diskPath)
+                                     .ToAff(identity))
                                  .Map(Right<Error, DiskStorageSettings>)
                              | @catch(e => SuccessAff(Left<Error, DiskStorageSettings>(
                                  Error.New($"Inventory of virtual disk '{diskPath}' failed", e))))
