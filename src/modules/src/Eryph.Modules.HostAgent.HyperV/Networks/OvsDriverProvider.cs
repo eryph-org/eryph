@@ -71,6 +71,12 @@ public class OvsDriverProvider<RT> where RT : struct,
                     // installation of the new driver might fail with error code 0x80070430.
                     from ___ in waitUntilDriverServiceHasStopped()
                     from ____ in removeAllDriverPackages()
+                    // Stop any OVS/OVN daemons still running from the previous version.
+                    // Stopping the eryph service does not stop them, and they keep the
+                    // OVN/OVS database lock files open. Dropping the data directory below
+                    // would then fail. Ask each daemon to exit gracefully and only
+                    // force-terminate the ones that do not stop in time.
+                    from _stopDaemons in stopRunningOvsDaemons(ovnRunDir, ovnDataDir)
                     // The OVN/OVS database schemas are tied to the binaries shipped in
                     // the package. On any version change we drop the databases so the new
                     // binaries start from a clean state. The network plan realizer rebuilds
@@ -106,6 +112,91 @@ public class OvsDriverProvider<RT> where RT : struct,
             from ____ in logInformation("Successfully dropped OVN database files")
             select unit
             : logInformation("No OVN database files to drop at {Path}.", ovnDataDir)
+        select unit;
+
+    // On an upgrade, OVS/OVN daemons started by the previous installation keep running
+    // (stopping the eryph service does not stop them). They hold the OVN/OVS database lock
+    // files open, so dropOvnDatabaseFiles cannot delete the data directory. Send each daemon
+    // the OVS 'exit' control command and wait for it to remove its pidfile, force-terminating
+    // only those that do not stop within the timeout.
+    public static Aff<RT, Unit> stopRunningOvsDaemons(string ovnRunDir, string ovnDataDir) =>
+        from controlFiles in getDaemonFiles(ovnDataDir, "*.ctl")
+        from _ in controlFiles.IsEmpty
+            ? logInformation("No running OVS/OVN daemons found before the OVN update.").ToAff()
+            : from _1 in logInformation(
+                    "Stopping {Count} OVS/OVN daemon(s) left over from the previous version...",
+                    controlFiles.Count)
+                from _2 in controlFiles.Map(ctl => sendDaemonExit(ovnRunDir, ctl)).SequenceSerial()
+                from _3 in waitUntilDaemonsStopped(ovnDataDir)
+                from _4 in forceStopRemainingDaemons(ovnDataDir)
+                select unit
+        select unit;
+
+    // The OVS/OVN daemons keep their control sockets (*.ctl) and pidfiles under
+    // '<ovnDataDir>\var\run\{openvswitch,ovn}'. A running daemon has both; a clean exit
+    // removes the pidfile.
+    private static readonly Seq<string> DaemonRunSubDirectories = Seq("openvswitch", "ovn");
+
+    private static string appctlPath(string ovnRunDir) =>
+        Path.Combine(ovnRunDir, "usr", "bin", "ovs-appctl.exe");
+
+    private static Aff<RT, Seq<string>> getDaemonFiles(string ovnDataDir, string searchPattern) =>
+        DaemonRunSubDirectories
+            .Map(subDir => enumerateExistingFiles(
+                Path.Combine(ovnDataDir, "var", "run", subDir), searchPattern))
+            .SequenceSerial()
+            .Map(files => files.Flatten());
+
+    private static Aff<RT, Seq<string>> enumerateExistingFiles(string directory, string searchPattern) =>
+        from exists in Directory<RT>.exists(directory)
+        from files in exists
+            ? Directory<RT>.enumerateFiles(directory, searchPattern).ToAff()
+            : SuccessAff<RT, Seq<string>>(Seq<string>())
+        select files;
+
+    private static Aff<RT, Unit> sendDaemonExit(string ovnRunDir, string controlFile) =>
+        from result in ProcessRunner<RT>.runProcess(
+                appctlPath(ovnRunDir),
+                $"--timeout=5 -t \"{controlFile}\" exit",
+                includeStandardError: true)
+            | @catch(_ => SuccessAff<RT, ProcessRunnerResult>(
+                new ProcessRunnerResult(-1, "The exit command could not be sent.")))
+        from _ in result.ExitCode == 0
+            ? logInformation("Requested shutdown of OVS/OVN daemon '{ControlFile}'.", controlFile)
+            : logInformation(
+                "OVS/OVN daemon '{ControlFile}' did not accept the exit command (it may have already stopped): {Output}",
+                controlFile, result.Output.Trim())
+        select unit;
+
+    private static Aff<RT, Unit> waitUntilDaemonsStopped(string ovnDataDir) =>
+        from _ in repeatWhile(
+            Schedule.NoDelayOnFirst
+            & Schedule.spaced(TimeSpan.FromSeconds(2))
+            & Schedule.upto(TimeSpan.FromSeconds(30)),
+            from pidFiles in getDaemonFiles(ovnDataDir, "*.pid")
+            from __ in pidFiles.IsEmpty
+                ? SuccessEff<RT, Unit>(unit)
+                : logInformation("Waiting for {Count} OVS/OVN daemon(s) to stop...", pidFiles.Count)
+            select pidFiles,
+            pidFiles => pidFiles.Count > 0)
+        select unit;
+
+    private static Aff<RT, Unit> forceStopRemainingDaemons(string ovnDataDir) =>
+        from pidFiles in getDaemonFiles(ovnDataDir, "*.pid")
+        from _ in pidFiles.Map(forceStopDaemon).SequenceSerial()
+        select unit;
+
+    private static Aff<RT, Unit> forceStopDaemon(string pidFile) =>
+        from content in File<RT>.readAllText(pidFile)
+            | @catch(_ => SuccessAff<RT, string>(""))
+        from _ in parseInt(content.Trim()).Match(
+            Some: pid =>
+                from _1 in logWarning(
+                    "OVS/OVN daemon (pid {Pid}) did not stop gracefully; terminating it.", pid)
+                from _2 in ProcessRunner<RT>.runProcess("taskkill.exe", $"/PID {pid} /F /T")
+                    | @catch(_ => SuccessAff<RT, ProcessRunnerResult>(new ProcessRunnerResult(0, "")))
+                select unit,
+            None: () => SuccessAff<RT, Unit>(unit))
         select unit;
 
     public static Aff<RT, Unit> installDriver(string infPath) =>
