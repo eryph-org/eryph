@@ -309,6 +309,36 @@ public class OvsDriverProviderTests
     }
 
     [Fact]
+    public async Task StopRunningOvsDaemons_OnlyPidFilePresent_ForceStopsWithoutGracefulExit()
+    {
+        // A leftover pidfile without a control socket: there is no socket to send an
+        // exit command to, so we go straight to force-termination.
+        var pidFile = Path.Combine(OpenvswitchRunDir, "ovs-db.pid");
+        _directoryMock.Setup(m => m.Exists(OpenvswitchRunDir)).Returns(true);
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.ctl")).Returns(Seq<string>());
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.pid")).Returns(Seq1(pidFile));
+        _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("1234");
+
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "tasklist.exe", "/FI \"PID eq 1234\" /FO CSV /NH", "", true))
+            .ReturnsAsync(new ProcessRunnerResult(
+                0, "\"ovsdb-server.exe\",\"1234\",\"Services\",\"0\",\"12,345 K\""));
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "taskkill.exe", "/PID 1234 /F /T", "", true))
+            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+
+        var result = await stopRunningOvsDaemons(OvnRunDir, OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processRunnerIOMock.Verify(m => m.RunProcess(
+            "taskkill.exe", "/PID 1234 /F /T", "", true), Times.Once);
+        // No control socket, so no graceful exit is attempted.
+        _processRunnerIOMock.Verify(m => m.RunProcess(
+            AppCtlPath, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ForceStopRemainingDaemons_PidBelongsToDaemon_TerminatesProcess()
     {
         var pidFile = Path.Combine(OpenvswitchRunDir, "ovs-db.pid");

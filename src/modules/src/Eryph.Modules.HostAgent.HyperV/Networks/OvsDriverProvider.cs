@@ -116,18 +116,25 @@ public class OvsDriverProvider<RT> where RT : struct,
 
     // On an upgrade, OVS/OVN daemons started by the previous installation keep running
     // (stopping the eryph service does not stop them). They hold the OVN/OVS database lock
-    // files open, so dropOvnDatabaseFiles cannot delete the data directory. Send each daemon
-    // the OVS 'exit' control command and wait for it to remove its pidfile, force-terminating
-    // only those that do not stop within the timeout.
+    // files open, so dropOvnDatabaseFiles cannot delete the data directory. Ask each daemon
+    // with a control socket to exit gracefully, then force-terminate any that remain.
+    // A running (or crashed) daemon leaves both a control socket (*.ctl) and a pidfile
+    // (*.pid); treat either as evidence of a daemon to stop, since a leftover pidfile
+    // without a control socket still points at a process that may hold the database lock.
     public static Aff<RT, Unit> stopRunningOvsDaemons(string ovnRunDir, string ovnDataDir) =>
         from controlFiles in getDaemonFiles(ovnDataDir, "*.ctl")
-        from _ in controlFiles.IsEmpty
+        from pidFiles in getDaemonFiles(ovnDataDir, "*.pid")
+        from _ in controlFiles.IsEmpty && pidFiles.IsEmpty
             ? logInformation("No running OVS/OVN daemons found before the OVN update.").ToAff()
             : from _1 in logInformation(
-                    "Stopping {Count} OVS/OVN daemon(s) left over from the previous version...",
-                    controlFiles.Count)
+                    "Stopping OVS/OVN daemon(s) left over from the previous version...")
+                // Gracefully stop the daemons that still expose a control socket, then wait
+                // for their pidfiles to disappear. Without a control socket there is nothing
+                // to ask, so skip straight to force-termination below.
                 from _2 in controlFiles.Map(ctl => sendDaemonExit(ovnRunDir, ctl)).SequenceSerial()
-                from _3 in waitUntilDaemonsStopped(ovnDataDir)
+                from _3 in controlFiles.IsEmpty
+                    ? SuccessAff<RT, Unit>(unit)
+                    : waitUntilDaemonsStopped(ovnDataDir)
                 from _4 in forceStopRemainingDaemons(ovnDataDir)
                 select unit
         select unit;
