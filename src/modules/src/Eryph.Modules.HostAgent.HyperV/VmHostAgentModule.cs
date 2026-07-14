@@ -187,6 +187,11 @@ public class VmHostAgentModule : WebModule
         options.AddHostedService<VmRemovalWatcherService>();
         options.AddHostedService<VmStateChangeWatcherService>();
         options.AddHostedService<DiskStoresChangeWatcherService>();
+        // Actively polls provisioning status of first-booting catlets. Exposed via
+        // its abstraction so the VM-state-change handler can enroll/drop catlets.
+        options.AddHostedService<ProvisioningStateMonitor>();
+        options.Container.RegisterSingleton<IProvisioningStateMonitor>(
+            () => options.Container.GetInstance<ProvisioningStateMonitor>());
         // Expose the running watcher singleton via its abstraction so the storage-config realizer can
         // restart it after a distributed datastore-path change (the same effect the interactive
         // agent-settings sync has).
@@ -253,6 +258,8 @@ public class VmHostAgentModule : WebModule
         container.RegisterSingleton<IChannelService, ChannelService>();
         // Reads guest services + provisioning status from the guest KVP pool.
         container.RegisterSingleton<IGuestStatusReader, GuestStatusReader>();
+        // Lean reader for just the provisioning-state KVP value (inventory + monitor).
+        container.RegisterSingleton<IProvisioningStateReader, ProvisioningStateReader>();
         // Single write path for guest-services settings (shell, authorized keys, ...).
         container.RegisterSingleton<IGuestDataWriter, GuestDataWriter>();
 

@@ -25,6 +25,24 @@ public class Catlet : Resource
     /// </remarks>
     public DateTimeOffset LastSeenState { get; set; }
 
+    /// <summary>
+    /// The provisioning status of the catlet as reported by guest-services.
+    /// </summary>
+    /// <remarks>
+    /// Provisioning is only actively monitored during the first boot. While a
+    /// catlet is provisioning it is refreshed quickly by the agent's provisioning
+    /// monitor; afterwards it is reconciled by the regular inventory. Its
+    /// observation time is tracked separately via
+    /// <see cref="LastSeenProvisioningStatus"/>, just like <see cref="Status"/>.
+    /// </remarks>
+    public CatletProvisioningStatus ProvisioningStatus { get; set; }
+
+    /// <summary>
+    /// The last time the <see cref="ProvisioningStatus"/> of the catlet has
+    /// been observed.
+    /// </summary>
+    public DateTimeOffset LastSeenProvisioningStatus { get; set; }
+
     public CatletType CatletType { get; set; }
 
     public ICollection<ReportedNetwork> ReportedNetworks { get; set; } = null!;

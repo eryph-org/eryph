@@ -70,6 +70,18 @@ public class OperationResultValueResolver(
                 Shell = statusResponse.Shell,
                 ShellArgs = statusResponse.ShellArgs,
             },
+            GetProvisioningLogVMCommandResponse logResponse => new ProvisioningLogOperationResult
+            {
+                RenderedLog = logResponse.RenderedLog,
+                Events = logResponse.Events.Select(e => new ProvisioningLogEntry
+                {
+                    Name = e.Name,
+                    Type = e.Type,
+                    Result = e.Result,
+                    Message = e.Message,
+                    Timestamp = e.Timestamp,
+                }).ToList(),
+            },
             ValidateCatletSpecificationCommandResponse validateSpecificationResponse => new
                 CatletSpecificationOperationResult
                 {

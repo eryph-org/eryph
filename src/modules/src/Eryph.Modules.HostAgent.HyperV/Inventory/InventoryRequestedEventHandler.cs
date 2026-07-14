@@ -28,7 +28,8 @@ internal class InventoryRequestedEventHandler(
     IFileSystemService fileSystemService,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
+    IProvisioningStateReader provisioningStateReader)
     : IHandleMessages<InventoryRequestedEvent>
 {
     public async Task Handle(InventoryRequestedEvent message)
@@ -90,7 +91,35 @@ internal class InventoryRequestedEventHandler(
                                vmInfo.Value.Name, vmInfo.Value.Id);
                            return SuccessAff(Option<VirtualMachineData>.None);
                        })
+        from _ in vmData.Match(
+            Some: ReadProvisioningStatus,
+            None: () => SuccessAff(unit))
         select vmData;
+
+    // Reads the guest's provisioning status and records it on the inventory data.
+    // A read failure or an unknown/absent state leaves it null so the controller
+    // does not overwrite a previously observed status.
+    //
+    // This adds one guest KVP read per inventorizable VM per inventory pass. It is
+    // the reconciliation path that the periodic provisioning monitor cannot cover:
+    // the monitor only tracks catlets it saw transition to Running, so a catlet
+    // still provisioning when the agent (re)starts is picked up here instead.
+    private Aff<Unit> ReadProvisioningStatus(VirtualMachineData vmData) =>
+        from status in Aff(async () => await provisioningStateReader.ReadAsync(vmData.VmId))
+                       | @catch(e =>
+                       {
+                           log.LogDebug(e,
+                               "Failed to read the provisioning status of VM {VmId} during inventory.",
+                               vmData.VmId);
+                           return SuccessAff(ProvisioningStatus.Unknown);
+                       })
+        from _ in Eff(() =>
+        {
+            vmData.ProvisioningStatus =
+                status is ProvisioningStatus.Unknown ? null : status;
+            return unit;
+        })
+        select unit;
 
     private bool IsInventorizable(TypedPsObject<VirtualMachineInfo> vmInfo)
     {

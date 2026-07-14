@@ -936,6 +936,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("LastSeenProvisioningStatus")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("LastSeenState")
                         .HasColumnType("TEXT");
 
@@ -949,6 +952,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Path")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProvisioningStatus")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SecureBootTemplate")

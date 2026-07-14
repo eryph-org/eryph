@@ -210,6 +210,16 @@ internal class UpdateInventoryCommandHandlerBase
         existingCatlet.Features = convertedVmInfo.Features;
         existingCatlet.SecureBootTemplate = convertedVmInfo.SecureBootTemplate;
 
+        // Provisioning status is observed and timestamped independently of the VM
+        // state (the agent's provisioning monitor reports it out of band). Only
+        // apply the inventory baseline when it was actually read and is newer.
+        if (vmInfo.ProvisioningStatus is { } provisioningStatus
+            && existingCatlet.LastSeenProvisioningStatus < timestamp)
+        {
+            existingCatlet.ProvisioningStatus = provisioningStatus.ToCatletProvisioningStatus();
+            existingCatlet.LastSeenProvisioningStatus = timestamp;
+        }
+
         // Skip the update of the state information when we already have newer data.
         // We must check this separately as the state information is monitored separately.
         if (existingCatlet.LastSeenState >= timestamp)
@@ -282,6 +292,12 @@ internal class UpdateInventoryCommandHandlerBase
                 Status = vmInfo.Status.ToCatletStatus(),
                 LastSeen = timestamp,
                 LastSeenState = timestamp,
+                // Seed the provisioning status. When inventory could not read it
+                // (VM not running / no guest-services) it stays Unknown and its
+                // observation time stays at the default so a later report wins.
+                ProvisioningStatus = vmInfo.ProvisioningStatus?.ToCatletProvisioningStatus()
+                                     ?? CatletProvisioningStatus.Unknown,
+                LastSeenProvisioningStatus = vmInfo.ProvisioningStatus is not null ? timestamp : default,
                 Host = hostMachine,
                 AgentName = hostMachine.Name,
                 DataStore = dataStore,
