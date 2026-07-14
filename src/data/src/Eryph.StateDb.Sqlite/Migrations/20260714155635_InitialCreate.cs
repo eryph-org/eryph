@@ -407,6 +407,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     LastSeenState = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ProvisioningStatus = table.Column<string>(type: "TEXT", nullable: false),
+                    LastSeenProvisioningStatus = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CatletType = table.Column<int>(type: "INTEGER", nullable: false),
                     UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: false),
                     VmId = table.Column<Guid>(type: "TEXT", nullable: false),

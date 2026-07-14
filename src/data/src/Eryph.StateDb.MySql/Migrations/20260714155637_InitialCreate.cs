@@ -489,6 +489,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     LastSeenState = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    ProvisioningStatus = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastSeenProvisioningStatus = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     CatletType = table.Column<int>(type: "int", nullable: false),
                     UpTime = table.Column<TimeSpan>(type: "time(6)", nullable: false),
                     VmId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
