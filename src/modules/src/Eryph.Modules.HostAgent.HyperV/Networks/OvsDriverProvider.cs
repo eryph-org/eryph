@@ -193,8 +193,21 @@ public class OvsDriverProvider<RT> where RT : struct,
             Some: pid =>
                 from _1 in logWarning(
                     "OVS/OVN daemon (pid {Pid}) did not stop gracefully; terminating it.", pid)
-                from _2 in ProcessRunner<RT>.runProcess("taskkill.exe", $"/PID {pid} /F /T")
-                    | @catch(_ => SuccessAff<RT, ProcessRunnerResult>(new ProcessRunnerResult(0, "")))
+                from result in ProcessRunner<RT>.runProcess(
+                        "taskkill.exe", $"/PID {pid} /F /T", includeStandardError: true)
+                    | @catch(ex => SuccessAff<RT, ProcessRunnerResult>(
+                        new ProcessRunnerResult(-1, ex.Message)))
+                // Do not fail here: a leftover pidfile often belongs to a daemon that
+                // has already exited (taskkill then reports "process not found"), which
+                // is exactly the outcome we want. Log the real result honestly instead of
+                // implying success. If a daemon genuinely could not be killed it still
+                // holds the database lock, and the subsequent dropOvnDatabaseFiles fails
+                // loudly -- the warning below explains why.
+                from _2 in result.ExitCode == 0
+                    ? logInformation("Terminated OVS/OVN daemon (pid {Pid}).", pid)
+                    : logWarning(
+                        "Could not terminate OVS/OVN daemon (pid {Pid}); it may already have stopped, or it still holds the OVN/OVS database lock: {Output}",
+                        pid, result.Output.Trim())
                 select unit,
             None: () => SuccessAff<RT, Unit>(unit))
         select unit;
