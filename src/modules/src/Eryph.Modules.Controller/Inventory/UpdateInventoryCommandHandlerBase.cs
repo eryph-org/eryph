@@ -294,10 +294,14 @@ internal class UpdateInventoryCommandHandlerBase
                 LastSeenState = timestamp,
                 // Seed the provisioning status. When inventory could not read it
                 // (VM not running / no guest-services) it stays Unknown and its
-                // observation time stays at the default so a later report wins.
+                // observation time stays at the Unix-epoch sentinel so a later report
+                // wins. Must not be default(DateTimeOffset) (0001-01-01): that is below
+                // MySQL datetime's minimum and would fail the insert on that provider.
                 ProvisioningStatus = vmInfo.ProvisioningStatus?.ToCatletProvisioningStatus()
                                      ?? CatletProvisioningStatus.Unknown,
-                LastSeenProvisioningStatus = vmInfo.ProvisioningStatus is not null ? timestamp : default,
+                LastSeenProvisioningStatus = vmInfo.ProvisioningStatus is not null
+                    ? timestamp
+                    : DateTimeOffset.UnixEpoch,
                 Host = hostMachine,
                 AgentName = hostMachine.Name,
                 DataStore = dataStore,
