@@ -181,35 +181,61 @@ public class OvsDriverProvider<RT> where RT : struct,
             pidFiles => pidFiles.Count > 0)
         select unit;
 
-    private static Aff<RT, Unit> forceStopRemainingDaemons(string ovnDataDir) =>
+    internal static Aff<RT, Unit> forceStopRemainingDaemons(string ovnDataDir) =>
         from pidFiles in getDaemonFiles(ovnDataDir, "*.pid")
         from _ in pidFiles.Map(forceStopDaemon).SequenceSerial()
         select unit;
+
+    // The executables of the OVS/OVN daemons that keep a pidfile. A pidfile's name is a
+    // logical name (e.g. ovs-db, ovn_nb, ovn_sb, ovn-controller) that does not map 1:1 to
+    // the executable, so we match a running process against this fixed daemon set instead.
+    private static readonly Seq<string> OvsDaemonImageNames = Seq(
+        "ovsdb-server.exe", "ovs-vswitchd.exe", "ovn-controller.exe", "ovn-northd.exe");
 
     private static Aff<RT, Unit> forceStopDaemon(string pidFile) =>
         from content in File<RT>.readAllText(pidFile)
             | @catch(_ => SuccessAff<RT, string>(""))
         from _ in parseInt(content.Trim()).Match(
             Some: pid =>
-                from _1 in logWarning(
-                    "OVS/OVN daemon (pid {Pid}) did not stop gracefully; terminating it.", pid)
-                from result in ProcessRunner<RT>.runProcess(
-                        "taskkill.exe", $"/PID {pid} /F /T", includeStandardError: true)
-                    | @catch(ex => SuccessAff<RT, ProcessRunnerResult>(
-                        new ProcessRunnerResult(-1, ex.Message)))
-                // Do not fail here: a leftover pidfile often belongs to a daemon that
-                // has already exited (taskkill then reports "process not found"), which
-                // is exactly the outcome we want. Log the real result honestly instead of
-                // implying success. If a daemon genuinely could not be killed it still
-                // holds the database lock, and the subsequent dropOvnDatabaseFiles fails
-                // loudly -- the warning below explains why.
-                from _2 in result.ExitCode == 0
-                    ? logInformation("Terminated OVS/OVN daemon (pid {Pid}).", pid)
+                from isDaemon in pidBelongsToOvsDaemon(pid)
+                // A leftover pidfile can be stale: the daemon died without removing it and
+                // Windows recycled its PID for an unrelated process. Terminating that PID
+                // with 'taskkill /F /T' would kill the wrong process tree, so only proceed
+                // when the PID still belongs to an OVS/OVN daemon.
+                from __ in isDaemon
+                    ? forceKillDaemon(pid)
                     : logWarning(
-                        "Could not terminate OVS/OVN daemon (pid {Pid}); it may already have stopped, or it still holds the OVN/OVS database lock: {Output}",
-                        pid, result.Output.Trim())
+                        "Not terminating pid {Pid} from a leftover OVS/OVN pidfile: no matching daemon is running. The pidfile is stale and the PID may have been reused by another process.",
+                        pid)
                 select unit,
             None: () => SuccessAff<RT, Unit>(unit))
+        select unit;
+
+    private static Aff<RT, bool> pidBelongsToOvsDaemon(int pid) =>
+        from result in ProcessRunner<RT>.runProcess(
+                "tasklist.exe", $"/FI \"PID eq {pid}\" /FO CSV /NH", includeStandardError: true)
+            | @catch(_ => SuccessAff<RT, ProcessRunnerResult>(new ProcessRunnerResult(-1, "")))
+        // tasklist prints one CSV row per match ("<image>","<pid>",...); when no process
+        // has that PID it prints an INFO line instead. Treat only a known daemon image as
+        // a match; anything else means the pidfile is stale (or the PID was reused).
+        select OvsDaemonImageNames.Exists(name =>
+            result.Output.Contains($"\"{name}\"", StringComparison.OrdinalIgnoreCase));
+
+    private static Aff<RT, Unit> forceKillDaemon(int pid) =>
+        from _1 in logWarning(
+            "OVS/OVN daemon (pid {Pid}) did not stop gracefully; terminating it.", pid)
+        from result in ProcessRunner<RT>.runProcess(
+                "taskkill.exe", $"/PID {pid} /F /T", includeStandardError: true)
+            | @catch(ex => SuccessAff<RT, ProcessRunnerResult>(
+                new ProcessRunnerResult(-1, ex.Message)))
+        // Do not fail here: if a daemon genuinely could not be killed it still holds the
+        // database lock, and the subsequent dropOvnDatabaseFiles fails loudly -- the
+        // warning below explains why.
+        from _2 in result.ExitCode == 0
+            ? logInformation("Terminated OVS/OVN daemon (pid {Pid}).", pid)
+            : logWarning(
+                "Could not terminate OVS/OVN daemon (pid {Pid}); it may already have stopped, or it still holds the OVN/OVS database lock: {Output}",
+                pid, result.Output.Trim())
         select unit;
 
     public static Aff<RT, Unit> installDriver(string infPath) =>

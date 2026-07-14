@@ -24,6 +24,9 @@ public class OvsDriverProviderTests
     private const string OvnRunDir = @"Z:\ovnrundir";
     private const string OvnDataDir = @"Z:\ovndatadir";
 
+    private static readonly string OpenvswitchRunDir = Path.Combine(OvnDataDir, "var", "run", "openvswitch");
+    private static readonly string AppCtlPath = Path.Combine(OvnRunDir, "usr", "bin", "ovs-appctl.exe");
+
     private static readonly Guid SwitchId = Guid.NewGuid();
 
     private readonly Mock<DirectoryIO> _directoryMock = new();
@@ -268,6 +271,88 @@ public class OvsDriverProviderTests
         VerifyOvnDataNotDropped();
     }
 
+
+    [Fact]
+    public async Task StopRunningOvsDaemons_NoDaemonFiles_DoesNothing()
+    {
+        // No daemon run directories exist, so there is nothing to stop.
+        var result = await stopRunningOvsDaemons(OvnRunDir, OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processRunnerIOMock.Verify(
+            m => m.RunProcess(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task StopRunningOvsDaemons_DaemonsExitGracefully_SendsExitAndDoesNotForceKill()
+    {
+        var ctlFile = Path.Combine(OpenvswitchRunDir, "ovs-db.ctl");
+        _directoryMock.Setup(m => m.Exists(OpenvswitchRunDir)).Returns(true);
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.ctl")).Returns(Seq1(ctlFile));
+        // The daemon removes its pidfile when it exits, so no pidfiles remain.
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.pid")).Returns(Seq<string>());
+
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                AppCtlPath, $"--timeout=5 -t \"{ctlFile}\" exit", "", true))
+            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+
+        var result = await stopRunningOvsDaemons(OvnRunDir, OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processRunnerIOMock.Verify(m => m.RunProcess(
+            AppCtlPath, $"--timeout=5 -t \"{ctlFile}\" exit", "", true), Times.Once);
+        _processRunnerIOMock.Verify(m => m.RunProcess(
+            "taskkill.exe", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        _processRunnerIOMock.Verify(m => m.RunProcess(
+            "tasklist.exe", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ForceStopRemainingDaemons_PidBelongsToDaemon_TerminatesProcess()
+    {
+        var pidFile = Path.Combine(OpenvswitchRunDir, "ovs-db.pid");
+        _directoryMock.Setup(m => m.Exists(OpenvswitchRunDir)).Returns(true);
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.pid")).Returns(Seq1(pidFile));
+        _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("1234");
+
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "tasklist.exe", "/FI \"PID eq 1234\" /FO CSV /NH", "", true))
+            .ReturnsAsync(new ProcessRunnerResult(
+                0, "\"ovsdb-server.exe\",\"1234\",\"Services\",\"0\",\"12,345 K\""));
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "taskkill.exe", "/PID 1234 /F /T", "", true))
+            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+
+        var result = await forceStopRemainingDaemons(OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processRunnerIOMock.Verify(m => m.RunProcess(
+            "taskkill.exe", "/PID 1234 /F /T", "", true), Times.Once);
+    }
+
+    [Fact]
+    public async Task ForceStopRemainingDaemons_PidStaleOrReused_DoesNotTerminate()
+    {
+        var pidFile = Path.Combine(OpenvswitchRunDir, "ovs-db.pid");
+        _directoryMock.Setup(m => m.Exists(OpenvswitchRunDir)).Returns(true);
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.pid")).Returns(Seq1(pidFile));
+        _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("1234");
+
+        // The daemon has exited and Windows reused its PID for an unrelated process.
+        _processRunnerIOMock.Setup(m => m.RunProcess(
+                "tasklist.exe", "/FI \"PID eq 1234\" /FO CSV /NH", "", true))
+            .ReturnsAsync(new ProcessRunnerResult(
+                0, "\"explorer.exe\",\"1234\",\"Console\",\"1\",\"50,000 K\""));
+
+        var result = await forceStopRemainingDaemons(OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processRunnerIOMock.Verify(m => m.RunProcess(
+            "taskkill.exe", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+    }
 
     private void ArrangeIsTestSigningEnabled(bool isEnabled)
     {
