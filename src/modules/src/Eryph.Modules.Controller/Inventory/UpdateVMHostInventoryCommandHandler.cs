@@ -45,6 +45,16 @@ internal class UpdateVMHostInventoryCommandHandler(
         var hostName = hostInventory.Name ?? throw new InvalidOperationException(
             "The host inventory is missing the host name.");
 
+        // Where a host is, is decided by its registration, not pinned like a catlet's site: a host
+        // IS wherever the operator says it is, and moving one is an assignment rather than a
+        // migration. So it is read on every round, not only when the record is created — otherwise a
+        // host inventoried before it registered would keep the default site forever, and everything
+        // first recorded on it (disks, discovered catlets) would be pinned to the wrong place.
+        var siteId = componentRegistry.GetHostAgents()
+            .Find(agent => string.Equals(agent.AgentName, hostName, StringComparison.OrdinalIgnoreCase))
+            .Map(agent => agent.SiteId)
+            .IfNone(EryphConstants.DefaultSiteId);
+
         var vmHost = await vmHostDataService.GetVMHostByAgentName(hostName)
             .IfNoneAsync(async () => await vmHostDataService.AddNewVMHost(new CatletFarm
             {
@@ -54,17 +64,19 @@ internal class UpdateVMHostInventoryCommandHandler(
                 // A host is not in an environment. It keeps the default one because every resource has
                 // one, and it is what scopes where the host's own global resources land.
                 Environment = EryphConstants.DefaultEnvironmentName,
-                // The site is operator-assigned on the host's registration; fall back to the default
-                // site when the host is inventoried before it registered.
-                SiteId = componentRegistry.GetHostAgents()
-                    .Find(agent => string.Equals(
-                        agent.AgentName, hostName, StringComparison.OrdinalIgnoreCase))
-                    .Map(agent => agent.SiteId)
-                    .IfNone(EryphConstants.DefaultSiteId),
+                SiteId = siteId,
             }));
 
         if (IsUpdateOutdated(vmHost, message.Timestamp))
             return;
+
+        if (vmHost.SiteId != siteId)
+        {
+            logger.LogInformation(
+                "Host {HostName} moved to another site. Resources recorded on it from now on are "
+                + "located there; the ones already recorded keep their site.", hostName);
+            vmHost.SiteId = siteId;
+        }
 
         var knownVmIds = await _vmDataService.GetAllVmIds(hostName);
         foreach (var vmId in knownVmIds) await _lockManager.AcquireVmLock(vmId);

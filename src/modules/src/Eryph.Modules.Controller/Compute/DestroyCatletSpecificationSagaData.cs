@@ -16,7 +16,12 @@ internal class DestroyCatletSpecificationSagaData
     /// </summary>
     public Guid[] CatletIds { get; set; } = [];
 
-    public List<Guid> CatletsDestroyed { get; set; } = [];
+    /// <summary>
+    /// The destroy tasks which have reported, deduplicated against redelivery. Tasks rather than
+    /// destroyed catlets: a catlet destroyed concurrently is already gone when its task runs, so it
+    /// reports no catlet, and waiting for one would wait forever.
+    /// </summary>
+    public List<Guid> TasksCompleted { get; set; } = [];
 
     public List<Resource> DestroyedResources { get; set; } = [];
 

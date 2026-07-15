@@ -35,20 +35,20 @@ internal class DestroyCatletSpecificationSaga(
 
         return FailOrRun(message, async (DestroyResourcesResponse response) =>
         {
-            // One event per deployment. Collect the results and only delete the specification once
-            // every deployment is gone: it must not disappear while a catlet still references it.
-            var destroyedCatlet = response.DestroyedResources
-                .Where(r => r.Type == ResourceType.Catlet)
-                .Select(r => r.Id)
-                .FirstOrDefault();
+            // One event per deployment. Count the tasks which reported, not the catlets found in
+            // their responses: a catlet destroyed concurrently is already gone by the time its task
+            // runs, so that task legitimately reports no catlet and the specification would wait for
+            // a report which can never come. Deduplicated against redelivery of the same task.
+            if (Data.Data.TasksCompleted.Contains(message.TaskId))
+                return;
 
-            if (destroyedCatlet != Guid.Empty && !Data.Data.CatletsDestroyed.Contains(destroyedCatlet))
-                Data.Data.CatletsDestroyed.Add(destroyedCatlet);
-
+            Data.Data.TasksCompleted.Add(message.TaskId);
             Data.Data.DestroyedResources.AddRange(response.DestroyedResources);
             Data.Data.DetachedResources.AddRange(response.DetachedResources ?? []);
 
-            if (Data.Data.CatletsDestroyed.Count < Data.Data.CatletIds.Length)
+            // Only delete the specification once every deployment is gone: it must not disappear
+            // while a catlet still references it.
+            if (Data.Data.TasksCompleted.Count < Data.Data.CatletIds.Length)
                 return;
 
             Data.Data.State = DestroyCatletSpecificationSagaState.CatletDestroyed;

@@ -114,6 +114,22 @@ internal class UpdateInventoryCommandHandlerBase
             return;
         }
 
+        // A catlet is identified by its name within a project and environment, and this one is being
+        // recorded for the first time. A VM copied on the host keeps its name, so it collides with
+        // the catlet it was copied from. The insert would only fail when the unit of work commits,
+        // taking the whole host's inventory round with it and repeating on every retry — one
+        // unmanaged VM would freeze the inventory of every catlet on that host. Skip it instead.
+        if (await NameIsTaken(
+                project.Id, vmInfo.Environment, NormalizeName(vmInfo.Name), excludedCatletId: null))
+        {
+            _logger.LogWarning(
+                "Skipping VM {VmId} during inventory: a catlet named '{Name}' already exists in the "
+                + "environment '{Environment}' of project {ProjectName}. Rename the VM to have it "
+                + "inventoried as a separate catlet.",
+                vmInfo.VmId, vmInfo.Name, vmInfo.Environment, project.Name);
+            return;
+        }
+
         if (metadata.VmId != vmInfo.VmId)
         {
             await AddCopiedVm(timestamp, vmInfo, host, project, metadata);
@@ -214,7 +230,25 @@ internal class UpdateInventoryCommandHandlerBase
         WarnAboutDivergedLocation(existingCatlet, vmInfo, host);
 
         existingCatlet.LastSeen = timestamp;
-        existingCatlet.Name = convertedVmInfo.Name;
+
+        // A rename on the host can collide with a sibling catlet, which would fail the whole
+        // inventory round when the unit of work commits. Keep the stored name in that case: the
+        // catlet stays inventoried under the name it can actually have.
+        if (!string.Equals(convertedVmInfo.Name, existingCatlet.Name, StringComparison.OrdinalIgnoreCase)
+            && await NameIsTaken(
+                existingCatlet.ProjectId, existingCatlet.Environment, convertedVmInfo.Name,
+                excludedCatletId: existingCatlet.Id))
+        {
+            _logger.LogWarning(
+                "Catlet {CatletId} was renamed to '{Name}' on host {HostName}, but a catlet with that "
+                + "name already exists in its environment. It keeps the name '{StoredName}'.",
+                existingCatlet.Id, convertedVmInfo.Name, host.Name, existingCatlet.Name);
+        }
+        else
+        {
+            existingCatlet.Name = convertedVmInfo.Name;
+        }
+
         existingCatlet.Host = host;
         existingCatlet.AgentName = convertedVmInfo.AgentName;
         existingCatlet.Frozen = convertedVmInfo.Frozen;
@@ -259,6 +293,34 @@ internal class UpdateInventoryCommandHandlerBase
         existingCatlet.LastSeenState = timestamp;
         existingCatlet.Status = convertedVmInfo.Status;
         existingCatlet.UpTime = convertedVmInfo.UpTime;
+    }
+
+    /// <summary>
+    /// The name a catlet is stored under. Every lookup compares against the lower-cased name, so a
+    /// name observed on the host is stored the same way — otherwise a VM named 'Web1' would be a
+    /// separate catlet from 'web1' on a case-sensitive database and the same one on a
+    /// case-insensitive database, and the uniqueness of a catlet's name would mean two different
+    /// things depending on the provider. Names created by eryph are already lower-cased, so this
+    /// only affects VMs named on the host.
+    /// </summary>
+    private static string? NormalizeName(string? name) => name?.ToLowerInvariant();
+
+    /// <summary>
+    /// Whether a catlet of that name already exists in the project and environment, which is what a
+    /// catlet is identified by. Checked before the write rather than caught afterwards: the unit of
+    /// work commits once for the whole host, so a violation could not be attributed back to the VM
+    /// which caused it and would fail the inventory of every catlet on that host.
+    /// </summary>
+    private async Task<bool> NameIsTaken(
+        Guid projectId, string environment, string? name, Guid? excludedCatletId)
+    {
+        if (name is null)
+            return false;
+
+        var catlet = await _stateStore.For<Catlet>().GetBySpecAsync(
+            new CatletSpecs.GetByName(name, projectId, environment));
+
+        return catlet is not null && catlet.Id != excludedCatletId;
     }
 
     /// <summary>
@@ -328,7 +390,7 @@ internal class UpdateInventoryCommandHandlerBase
     {
         // A managed VM (it passed the metadata check) always reports these required
         // identity fields; treat a missing value as an inconsistent inventory.
-        var name = vmInfo.Name ?? throw new InvalidOperationException(
+        var name = NormalizeName(vmInfo.Name) ?? throw new InvalidOperationException(
             $"The inventory data for VM {vmInfo.VmId} is missing the name.");
         var dataStore = vmInfo.DataStore ?? throw new InvalidOperationException(
             $"The inventory data for VM {vmInfo.VmId} is missing the data store.");

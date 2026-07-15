@@ -1,4 +1,4 @@
-using Eryph.Core;
+﻿using Eryph.Core;
 using Eryph.DistributedLock;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Configuration;
@@ -46,9 +46,13 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
           site: munich
         """;
 
+    private static readonly Guid BerlinSiteId = new("d1d2d3d4-0000-4000-8000-000000000001");
+
     protected override async Task SeedAsync(IStateStore stateStore)
     {
         await SeedDefaultTenantAndProject();
+
+        await stateStore.For<Site>().AddAsync(new Site { Id = BerlinSiteId, Name = "berlin" });
     }
 
     [Fact]
@@ -70,7 +74,8 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
         var errors = await Validate(StagingInMunich);
 
         errors.Should().ContainSingle()
-            .Which.Should().Contain("cannot be moved").And.Contain("still has resources");
+            .Which.Should().Contain("cannot be configured for the site 'munich'")
+            .And.Contain("already has resources in another site");
     }
 
     [Fact]
@@ -99,7 +104,7 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
     public async Task A_catlet_in_another_environment_does_not_block_the_change()
     {
         await Author(StagingInBerlin);
-        await AddCatlet("default");
+        await AddCatlet("default", siteId: EryphConstants.DefaultSiteId);
 
         var errors = await Validate(StagingInMunich);
 
@@ -110,6 +115,30 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
     public async Task Nothing_is_refused_when_no_configuration_was_authored_yet()
     {
         var errors = await Validate(StagingInMunich);
+
+        errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task The_first_authoring_cannot_strand_resources_which_already_exist()
+    {
+        // Nothing was authored yet, but resources can already be in a named environment: the
+        // inventory records a catlet with the environment derived from its path, without consulting
+        // the configuration. Comparing payloads would see no previous environment and allow this.
+        await AddCatlet("staging");
+
+        var errors = await Validate(StagingInMunich);
+
+        errors.Should().ContainSingle()
+            .Which.Should().Contain("cannot be configured for the site 'munich'");
+    }
+
+    [Fact]
+    public async Task The_first_authoring_is_allowed_when_it_matches_where_the_resources_are()
+    {
+        await AddCatlet("staging");
+
+        var errors = await Validate(StagingInBerlin);
 
         errors.Should().BeEmpty();
     }
@@ -131,7 +160,7 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
         await scope.GetInstance<IStateStore>().SaveChangesAsync();
     }
 
-    private async Task AddCatlet(string environment)
+    private async Task AddCatlet(string environment, Guid? siteId = null)
     {
         await using var scope = CreateScope();
         var stateStore = scope.GetInstance<IStateStore>();
@@ -139,7 +168,7 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
         {
             Id = Guid.NewGuid(),
             ProjectId = EryphConstants.DefaultProjectId,
-            SiteId = EryphConstants.DefaultSiteId,
+            SiteId = siteId ?? BerlinSiteId,
             Name = "test-catlet",
             Environment = environment,
             DataStore = EryphConstants.DefaultDataStoreName,

@@ -39,15 +39,39 @@ internal sealed class EnvironmentsConfigChangeValidator(
         string canonicalPayload,
         CancellationToken cancellationToken)
     {
+        var newConfig = EnvironmentsConfigYamlSerializer.Deserialize(canonicalPayload);
+        var errors = new List<string>();
+
+        // Where the resources already are, not what the previous configuration said. Resources can
+        // exist in an environment that was never authored — the inventory records a catlet with the
+        // environment derived from its path, without consulting the configuration — so comparing the
+        // two payloads would miss them entirely on the first authoring, and a differential check
+        // cannot see an environment that only the resources know about.
+        foreach (var environment in newConfig.Environments ?? [])
+        {
+            if (environment?.Name is null)
+                continue;
+
+            var declaredSite = await stateStore.For<Site>().GetBySpecAsync(
+                new SiteSpecs.GetByName(environment.Site), cancellationToken);
+
+            var strandedSites = await FindSitesOfResources(
+                environment.Name, exceptSiteId: declaredSite?.Id, cancellationToken);
+            if (strandedSites.Count == 0)
+                continue;
+
+            errors.Add(
+                $"The environment '{environment.Name}' cannot be configured for the site "
+                + $"'{environment.Site}' because it already has resources in another site. The site "
+                + "of an existing resource cannot change.");
+        }
+
         var current = await authoredConfigStore.GetCurrentAsync(
             ConfigDomain.Environments, ConfigScope.Default, cancellationToken);
         if (current is null)
-            return [];
+            return errors;
 
         var currentConfig = EnvironmentsConfigYamlSerializer.Deserialize(current.Payload);
-        var newConfig = EnvironmentsConfigYamlSerializer.Deserialize(canonicalPayload);
-
-        var errors = new List<string>();
 
         foreach (var site in currentConfig.Sites ?? [])
         {
@@ -68,24 +92,38 @@ internal sealed class EnvironmentsConfigChangeValidator(
             if (environment?.Name is null)
                 continue;
 
-            var updated = (newConfig.Environments ?? [])
-                .FirstOrDefault(e => string.Equals(e?.Name, environment.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (updated is not null
-                && string.Equals(updated.Site, environment.Site, StringComparison.OrdinalIgnoreCase))
+            if ((newConfig.Environments ?? []).Any(
+                    e => string.Equals(e?.Name, environment.Name, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            if (!await IsInUse(environment.Name, cancellationToken))
-                continue;
-
-            errors.Add(updated is null
-                ? $"The environment '{environment.Name}' cannot be removed because it still has resources."
-                : $"The environment '{environment.Name}' cannot be moved from the site '{environment.Site}' "
-                  + $"to the site '{updated.Site}' because it still has resources. The site of an existing "
-                  + "resource cannot change.");
+            if (await IsInUse(environment.Name, cancellationToken))
+                errors.Add(
+                    $"The environment '{environment.Name}' cannot be removed because it still has resources.");
         }
 
         return errors;
+    }
+
+    /// <summary>
+    /// The sites of the resources in an environment, other than the one given. Empty when every
+    /// resource in it is already where the configuration says the environment is.
+    /// </summary>
+    private async Task<IReadOnlyList<Guid>> FindSitesOfResources(
+        string environment, Guid? exceptSiteId, CancellationToken cancellationToken)
+    {
+        var catlets = await stateStore.For<Catlet>().ListAsync(
+            new ResourceSpecs<Catlet>.GetByEnvironmentUnscoped(environment), cancellationToken);
+        var disks = await stateStore.For<VirtualDisk>().ListAsync(
+            new ResourceSpecs<VirtualDisk>.GetByEnvironmentUnscoped(environment), cancellationToken);
+        var networks = await stateStore.For<VirtualNetwork>().ListAsync(
+            new ResourceSpecs<VirtualNetwork>.GetByEnvironmentUnscoped(environment), cancellationToken);
+
+        return catlets.Select(c => c.SiteId)
+            .Concat(disks.Select(d => d.SiteId))
+            .Concat(networks.Select(n => n.SiteId))
+            .Where(id => id != exceptSiteId)
+            .Distinct()
+            .ToList();
     }
 
     private async Task<bool> IsInUse(string environment, CancellationToken cancellationToken) =>

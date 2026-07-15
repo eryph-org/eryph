@@ -75,6 +75,25 @@ internal class DeployCatletSaga(
                     SpecificationVersionId = Data.Data.SpecificationVersionId,
                 });
 
+            var catletName = inventory.Name ?? throw new InvalidOperationException(
+                $"The inventory for catlet {Data.Data.CatletId} is missing the name.");
+
+            // The endpoint checked this before the operation started, but the VM is created first, so
+            // a concurrent deployment of the same name can have taken it since. Check again next to
+            // the insert: the insert itself only fails when the unit of work commits, which would
+            // strand the operation instead of failing it, and the VM has to be reported either way.
+            var nameTaken = await catletRepository.GetBySpecAsync(
+                new CatletSpecs.GetByName(
+                    catletName, Data.Data.ProjectId, Data.Data.Config!.Environment!));
+            if (nameTaken is not null)
+            {
+                await Fail(
+                    $"A catlet with the name '{catletName}' already exists in the environment "
+                    + $"'{Data.Data.Config!.Environment}'. The virtual machine {inventory.VmId} was "
+                    + "created and has to be removed.");
+                return;
+            }
+
             await catletDataService.Add(new Catlet
             {
                 ProjectId = Data.Data.ProjectId,
@@ -82,8 +101,7 @@ internal class DeployCatletSaga(
                 MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
                 VmId = inventory.VmId,
-                Name = inventory.Name ?? throw new InvalidOperationException(
-                    $"The inventory for catlet {Data.Data.CatletId} is missing the name."),
+                Name = catletName,
                 Environment = Data.Data.Config!.Environment!,
                 SiteId = Data.Data.SiteId,
                 DataStore = Data.Data.Config!.Store!,

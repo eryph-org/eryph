@@ -1,4 +1,4 @@
-using Dbosoft.Rebus.Operations;
+﻿using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
@@ -8,6 +8,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using LanguageExt;
+using static LanguageExt.Prelude;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Rebus.Pipeline;
@@ -47,6 +48,8 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
     private static readonly Guid OrphanedCatletId = new("a1b2c3d4-0000-4000-8000-000000000005");
     private static readonly Guid OrphanedMetadataId = new("a1b2c3d4-0000-4000-8000-000000000006");
     private static readonly Guid OrphanedVmId = new("a1b2c3d4-0000-4000-8000-000000000007");
+
+    private readonly StubRegistry _registry = new();
 
     protected override async Task SeedAsync(IStateStore stateStore)
     {
@@ -154,6 +157,82 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
     }
 
     [Fact]
+    public async Task A_copied_vm_whose_name_is_taken_is_skipped_not_inserted()
+    {
+        // A VM copied on the host keeps its name, so it collides with the catlet it was copied
+        // from. The insert would only fail when the unit of work commits, taking the whole host's
+        // inventory round with it and repeating on every retry.
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+            {
+                Id = OrphanedMetadataId,
+                CatletId = OrphanedCatletId,
+                // A different VM id: this is the copy-detection path.
+                VmId = Guid.NewGuid(),
+                Metadata = new CatletMetadataContent(),
+            });
+            await stateStore.SaveChangesAsync();
+        });
+
+        await Handle(
+            environment: "staging",
+            vmName: "test-catlet",
+            vmId: OrphanedVmId,
+            metadataId: OrphanedMetadataId);
+
+        await WithScope(async stateStore =>
+        {
+            var catlets = await stateStore.For<Catlet>().ListAsync();
+
+            catlets.Should().ContainSingle().Which.Id.Should().Be(CatletId);
+        });
+    }
+
+    [Fact]
+    public async Task A_rename_which_collides_keeps_the_stored_name()
+    {
+        // A second catlet whose name the existing one is about to be renamed to.
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<Catlet>().AddAsync(new Catlet
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = EryphConstants.DefaultProjectId,
+                SiteId = OtherSiteId,
+                Name = "taken",
+                Environment = "staging",
+                DataStore = EryphConstants.DefaultDataStoreName,
+            });
+            await stateStore.SaveChangesAsync();
+        });
+
+        await Handle(environment: "staging", vmName: "taken");
+
+        await WithScope(async stateStore =>
+        {
+            var catlet = await stateStore.For<Catlet>().GetByIdAsync(CatletId);
+
+            catlet!.Name.Should().Be("test-catlet");
+        });
+    }
+
+    [Fact]
+    public async Task A_name_observed_on_the_host_is_stored_lower_cased()
+    {
+        // Every lookup compares against the lower-cased name, so the uniqueness of a catlet's name
+        // must not depend on the database's collation.
+        await Handle(environment: "staging", vmName: "Renamed-CATLET");
+
+        await WithScope(async stateStore =>
+        {
+            var catlet = await stateStore.For<Catlet>().GetByIdAsync(CatletId);
+
+            catlet!.Name.Should().Be("renamed-catlet");
+        });
+    }
+
+    [Fact]
     public async Task A_first_seen_vm_with_an_attributable_path_is_inserted()
     {
         // The counterpart: the same VM IS recorded once its path resolves, so the skip above is the
@@ -231,7 +310,7 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
             new CatletDataService(
                 scope.GetInstance<IStateStoreRepository<Catlet>>(), metadataService, stateStore),
             new VMHostMachineDataService(scope.GetInstance<IStateStoreRepository<CatletFarm>>()),
-            new StubRegistry(),
+            _registry,
             stateStore,
             NullLogger.Instance);
     }
@@ -242,10 +321,38 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
         await func(scope.GetInstance<IStateStore>());
     }
 
-    /// <summary>The host has not registered, so it falls back to the default site.</summary>
+    [Fact]
+    public async Task The_hosts_site_follows_its_registration()
+    {
+        // A host is wherever the operator assigned it, so this is read on every round rather than
+        // pinned. A host inventoried before it registered would otherwise keep the default site
+        // forever, and everything first recorded on it would be pinned to the wrong place.
+        await Handle(environment: "staging");
+
+        _registry.SiteId = OtherSiteId;
+        await Handle(environment: "staging");
+
+        await WithScope(async stateStore =>
+        {
+            var farms = await stateStore.For<CatletFarm>().ListAsync();
+
+            farms.Should().ContainSingle().Which.SiteId.Should().Be(OtherSiteId);
+        });
+    }
+
+    /// <summary>
+    /// The host's registration. Reports no agent until a site is assigned, which is the host
+    /// inventoried before it registered.
+    /// </summary>
     private sealed class StubRegistry : IComponentRegistry
     {
-        public Seq<HostAgentComponent> GetHostAgents() => Seq<HostAgentComponent>.Empty;
+        public Guid? SiteId { get; set; }
+
+        public Seq<HostAgentComponent> GetHostAgents() =>
+            SiteId is null
+                ? LanguageExt.Seq<HostAgentComponent>.Empty
+                : Seq1(new HostAgentComponent(
+                    HostName, SiteId.Value, EryphConstants.Networking.LocalChassisName, 1));
     }
 
     /// <summary>Hand-written: the interface is internal, which Moq cannot proxy.</summary>
