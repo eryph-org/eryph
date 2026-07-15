@@ -246,6 +246,7 @@ public class IpPoolManagerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = NetworkId,
                 Name = "test-network",
                 ProjectId = EryphConstants.DefaultProjectId,

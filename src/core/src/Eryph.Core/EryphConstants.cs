@@ -10,10 +10,12 @@ public static class EryphConstants
 
     public static readonly Guid DefaultTenantId = Guid.Parse("{C1813384-8ECB-4F17-B846-821EE515D19B}");
     public static readonly Guid DefaultProjectId = Guid.Parse("{4B4A3FCF-B5ED-4A9A-AB6E-03852752095E}");
+    public static readonly Guid DefaultSiteId = Guid.Parse("{9D7E4E4A-6D8B-4C1F-9E2A-6F3B1C5D8A47}");
 
     public static readonly string DefaultCatletName = "catlet";
     public static readonly string DefaultProjectName = "default";
     public static readonly string DefaultEnvironmentName = "default";
+    public static readonly string DefaultSiteName = "default";
     public static readonly string DefaultDataStoreName = "default";
     public static readonly string DefaultNetworkName = "default";
     public static readonly string DefaultProviderName = "default";

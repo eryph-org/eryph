@@ -51,6 +51,7 @@ internal class UpdateVMHostInventoryCommandHandler(
                 Name = hostName,
                 Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null),
                 Environment = EryphConstants.DefaultEnvironmentName,
+                SiteId = EryphConstants.DefaultSiteId,
             }));
 
         if (IsUpdateOutdated(vmHost, message.Timestamp))

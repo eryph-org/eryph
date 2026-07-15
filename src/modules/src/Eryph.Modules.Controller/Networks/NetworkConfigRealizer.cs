@@ -48,6 +48,7 @@ public class NetworkConfigRealizer(
                     Id = Guid.NewGuid(),
                     ProjectId = projectId,
                     Environment = networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName,
+                    SiteId = EryphConstants.DefaultSiteId,
                     Name = networkConfig.Name,
                     NetworkProvider = networkConfig.Provider?.Name ?? EryphConstants.DefaultProviderName,
                     Subnets = [],

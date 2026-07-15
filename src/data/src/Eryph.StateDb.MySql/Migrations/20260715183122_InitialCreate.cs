@@ -61,6 +61,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Environment = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     TagsJson = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
@@ -164,6 +165,20 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "Sites",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Sites", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Tenants",
                 columns: table => new
                 {
@@ -255,6 +270,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Environment = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     LastInventory = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
@@ -264,6 +280,12 @@ namespace Eryph.StateDb.MySql.Migrations
                         name: "FK_CatletFarms_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CatletFarms_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 })
@@ -397,6 +419,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Environment = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -437,6 +460,12 @@ namespace Eryph.StateDb.MySql.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
+                        name: "FK_VirtualDisks_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_VirtualDisks_VirtualDisks_ParentId",
                         column: x => x.ParentId,
                         principalTable: "VirtualDisks",
@@ -456,6 +485,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Environment = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     NetworkProvider = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     IpNetwork = table.Column<string>(type: "longtext", nullable: true)
@@ -468,6 +498,12 @@ namespace Eryph.StateDb.MySql.Migrations
                         name: "FK_VirtualNetworks_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_VirtualNetworks_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 })
@@ -484,6 +520,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Environment = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     AgentName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
@@ -529,6 +566,12 @@ namespace Eryph.StateDb.MySql.Migrations
                         name: "FK_Catlets_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Catlets_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 })
@@ -941,6 +984,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CatletFarms_SiteId",
+                table: "CatletFarms",
+                column: "SiteId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Catlets_HostId",
                 table: "Catlets",
                 column: "HostId");
@@ -949,6 +997,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_Catlets_ProjectId",
                 table: "Catlets",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Catlets_SiteId",
+                table: "Catlets",
+                column: "SiteId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Catlets_SpecificationId",
@@ -1100,6 +1153,12 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "CatletId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Sites_Name",
+                table: "Sites",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Subnet_NetworkId",
                 table: "Subnet",
                 column: "NetworkId");
@@ -1120,6 +1179,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VirtualDisks_SiteId",
+                table: "VirtualDisks",
+                column: "SiteId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VirtualDisks_UniqueGeneIndex",
                 table: "VirtualDisks",
                 column: "UniqueGeneIndex");
@@ -1128,6 +1192,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_VirtualNetworks_ProjectId",
                 table: "VirtualNetworks",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualNetworks_SiteId",
+                table: "VirtualNetworks",
+                column: "SiteId");
         }
 
         /// <inheritdoc />
@@ -1219,6 +1288,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
             migrationBuilder.DropTable(
                 name: "Projects");
+
+            migrationBuilder.DropTable(
+                name: "Sites");
 
             migrationBuilder.DropTable(
                 name: "Tenants");

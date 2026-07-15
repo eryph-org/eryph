@@ -49,6 +49,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
             var parentDisk = await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     Id = ParentDiskId,
                     ProjectId = EryphConstants.DefaultProjectId,
                     Name = ParentDiskName,
@@ -63,6 +64,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
             await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     Id = DiskId,
                     ProjectId = EryphConstants.DefaultProjectId,
                     Name = DiskName,
@@ -99,6 +101,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
 
             await stateStore.For<Catlet>().AddAsync(new Catlet
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = CatletId,
                 ProjectId = EryphConstants.DefaultProjectId,
                 MetadataId = metadata.Id,

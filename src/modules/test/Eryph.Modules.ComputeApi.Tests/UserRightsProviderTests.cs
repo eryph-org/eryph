@@ -104,6 +104,7 @@ public class UserRightsProviderTests
 
         var resource = new Catlet
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = Guid.NewGuid(),
             Project = project,
             ProjectId = project.Id,

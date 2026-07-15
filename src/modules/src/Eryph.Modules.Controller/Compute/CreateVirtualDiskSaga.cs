@@ -50,6 +50,7 @@ internal class CreateVirtualDiskSaga(
                 Name = diskInfo.Name,
                 DataStore = diskInfo.DataStore,
                 Environment = diskInfo.Environment,
+                SiteId = EryphConstants.DefaultSiteId,
                 FileName = diskInfo.FileName,
                 Path = diskInfo.Path,
                 SizeBytes = diskInfo.SizeBytes,

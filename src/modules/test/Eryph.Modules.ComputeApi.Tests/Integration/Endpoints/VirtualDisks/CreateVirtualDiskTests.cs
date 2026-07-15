@@ -48,6 +48,7 @@ public class CreateVirtualDiskTests(ITestOutputHelper outputHelper)
             await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     ProjectId = EryphConstants.DefaultProjectId,
                     Name = DiskName,
                     Environment = EnvironmentName,
@@ -81,6 +82,7 @@ public class CreateVirtualDiskTests(ITestOutputHelper outputHelper)
             await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     ProjectId = EryphConstants.DefaultProjectId,
                     Name = DiskName,
                     Environment = EryphConstants.DefaultEnvironmentName,
@@ -170,6 +172,7 @@ public class CreateVirtualDiskTests(ITestOutputHelper outputHelper)
             await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     ProjectId = EryphConstants.DefaultProjectId,
                     Name = DiskName,
                     Environment = EnvironmentName,
@@ -215,6 +218,7 @@ public class CreateVirtualDiskTests(ITestOutputHelper outputHelper)
             await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     ProjectId = EryphConstants.DefaultProjectId,
                     Name = DiskName,
                     Environment = EryphConstants.DefaultEnvironmentName,

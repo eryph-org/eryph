@@ -19,6 +19,7 @@ public class CatletConfigGeneratorTests
 
         var catlet = new Catlet
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Name = "test-catlet",
             Project = new Project
             {
@@ -48,6 +49,7 @@ public class CatletConfigGeneratorTests
                     Type = CatletDriveType.Vhd,
                     AttachedDisk = new VirtualDisk
                     {
+                        SiteId = EryphConstants.DefaultSiteId,
                         Id = Guid.NewGuid(),
                         Name = "sda",
                         Environment = "test-environment",
@@ -56,6 +58,7 @@ public class CatletConfigGeneratorTests
                         SizeBytes = 100 * 1024 * 1024 * 1024L,
                         Parent = new VirtualDisk
                         {
+                            SiteId = EryphConstants.DefaultSiteId,
                             Id = Guid.NewGuid(),
                             Name = "sda",
                             Environment = EryphConstants.DefaultEnvironmentName,
@@ -89,6 +92,7 @@ public class CatletConfigGeneratorTests
             MacAddress = "02:04:06:08:0a:0c",
             Network = new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Name = "test-network",
                 Environment = "test-environment",
                 NetworkProvider = EryphConstants.DefaultProviderName,
@@ -176,6 +180,7 @@ public class CatletConfigGeneratorTests
     {
         var catlet = new Catlet
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Name = "test-catlet",
             Project = new Project
             {

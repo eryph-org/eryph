@@ -3,8 +3,12 @@ using System.Collections.Generic;
 
 namespace Eryph.StateDb.Model;
 
-public class Catlet : Resource
+public class Catlet : Resource, ISiteBound
 {
+    public required Guid SiteId { get; set; }
+
+    public Site Site { get; set; } = null!;
+
     public string? AgentName { get; set; }
 
     /// <summary>

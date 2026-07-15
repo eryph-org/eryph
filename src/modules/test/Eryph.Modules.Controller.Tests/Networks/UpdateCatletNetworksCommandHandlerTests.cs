@@ -1344,6 +1344,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(DefaultNetworkId),
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = EryphConstants.DefaultNetworkName,
@@ -1413,6 +1414,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(SecondNetworkId),
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = "second-network",
@@ -1456,6 +1458,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(ThirdNetworkId),
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = "third-network",
@@ -1499,6 +1502,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(SecondEnvironmentNetworkId),
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = EryphConstants.DefaultNetworkName,
@@ -1542,6 +1546,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(SecondProjectNetworkId),
                 ProjectId = Guid.Parse(SecondProjectId),
                 Name = EryphConstants.DefaultNetworkName,
@@ -1585,6 +1590,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(FlatNetworkId),
                 ProjectId = Guid.Parse(DefaultProjectId),
                 Name = "flat-network",
@@ -1595,6 +1601,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(FlatStaticNetworkId),
                 ProjectId = Guid.Parse(DefaultProjectId),
                 Name = "flat-static-network",

@@ -524,6 +524,12 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
     {
         var networkRepo = stateStore.For<VirtualNetwork>();
 
+        await stateStore.For<Site>().AddAsync(new Site
+        {
+            Id = EryphConstants.DefaultSiteId,
+            Name = EryphConstants.DefaultSiteName,
+        });
+
         var project = new Project
         {
             Id = _projectId,
@@ -542,6 +548,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await networkRepo.AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.NewGuid(),
                 Name = "unused_network",
                 ProjectId = _projectId,
@@ -554,6 +561,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await networkRepo.AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.NewGuid(),
                 Name = "used_network",
                 ProjectId = _projectId,
@@ -585,6 +593,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await networkRepo.AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.NewGuid(),
                 Name = "pool_network",
                 ProjectId = _projectId,

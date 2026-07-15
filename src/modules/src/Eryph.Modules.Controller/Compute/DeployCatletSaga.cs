@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
@@ -84,6 +85,7 @@ internal class DeployCatletSaga(
                 Name = inventory.Name ?? throw new InvalidOperationException(
                     $"The inventory for catlet {Data.Data.CatletId} is missing the name."),
                 Environment = Data.Data.Config!.Environment!,
+                SiteId = EryphConstants.DefaultSiteId,
                 DataStore = Data.Data.Config!.Store!,
                 StorageIdentifier = Data.Data.Config!.Location!,
                 // Ensure that any inventory updates are applied as the

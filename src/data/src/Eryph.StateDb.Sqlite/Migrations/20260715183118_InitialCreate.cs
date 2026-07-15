@@ -45,6 +45,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     AppliedConfigVersionsJson = table.Column<string>(type: "TEXT", nullable: false),
                     AdvertisedEndpointsJson = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: true),
+                    SiteId = table.Column<Guid>(type: "TEXT", nullable: false),
                     TagsJson = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -128,6 +129,18 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Sites",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Sites", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tenants",
                 columns: table => new
                 {
@@ -208,6 +221,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
+                    SiteId = table.Column<Guid>(type: "TEXT", nullable: false),
                     LastInventory = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -217,6 +231,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         name: "FK_CatletFarms_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CatletFarms_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -334,6 +354,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
+                    SiteId = table.Column<Guid>(type: "TEXT", nullable: false),
                     StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
                     DiskIdentifier = table.Column<Guid>(type: "TEXT", nullable: false),
                     Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
@@ -364,6 +385,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
+                        name: "FK_VirtualDisks_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_VirtualDisks_VirtualDisks_ParentId",
                         column: x => x.ParentId,
                         principalTable: "VirtualDisks",
@@ -380,6 +407,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
+                    SiteId = table.Column<Guid>(type: "TEXT", nullable: false),
                     NetworkProvider = table.Column<string>(type: "TEXT", nullable: false),
                     IpNetwork = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -390,6 +418,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         name: "FK_VirtualNetworks_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_VirtualNetworks_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -403,6 +437,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
+                    SiteId = table.Column<Guid>(type: "TEXT", nullable: false),
                     AgentName = table.Column<string>(type: "TEXT", nullable: true),
                     LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
@@ -441,6 +476,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         name: "FK_Catlets_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Catlets_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -790,6 +831,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CatletFarms_SiteId",
+                table: "CatletFarms",
+                column: "SiteId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Catlets_HostId",
                 table: "Catlets",
                 column: "HostId");
@@ -798,6 +844,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_Catlets_ProjectId",
                 table: "Catlets",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Catlets_SiteId",
+                table: "Catlets",
+                column: "SiteId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Catlets_SpecificationId",
@@ -949,6 +1000,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "CatletId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Sites_Name",
+                table: "Sites",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Subnet_NetworkId",
                 table: "Subnet",
                 column: "NetworkId");
@@ -969,6 +1026,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VirtualDisks_SiteId",
+                table: "VirtualDisks",
+                column: "SiteId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VirtualDisks_UniqueGeneIndex",
                 table: "VirtualDisks",
                 column: "UniqueGeneIndex");
@@ -977,6 +1039,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_VirtualNetworks_ProjectId",
                 table: "VirtualNetworks",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualNetworks_SiteId",
+                table: "VirtualNetworks",
+                column: "SiteId");
         }
 
         /// <inheritdoc />
@@ -1068,6 +1135,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "Projects");
+
+            migrationBuilder.DropTable(
+                name: "Sites");
 
             migrationBuilder.DropTable(
                 name: "Tenants");

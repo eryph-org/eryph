@@ -61,6 +61,8 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<Project> Projects { get; set; }
 
+    public DbSet<Site> Sites { get; set; }
+
     public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
 
     public DbSet<Tenant> Tenants { get; set; }
@@ -122,6 +124,28 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<ProjectRoleAssignment>()
             .HasAlternateKey(x => new { x.ProjectId, x.IdentityId, x.RoleId });
+
+        modelBuilder.Entity<Site>()
+            .HasKey(x => x.Id);
+
+        modelBuilder.Entity<Site>()
+            .HasIndex(x => x.Name)
+            .IsUnique();
+
+        // Configured per concrete type instead of on Resource: only the site bound
+        // resources have a site. CatletSpecification is project level and deploys
+        // into many sites, so it must not carry one.
+        foreach (var entityType in new[]
+                 {
+                     typeof(Catlet), typeof(CatletFarm), typeof(VirtualDisk), typeof(VirtualNetwork),
+                 })
+        {
+            modelBuilder.Entity(entityType)
+                .HasOne(nameof(ISiteBound.Site))
+                .WithMany()
+                .HasForeignKey(nameof(ISiteBound.SiteId))
+                .OnDelete(DeleteBehavior.Restrict);
+        }
 
         modelBuilder.Entity<Resource>()
             .UseTpcMappingStrategy()

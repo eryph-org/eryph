@@ -4,12 +4,16 @@ using Eryph.Resources;
 
 namespace Eryph.StateDb.Model;
 
-public class VirtualDisk : Disk
+public class VirtualDisk : Disk, ISiteBound
 {
     public VirtualDisk()
     {
         ResourceType = ResourceType.VirtualDisk;
     }
+
+    public required Guid SiteId { get; set; }
+
+    public Site Site { get; set; } = null!;
 
     public string? StorageIdentifier { get; set; }
 

@@ -70,6 +70,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
 
         await stateStore.For<Catlet>().AddAsync(new Catlet
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = CatletId,
             MetadataId = CatletMetadataId,
             Name = "test-catlet",
@@ -94,6 +95,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
 
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = GeneDiskId,
             Name = "sda",
             StorageIdentifier = "gene:acme/acme-os/1.0:sda",
@@ -109,6 +111,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
 
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = DiskId,
             Name = "sda",
             ParentId = GeneDiskId,

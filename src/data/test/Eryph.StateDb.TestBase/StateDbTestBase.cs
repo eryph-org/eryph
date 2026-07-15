@@ -32,7 +32,11 @@ public abstract class StateDbTestBase : IAsyncLifetime
         ITestOutputHelper outputHelper)
     {
         _databaseFixture = databaseFixture;
-        _dbConnection = _databaseFixture.GetConnectionString($"test_{DateTime.UtcNow.Ticks}");
+        // Must be unique per test: the SQLite fixture uses a shared cache, so two tests
+        // with the same database name would share one in-memory database and corrupt each
+        // other's seed data. DateTime.UtcNow has a ~15ms resolution on Windows and tests
+        // are constructed far faster than that, so it cannot provide the uniqueness.
+        _dbConnection = _databaseFixture.GetConnectionString($"test_{Guid.NewGuid():N}");
         _container = new Container();
         _container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
         var services = new ServiceCollection();
@@ -65,6 +69,16 @@ public abstract class StateDbTestBase : IAsyncLifetime
         var context = scope.GetInstance<StateStoreContext>();
         await context.Database.MigrateAsync();
         var stateStore = scope.GetInstance<IStateStore>();
+        if (SeedDefaultSite)
+        {
+            await stateStore.For<Site>().AddAsync(new Site
+            {
+                Id = EryphConstants.DefaultSiteId,
+                Name = EryphConstants.DefaultSiteName,
+            });
+            await stateStore.SaveChangesAsync();
+        }
+
         await SeedAsync(stateStore);
         await stateStore.SaveChangesAsync();
     }
@@ -84,6 +98,13 @@ public abstract class StateDbTestBase : IAsyncLifetime
     }
 
     public Scope CreateScope() => AsyncScopedLifestyle.BeginScope(_container);
+
+    /// <summary>
+    /// Seeds the default site before <see cref="SeedAsync"/>. Every site bound resource
+    /// has a foreign key to a site, so tests which seed resources need it to exist.
+    /// Override to <c>false</c> when the test asserts on the seeding of the site itself.
+    /// </summary>
+    protected virtual bool SeedDefaultSite => true;
 
     /// <summary>
     /// This method can be implemented to execute seeding logic for
