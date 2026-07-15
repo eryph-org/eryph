@@ -39,6 +39,8 @@ public class ConfigDomainDescriptorsTests
         ConfigDomainDescriptors.TryCanonicalize(
                 ConfigDomain.Environments,
                 """
+                sites:
+                - name: Berlin
                 environments:
                 - name: Staging
                   site: Berlin
@@ -47,6 +49,22 @@ public class ConfigDomainDescriptorsTests
             .Should().BeTrue();
 
         canonical.Should().Contain("name: staging").And.Contain("site: berlin");
+    }
+
+    [Fact]
+    public void Environments_a_site_which_is_not_declared_is_rejected()
+    {
+        ConfigDomainDescriptors.TryCanonicalize(
+                ConfigDomain.Environments,
+                """
+                environments:
+                - name: staging
+                  site: berlin
+                """,
+                out _, out var error)
+            .Should().BeFalse();
+
+        error.Should().Contain("'berlin', which is not declared");
     }
 
     [Fact]

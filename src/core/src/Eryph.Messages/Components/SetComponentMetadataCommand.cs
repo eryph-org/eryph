@@ -18,9 +18,11 @@ public class SetComponentMetadataCommand : IHasCorrelationId
     /// <summary>The environment to assign, or null to clear it.</summary>
     public string? Environment { get; set; }
 
-    /// <summary>The site the component is located in, or null to leave it unchanged. Unlike
-    /// <see cref="Environment"/> it cannot be cleared: a component always runs somewhere.</summary>
-    public Guid? SiteId { get; set; }
+    /// <summary>The name of the site the component is located in, or null to leave it unchanged.
+    /// Unlike <see cref="Environment"/> it cannot be cleared: a component always runs somewhere.
+    /// A name rather than an id, because that is what an operator declares and can therefore refer
+    /// to; the handler resolves it and rejects a site which does not exist.</summary>
+    public string? Site { get; set; }
 
     /// <summary>The complete replacement tag set (key → value). A null set is treated as no tags; a null
     /// value as an empty one. The value type is nullable because this message is populated by

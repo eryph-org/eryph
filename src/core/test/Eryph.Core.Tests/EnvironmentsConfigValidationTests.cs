@@ -82,6 +82,7 @@ public class EnvironmentsConfigValidationTests
     {
         var config = new EnvironmentsConfig
         {
+            Sites = [new SiteConfig { Name = "berlin" }],
             Environments = [new EnvironmentConfig { Name = "staging", Site = "berlin" }],
         };
 
@@ -89,15 +90,67 @@ public class EnvironmentsConfigValidationTests
     }
 
     [Fact]
+    public void Validate_accepts_an_environment_in_the_reserved_default_site()
+    {
+        // The default site always exists and is never declared.
+        var config = new EnvironmentsConfig
+        {
+            Environments = [new EnvironmentConfig { Name = "staging", Site = "default" }],
+        };
+
+        EnvironmentsConfigValidation.Validate(config).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validate_rejects_an_environment_whose_site_is_not_declared()
+    {
+        // The whole reason sites and environments are authored together: this would otherwise be
+        // accepted, distributed, and then fail at every deployment into the environment.
+        var config = new EnvironmentsConfig
+        {
+            Sites = [new SiteConfig { Name = "berlin" }],
+            Environments = [new EnvironmentConfig { Name = "staging", Site = "munich" }],
+        };
+
+        EnvironmentsConfigValidation.Validate(config).Should()
+            .ContainSingle().Which.Should().Contain("'munich', which is not declared");
+    }
+
+    [Fact]
+    public void Validate_rejects_the_reserved_default_site()
+    {
+        var config = new EnvironmentsConfig
+        {
+            Sites = [new SiteConfig { Name = "default" }],
+        };
+
+        EnvironmentsConfigValidation.Validate(config).Should()
+            .ContainSingle().Which.Should().Contain("reserved site name");
+    }
+
+    [Fact]
+    public void Validate_rejects_duplicate_sites()
+    {
+        var config = new EnvironmentsConfig
+        {
+            Sites = [new SiteConfig { Name = "berlin" }, new SiteConfig { Name = "berlin" }],
+        };
+
+        EnvironmentsConfigValidation.Validate(config).Should()
+            .ContainSingle().Which.Should().Contain("site name 'berlin' is not unique");
+    }
+
+    [Fact]
     public void Validate_rejects_the_reserved_default_environment()
     {
         var config = new EnvironmentsConfig
         {
+            Sites = [new SiteConfig { Name = "berlin" }],
             Environments = [new EnvironmentConfig { Name = "default", Site = "berlin" }],
         };
 
         EnvironmentsConfigValidation.Validate(config).Should()
-            .ContainSingle().Which.Should().Contain("reserved");
+            .ContainSingle().Which.Should().Contain("reserved environment name");
     }
 
     [Fact]
@@ -105,6 +158,7 @@ public class EnvironmentsConfigValidationTests
     {
         var config = new EnvironmentsConfig
         {
+            Sites = [new SiteConfig { Name = "berlin" }],
             Environments = [new EnvironmentConfig { Name = "invalid name!", Site = "berlin" }],
         };
 
@@ -129,6 +183,7 @@ public class EnvironmentsConfigValidationTests
     {
         var config = new EnvironmentsConfig
         {
+            Sites = [new SiteConfig { Name = "berlin" }, new SiteConfig { Name = "munich" }],
             Environments =
             [
                 new EnvironmentConfig { Name = "staging", Site = "berlin" },
@@ -137,6 +192,6 @@ public class EnvironmentsConfigValidationTests
         };
 
         EnvironmentsConfigValidation.Validate(config).Should()
-            .ContainSingle().Which.Should().Contain("not unique");
+            .ContainSingle().Which.Should().Contain("environment name 'staging' is not unique");
     }
 }

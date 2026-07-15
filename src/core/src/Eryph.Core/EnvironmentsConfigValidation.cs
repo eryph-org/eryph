@@ -17,6 +17,27 @@ public static class EnvironmentsConfigValidation
     {
         var errors = new List<string>();
 
+        foreach (var site in config.Sites ?? [])
+        {
+            if (site is null)
+            {
+                errors.Add("A site entry must not be null.");
+                continue;
+            }
+
+            ValidateName("site", site.Name, n => new SiteName(n), errors);
+            ValidateNotReserved("site", site.Name, EryphConstants.DefaultSiteName, errors);
+        }
+
+        ValidateNoDuplicateNames(
+            "site", (config.Sites ?? []).Where(s => s is not null).Select(s => s.Name), errors);
+
+        var declaredSites = (config.Sites ?? [])
+            .Where(s => s?.Name is not null)
+            .Select(s => s.Name)
+            .Append(EryphConstants.DefaultSiteName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (var environment in config.Environments ?? [])
         {
             if (environment is null)
@@ -30,10 +51,22 @@ public static class EnvironmentsConfigValidation
                 "environment", environment.Name, EryphConstants.DefaultEnvironmentName, errors);
             ValidateName($"environment '{environment.Name}' site", environment.Site,
                 n => new SiteName(n), errors);
+
+            // The site must be declared in this same document. Checking it here is the reason the
+            // two are authored together: an environment which names a site that does not exist
+            // would be accepted, distributed, and then fail at every deployment into it.
+            if (!string.IsNullOrWhiteSpace(environment.Site)
+                && !declaredSites.Contains(environment.Site))
+            {
+                errors.Add(
+                    $"The environment '{environment.Name}' is configured for the site "
+                    + $"'{environment.Site}', which is not declared.");
+            }
         }
 
         ValidateNoDuplicateNames(
-            (config.Environments ?? []).Where(e => e is not null).Select(e => e.Name), errors);
+            "environment", (config.Environments ?? []).Where(e => e is not null).Select(e => e.Name),
+            errors);
 
         return errors;
     }
@@ -101,7 +134,8 @@ public static class EnvironmentsConfigValidation
         }
     }
 
-    private static void ValidateNoDuplicateNames(IEnumerable<string?> names, List<string> errors)
+    private static void ValidateNoDuplicateNames(
+        string kind, IEnumerable<string?> names, List<string> errors)
     {
         var duplicates = names
             .Where(n => !string.IsNullOrWhiteSpace(n))
@@ -111,6 +145,6 @@ public static class EnvironmentsConfigValidation
             .Select(g => g.Key);
 
         foreach (var duplicate in duplicates)
-            errors.Add($"The environment name '{duplicate}' is not unique.");
+            errors.Add($"The {kind} name '{duplicate}' is not unique.");
     }
 }

@@ -55,7 +55,14 @@ public static class ConfigDomainDescriptors
 
     private static void NormalizeEnvironmentNames(EnvironmentsConfig config)
     {
+        config.Sites ??= [];
         config.Environments ??= [];
+
+        foreach (var site in config.Sites)
+        {
+            if (site?.Name is not null)
+                site.Name = site.Name.Trim().ToLowerInvariant();
+        }
 
         foreach (var environment in config.Environments)
         {

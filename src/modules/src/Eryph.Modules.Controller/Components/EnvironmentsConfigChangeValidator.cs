@@ -48,6 +48,21 @@ internal sealed class EnvironmentsConfigChangeValidator(
         var newConfig = EnvironmentsConfigYamlSerializer.Deserialize(canonicalPayload);
 
         var errors = new List<string>();
+
+        foreach (var site in currentConfig.Sites ?? [])
+        {
+            if (site?.Name is null)
+                continue;
+
+            if ((newConfig.Sites ?? []).Any(
+                    s => string.Equals(s?.Name, site.Name, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            if (await SiteHasResources(site.Name, cancellationToken))
+                errors.Add(
+                    $"The site '{site.Name}' cannot be removed because it still has resources.");
+        }
+
         foreach (var environment in currentConfig.Environments ?? [])
         {
             if (environment?.Name is null)
@@ -73,23 +88,30 @@ internal sealed class EnvironmentsConfigChangeValidator(
         return errors;
     }
 
-    private async Task<bool> IsInUse(string environment, CancellationToken cancellationToken)
-    {
+    private async Task<bool> IsInUse(string environment, CancellationToken cancellationToken) =>
         // The site bound resources which carry an environment. A catlet farm is always in the default
         // environment, which is reserved and therefore never part of an authored configuration.
-        var catlets = await stateStore.For<Catlet>().ListAsync(
-            new ResourceSpecs<Catlet>.GetByEnvironment(environment), cancellationToken);
-        if (catlets.Count > 0)
-            return true;
+        await stateStore.For<Catlet>().AnyAsync(
+            new ResourceSpecs<Catlet>.GetByEnvironmentUnscoped(environment), cancellationToken)
+        || await stateStore.For<VirtualDisk>().AnyAsync(
+            new ResourceSpecs<VirtualDisk>.GetByEnvironmentUnscoped(environment), cancellationToken)
+        || await stateStore.For<VirtualNetwork>().AnyAsync(
+            new ResourceSpecs<VirtualNetwork>.GetByEnvironmentUnscoped(environment), cancellationToken);
 
-        var disks = await stateStore.For<VirtualDisk>().ListAsync(
-            new ResourceSpecs<VirtualDisk>.GetByEnvironment(environment), cancellationToken);
-        if (disks.Count > 0)
-            return true;
+    private async Task<bool> SiteHasResources(string siteName, CancellationToken cancellationToken)
+    {
+        var site = await stateStore.For<Site>().GetBySpecAsync(
+            new SiteSpecs.GetByName(siteName), cancellationToken);
+        if (site is null)
+            return false;
 
-        var networks = await stateStore.For<VirtualNetwork>().ListAsync(
-            new ResourceSpecs<VirtualNetwork>.GetByEnvironment(environment), cancellationToken);
-
-        return networks.Count > 0;
+        return await stateStore.For<Catlet>().AnyAsync(
+                   new SiteBoundSpecs<Catlet>.GetBySiteUnscoped(site.Id), cancellationToken)
+               || await stateStore.For<VirtualDisk>().AnyAsync(
+                   new SiteBoundSpecs<VirtualDisk>.GetBySiteUnscoped(site.Id), cancellationToken)
+               || await stateStore.For<VirtualNetwork>().AnyAsync(
+                   new SiteBoundSpecs<VirtualNetwork>.GetBySiteUnscoped(site.Id), cancellationToken)
+               || await stateStore.For<CatletFarm>().AnyAsync(
+                   new SiteBoundSpecs<CatletFarm>.GetBySiteUnscoped(site.Id), cancellationToken);
     }
 }

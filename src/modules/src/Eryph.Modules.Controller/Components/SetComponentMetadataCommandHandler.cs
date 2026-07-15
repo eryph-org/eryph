@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,6 +7,9 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Configuration;
 using Eryph.Rebus;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -20,6 +24,7 @@ namespace Eryph.Modules.Controller.Components;
 internal sealed class SetComponentMetadataCommandHandler(
     IBus bus,
     IComponentRegistryService registry,
+    IStateStoreRepository<Site> siteRepository,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<SetComponentMetadataCommand>>
 {
@@ -59,8 +64,26 @@ internal sealed class SetComponentMetadataCommandHandler(
             }
         }
 
+        // Resolve the site to its id here rather than accepting one: an id an operator cannot
+        // discover would silently remove the host from all placement and storage-agent resolution
+        // if it were wrong, with nothing pointing at the cause.
+        Guid? siteId = null;
+        if (!string.IsNullOrWhiteSpace(command.Site))
+        {
+            var site = await siteRepository.GetBySpecAsync(
+                new SiteSpecs.GetByName(command.Site.Trim().ToLowerInvariant()),
+                CancellationToken.None);
+            if (site is null)
+            {
+                await messaging.FailTask(message, $"The site '{command.Site}' does not exist.");
+                return;
+            }
+
+            siteId = site.Id;
+        }
+
         var found = await registry.SetMetadataAsync(
-            command.ComponentId, command.Environment, command.SiteId, command.Tags,
+            command.ComponentId, command.Environment, siteId, command.Tags,
             CancellationToken.None);
 
         if (!found)

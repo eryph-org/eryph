@@ -28,6 +28,7 @@ public class SetConfigDomainCommandHandlerTests
     private readonly FakeStore _store = new();
     private readonly Mock<INetworkSyncService> _networkSync = new();
     private readonly FakeEnvironmentsConfigChangeValidator _environmentsValidator = new();
+    private readonly FakeSitesConfigRealizer _sitesRealizer = new();
 
     public SetConfigDomainCommandHandlerTests() =>
         _networkSync.Setup(s => s.SyncNetworks(
@@ -35,7 +36,8 @@ public class SetConfigDomainCommandHandlerTests
             .Returns(RightAsync<Error, Unit>(unit));
 
     private SetConfigDomainCommandHandler CreateHandler() =>
-        new(_bus.Object, _store, _networkSync.Object, _environmentsValidator, _messaging.Object);
+        new(_bus.Object, _store, _networkSync.Object, _environmentsValidator, _sitesRealizer,
+            _messaging.Object);
 
     private static OperationTask<SetConfigDomainCommand> Op(ConfigDomain domain, string? payload) =>
         new(new SetConfigDomainCommand { Domain = domain, Payload = payload, Author = "alice" },
@@ -83,6 +85,8 @@ public class SetConfigDomainCommandHandlerTests
 
         await CreateHandler().Handle(Op(ConfigDomain.Environments,
             """
+            sites:
+            - name: munich
             environments:
             - name: staging
               site: munich
@@ -98,6 +102,8 @@ public class SetConfigDomainCommandHandlerTests
     {
         await CreateHandler().Handle(Op(ConfigDomain.Environments,
             """
+            sites:
+            - name: munich
             environments:
             - name: staging
               site: munich
@@ -184,6 +190,17 @@ public class SetConfigDomainCommandHandlerTests
 
         _store.Added.Should().ContainSingle(); // stored — will realize on the next sync
         VerifyCompleted(Times.Never());        // but the operation is reported failed
+    }
+
+    private sealed class FakeSitesConfigRealizer : ISitesConfigRealizer
+    {
+        public List<string> RealizedSites { get; } = [];
+
+        public Task RealizeSites(EnvironmentsConfig config, CancellationToken cancellationToken)
+        {
+            RealizedSites.AddRange((config.Sites ?? []).Select(s => s.Name));
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeEnvironmentsConfigChangeValidator : IEnvironmentsConfigChangeValidator

@@ -24,6 +24,7 @@ internal sealed class SetConfigDomainCommandHandler(
     IAuthoredConfigStore store,
     INetworkSyncService networkSyncService,
     IEnvironmentsConfigChangeValidator environmentsConfigChangeValidator,
+    ISitesConfigRealizer sitesConfigRealizer,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<SetConfigDomainCommand>>
 {
@@ -67,7 +68,8 @@ internal sealed class SetConfigDomainCommandHandler(
         }
 
         // The payload is well-formed, but changing an environment's site is only valid while nothing
-        // is in it: the site of an existing resource is pinned and must not change under it.
+        // is in it: the site of an existing resource is pinned and must not change under it. The same
+        // holds for removing a site.
         if (command.Domain == ConfigDomain.Environments)
         {
             var changeErrors = await environmentsConfigChangeValidator.ValidateChanges(
@@ -81,6 +83,14 @@ internal sealed class SetConfigDomainCommandHandler(
 
         await store.AddVersionAsync(
             command.Domain, scope, canonical, command.Author, CancellationToken.None);
+
+        // Realize the authored sites in the same unit of work as the version which declares them, so
+        // an environment can never reference a site that was accepted but never created.
+        if (command.Domain == ConfigDomain.Environments)
+        {
+            await sitesConfigRealizer.RealizeSites(
+                EnvironmentsConfigYamlSerializer.Deserialize(canonical), CancellationToken.None);
+        }
 
         // NetworkProviders drives the controller's OWN network realization, so re-realize now against the
         // just-authored value (SyncNetworks reads it through the authored-aware provider manager). That

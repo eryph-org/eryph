@@ -172,6 +172,7 @@ public class ControllerModule
         container.Register<ISiteResolver, SiteResolver>(Lifestyle.Scoped);
         container.Register<IEnvironmentsConfigChangeValidator, EnvironmentsConfigChangeValidator>(
             Lifestyle.Scoped);
+        container.Register<ISitesConfigRealizer, SitesConfigRealizer>(Lifestyle.Scoped);
 
         //use network services from host
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
