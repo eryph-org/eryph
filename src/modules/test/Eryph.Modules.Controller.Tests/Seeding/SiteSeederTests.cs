@@ -1,8 +1,10 @@
 using Eryph.Core;
+using Eryph.Modules.Controller.Seeding;
 using Eryph.Modules.Controller.Tests.ChangeTracking;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Seeding;
@@ -46,8 +48,14 @@ public abstract class SiteSeederTests(
     [Fact]
     public async Task Default_site_is_not_seeded_twice()
     {
-        await ExecuteSeeder();
-        await ExecuteSeeder();
+        // The seeder itself is executed twice rather than the whole seeding host: re-running the
+        // host would also re-run the other seeders over the config files the first run wrote, which
+        // is a different thing to test.
+        await WithScope(async stateStore =>
+        {
+            await new SiteSeeder(NullLogger.Instance, stateStore).Execute(default);
+            await new SiteSeeder(NullLogger.Instance, stateStore).Execute(default);
+        });
 
         await WithScope(async stateStore =>
         {
