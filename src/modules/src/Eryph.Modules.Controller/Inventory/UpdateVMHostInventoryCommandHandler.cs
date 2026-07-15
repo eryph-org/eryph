@@ -22,6 +22,7 @@ internal class UpdateVMHostInventoryCommandHandler(
     IMessageContext messageContext,
     ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
+    IComponentRegistry componentRegistry,
     IStateStore stateStore,
     ILogger logger)
     : UpdateInventoryCommandHandlerBase(
@@ -50,8 +51,16 @@ internal class UpdateVMHostInventoryCommandHandler(
                 Id = Guid.NewGuid(),
                 Name = hostName,
                 Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null),
+                // A host is not in an environment. It keeps the default one because every resource has
+                // one, and it is what scopes where the host's own global resources land.
                 Environment = EryphConstants.DefaultEnvironmentName,
-                SiteId = EryphConstants.DefaultSiteId,
+                // The site is operator-assigned on the host's registration; fall back to the default
+                // site when the host is inventoried before it registered.
+                SiteId = componentRegistry.GetHostAgents()
+                    .Find(agent => string.Equals(
+                        agent.AgentName, hostName, StringComparison.OrdinalIgnoreCase))
+                    .Map(agent => agent.SiteId)
+                    .IfNone(EryphConstants.DefaultSiteId),
             }));
 
         if (IsUpdateOutdated(vmHost, message.Timestamp))
@@ -64,7 +73,8 @@ internal class UpdateVMHostInventoryCommandHandler(
         var diskIdentifiers = CollectDiskIdentifiers(diskInventory.ToSeq());
         foreach (var diskIdentifier in diskIdentifiers) await _lockManager.AcquireVhdLock(diskIdentifier);
 
-        foreach (var diskInfo in diskInventory) await AddOrUpdateDisk(vmHost.Name, message.Timestamp, diskInfo);
+        foreach (var diskInfo in diskInventory)
+            await AddOrUpdateDisk(vmHost.Name, vmHost.SiteId, message.Timestamp, diskInfo);
 
         var vmInventory = message.VMInventory ?? [];
         await UpdateVms(message.Timestamp, vmInventory, vmHost);

@@ -55,7 +55,10 @@ public class VirtualMachineInventory(
             ProjectId = vmStorageSettings.StorageNames.ProjectId.ToNullable(),
             ProjectName = vmStorageSettings.StorageNames.ProjectName.IfNone(""),
             DataStore = vmStorageSettings.StorageNames.DataStoreName.IfNone(""),
-            Environment = vmStorageSettings.StorageNames.EnvironmentName.IfNone(""),
+            // Null, not empty, when the VM's path could not be attributed to an environment. The
+            // environment is part of a catlet's identity, so the controller must be able to tell
+            // "unknown" apart from a name and refuse to store one it does not have.
+            Environment = vmStorageSettings.StorageNames.EnvironmentName.IfNoneUnsafe((string?)null),
             Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x => x.HardDrives)).ToArray(),
             NetworkAdapters = networkAdaptersData.ToArray(),
             Networks = networks.ToArray(),

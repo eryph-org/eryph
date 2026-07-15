@@ -91,20 +91,36 @@ internal class UpdateInventoryCommandHandlerBase
             return;
         }
 
+        var existingCatlet = metadata.VmId == vmInfo.VmId
+            ? await _vmDataService.Get(metadata.CatletId)
+            : null;
+
+        if (existingCatlet is not null)
+        {
+            await UpdateExistingVm(timestamp, vmInfo, host, existingCatlet);
+            return;
+        }
+
+        // A catlet is created here, so its environment must be derived from where the VM was found.
+        // Nothing else knows it: unlike an update there is no stored value to fall back on. Skip the
+        // VM when the path cannot be attributed rather than inventing an environment — the
+        // environment is part of a catlet's identity, and a wrong one is worse than a missing catlet.
+        if (vmInfo.Environment is null)
+        {
+            _logger.LogWarning(
+                "Skipping VM {VmId} during inventory: its storage location could not be attributed to "
+                + "an environment. Check that the datastore paths of this host match the storage "
+                + "configuration.", vmInfo.VmId);
+            return;
+        }
+
         if (metadata.VmId != vmInfo.VmId)
         {
             await AddCopiedVm(timestamp, vmInfo, host, project, metadata);
             return;
         }
 
-        var existingCatlet = await _vmDataService.Get(metadata.CatletId);
-        if (existingCatlet is null)
-        {
-            await AddNewVm(timestamp, vmInfo, host, project, metadata);
-            return;
-        }
-
-        await UpdateExistingVm(timestamp, vmInfo, host, existingCatlet);
+        await AddNewVm(timestamp, vmInfo, host, project, metadata);
     }
 
     private async Task AddCopiedVm(
@@ -146,7 +162,7 @@ internal class UpdateInventoryCommandHandlerBase
 
 
         var newCatlet = await VirtualMachineInfoToCatlet(
-            vmInfo, host, timestamp, catletId, project);
+            vmInfo, host, timestamp, catletId, project, vmInfo.Environment!, host.SiteId);
         newCatlet.MetadataId = metadataId;
         newCatlet.IsDeprecated = existingMetadata.IsDeprecated;
 
@@ -161,7 +177,8 @@ internal class UpdateInventoryCommandHandlerBase
         CatletMetadata existingMetadata)
     {
         var newCatlet = await VirtualMachineInfoToCatlet(
-            vmInfo, host, timestamp, existingMetadata.CatletId, project);
+            vmInfo, host, timestamp, existingMetadata.CatletId, project,
+            vmInfo.Environment!, host.SiteId);
         newCatlet.MetadataId = existingMetadata.Id;
         newCatlet.IsDeprecated = existingMetadata.IsDeprecated;
         newCatlet.SpecificationId = existingMetadata.SpecificationId;
@@ -188,8 +205,13 @@ internal class UpdateInventoryCommandHandlerBase
         await _stateStore.LoadCollectionAsync(existingCatlet, x => x.ReportedNetworks);
         await _stateStore.LoadCollectionAsync(existingCatlet, x => x.NetworkAdapters);
 
+        // The catlet exists, so its environment and site are already decided: pass them back in rather
+        // than deriving them from the VM's path, which is only a second observation of the same fact.
         var convertedVmInfo = await VirtualMachineInfoToCatlet(
-            vmInfo, host, timestamp, existingCatlet.Id, existingCatlet.Project);
+            vmInfo, host, timestamp, existingCatlet.Id, existingCatlet.Project,
+            existingCatlet.Environment, existingCatlet.SiteId);
+
+        WarnAboutDivergedLocation(existingCatlet, vmInfo, host);
 
         existingCatlet.LastSeen = timestamp;
         existingCatlet.Name = convertedVmInfo.Name;
@@ -197,7 +219,11 @@ internal class UpdateInventoryCommandHandlerBase
         existingCatlet.AgentName = convertedVmInfo.AgentName;
         existingCatlet.Frozen = convertedVmInfo.Frozen;
         existingCatlet.DataStore = convertedVmInfo.DataStore;
-        existingCatlet.Environment = convertedVmInfo.Environment;
+        // The environment and the site are deliberately not updated. Both are decided when the catlet
+        // is deployed and are immutable for its lifetime, so the value derived from the VM's path here
+        // is a second observation of the same fact, not a newer one: when it agrees the write is a
+        // no-op, and when it disagrees the stored value is the correct one. Writing it could only
+        // destroy information — including the catlet's identity, of which the environment is part.
         existingCatlet.Path = convertedVmInfo.Path;
         existingCatlet.StorageIdentifier = convertedVmInfo.StorageIdentifier;
         existingCatlet.ReportedNetworks = convertedVmInfo.ReportedNetworks;
@@ -235,6 +261,36 @@ internal class UpdateInventoryCommandHandlerBase
         existingCatlet.UpTime = convertedVmInfo.UpTime;
     }
 
+    /// <summary>
+    /// Reports a catlet whose stored location disagrees with what the inventory observed. Neither is
+    /// corrected: the stored environment and site are the authoritative ones, and silently rewriting
+    /// either would change the catlet's identity or lie about where it runs. The divergence is real
+    /// though, so it must not pass unnoticed — until now there was no signal for it at all.
+    /// </summary>
+    private void WarnAboutDivergedLocation(
+        Catlet existingCatlet, VirtualMachineData vmInfo, CatletFarm host)
+    {
+        if (vmInfo.Environment is null)
+            _logger.LogWarning(
+                "The storage location of catlet {CatletId} could not be attributed to an environment; "
+                + "it remains in the environment '{Environment}'. Check that the datastore paths of "
+                + "host {HostName} match the storage configuration.",
+                existingCatlet.Id, existingCatlet.Environment, host.Name);
+        else if (!string.Equals(
+                     vmInfo.Environment, existingCatlet.Environment, StringComparison.OrdinalIgnoreCase))
+            _logger.LogWarning(
+                "Catlet {CatletId} is in the environment '{Environment}' but its storage location is "
+                + "attributed to the environment '{ObservedEnvironment}' on host {HostName}. The "
+                + "environment of a catlet cannot change; its files may have been moved.",
+                existingCatlet.Id, existingCatlet.Environment, vmInfo.Environment, host.Name);
+
+        if (host.SiteId != existingCatlet.SiteId)
+            _logger.LogWarning(
+                "Catlet {CatletId} is pinned to a site but runs on host {HostName}, which is in a "
+                + "different one. Moving a catlet between sites must be an explicit operation.",
+                existingCatlet.Id, host.Name);
+    }
+
     protected async Task<Option<Project>> FindProject(
         string? projectName, Guid? optionalProjectId)
     {
@@ -266,7 +322,9 @@ internal class UpdateInventoryCommandHandlerBase
         CatletFarm hostMachine,
         DateTimeOffset timestamp,
         Guid catletId,
-        Project project)
+        Project project,
+        string environment,
+        Guid siteId)
     {
         // A managed VM (it passed the metadata check) always reports these required
         // identity fields; treat a missing value as an inconsistent inventory.
@@ -274,20 +332,19 @@ internal class UpdateInventoryCommandHandlerBase
             $"The inventory data for VM {vmInfo.VmId} is missing the name.");
         var dataStore = vmInfo.DataStore ?? throw new InvalidOperationException(
             $"The inventory data for VM {vmInfo.VmId} is missing the data store.");
-        var environment = vmInfo.Environment ?? throw new InvalidOperationException(
-            $"The inventory data for VM {vmInfo.VmId} is missing the environment.");
 
         return
             from _ in Task.FromResult(unit)
             from drives in vmInfo.Drives.ToSeq()
-                .Map(d => VirtualMachineDriveDataToCatletDrive(d, hostMachine.Name, timestamp))
+                .Map(d => VirtualMachineDriveDataToCatletDrive(
+                    d, hostMachine.Name, hostMachine.SiteId, timestamp))
                 .SequenceSerial()
             select new Catlet
             {
                 Id = catletId,
                 Project = project,
                 ProjectId = project.Id,
-                SiteId = EryphConstants.DefaultSiteId,
+                SiteId = siteId,
                 VmId = vmInfo.VmId,
                 Name = name,
                 Status = vmInfo.Status.ToCatletStatus(),
@@ -336,10 +393,11 @@ internal class UpdateInventoryCommandHandlerBase
     private async Task<CatletDrive> VirtualMachineDriveDataToCatletDrive(
         VirtualMachineDriveData driveData,
         string agentName,
+        Guid siteId,
         DateTimeOffset timestamp)
     {
         var disk = await Optional(driveData.Disk)
-            .BindAsync(d => AddOrUpdateDisk(agentName, timestamp, d).ToAsync())
+            .BindAsync(d => AddOrUpdateDisk(agentName, siteId, timestamp, d).ToAsync())
             .ToOption();
 
         return new CatletDrive
@@ -370,8 +428,14 @@ internal class UpdateInventoryCommandHandlerBase
         return features;
     }
 
+    /// <param name="siteId">
+    /// The site of the host reporting the disk. A disk is where the host that holds it is, so this is
+    /// an observation, not a lookup: it is only used when the disk is first recorded and never
+    /// re-derived for one that already exists.
+    /// </param>
     protected async Task<Option<VirtualDisk>> AddOrUpdateDisk(
         string agentName,
+        Guid siteId,
         DateTimeOffset timestamp,
         DiskInfo diskInfo)
     {
@@ -380,7 +444,8 @@ internal class UpdateInventoryCommandHandlerBase
             return disk;
 
         Option<VirtualDisk> parentDisk = null;
-        if (diskInfo.Parent is not null) parentDisk = await AddOrUpdateDisk(agentName, timestamp, diskInfo.Parent);
+        if (diskInfo.Parent is not null)
+            parentDisk = await AddOrUpdateDisk(agentName, siteId, timestamp, diskInfo.Parent);
 
         if (disk is not null)
         {
@@ -417,7 +482,7 @@ internal class UpdateInventoryCommandHandlerBase
             DiskIdentifier = diskInfo.DiskIdentifier,
             DataStore = diskInfo.DataStore,
             Environment = diskInfo.Environment,
-            SiteId = EryphConstants.DefaultSiteId,
+            SiteId = siteId,
             StorageIdentifier = diskInfo.StorageIdentifier,
             Project = project,
             FileName = diskInfo.FileName,
