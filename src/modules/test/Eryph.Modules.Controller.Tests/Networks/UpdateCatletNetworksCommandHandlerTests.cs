@@ -48,6 +48,9 @@ public class UpdateCatletNetworksCommandHandlerTests(
 
     private readonly Mock<ITaskMessaging> _taskMessingMock = new();
 
+    // Every environment is in the default site unless a test says otherwise.
+    private ISiteResolver _siteResolver = new FakeSiteResolver();
+
     [Theory]
     [InlineData(DefaultProjectId, "default", null, null, null,
         DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
@@ -829,6 +832,39 @@ public class UpdateCatletNetworksCommandHandlerTests(
     }
 
     [Fact]
+    public async Task UpdateNetworks_EnvironmentWithoutNetworkIsInAnotherSite_ReturnsError()
+    {
+        // The environment declares no network of its own, so the handler would fall back to the
+        // default environment's network — but that network is realized by another site, so the
+        // catlet could not reach it. The project's network configuration cannot catch this: this
+        // environment never appears in it, which is exactly why we are falling back.
+        _siteResolver = new SiteAwareSiteResolver(
+            ("environment-without-network", Guid.NewGuid()));
+
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Name = "catlet-1",
+                Environment = "environment-without-network",
+                Networks = [new CatletNetworkConfig { AdapterName = "eth0", Name = "default" }],
+            },
+        };
+
+        await WithScope(async (handler, _) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeLeft().Which.Message.Should()
+                .Contain("realized by a different site")
+                .And.Contain("Declare a network 'default' for the environment 'environment-without-network'");
+        });
+    }
+
+    [Fact]
     public async Task UpdateNetworks_MacAddressSpoofingConfiguredInOverlayNetwork_ReturnsError()
     {
         var command = new UpdateCatletNetworksCommand
@@ -1211,6 +1247,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
         options.Container.Register<IProviderIpManager, ProviderIpManager>(Lifestyle.Scoped);
 
         options.Container.Register<UpdateCatletNetworksCommandHandler>(Lifestyle.Scoped);
+        // Resolved through a field so a test can put an environment in another site.
+        options.Container.Register(() => _siteResolver, Lifestyle.Scoped);
     }
 
     public override async Task InitializeAsync()

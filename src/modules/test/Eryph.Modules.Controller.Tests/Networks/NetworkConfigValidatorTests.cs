@@ -503,7 +503,8 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await SeedData(stateStore);
 
 
-        var configValidator = new NetworkConfigValidator(stateStore, NullLogger.Instance);
+        var configValidator = new NetworkConfigValidator(
+            stateStore, new FakeSiteResolver(), NullLogger.Instance);
         var res = await configValidator.ValidateChanges(_projectId, projectConfig, _providers).ToListAsync();
         foreach (var message in res) _output.WriteLine(message);
 
@@ -512,7 +513,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
 
     private string[] RunConfigValidator(ProjectNetworksConfig projectConfig)
     {
-        var configValidator = new NetworkConfigValidator(null!, NullLogger.Instance);
+        var configValidator = new NetworkConfigValidator(null!, null!, NullLogger.Instance);
         var normalized = configValidator.NormalizeConfig(projectConfig);
         var res = configValidator.ValidateConfig(normalized, _providers).ToArray();
         foreach (var message in res) _output.WriteLine(message);
