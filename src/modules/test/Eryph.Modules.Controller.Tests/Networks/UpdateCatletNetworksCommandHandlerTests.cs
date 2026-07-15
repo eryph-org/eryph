@@ -48,9 +48,6 @@ public class UpdateCatletNetworksCommandHandlerTests(
 
     private readonly Mock<ITaskMessaging> _taskMessingMock = new();
 
-    // Every environment is in the default site unless a test says otherwise.
-    private ISiteResolver _siteResolver = new FakeSiteResolver();
-
     [Theory]
     [InlineData(DefaultProjectId, "default", null, null, null,
         DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
@@ -94,6 +91,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(projectId),
             Config = new CatletConfig
@@ -150,6 +148,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -197,6 +196,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -253,6 +253,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -274,6 +275,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var updatedConfigCommand = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -320,6 +322,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -372,6 +375,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -410,6 +414,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -438,6 +443,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var updatedConfigCommand = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -489,6 +495,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -518,6 +525,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var updatedConfigCommand = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -592,6 +600,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -621,6 +630,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var updatedConfigCommand = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(projectId),
             Config = new CatletConfig
@@ -672,6 +682,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -701,6 +712,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var updatedConfigCommand = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -736,6 +748,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -798,6 +811,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -832,18 +846,16 @@ public class UpdateCatletNetworksCommandHandlerTests(
     }
 
     [Fact]
-    public async Task UpdateNetworks_EnvironmentWithoutNetworkIsInAnotherSite_ReturnsError()
+    public async Task UpdateNetworks_CatletIsPinnedToAnotherSiteThanTheDefaultNetwork_ReturnsError()
     {
         // The environment declares no network of its own, so the handler would fall back to the
-        // default environment's network — but that network is realized by another site, so the
-        // catlet could not reach it. The project's network configuration cannot catch this: this
-        // environment never appears in it, which is exactly why we are falling back.
-        _siteResolver = new SiteAwareSiteResolver(
-            ("environment-without-network", Guid.NewGuid()));
-
+        // default environment's network — but the catlet is pinned to another site and could not
+        // reach it. The project's network configuration cannot catch this: this environment never
+        // appears in it, which is exactly why we are falling back.
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = Guid.NewGuid(),
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -870,6 +882,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -909,6 +922,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -971,6 +985,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -1010,6 +1025,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -1049,6 +1065,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -1111,6 +1128,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -1150,6 +1168,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            SiteId = EryphConstants.DefaultSiteId,
             CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(DefaultProjectId),
             Config = new CatletConfig
@@ -1247,8 +1266,6 @@ public class UpdateCatletNetworksCommandHandlerTests(
         options.Container.Register<IProviderIpManager, ProviderIpManager>(Lifestyle.Scoped);
 
         options.Container.Register<UpdateCatletNetworksCommandHandler>(Lifestyle.Scoped);
-        // Resolved through a field so a test can put an environment in another site.
-        options.Container.Register(() => _siteResolver, Lifestyle.Scoped);
     }
 
     public override async Task InitializeAsync()

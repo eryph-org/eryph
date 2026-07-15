@@ -43,6 +43,11 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
     private static readonly Guid VmId = new("a1b2c3d4-0000-4000-8000-000000000003");
     private static readonly Guid OtherSiteId = new("a1b2c3d4-0000-4000-8000-000000000004");
 
+    // Metadata whose catlet does not exist: a VM eryph knows but has not recorded yet.
+    private static readonly Guid OrphanedCatletId = new("a1b2c3d4-0000-4000-8000-000000000005");
+    private static readonly Guid OrphanedMetadataId = new("a1b2c3d4-0000-4000-8000-000000000006");
+    private static readonly Guid OrphanedVmId = new("a1b2c3d4-0000-4000-8000-000000000007");
+
     protected override async Task SeedAsync(IStateStore stateStore)
     {
         await SeedDefaultTenantAndProject();
@@ -119,17 +124,66 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
     }
 
     [Fact]
-    public async Task An_unmanaged_vm_with_an_unattributable_path_is_skipped_not_inserted()
+    public async Task A_first_seen_vm_with_an_unattributable_path_is_skipped_not_inserted()
     {
-        // No metadata for this VM id, and no environment: it must not be inserted with an empty
-        // environment, which would be an unusable identity.
-        await Handle(environment: null, vmId: Guid.NewGuid(), metadataId: Guid.NewGuid());
+        // Metadata exists but the catlet does not, so this VM would be recorded for the first time.
+        // Its environment is only knowable from its path, and the path cannot be attributed — it
+        // must be skipped rather than inserted with an empty environment, which would be an
+        // unusable identity.
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+            {
+                Id = OrphanedMetadataId,
+                CatletId = OrphanedCatletId,
+                VmId = OrphanedVmId,
+                Metadata = new CatletMetadataContent(),
+            });
+            await stateStore.SaveChangesAsync();
+        });
+
+        await Handle(environment: null, vmId: OrphanedVmId, metadataId: OrphanedMetadataId);
 
         await WithScope(async stateStore =>
         {
             var catlets = await stateStore.For<Catlet>().ListAsync();
 
+            // Only the pre-existing catlet; the unattributable one was not inserted.
             catlets.Should().ContainSingle().Which.Id.Should().Be(CatletId);
+        });
+    }
+
+    [Fact]
+    public async Task A_first_seen_vm_with_an_attributable_path_is_inserted()
+    {
+        // The counterpart: the same VM IS recorded once its path resolves, so the skip above is the
+        // unattributable path and not the metadata check in front of it.
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+            {
+                Id = OrphanedMetadataId,
+                CatletId = OrphanedCatletId,
+                VmId = OrphanedVmId,
+                Metadata = new CatletMetadataContent(),
+            });
+            await stateStore.SaveChangesAsync();
+        });
+
+        await Handle(
+            environment: EryphConstants.DefaultEnvironmentName,
+            vmName: "discovered-catlet",
+            vmId: OrphanedVmId,
+            metadataId: OrphanedMetadataId);
+
+        await WithScope(async stateStore =>
+        {
+            var catlet = await stateStore.For<Catlet>().GetByIdAsync(OrphanedCatletId);
+
+            catlet.Should().NotBeNull();
+            catlet!.Environment.Should().Be(EryphConstants.DefaultEnvironmentName);
+            // Pinned from the host reporting it, not from its environment.
+            catlet.SiteId.Should().Be(EryphConstants.DefaultSiteId);
         });
     }
 

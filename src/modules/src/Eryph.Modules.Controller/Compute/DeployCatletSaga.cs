@@ -99,6 +99,7 @@ internal class DeployCatletSaga(
             await StartNewTask(new UpdateCatletNetworksCommand
             {
                 CatletId = Data.Data.CatletId,
+                SiteId = Data.Data.SiteId,
                 CatletMetadataId = Data.Data.MetadataId,
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
                     Data.Data.Config ?? throw new InvalidOperationException(
@@ -314,6 +315,7 @@ internal class DeployCatletSaga(
         await StartNewTask(new UpdateCatletNetworksCommand
         {
             CatletId = Data.Data.CatletId,
+            SiteId = Data.Data.SiteId,
             CatletMetadataId = Data.Data.MetadataId,
             Config = CatletSystemDataFeeding.FeedSystemVariables(
                 feedConfig, Data.Data.CatletId, Data.Data.VmId),
