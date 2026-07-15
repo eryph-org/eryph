@@ -168,7 +168,7 @@ public class SetComponentMetadataCommandHandlerTests
         public ComponentRegistration? Registration { get; init; }
 
         public Task<bool> SetMetadataAsync(
-            Guid componentId, string? environment, IReadOnlyDictionary<string, string?>? tags,
+            Guid componentId, string? environment, Guid? siteId, IReadOnlyDictionary<string, string?>? tags,
             CancellationToken cancellationToken)
         {
             LastComponentId = componentId;

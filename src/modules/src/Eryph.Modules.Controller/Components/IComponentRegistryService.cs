@@ -62,12 +62,15 @@ internal interface IComponentRegistryService
     Task<bool> RemoveRegistrationAsync(Guid componentId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Assigns operator-owned targeting metadata (environment + tags) to a registered component.
-    /// Replaces the environment and the full tag set. Returns whether the component exists.
+    /// Assigns operator-owned metadata to a registered component: the targeting metadata (environment +
+    /// tags) and the site it is located in. Replaces the environment and the full tag set. A null
+    /// <paramref name="siteId"/> leaves the site unchanged — unlike the environment it cannot be
+    /// cleared, as a component always runs somewhere. Returns whether the component exists.
     /// </summary>
     Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
+        Guid? siteId,
         IReadOnlyDictionary<string, string?>? tags,
         CancellationToken cancellationToken);
 

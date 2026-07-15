@@ -15,6 +15,9 @@ public class DeployCatletSpecificationSagaData
 
     public Guid ProjectId { get; set; }
 
+    /// <summary>The site realizing the deployment's environment, resolved when the catlet was placed.</summary>
+    public Guid SiteId { get; set; }
+
     public Guid SpecificationId { get; set; }
 
     public Guid SpecificationVersionId { get; set; }

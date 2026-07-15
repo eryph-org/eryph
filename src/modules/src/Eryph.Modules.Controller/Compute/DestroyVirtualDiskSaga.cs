@@ -81,14 +81,21 @@ internal class DestroyVirtualDiskSaga(
             return;
         }
 
-        var agentName = agentLocator.FindAgentForDataStore(virtualDisk.DataStore, virtualDisk.Environment);
+        // The disk's own site, not its environment: the disk exists, so where it lives is already
+        // decided and must not be re-derived from configuration which may since have changed.
+        var agentName = agentLocator.FindAgentForDataStore(virtualDisk.DataStore, virtualDisk.SiteId);
+        if (agentName.IsLeft)
+        {
+            await Fail(agentName.LeftToSeq().Head.Message);
+            return;
+        }
 
         await StartNewTask(new RemoveVirtualDiskCommand
         {
             DiskId = Data.DiskId,
             Path = virtualDisk.Path,
             FileName = virtualDisk.FileName,
-            AgentName = agentName,
+            AgentName = agentName.RightToSeq().Head,
         });
     }
 }

@@ -161,6 +161,7 @@ internal sealed class ComponentRegistryService(
     public async Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
+        Guid? siteId,
         IReadOnlyDictionary<string, string?>? tags,
         CancellationToken cancellationToken)
     {
@@ -177,6 +178,11 @@ internal sealed class ComponentRegistryService(
         registration.Environment = string.IsNullOrWhiteSpace(environment)
             ? null
             : environment.Trim().ToLowerInvariant();
+
+        // Unlike the environment, the site is not replaced wholesale: it cannot be cleared, so an
+        // omitted value means "leave it where it is" rather than "it is nowhere".
+        if (siteId.HasValue)
+            registration.SiteId = siteId.Value;
 
         var normalizedTags = new Dictionary<string, string>();
         foreach (var tag in tags ?? new Dictionary<string, string?>())

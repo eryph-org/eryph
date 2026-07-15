@@ -23,6 +23,12 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
 
     public Guid ProjectId { get; set; }
 
+    /// <summary>
+    /// The site realizing the catlet's environment, resolved once when the saga starts. It is both
+    /// the site placement stays within and the site the catlet is pinned to.
+    /// </summary>
+    public Guid SiteId { get; set; }
+
     public ProjectName? ProjectName { get; set; }
 
     public Architecture? Architecture { get; set; }

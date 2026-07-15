@@ -12,6 +12,9 @@ public class DeployCatletSagaData : TaskWorkflowSagaData
 
     public Guid ProjectId { get; set; }
 
+    /// <summary>The site the catlet is pinned to, decided by the calling saga when it placed it.</summary>
+    public Guid SiteId { get; set; }
+
     public Guid CatletId { get; set; }
 
     public Guid MetadataId { get; set; }

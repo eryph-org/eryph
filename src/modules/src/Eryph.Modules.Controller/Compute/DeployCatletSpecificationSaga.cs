@@ -7,6 +7,7 @@ using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.CatletSpecifications;
@@ -20,6 +21,7 @@ using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -30,6 +32,7 @@ internal class DeployCatletSpecificationSaga(
     IReadonlyStateStoreRepository<CatletSpecificationVersion> specificationVersionRepository,
     IStorageIdentifierGenerator storageIdentifierGenerator,
     IPlacementCalculator placementCalculator,
+    ISiteResolver siteResolver,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<DeployCatletSpecificationCommand, EryphSagaData<DeployCatletSpecificationSagaData>>(
             workflow),
@@ -87,6 +90,7 @@ internal class DeployCatletSpecificationSaga(
             await StartNewTask(new DeployCatletCommand
             {
                 ProjectId = Data.Data.ProjectId,
+                SiteId = Data.Data.SiteId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
@@ -153,8 +157,22 @@ internal class DeployCatletSpecificationSaga(
 
         Data.Data.BuiltConfig = builtConfig.CloneWith(c => { c.Variables = updatedVariables.ValueUnsafe().ToArray(); });
 
+        // Resolve the site once, here: it is both the site placement must stay within and the site the
+        // deployed catlet is pinned to.
+        var environment = Optional(Data.Data.BuiltConfig.Environment).Filter(notEmpty).Match(
+            EnvironmentName.New,
+            () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName));
+        var site = await siteResolver.ResolveSite(environment);
+        if (site.IsLeft)
+        {
+            await Fail(site.LeftToSeq().Head.Message);
+            return;
+        }
+
+        Data.Data.SiteId = site.RightToSeq().Head;
+
         var placement = placementCalculator.CalculateVMPlacement(
-            Data.Data.BuiltConfig, specificationVersionVariant.Architecture);
+            Data.Data.BuiltConfig, Data.Data.SiteId, specificationVersionVariant.Architecture);
         if (placement.IsLeft)
         {
             await Fail(placement.LeftToSeq().Head.Message);

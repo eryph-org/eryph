@@ -60,7 +60,8 @@ internal sealed class SetComponentMetadataCommandHandler(
         }
 
         var found = await registry.SetMetadataAsync(
-            command.ComponentId, command.Environment, command.Tags, CancellationToken.None);
+            command.ComponentId, command.Environment, command.SiteId, command.Tags,
+            CancellationToken.None);
 
         if (!found)
         {

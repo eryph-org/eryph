@@ -85,7 +85,7 @@ internal class DeployCatletSaga(
                 Name = inventory.Name ?? throw new InvalidOperationException(
                     $"The inventory for catlet {Data.Data.CatletId} is missing the name."),
                 Environment = Data.Data.Config!.Environment!,
-                SiteId = EryphConstants.DefaultSiteId,
+                SiteId = Data.Data.SiteId,
                 DataStore = Data.Data.Config!.Store!,
                 StorageIdentifier = Data.Data.Config!.Location!,
                 // Ensure that any inventory updates are applied as the
@@ -240,6 +240,7 @@ internal class DeployCatletSaga(
     {
         Data.Data.State = DeployCatletSagaState.Initiated;
         Data.Data.ProjectId = message.ProjectId;
+        Data.Data.SiteId = message.SiteId;
         Data.Data.AgentName = message.AgentName;
         Data.Data.Architecture = message.Architecture;
         Data.Data.ContentType = message.ContentType;

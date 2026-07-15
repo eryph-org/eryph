@@ -25,6 +25,7 @@ internal class CreateVirtualDiskSaga(
     IWorkflow workflow,
     IStateStore stateStore,
     IStorageManagementAgentLocator agentLocator,
+    ISiteResolver siteResolver,
     IInventoryLockManager lockManager)
     : OperationTaskWorkflowSaga<CreateVirtualDiskCommand, EryphSagaData<CreateVirtualDiskSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateVirtualDiskVMCommand>>
@@ -50,7 +51,7 @@ internal class CreateVirtualDiskSaga(
                 Name = diskInfo.Name,
                 DataStore = diskInfo.DataStore,
                 Environment = diskInfo.Environment,
-                SiteId = EryphConstants.DefaultSiteId,
+                SiteId = Data.Data.SiteId,
                 FileName = diskInfo.FileName,
                 Path = diskInfo.Path,
                 SizeBytes = diskInfo.SizeBytes,
@@ -75,7 +76,21 @@ internal class CreateVirtualDiskSaga(
             return;
         }
 
-        var result = CreateAgentCommand(message, project);
+        // A disk is created, so its environment decides its site. Resolve it once here and pin it on
+        // the saga: the agent command is routed to that site, and the disk row records it.
+        var environment = Optional(message.Environment).Filter(notEmpty).Match(
+            EnvironmentName.New,
+            () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName));
+        var site = await siteResolver.ResolveSite(environment);
+        if (site.IsLeft)
+        {
+            await Fail(site.LeftToSeq().Head.Message);
+            return;
+        }
+
+        Data.Data.SiteId = site.RightToSeq().Head;
+
+        var result = CreateAgentCommand(message, project, Data.Data.SiteId);
         if (result.IsLeft)
         {
             await Fail(Error.Many(result.LeftToSeq()).Print());
@@ -97,7 +112,8 @@ internal class CreateVirtualDiskSaga(
 
     private Either<Error, CreateVirtualDiskVMCommand> CreateAgentCommand(
         CreateVirtualDiskCommand command,
-        Project project) =>
+        Project project,
+        Guid siteId) =>
         from diskName in CatletDriveName.NewEither(command.Name)
         from storageIdentifier in StorageIdentifier.NewEither(command.StorageIdentifier)
         from dataStoreName in Optional(command.DataStore)
@@ -111,8 +127,7 @@ internal class CreateVirtualDiskSaga(
                 EnvironmentName.NewEither,
                 () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
         let projectName = ProjectName.New(project.Name)
-        let agentName = agentLocator.FindAgentForDataStore(
-            dataStoreName.Value, environmentName.Value)
+        from agentName in agentLocator.FindAgentForDataStore(dataStoreName.Value, siteId)
         select new CreateVirtualDiskVMCommand
         {
             AgentName = agentName,
