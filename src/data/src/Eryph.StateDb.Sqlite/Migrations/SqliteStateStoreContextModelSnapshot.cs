@@ -105,8 +105,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SpecificationId")
-                        .IsUnique();
+                    b.HasIndex("SpecificationId");
 
                     b.ToTable("Metadata");
                 });
@@ -1010,7 +1009,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("SiteId");
 
-                    b.HasIndex("SpecificationId")
+                    b.HasIndex("SpecificationId", "Environment")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "Environment", "Name")
                         .IsUnique();
 
                     b.ToTable("Catlets");

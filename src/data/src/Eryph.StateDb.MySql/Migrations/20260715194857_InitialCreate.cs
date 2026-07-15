@@ -266,9 +266,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
+                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                    Environment = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     LastInventory = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
@@ -298,9 +298,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
+                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                    Environment = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Architectures = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
@@ -415,9 +415,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
+                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                    Environment = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
@@ -481,9 +481,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
+                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                    Environment = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     NetworkProvider = table.Column<string>(type: "longtext", nullable: false)
@@ -516,9 +516,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
+                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                    Environment = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     AgentName = table.Column<string>(type: "longtext", nullable: true)
@@ -999,14 +999,20 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Catlets_ProjectId_Environment_Name",
+                table: "Catlets",
+                columns: new[] { "ProjectId", "Environment", "Name" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Catlets_SiteId",
                 table: "Catlets",
                 column: "SiteId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Catlets_SpecificationId",
+                name: "IX_Catlets_SpecificationId_Environment",
                 table: "Catlets",
-                column: "SpecificationId",
+                columns: new[] { "SpecificationId", "Environment" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1081,8 +1087,7 @@ namespace Eryph.StateDb.MySql.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Metadata_SpecificationId",
                 table: "Metadata",
-                column: "SpecificationId",
-                unique: true);
+                column: "SpecificationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MetadataGenes_UniqueGeneIndex",

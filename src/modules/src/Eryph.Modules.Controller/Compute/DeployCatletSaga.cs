@@ -265,12 +265,16 @@ internal class DeployCatletSaga(
 
             if (Data.Data.SpecificationId.HasValue)
             {
+                // Only this environment's deployment: the same specification may be deployed in
+                // others, which is not a conflict.
                 var deployedCatlet = await catletRepository.GetBySpecAsync(
-                    new CatletSpecs.GetBySpecificationId(Data.Data.SpecificationId.Value));
+                    new CatletSpecs.GetBySpecificationIdAndEnvironment(
+                        Data.Data.SpecificationId.Value, Data.Data.Config!.Environment!));
                 if (deployedCatlet is not null)
                 {
                     await Fail(
-                        $"The specification {Data.Data.SpecificationId} is already deployed as catlet {deployedCatlet.Id}.");
+                        $"The specification {Data.Data.SpecificationId} is already deployed as catlet "
+                        + $"{deployedCatlet.Id} in the environment '{Data.Data.Config!.Environment}'.");
                     return;
                 }
             }

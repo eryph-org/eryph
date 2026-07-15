@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Resources;
 
@@ -13,6 +14,12 @@ public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
     public Guid SpecificationVersionId { get; set; }
 
     public Architecture? Architecture { get; set; }
+
+    /// <summary>
+    /// The environment to deploy into. A specification is project level and deploys into many
+    /// environments, so the environment belongs to the deployment, not to the specification.
+    /// </summary>
+    public EnvironmentName? Environment { get; set; }
 
     public string? Name { get; set; }
 

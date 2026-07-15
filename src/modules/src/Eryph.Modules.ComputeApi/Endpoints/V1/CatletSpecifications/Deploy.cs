@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Dbosoft.Functional.Validations;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -81,25 +82,34 @@ public class Deploy(
                 statusCode: StatusCodes.Status403Forbidden,
                 detail: "You do not have write access to the project.");
 
+        var environment = Optional(request.Body.Environment).Filter(notEmpty).Match(
+            EnvironmentName.New,
+            () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName));
+
+        // Scoped to the environment: the specification may already be deployed elsewhere, which does
+        // not prevent deploying it here.
         var catlet = await catletRepository.GetBySpecAsync(
-            new CatletSpecs.GetBySpecificationId(specification.Id),
+            new CatletSpecs.GetBySpecificationIdAndEnvironment(specification.Id, environment.Value),
             cancellationToken);
 
         if (!request.Body.Redeploy.GetValueOrDefault() && catlet is not null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 detail:
-                $"The catlet specification is already deployed as catlet {catlet.Id}. Please remove the catlet before deploying a new version.");
+                $"The catlet specification is already deployed as catlet {catlet.Id} in the "
+                + $"environment '{environment}'. Please remove the catlet before deploying a new version.");
 
         var catletWithName = await catletRepository.GetBySpecAsync(
-            new CatletSpecs.GetByName(specification.Name, specification.ProjectId),
+            new CatletSpecs.GetByName(specification.Name, specification.ProjectId, environment.Value),
             cancellationToken);
 
         if (catlet is null && catletWithName is not null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 detail:
-                $"A catlet with the name '{specification.Name}' already exists in the project '{specification.Project.Name}'. Catlet names must be unique within a project.");
+                $"A catlet with the name '{specification.Name}' already exists in the environment "
+                + $"'{environment}' of the project '{specification.Project.Name}'. Catlet names must "
+                + "be unique within a project and environment.");
 
         return await operationHandler.HandleOperationRequest(
             () => new DeployCatletSpecificationCommand
@@ -107,6 +117,7 @@ public class Deploy(
                 SpecificationId = specification.Id,
                 SpecificationVersionId = specificationVersion.Id,
                 Name = specification.Name,
+                Environment = environment,
                 Architecture = Optional(request.Body.Architecture)
                     .Map(Architecture.New)
                     .IfNone(Architecture.New(EryphConstants.DefaultArchitecture)),
@@ -123,6 +134,10 @@ public class Deploy(
                 Architecture.NewValidation,
                 () => Architecture.New(EryphConstants.DefaultArchitecture))
             .MapFail(e => new ValidationIssue(nameof(DeployCatletSpecificationRequestBody.Architecture), e.Message))
+        from _environment in Optional(body.Environment).Filter(notEmpty).Match(
+                EnvironmentName.NewValidation,
+                () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
+            .MapFail(e => new ValidationIssue(nameof(DeployCatletSpecificationRequestBody.Environment), e.Message))
         from variant in specificationVersion.Variants.ToSeq()
             .Find(v => v.Architecture == architecture)
             .ToValidation(new ValidationIssue(

@@ -155,13 +155,20 @@ internal class DeployCatletSpecificationSaga(
             return;
         }
 
-        Data.Data.BuiltConfig = builtConfig.CloneWith(c => { c.Variables = updatedVariables.ValueUnsafe().ToArray(); });
+        // The environment belongs to the deployment, not to the specification: the same
+        // specification deploys into several environments, so the requested one overrides whatever
+        // the built config carries.
+        var environment = message.Environment
+                          ?? EnvironmentName.New(EryphConstants.DefaultEnvironmentName);
+        Data.Data.Environment = environment;
+        Data.Data.BuiltConfig = builtConfig.CloneWith(c =>
+        {
+            c.Variables = updatedVariables.ValueUnsafe().ToArray();
+            c.Environment = environment.Value;
+        });
 
         // Resolve the site once, here: it is both the site placement must stay within and the site the
         // deployed catlet is pinned to.
-        var environment = Optional(Data.Data.BuiltConfig.Environment).Filter(notEmpty).Match(
-            EnvironmentName.New,
-            () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName));
         var site = await siteResolver.ResolveSite(environment);
         if (site.IsLeft)
         {
@@ -181,8 +188,10 @@ internal class DeployCatletSpecificationSaga(
 
         Data.Data.AgentName = placement.RightToSeq().Head;
 
+        // Only this environment's deployment: the specification may be deployed in others, which is
+        // not a conflict.
         var existingCatlet = await catletRepository.GetBySpecAsync(
-            new CatletSpecs.GetBySpecificationId(specification.Id));
+            new CatletSpecs.GetBySpecificationIdAndEnvironment(specification.Id, environment.Value));
         if (existingCatlet is null)
         {
             Data.Data.State = DeployCatletSpecificationSagaState.CatletDestroyed;
@@ -200,7 +209,8 @@ internal class DeployCatletSpecificationSaga(
         if (!message.Redeploy)
         {
             await Fail(
-                $"The catlet specification {specification.Id} is already deployed as catlet {existingCatlet.Id}.");
+                $"The catlet specification {specification.Id} is already deployed as catlet "
+                + $"{existingCatlet.Id} in the environment '{environment}'.");
             return;
         }
 

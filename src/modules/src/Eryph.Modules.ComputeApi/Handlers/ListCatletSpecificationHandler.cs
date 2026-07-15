@@ -13,6 +13,7 @@ using Eryph.StateDb.Specifications;
 using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
 using CatletSpecification = Eryph.Modules.ComputeApi.Model.V1.CatletSpecification;
+using CatletSpecificationDeployment = Eryph.Modules.ComputeApi.Model.V1.CatletSpecificationDeployment;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
@@ -40,11 +41,18 @@ internal class ListCatletSpecificationHandler(
         var mappedResults = await results.Map(async result =>
         {
             var mappedResult = mapper.Map<CatletSpecification>(result, o => o.SetAuthContext(authContext));
-            var catlet = await catletRepository.GetBySpecAsync(
-                new CatletSpecs.GetBySpecificationId(result.Id),
+            var catlets = await catletRepository.ListAsync(
+                new CatletSpecs.ListBySpecificationId(result.Id),
                 cancellationToken);
 
-            mappedResult.CatletId = mapper.Map<string?>(catlet?.Id);
+            mappedResult.Deployments = catlets
+                .Select(c => new CatletSpecificationDeployment
+                {
+                    Environment = c.Environment,
+                    CatletId = mapper.Map<string>(c.Id),
+                })
+                .OrderBy(d => d.Environment, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             return mappedResult;
         }).SequenceSerial();

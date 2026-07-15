@@ -110,8 +110,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SpecificationId")
-                        .IsUnique();
+                    b.HasIndex("SpecificationId");
 
                     b.ToTable("Metadata");
                 });
@@ -775,11 +774,11 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<string>("Environment")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("char(36)");
@@ -1015,7 +1014,10 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasIndex("SiteId");
 
-                    b.HasIndex("SpecificationId")
+                    b.HasIndex("SpecificationId", "Environment")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "Environment", "Name")
                         .IsUnique();
 
                     b.ToTable("Catlets");

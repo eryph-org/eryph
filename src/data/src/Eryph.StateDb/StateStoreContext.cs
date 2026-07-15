@@ -193,8 +193,18 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Property(x => x.ProvisioningStatus)
             .HasConversion<string>();
 
+        // A catlet is identified by its name within a project AND environment: the same name can
+        // exist in different environments of one project. Declared here on the concrete type, not on
+        // Resource: under the table-per-concrete-type strategy an index on the base is created once
+        // per table, which would not give uniqueness across the resource types.
         modelBuilder.Entity<Catlet>()
-            .HasIndex(c => c.SpecificationId)
+            .HasIndex(c => new { c.ProjectId, c.Environment, c.Name })
+            .IsUnique();
+
+        // A specification is project level and deploys into many environments, but at most once into
+        // each of them.
+        modelBuilder.Entity<Catlet>()
+            .HasIndex(c => new { c.SpecificationId, c.Environment })
             .IsUnique();
 
         modelBuilder.Entity<VirtualNetwork>()
@@ -335,9 +345,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<CatletMetadata>()
             .Property(m => m.MetadataJson);
 
+        // Not unique: a specification deploys into many environments, so it has a metadata record per
+        // deployment. It cannot become unique per (specification, environment) the way the catlet
+        // index is, because metadata is not a resource and has no environment — adding one would be a
+        // second place the environment could rot. The catlet index already enforces the invariant.
         modelBuilder.Entity<CatletMetadata>()
-            .HasIndex(c => c.SpecificationId)
-            .IsUnique();
+            .HasIndex(c => c.SpecificationId);
 
         modelBuilder.Entity<CatletMetadata>()
             .Navigation(m => m.Genes)

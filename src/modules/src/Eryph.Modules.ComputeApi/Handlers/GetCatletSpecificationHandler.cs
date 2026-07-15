@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
@@ -10,6 +11,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Mvc;
 using CatletSpecification = Eryph.Modules.ComputeApi.Model.V1.CatletSpecification;
+using CatletSpecificationDeployment = Eryph.Modules.ComputeApi.Model.V1.CatletSpecificationDeployment;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
@@ -35,10 +37,17 @@ internal class GetCatletSpecificationHandler(
         var authContext = userRightsProvider.GetAuthContext();
 
         var mappedResult = mapper.Map<CatletSpecification>(dbSpecification, o => o.SetAuthContext(authContext));
-        var catlet = await catletRepository.GetBySpecAsync(
-            new CatletSpecs.GetBySpecificationId(dbSpecification.Id),
+        var catlets = await catletRepository.ListAsync(
+            new CatletSpecs.ListBySpecificationId(dbSpecification.Id),
             cancellationToken);
-        mappedResult.CatletId = mapper.Map<string>(catlet?.Id);
+        mappedResult.Deployments = catlets
+            .Select(c => new CatletSpecificationDeployment
+            {
+                Environment = c.Environment,
+                CatletId = mapper.Map<string>(c.Id),
+            })
+            .OrderBy(d => d.Environment, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         return new JsonResult(mappedResult);
     }

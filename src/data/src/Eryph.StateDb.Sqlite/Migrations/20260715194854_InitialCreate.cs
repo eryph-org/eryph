@@ -846,14 +846,20 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Catlets_ProjectId_Environment_Name",
+                table: "Catlets",
+                columns: new[] { "ProjectId", "Environment", "Name" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Catlets_SiteId",
                 table: "Catlets",
                 column: "SiteId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Catlets_SpecificationId",
+                name: "IX_Catlets_SpecificationId_Environment",
                 table: "Catlets",
-                column: "SpecificationId",
+                columns: new[] { "SpecificationId", "Environment" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -928,8 +934,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Metadata_SpecificationId",
                 table: "Metadata",
-                column: "SpecificationId",
-                unique: true);
+                column: "SpecificationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MetadataGenes_UniqueGeneIndex",

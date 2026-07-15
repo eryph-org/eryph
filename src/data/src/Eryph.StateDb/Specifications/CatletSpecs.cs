@@ -6,20 +6,26 @@ namespace Eryph.StateDb.Specifications;
 
 public class CatletSpecs
 {
+    /// <summary>
+    /// A catlet by its name within a project and environment. A catlet is identified by all three:
+    /// the same name can exist in different environments of one project.
+    /// </summary>
     public sealed class GetByName : Specification<Catlet>, ISingleResultSpecification
     {
-        public GetByName(string name, Guid tenantId, string projectName)
+        public GetByName(string name, Guid tenantId, string projectName, string environment)
         {
             Query
                 .Include(x => x.Project)
                 .Where(x => x.Project.TenantId == tenantId && x.Project.Name == projectName.ToLowerInvariant())
+                .Where(x => x.Environment == environment.ToLowerInvariant())
                 .Where(x => x.Name == name.ToLowerInvariant());
         }
 
-        public GetByName(string name, Guid projectId)
+        public GetByName(string name, Guid projectId, string environment)
         {
             Query
                 .Where(x => x.ProjectId == projectId)
+                .Where(x => x.Environment == environment.ToLowerInvariant())
                 .Where(x => x.Name == name.ToLowerInvariant());
         }
     }
@@ -74,11 +80,29 @@ public class CatletSpecs
         }
     }
 
-    public sealed class GetBySpecificationId : Specification<Catlet>, ISingleResultSpecification
+    /// <summary>
+    /// Every deployment of a specification. A specification is project level and deploys into many
+    /// environments, so this can return more than one catlet.
+    /// </summary>
+    public sealed class ListBySpecificationId : Specification<Catlet>
     {
-        public GetBySpecificationId(Guid specificationId)
+        public ListBySpecificationId(Guid specificationId)
         {
             Query.Where(x => x.SpecificationId == specificationId);
+        }
+    }
+
+    /// <summary>
+    /// The deployment of a specification into one environment. This is the unique one:
+    /// a specification deploys at most once per environment.
+    /// </summary>
+    public sealed class GetBySpecificationIdAndEnvironment : Specification<Catlet>, ISingleResultSpecification
+    {
+        public GetBySpecificationIdAndEnvironment(Guid specificationId, string environment)
+        {
+            Query
+                .Where(x => x.SpecificationId == specificationId)
+                .Where(x => x.Environment == environment.ToLowerInvariant());
         }
     }
 }
