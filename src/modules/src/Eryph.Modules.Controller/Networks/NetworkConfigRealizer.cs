@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Networks;
 using Eryph.Core;
 using Eryph.Core.Network;
@@ -19,6 +20,7 @@ namespace Eryph.Modules.Controller.Networks;
 public class NetworkConfigRealizer(
     IStateStore stateStore,
     IIpPoolManager ipPoolManager,
+    ISiteResolver siteResolver,
     ILogger log)
     : INetworkConfigRealizer
 {
@@ -43,12 +45,16 @@ public class NetworkConfigRealizer(
                 log.LogDebug("Environment {Environment}: network {Network} not found. Creating new network.",
                     networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName,
                     networkConfig.Name);
+                var environment = networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName;
                 var newNetwork = new VirtualNetwork
                 {
                     Id = Guid.NewGuid(),
                     ProjectId = projectId,
-                    Environment = networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName,
-                    SiteId = EryphConstants.DefaultSiteId,
+                    Environment = environment,
+                    // A network is not hosted on a specific machine, so unlike the other resources
+                    // its site cannot be taken from a placement decision or a reporting host. This
+                    // is the one place the environment is the creation-time source of the site.
+                    SiteId = await ResolveSite(environment),
                     Name = networkConfig.Name,
                     NetworkProvider = networkConfig.Provider?.Name ?? EryphConstants.DefaultProviderName,
                     Subnets = [],
@@ -367,6 +373,13 @@ public class NetworkConfigRealizer(
                 await stateStore.For<IpPool>().DeleteRangeAsync(removeIpPools);
             }
         }
+    }
+
+    private async Task<Guid> ResolveSite(string environment)
+    {
+        var result = await siteResolver.ResolveSite(EnvironmentName.New(environment));
+        return result.IfLeft(error => throw new InvalidOperationException(
+            $"Cannot realize the network configuration: {error.Message}"));
     }
 
     private static string GetEnvironmentName(string? environment, string network)

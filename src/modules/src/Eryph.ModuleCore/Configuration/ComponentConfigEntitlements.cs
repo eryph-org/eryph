@@ -14,11 +14,15 @@ public static class ComponentConfigEntitlements
     private static readonly IReadOnlyDictionary<ComponentType, ConfigDomain[]> Entitlements =
         new Dictionary<ComponentType, ConfigDomain[]>
         {
-            // Host agents need the placement vocabulary (datastore/environment names) and the
-            // network-provider configuration to realize host networking, plus the deployment
-            // endpoints (e.g. the identity issuer) to reach other components.
+            // Host agents need the placement vocabulary (the datastore names and the storage of each
+            // environment, plus the environment catalog itself) and the network-provider configuration
+            // to realize host networking, plus the deployment endpoints (e.g. the identity issuer) to
+            // reach other components.
             [ComponentType.VMHostAgent] =
-                [ConfigDomain.StorageConfig, ConfigDomain.NetworkProviders, ConfigDomain.Endpoints],
+            [
+                ConfigDomain.StorageConfig, ConfigDomain.Environments, ConfigDomain.NetworkProviders,
+                ConfigDomain.Endpoints,
+            ],
 
             // The gene pool stores genes under the same storage the agent uses (its root is the
             // default volumes path). It receives the storage configuration so it derives that root

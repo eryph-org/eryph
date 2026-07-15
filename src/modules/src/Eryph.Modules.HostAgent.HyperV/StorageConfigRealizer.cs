@@ -100,18 +100,15 @@ internal sealed class StorageConfigRealizer(
 
     private void WarnAboutUnusedLocalConfig(StorageConfig distributed, VmHostAgentConfiguration local)
     {
-        // Surface datastores/environments that are configured locally but not part of the distributed
-        // vocabulary. The agent does not reject them, but the controller will never place on them. Uses
-        // the pre-merge local config (what was genuinely local before this push), by design.
+        // Surface datastores that are configured locally but not part of the distributed vocabulary.
+        // The agent does not reject them, but the controller will never place on them. Uses the
+        // pre-merge local config (what was genuinely local before this push), by design.
+        // The equivalent warning for environments belongs to the environment vocabulary and is
+        // therefore raised by EnvironmentsConfigRealizer.
         foreach (var dataStore in StorageConfigValidation.GetUnusedLocalDatastores(distributed, local))
             logger.LogWarning(
                 "Local datastore '{DataStore}' is configured in agentsettings but is not part of the controller "
                 + "storage configuration; catlets cannot be placed on it.", dataStore);
-
-        foreach (var environment in StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local))
-            logger.LogWarning(
-                "Local environment '{Environment}' is configured in agentsettings but is not part of the controller "
-                + "storage configuration; catlets cannot be placed in it.", environment);
     }
 
     private void WarnAboutUnmappedDistributedDatastores(

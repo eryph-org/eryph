@@ -23,6 +23,7 @@ internal sealed class SetConfigDomainCommandHandler(
     IBus bus,
     IAuthoredConfigStore store,
     INetworkSyncService networkSyncService,
+    IEnvironmentsConfigChangeValidator environmentsConfigChangeValidator,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<SetConfigDomainCommand>>
 {
@@ -63,6 +64,19 @@ internal sealed class SetConfigDomainCommandHandler(
             await messaging.FailTask(message,
                 error ?? $"The payload is not a valid {command.Domain} configuration.");
             return;
+        }
+
+        // The payload is well-formed, but changing an environment's site is only valid while nothing
+        // is in it: the site of an existing resource is pinned and must not change under it.
+        if (command.Domain == ConfigDomain.Environments)
+        {
+            var changeErrors = await environmentsConfigChangeValidator.ValidateChanges(
+                canonical, CancellationToken.None);
+            if (changeErrors.Count > 0)
+            {
+                await messaging.FailTask(message, string.Join(" ", changeErrors));
+                return;
+            }
         }
 
         await store.AddVersionAsync(

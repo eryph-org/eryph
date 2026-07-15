@@ -166,8 +166,12 @@ public class ControllerModule
         // configuration; register it explicitly rather than relying on auto cross-wiring.
         container.RegisterInstance(_configuration);
         container.Collection.Register<IConfigSource>(typeof(StorageConfigSource),
-            typeof(NetworkProvidersConfigSource), typeof(EndpointsConfigSource),
-            typeof(OvnClusterConfigSource));
+            typeof(EnvironmentsConfigSource), typeof(NetworkProvidersConfigSource),
+            typeof(EndpointsConfigSource), typeof(OvnClusterConfigSource));
+        // Resolves the site an environment is realized by, for pinning newly created resources.
+        container.Register<ISiteResolver, SiteResolver>(Lifestyle.Scoped);
+        container.Register<IEnvironmentsConfigChangeValidator, EnvironmentsConfigChangeValidator>(
+            Lifestyle.Scoped);
 
         //use network services from host
         container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());

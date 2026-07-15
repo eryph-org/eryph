@@ -35,6 +35,18 @@ public static class ResourceSpecs<T> where T : Resource
         }
     }
 
+    /// <summary>
+    /// The resources of this type in an environment. Used to refuse a change to an environment
+    /// which is still in use.
+    /// </summary>
+    public sealed class GetByEnvironment : Specification<T>
+    {
+        public GetByEnvironment(string environment)
+        {
+            Query.Where(x => x.Environment == environment.ToLowerInvariant());
+        }
+    }
+
     public sealed class GetById : Specification<T>, ISingleResultSpecification<T>
     {
         public GetById(Guid id, Action<ISpecificationBuilder<T>>? customizeAction = null)

@@ -522,6 +522,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
 
         options.Container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
+        options.Container.Register<ISiteResolver, FakeSiteResolver>(Lifestyle.Scoped);
     }
 
     protected override async Task SeedAsync(IStateStore stateStore)

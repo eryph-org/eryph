@@ -22,7 +22,8 @@ internal class CreateVirtualDiskVMCommandHandler(
     IPowershellEngine engine,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
-    IStorageConfigProvider storageConfigProvider)
+    IStorageConfigProvider storageConfigProvider,
+    IEnvironmentsConfigProvider environmentsConfigProvider)
     : IHandleMessages<OperationTask<CreateVirtualDiskVMCommand>>
 {
     public Task Handle(OperationTask<CreateVirtualDiskVMCommand> message) =>
@@ -57,20 +58,18 @@ internal class CreateVirtualDiskVMCommandHandler(
             DiskInfo = storageSettings.CreateDiskInfo(),
         };
 
-    // The controller owns the datastore/environment vocabulary; reject a name it does not
+    // The controller owns the datastore and environment vocabulary; reject a name it does not
     // distribute before resolving the local path. The default datastore/environment is
     // always allowed.
     private EitherAsync<Error, Unit> ValidatePlacement(string dataStore, string environment)
     {
-        var storageConfig = storageConfigProvider.Current;
-
-        if (!StorageConfigValidation.IsDataStoreAllowed(storageConfig, dataStore))
+        if (!StorageConfigValidation.IsDataStoreAllowed(storageConfigProvider.Current, dataStore))
             return LeftAsync<Error, Unit>(Error.New(
                 $"The data store '{dataStore}' is not part of the controller storage configuration."));
 
-        if (!StorageConfigValidation.IsEnvironmentAllowed(storageConfig, environment))
+        if (!EnvironmentsConfigValidation.IsEnvironmentAllowed(environmentsConfigProvider.Current, environment))
             return LeftAsync<Error, Unit>(Error.New(
-                $"The environment '{environment}' is not part of the controller storage configuration."));
+                $"The environment '{environment}' is not part of the controller environment configuration."));
 
         return RightAsync<Error, Unit>(unit);
     }

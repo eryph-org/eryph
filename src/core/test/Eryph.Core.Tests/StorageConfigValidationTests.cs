@@ -5,12 +5,11 @@ namespace Eryph.Core.Tests;
 public class StorageConfigValidationTests
 {
     [Fact]
-    public void Default_datastore_and_environment_are_always_allowed()
+    public void Default_datastore_is_always_allowed()
     {
         var distributed = new StorageConfig();
 
         StorageConfigValidation.IsDataStoreAllowed(distributed, "default").Should().BeTrue();
-        StorageConfigValidation.IsEnvironmentAllowed(distributed, "default").Should().BeTrue();
     }
 
     [Theory]
@@ -22,16 +21,6 @@ public class StorageConfigValidationTests
         var distributed = new StorageConfig { Datastores = [new StorageDatastoreConfig { Name = "fast" }], Environments = [] };
 
         StorageConfigValidation.IsDataStoreAllowed(distributed, name).Should().Be(expected);
-    }
-
-    [Theory]
-    [InlineData("staging", true)]
-    [InlineData("prod", false)]
-    public void Environment_is_allowed_only_when_in_the_distributed_vocabulary(string name, bool expected)
-    {
-        var distributed = new StorageConfig { Datastores = [], Environments = [new StorageEnvironmentConfig { Name = "staging" }] };
-
-        StorageConfigValidation.IsEnvironmentAllowed(distributed, name).Should().Be(expected);
     }
 
     [Fact]
@@ -52,30 +41,12 @@ public class StorageConfigValidationTests
     }
 
     [Fact]
-    public void Unused_local_environments_lists_names_not_in_the_distributed_vocabulary()
-    {
-        var distributed = new StorageConfig { Datastores = [], Environments = [new StorageEnvironmentConfig { Name = "staging" }] };
-        var local = new VmHostAgentConfiguration
-        {
-            Environments =
-            [
-                new VmHostAgentEnvironmentConfiguration { Name = "staging" }, // distributed → used
-                new VmHostAgentEnvironmentConfiguration { Name = "prod" }, // not distributed → unused
-            ],
-        };
-
-        StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local)
-            .Should().BeEquivalentTo("prod");
-    }
-
-    [Fact]
     public void Unused_local_names_are_empty_when_no_local_config()
     {
         var distributed = new StorageConfig { Datastores = [new StorageDatastoreConfig { Name = "fast" }], Environments = [new StorageEnvironmentConfig { Name = "staging" }] };
         var local = new VmHostAgentConfiguration();
 
         StorageConfigValidation.GetUnusedLocalDatastores(distributed, local).Should().BeEmpty();
-        StorageConfigValidation.GetUnusedLocalEnvironments(distributed, local).Should().BeEmpty();
     }
 
     [Fact]
