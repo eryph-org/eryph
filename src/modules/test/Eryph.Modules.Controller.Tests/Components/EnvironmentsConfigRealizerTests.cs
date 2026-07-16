@@ -2,6 +2,7 @@
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
 using Xunit.Abstractions;
 
@@ -100,6 +101,87 @@ public abstract class EnvironmentsConfigRealizerTests(
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*'berlin' cannot be removed because it still has resources*");
+    }
+
+    [Fact]
+    public async Task Environment_bindings_are_realized_and_resolve()
+    {
+        // The bindings are the point: resolving a site reads these records, never the configuration.
+        await RealizeConfig(
+            """
+            sites:
+            - name: berlin
+            environments:
+            - name: staging
+              site: berlin
+            """);
+
+        await WithScope(async stateStore =>
+        {
+            var berlin = await stateStore.For<Site>().GetBySpecAsync(new SiteSpecs.GetByName("berlin"));
+            var staging = await stateStore.For<Eryph.StateDb.Model.Environment>()
+                .GetBySpecAsync(new EnvironmentSpecs.GetByName("staging"));
+
+            staging.Should().NotBeNull();
+            staging!.SiteId.Should().Be(berlin!.Id);
+        });
+    }
+
+    [Fact]
+    public async Task An_environment_without_a_site_is_realized_by_the_default_site()
+    {
+        // The omitted site autofills to the default one, the same as when it is authored.
+        await RealizeConfig(
+            """
+            environments:
+            - name: staging
+            """);
+
+        await WithScope(async stateStore =>
+        {
+            var staging = await stateStore.For<Eryph.StateDb.Model.Environment>()
+                .GetBySpecAsync(new EnvironmentSpecs.GetByName("staging"));
+
+            staging!.SiteId.Should().Be(EryphConstants.DefaultSiteId);
+        });
+    }
+
+    [Fact]
+    public async Task A_dropped_environment_is_removed_and_re_realizing_is_idempotent()
+    {
+        const string config =
+            """
+            sites:
+            - name: berlin
+            environments:
+            - name: staging
+              site: berlin
+            """;
+        await RealizeConfig(config);
+        // Every refresh realizes again, so applying the same catalog twice must not duplicate it.
+        await RealizeConfig(config);
+
+        await WithScope(async stateStore =>
+        {
+            (await stateStore.For<Eryph.StateDb.Model.Environment>().ListAsync())
+                .Should().ContainSingle();
+        });
+
+        await RealizeConfig("environments: []");
+
+        await WithScope(async stateStore =>
+        {
+            (await stateStore.For<Eryph.StateDb.Model.Environment>().ListAsync()).Should().BeEmpty();
+        });
+    }
+
+    private async Task RealizeConfig(string payload)
+    {
+        await using var scope = CreateScope();
+        var stateStore = scope.GetInstance<IStateStore>();
+        await new EnvironmentsConfigRealizer(stateStore).RealizeEnvironments(
+            EnvironmentsConfigYamlSerializer.Deserialize(payload), default);
+        await stateStore.SaveChangesAsync();
     }
 
     private async Task Realize(params string[] siteNames)
