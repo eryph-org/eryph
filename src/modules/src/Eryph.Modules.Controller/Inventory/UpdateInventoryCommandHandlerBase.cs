@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -17,6 +18,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Pipeline;
 using static LanguageExt.Prelude;
@@ -30,6 +32,7 @@ internal class UpdateInventoryCommandHandlerBase
     private readonly ILogger _logger;
     private readonly IMessageContext _messageContext;
     private readonly ICatletMetadataService _metadataService;
+    private readonly ISiteResolver _siteResolver;
     private readonly IStateStore _stateStore;
     private readonly ICatletDataService _vmDataService;
 
@@ -40,6 +43,12 @@ internal class UpdateInventoryCommandHandlerBase
     private readonly System.Collections.Generic.HashSet<(Guid ProjectId, string Environment, string Name)>
         _namesTaken = [];
 
+    /// <summary>
+    /// The sites resolved during this message. A host reports many resources sharing few
+    /// environments, so the catalog is read once per environment rather than once per resource.
+    /// </summary>
+    private readonly System.Collections.Generic.Dictionary<string, Guid> _sitesByEnvironment = [];
+
     protected UpdateInventoryCommandHandlerBase(
         IInventoryLockManager lockManager,
         ICatletMetadataService metadataService,
@@ -47,6 +56,7 @@ internal class UpdateInventoryCommandHandlerBase
         ICatletDataService vmDataService,
         IStateStore stateStore,
         IMessageContext messageContext,
+        ISiteResolver siteResolver,
         ILogger logger)
     {
         _lockManager = lockManager;
@@ -55,7 +65,36 @@ internal class UpdateInventoryCommandHandlerBase
         _vmDataService = vmDataService;
         _stateStore = stateStore;
         _messageContext = messageContext;
+        _siteResolver = siteResolver;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// The site realizing an environment, or <c>None</c> when the catalog does not declare it.
+    /// </summary>
+    /// <remarks>
+    /// A resource's site follows its environment, never the host it was found on: the host's site is
+    /// what placement picks a host by, not what a deployed resource belongs to. The two are separate
+    /// facts, and deriving one from the other would make an inventory round the authority on where a
+    /// resource lives.
+    /// </remarks>
+    private async Task<Option<Guid>> ResolveSiteOfEnvironment(string environment)
+    {
+        if (_sitesByEnvironment.TryGetValue(environment, out var cached))
+            return cached;
+
+        var name = EnvironmentName.NewValidation(environment);
+        if (name.IsFail)
+            return None;
+
+        var resolved = await _siteResolver.ResolveSite((EnvironmentName)name);
+        return resolved.Match<Option<Guid>>(
+            Right: siteId =>
+            {
+                _sitesByEnvironment[environment] = siteId;
+                return siteId;
+            },
+            Left: _ => None);
     }
 
     protected async Task UpdateVms(
@@ -141,13 +180,27 @@ internal class UpdateInventoryCommandHandlerBase
             return;
         }
 
-        if (metadata.VmId != vmInfo.VmId)
+        // The site follows the environment the VM was found in, not the host reporting it. A catlet
+        // in an environment the catalog does not declare has no site to be pinned to, and inventing
+        // one from the host would record a location nothing decided.
+        var siteId = await ResolveSiteOfEnvironment(vmInfo.Environment);
+        if (siteId.IsNone)
         {
-            await AddCopiedVm(timestamp, vmInfo, host, project, metadata);
+            _logger.LogWarning(
+                "Skipping VM {VmId} during inventory: its storage location is attributed to the "
+                + "environment '{Environment}', which the environment configuration does not declare. "
+                + "Declare it to have this VM inventoried.",
+                vmInfo.VmId, vmInfo.Environment);
             return;
         }
 
-        await AddNewVm(timestamp, vmInfo, host, project, metadata);
+        if (metadata.VmId != vmInfo.VmId)
+        {
+            await AddCopiedVm(timestamp, vmInfo, host, project, metadata, siteId.ValueUnsafe());
+            return;
+        }
+
+        await AddNewVm(timestamp, vmInfo, host, project, metadata, siteId.ValueUnsafe());
     }
 
     private async Task AddCopiedVm(
@@ -155,7 +208,8 @@ internal class UpdateInventoryCommandHandlerBase
         VirtualMachineData vmInfo,
         CatletFarm host,
         Project project,
-        CatletMetadata existingMetadata)
+        CatletMetadata existingMetadata,
+        Guid siteId)
     {
         // This VM is a copy/import of another VM. We assign
         // new IDs and track it as a separate catlet.
@@ -189,7 +243,7 @@ internal class UpdateInventoryCommandHandlerBase
 
 
         var newCatlet = await VirtualMachineInfoToCatlet(
-            vmInfo, host, timestamp, catletId, project, vmInfo.Environment!, host.SiteId);
+            vmInfo, host, timestamp, catletId, project, vmInfo.Environment!, siteId);
         newCatlet.MetadataId = metadataId;
         newCatlet.IsDeprecated = existingMetadata.IsDeprecated;
 
@@ -201,11 +255,12 @@ internal class UpdateInventoryCommandHandlerBase
         VirtualMachineData vmInfo,
         CatletFarm host,
         Project project,
-        CatletMetadata existingMetadata)
+        CatletMetadata existingMetadata,
+        Guid siteId)
     {
         var newCatlet = await VirtualMachineInfoToCatlet(
             vmInfo, host, timestamp, existingMetadata.CatletId, project,
-            vmInfo.Environment!, host.SiteId);
+            vmInfo.Environment!, siteId);
         newCatlet.MetadataId = existingMetadata.Id;
         newCatlet.IsDeprecated = existingMetadata.IsDeprecated;
         newCatlet.SpecificationId = existingMetadata.SpecificationId;
@@ -368,10 +423,10 @@ internal class UpdateInventoryCommandHandlerBase
 
         if (host.SiteId != existingCatlet.SiteId)
             _logger.LogWarning(
-                "Catlet {CatletId} is pinned to a site but runs on host {HostName}, which is in a "
-                + "different one. The catlet keeps its pinned site; a catlet cannot move between "
-                + "sites, so this means the host was re-assigned under it.",
-                existingCatlet.Id, host.Name);
+                "Catlet {CatletId} belongs to the site of its environment '{Environment}' but runs on "
+                + "host {HostName}, which is in a different site. It keeps its pinned site. Check "
+                + "that the datastore paths of that environment only reach hosts in its site.",
+                existingCatlet.Id, existingCatlet.Environment, host.Name);
     }
 
     protected async Task<Option<Project>> FindProject(
@@ -419,8 +474,7 @@ internal class UpdateInventoryCommandHandlerBase
         return
             from _ in Task.FromResult(unit)
             from drives in vmInfo.Drives.ToSeq()
-                .Map(d => VirtualMachineDriveDataToCatletDrive(
-                    d, hostMachine.Name, hostMachine.SiteId, timestamp))
+                .Map(d => VirtualMachineDriveDataToCatletDrive(d, hostMachine.Name, timestamp))
                 .SequenceSerial()
             select new Catlet
             {
@@ -476,11 +530,10 @@ internal class UpdateInventoryCommandHandlerBase
     private async Task<CatletDrive> VirtualMachineDriveDataToCatletDrive(
         VirtualMachineDriveData driveData,
         string agentName,
-        Guid siteId,
         DateTimeOffset timestamp)
     {
         var disk = await Optional(driveData.Disk)
-            .BindAsync(d => AddOrUpdateDisk(agentName, siteId, timestamp, d).ToAsync())
+            .BindAsync(d => AddOrUpdateDisk(agentName, timestamp, d).ToAsync())
             .ToOption();
 
         return new CatletDrive
@@ -512,13 +565,11 @@ internal class UpdateInventoryCommandHandlerBase
     }
 
     /// <remarks>
-    /// The site is the one of the host reporting the disk. A disk is where the host that holds it is,
-    /// so this is an observation, not a lookup: it is only used when the disk is first recorded and
-    /// never re-derived for one that already exists.
+    /// The site follows the disk's environment, like every other resource's, and is only decided when
+    /// the disk is first recorded — never re-derived for one that already exists.
     /// </remarks>
     protected async Task<Option<VirtualDisk>> AddOrUpdateDisk(
         string agentName,
-        Guid siteId,
         DateTimeOffset timestamp,
         DiskInfo diskInfo)
     {
@@ -528,7 +579,7 @@ internal class UpdateInventoryCommandHandlerBase
 
         Option<VirtualDisk> parentDisk = null;
         if (diskInfo.Parent is not null)
-            parentDisk = await AddOrUpdateDisk(agentName, siteId, timestamp, diskInfo.Parent);
+            parentDisk = await AddOrUpdateDisk(agentName, timestamp, diskInfo.Parent);
 
         if (disk is not null)
         {
@@ -558,6 +609,19 @@ internal class UpdateInventoryCommandHandlerBase
             throw new InvalidOperationException(
                 $"The inventory data for disk {diskInfo.Id} is missing the name, data store, or environment.");
 
+        // Same rule as a catlet: the site comes from the disk's environment, and a disk in an
+        // environment the catalog does not declare is left unrecorded rather than pinned to wherever
+        // the reporting host happens to be.
+        var siteId = await ResolveSiteOfEnvironment(diskInfo.Environment);
+        if (siteId.IsNone)
+        {
+            _logger.LogWarning(
+                "Skipping disk {DiskId} during inventory: it is attributed to the environment "
+                + "'{Environment}', which the environment configuration does not declare.",
+                diskInfo.Id, diskInfo.Environment);
+            return None;
+        }
+
         disk = new VirtualDisk
         {
             Id = diskInfo.Id,
@@ -565,7 +629,7 @@ internal class UpdateInventoryCommandHandlerBase
             DiskIdentifier = diskInfo.DiskIdentifier,
             DataStore = diskInfo.DataStore,
             Environment = diskInfo.Environment,
-            SiteId = siteId,
+            SiteId = siteId.ValueUnsafe(),
             StorageIdentifier = diskInfo.StorageIdentifier,
             Project = project,
             FileName = diskInfo.FileName,

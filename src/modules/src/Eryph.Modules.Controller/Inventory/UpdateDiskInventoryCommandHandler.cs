@@ -21,6 +21,7 @@ internal class UpdateDiskInventoryCommandHandler(
     ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
+    ISiteResolver siteResolver,
     ILogger logger)
     : UpdateInventoryCommandHandlerBase(
             lockManager,
@@ -29,6 +30,7 @@ internal class UpdateDiskInventoryCommandHandler(
             vmDataService,
             stateStore,
             messageContext,
+            siteResolver,
             logger),
         IHandleMessages<UpdateDiskInventoryCommand>
 {
@@ -47,7 +49,7 @@ internal class UpdateDiskInventoryCommandHandler(
         foreach (var diskIdentifier in diskIdentifiers) await _lockManager.AcquireVhdLock(diskIdentifier);
 
         foreach (var diskInfo in inventory)
-            await AddOrUpdateDisk(agentName, vmHost.ValueUnsafe().SiteId, message.Timestamp, diskInfo);
+            await AddOrUpdateDisk(agentName, message.Timestamp, diskInfo);
 
         await CheckDisks(message.Timestamp, agentName);
     }

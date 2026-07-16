@@ -20,6 +20,7 @@ internal class UpdateVMInventoryCommandHandler(
     ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
+    ISiteResolver siteResolver,
     ILogger logger)
     : UpdateInventoryCommandHandlerBase(
             lockManager,
@@ -28,6 +29,7 @@ internal class UpdateVMInventoryCommandHandler(
             vmDataService,
             stateStore,
             messageContext,
+            siteResolver,
             logger),
         IHandleMessages<UpdateInventoryCommand>
 {

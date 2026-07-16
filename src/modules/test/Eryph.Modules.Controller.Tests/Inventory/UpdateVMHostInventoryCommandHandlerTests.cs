@@ -1,4 +1,5 @@
 ﻿using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
@@ -9,6 +10,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
 using LanguageExt;
+using LanguageExt.Common;
 using static LanguageExt.Prelude;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -262,8 +264,72 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
 
             catlet.Should().NotBeNull();
             catlet!.Environment.Should().Be(EryphConstants.DefaultEnvironmentName);
-            // Pinned from the host reporting it, not from its environment.
             catlet.SiteId.Should().Be(EryphConstants.DefaultSiteId);
+        });
+    }
+
+    [Fact]
+    public async Task A_first_seen_vm_is_pinned_to_the_site_of_its_environment_not_of_its_host()
+    {
+        // The host is in the default site, but 'staging' is realized elsewhere. A catlet belongs to
+        // the locality its environment names; the host it happens to run on does not decide that.
+        // Deriving the site from the host would make an inventory round the authority on where a
+        // resource lives.
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+            {
+                Id = OrphanedMetadataId,
+                CatletId = OrphanedCatletId,
+                VmId = OrphanedVmId,
+                Metadata = new CatletMetadataContent(),
+            });
+            await stateStore.SaveChangesAsync();
+        });
+
+        await Handle(
+            environment: "staging",
+            vmName: "discovered-catlet",
+            vmId: OrphanedVmId,
+            metadataId: OrphanedMetadataId);
+
+        await WithScope(async stateStore =>
+        {
+            var catlet = await stateStore.For<Catlet>().GetByIdAsync(OrphanedCatletId);
+
+            catlet.Should().NotBeNull();
+            catlet!.SiteId.Should().Be(OtherSiteId);
+        });
+    }
+
+    [Fact]
+    public async Task A_first_seen_vm_in_an_undeclared_environment_is_skipped()
+    {
+        // Nothing says where such a catlet lives: the catalog does not realize the environment, and
+        // the host is not an answer. Recording it would invent a location.
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+            {
+                Id = OrphanedMetadataId,
+                CatletId = OrphanedCatletId,
+                VmId = OrphanedVmId,
+                Metadata = new CatletMetadataContent(),
+            });
+            await stateStore.SaveChangesAsync();
+        });
+
+        await Handle(
+            environment: "not-declared",
+            vmName: "discovered-catlet",
+            vmId: OrphanedVmId,
+            metadataId: OrphanedMetadataId);
+
+        await WithScope(async stateStore =>
+        {
+            var catlet = await stateStore.For<Catlet>().GetByIdAsync(OrphanedCatletId);
+
+            catlet.Should().BeNull();
         });
     }
 
@@ -337,6 +403,7 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
             new VMHostMachineDataService(scope.GetInstance<IStateStoreRepository<CatletFarm>>()),
             _registry,
             stateStore,
+            new StubSiteResolver(),
             NullLogger.Instance);
     }
 
@@ -419,6 +486,23 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
                 ? LanguageExt.Seq<HostAgentComponent>.Empty
                 : Seq1(new HostAgentComponent(
                     HostName, SiteId.Value, EryphConstants.Networking.LocalChassisName, 1));
+    }
+
+    /// <summary>
+    /// Stands in for the environment catalog: 'staging' is realized elsewhere, the reserved default
+    /// environment by the default site, and nothing else is declared.
+    /// </summary>
+    private sealed class StubSiteResolver : ISiteResolver
+    {
+        public Task<Either<Error, Guid>> ResolveSite(
+            EnvironmentName environment, CancellationToken cancellationToken = default) =>
+            Task.FromResult(
+                environment.Value == EryphConstants.DefaultEnvironmentName
+                    ? Right<Error, Guid>(EryphConstants.DefaultSiteId)
+                    : environment.Value == "staging"
+                        ? Right<Error, Guid>(OtherSiteId)
+                        : Left<Error, Guid>(Error.New(
+                            $"The environment '{environment}' is not part of the configuration.")));
     }
 
     /// <summary>Hand-written: the interface is internal, which Moq cannot proxy.</summary>

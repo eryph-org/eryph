@@ -24,6 +24,7 @@ internal class UpdateVMHostInventoryCommandHandler(
     IVMHostMachineDataService vmHostDataService,
     IComponentRegistry componentRegistry,
     IStateStore stateStore,
+    ISiteResolver siteResolver,
     ILogger logger)
     : UpdateInventoryCommandHandlerBase(
             lockManager,
@@ -32,6 +33,7 @@ internal class UpdateVMHostInventoryCommandHandler(
             vmDataService,
             stateStore,
             messageContext,
+            siteResolver,
             logger),
         IHandleMessages<UpdateVMHostInventoryCommand>
 {
@@ -86,7 +88,7 @@ internal class UpdateVMHostInventoryCommandHandler(
         foreach (var diskIdentifier in diskIdentifiers) await _lockManager.AcquireVhdLock(diskIdentifier);
 
         foreach (var diskInfo in diskInventory)
-            await AddOrUpdateDisk(vmHost.Name, vmHost.SiteId, message.Timestamp, diskInfo);
+            await AddOrUpdateDisk(vmHost.Name, message.Timestamp, diskInfo);
 
         var vmInventory = message.VMInventory ?? [];
         await UpdateVms(message.Timestamp, vmInventory, vmHost);
