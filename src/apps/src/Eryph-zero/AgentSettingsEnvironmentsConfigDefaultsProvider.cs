@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using LanguageExt;
@@ -8,8 +8,9 @@ namespace Eryph.Runtime.Zero;
 
 /// <summary>
 /// eryph-zero default environment catalog: derived from the local <c>agentsettings.yml</c>, where an
-/// environment has always been declared to bind its storage paths. eryph on-premises spans exactly one
-/// site, so every environment the operator declared locally is realized by the default site.
+/// environment has always been declared to bind its storage paths. That file says nothing about sites,
+/// so each environment gets the default one — the same autofill an authored payload gets when it omits
+/// <c>site:</c>. Authoring a catalog later overrides this and may bind an environment to another site.
 /// </summary>
 /// <remarks>
 /// Without this, adding the environment catalog would silently un-declare the environments an existing
@@ -30,7 +31,7 @@ internal sealed class AgentSettingsEnvironmentsConfigDefaultsProvider(
     private static EnvironmentsConfig ToEnvironmentsConfig(VmHostAgentConfiguration config) =>
         new()
         {
-            // The sites are not derived: on-premises has the default site and nothing else, and it is
+            // No sites are derived: agentsettings.yml declares none, and the default site is
             // reserved, so declaring it would be rejected as an authored value.
             Sites = [],
             Environments = (config.Environments ?? [])
