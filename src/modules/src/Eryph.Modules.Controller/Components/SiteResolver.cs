@@ -3,8 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
-using Eryph.Messages.Components;
-using Eryph.ModuleCore.Configuration;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -15,7 +13,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.Controller.Components;
 
 internal sealed class SiteResolver(
-    IAuthoredConfigStore authoredConfigStore,
+    ICurrentEnvironmentsConfig currentEnvironmentsConfig,
     IStateStoreRepository<Site> siteRepository)
     : ISiteResolver
 {
@@ -48,12 +46,10 @@ internal sealed class SiteResolver(
                 environment.Value, EryphConstants.DefaultEnvironmentName, StringComparison.OrdinalIgnoreCase))
             return EryphConstants.DefaultSiteName;
 
-        var authored = await authoredConfigStore.GetCurrentAsync(
-            ConfigDomain.Environments, ConfigScope.Default, cancellationToken);
-        if (authored is null)
-            return null;
-
-        var config = EnvironmentsConfigYamlSerializer.Deserialize(authored.Payload);
+        // The catalog in force, not the authored one: an environment which only the host-wired
+        // defaults declare is one the agents were handed and can deploy into, so refusing it here
+        // would make the controller contradict the config it distributes.
+        var config = await currentEnvironmentsConfig.GetAsync(cancellationToken);
         return EnvironmentsConfigValidation.FindSite(config, environment.Value);
     }
 }

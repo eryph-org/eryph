@@ -75,7 +75,9 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
 
         errors.Should().ContainSingle()
             .Which.Should().Contain("cannot be configured for the site 'munich'")
-            .And.Contain("already has resources in another site");
+            // The operator has to be told where the resources actually are to act on this.
+            .And.Contain("the site 'berlin'")
+            .And.Contain("remove them first");
     }
 
     [Fact]
@@ -109,6 +111,30 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
         var errors = await Validate(StagingInMunich);
 
         errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task An_environment_declared_only_by_the_host_defaults_cannot_be_removed_while_in_use()
+    {
+        // eryph-zero's catalog comes from agentsettings.yml with nothing authored. The first
+        // authoring which drops such an environment is a removal like any other: comparing against
+        // the authored value alone would see no previous catalog and let it through.
+        await AddCatlet("staging", siteId: EryphConstants.DefaultSiteId);
+
+        var errors = await Validate(
+            "environments: []",
+            defaults: new EnvironmentsConfig
+            {
+                Environments =
+                [
+                    new EnvironmentConfig
+                    {
+                        Name = "staging", Site = EryphConstants.DefaultSiteName,
+                    },
+                ],
+            });
+
+        errors.Should().ContainSingle().Which.Should().Contain("cannot be removed");
     }
 
     [Fact]
@@ -181,13 +207,25 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
         errors.Should().BeEmpty();
     }
 
-    private async Task<IReadOnlyList<string>> Validate(string payload)
+    private async Task<IReadOnlyList<string>> Validate(
+        string payload, EnvironmentsConfig? defaults = null)
     {
         await using var scope = CreateScope();
         var validator = new EnvironmentsConfigChangeValidator(
-            Store(scope), scope.GetInstance<IStateStore>());
+            new CurrentEnvironmentsConfig(
+                Store(scope), new StubEnvironmentsDefaults(defaults ?? new EnvironmentsConfig())),
+            scope.GetInstance<IStateStore>());
 
         return await validator.ValidateChanges(payload, default);
+    }
+
+    /// <summary>Stands in for the host-wired defaults; the split runtime's is an empty catalog.</summary>
+    private sealed class StubEnvironmentsDefaults(EnvironmentsConfig config)
+        : IEnvironmentsConfigDefaultsProvider
+    {
+        public LanguageExt.EitherAsync<LanguageExt.Common.Error, EnvironmentsConfig>
+            GetDefaultEnvironmentsConfig() =>
+            LanguageExt.Prelude.RightAsync<LanguageExt.Common.Error, EnvironmentsConfig>(config);
     }
 
     private async Task Author(string payload)

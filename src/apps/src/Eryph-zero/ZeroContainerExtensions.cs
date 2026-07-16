@@ -61,6 +61,8 @@ internal static class ZeroContainerExtensions
             container.Register<IHostSettingsProvider, HostSettingsProvider>();
             // eryph-zero's storage config is the local agentsettings.yml (shared by agent + gene pool).
             container.Register<IStorageConfigDefaultsProvider, AgentSettingsStorageConfigDefaultsProvider>();
+            // Its environments are declared in the same file, and on-premises is a single site.
+            container.Register<IEnvironmentsConfigDefaultsProvider, AgentSettingsEnvironmentsConfigDefaultsProvider>();
             container.Register<IGenePoolPathProvider, HyperVGenePoolPathProvider>();
             container.RegisterSingleton<IApplicationInfoProvider, ZeroApplicationInfoProvider>();
             // The in-process gene pool borrows the agent's storage config (HyperVGenePoolPathProvider),

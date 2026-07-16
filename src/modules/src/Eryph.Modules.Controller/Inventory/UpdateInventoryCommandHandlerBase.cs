@@ -369,7 +369,8 @@ internal class UpdateInventoryCommandHandlerBase
         if (host.SiteId != existingCatlet.SiteId)
             _logger.LogWarning(
                 "Catlet {CatletId} is pinned to a site but runs on host {HostName}, which is in a "
-                + "different one. Moving a catlet between sites must be an explicit operation.",
+                + "different one. The catlet keeps its pinned site; a catlet cannot move between "
+                + "sites, so this means the host was re-assigned under it.",
                 existingCatlet.Id, host.Name);
     }
 

@@ -162,12 +162,18 @@ public class ControllerModule
         // The default-scope storage config source is host-wired: the split runtime reads the central
         // controller settings, eryph-zero reads the local agentsettings.yml (see IStorageConfigDefaultsProvider).
         container.RegisterInstance(serviceProvider.GetRequiredService<IStorageConfigDefaultsProvider>());
+        // Likewise for the environment catalog: eryph-zero derives it from agentsettings.yml, the
+        // split runtime defines it centrally (see IEnvironmentsConfigDefaultsProvider).
+        container.RegisterInstance(serviceProvider.GetRequiredService<IEnvironmentsConfigDefaultsProvider>());
         // EndpointsConfigSource reads the operator endpoint overrides from the host
         // configuration; register it explicitly rather than relying on auto cross-wiring.
         container.RegisterInstance(_configuration);
         container.Collection.Register<IConfigSource>(typeof(StorageConfigSource),
             typeof(EnvironmentsConfigSource), typeof(NetworkProvidersConfigSource),
             typeof(EndpointsConfigSource), typeof(OvnClusterConfigSource));
+        // The environment catalog in force (authored, else host-wired defaults). Single seam, so the
+        // controller's own resolution cannot diverge from the catalog agents are given.
+        container.Register<ICurrentEnvironmentsConfig, CurrentEnvironmentsConfig>(Lifestyle.Scoped);
         // Resolves the site an environment is realized by, for pinning newly created resources.
         container.Register<ISiteResolver, SiteResolver>(Lifestyle.Scoped);
         container.Register<IEnvironmentsConfigChangeValidator, EnvironmentsConfigChangeValidator>(

@@ -4,8 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
-using Eryph.Messages.Components;
-using Eryph.ModuleCore.Configuration;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -31,7 +29,7 @@ internal interface IEnvironmentsConfigChangeValidator
 /// This mirrors the in-use refusals in <c>NetworkConfigValidator.ValidateChanges</c>.
 /// </remarks>
 internal sealed class EnvironmentsConfigChangeValidator(
-    IAuthoredConfigStore authoredConfigStore,
+    ICurrentEnvironmentsConfig currentEnvironmentsConfig,
     IStateStore stateStore)
     : IEnvironmentsConfigChangeValidator
 {
@@ -63,18 +61,24 @@ internal sealed class EnvironmentsConfigChangeValidator(
             if (strandedSites.Count == 0)
                 continue;
 
+            // Name the sites the resources are actually in: without them the operator is told the
+            // change is refused but not by what, and the way out is to bind the environment to the
+            // site they are already in (or to remove them).
+            var strandedNames = await FindSiteNames(strandedSites, cancellationToken);
+
             errors.Add(
                 $"The environment '{environment.Name}' cannot be configured for the site "
-                + $"'{environment.Site}' because it already has resources in another site. The site "
-                + "of an existing resource cannot change.");
+                + $"'{environment.Site}' because it already has resources in {strandedNames}. The "
+                + "site of an existing resource cannot change: configure the environment for the "
+                + "site its resources are in, or remove them first.");
         }
 
-        var current = await authoredConfigStore.GetCurrentAsync(
-            ConfigDomain.Environments, ConfigScope.Default, cancellationToken);
-        if (current is null)
-            return errors;
-
-        var currentConfig = EnvironmentsConfigYamlSerializer.Deserialize(current.Payload);
+        // The catalog in force, which before the first authoring is the host-wired default. In
+        // eryph-zero that is derived from agentsettings.yml, so an authored payload dropping an
+        // environment declared there is a removal like any other and must be refused while it is in
+        // use — comparing against the authored value alone would see no previous catalog and let it
+        // through.
+        var currentConfig = await currentEnvironmentsConfig.GetAsync(cancellationToken);
 
         foreach (var site in currentConfig.Sites ?? [])
         {
@@ -129,6 +133,27 @@ internal sealed class EnvironmentsConfigChangeValidator(
             .Where(id => !declaredSiteId.HasValue || id != declaredSiteId.Value)
             .Distinct()
             .ToList();
+    }
+
+    /// <summary>
+    /// The sites, by name, for an error the operator has to act on. A site which no longer exists is
+    /// reported by id rather than dropped: an unnamed site is still a reason the change is refused.
+    /// </summary>
+    private async Task<string> FindSiteNames(
+        IReadOnlyList<Guid> siteIds, CancellationToken cancellationToken)
+    {
+        var sites = await stateStore.For<Site>().ListAsync(
+            new SiteSpecs.GetByIds(siteIds), cancellationToken);
+
+        var names = siteIds
+            .Select(id => sites.FirstOrDefault(s => s.Id == id)?.Name ?? id.ToString())
+            .OrderBy(n => n)
+            .Select(n => $"'{n}'")
+            .ToList();
+
+        return names.Count == 1
+            ? $"the site {names[0]}"
+            : $"the sites {string.Join(", ", names)}";
     }
 
     private async Task<bool> IsInUse(string environment, CancellationToken cancellationToken) =>

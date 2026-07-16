@@ -15,8 +15,8 @@ namespace Eryph.StateDb.Model;
 /// so its site follows its registration and is reconciled on every inventory
 /// round. Everything the host reports is pinned from it and does not move with it.
 /// <see cref="CatletSpecification"/> is deliberately not site bound at all. A
-/// specification is project level and deploys into many environments, hence into
-/// many sites.
+/// specification is project level and deploys into many environments, so it has no
+/// single site of its own.
 /// </remarks>
 public interface ISiteBound
 {

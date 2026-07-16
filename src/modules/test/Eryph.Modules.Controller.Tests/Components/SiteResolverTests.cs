@@ -105,14 +105,79 @@ public abstract class SiteResolverTests(ITestOutputHelper outputHelper, IDatabas
         result.IsLeft.Should().BeTrue();
     }
 
-    private async Task<LanguageExt.Either<LanguageExt.Common.Error, Guid>> Resolve(string environment)
+    [Fact]
+    public async Task Environment_declared_only_by_the_host_defaults_resolves()
+    {
+        // eryph-zero declares its environments in agentsettings.yml and authors nothing. The agents
+        // are handed that catalog, so the controller must resolve from it too — otherwise every
+        // deployment into an environment which worked before the catalog existed is refused.
+        var result = await Resolve(
+            "staging",
+            defaults: new EnvironmentsConfig
+            {
+                Environments =
+                [
+                    new EnvironmentConfig
+                    {
+                        Name = "staging", Site = EryphConstants.DefaultSiteName,
+                    },
+                ],
+            });
+
+        result.IsRight.Should().BeTrue();
+        result.IfRight(siteId => siteId.Should().Be(EryphConstants.DefaultSiteId));
+    }
+
+    [Fact]
+    public async Task Authored_configuration_wins_over_the_host_defaults()
+    {
+        await AuthorEnvironments(
+            """
+            sites:
+            - name: munich
+            environments:
+            - name: staging
+              site: munich
+            """);
+
+        var result = await Resolve(
+            "staging",
+            defaults: new EnvironmentsConfig
+            {
+                Environments =
+                [
+                    new EnvironmentConfig
+                    {
+                        Name = "staging", Site = EryphConstants.DefaultSiteName,
+                    },
+                ],
+            });
+
+        // The site does not exist (nothing realized it in this test), which proves the authored
+        // value was read rather than the default one.
+        result.IsLeft.Should().BeTrue();
+        result.MapLeft(e => e.Message.Should().Contain("site 'munich'"));
+    }
+
+    private async Task<LanguageExt.Either<LanguageExt.Common.Error, Guid>> Resolve(
+        string environment, EnvironmentsConfig? defaults = null)
     {
         await using var scope = CreateScope();
         var resolver = new SiteResolver(
-            Store(scope),
+            new CurrentEnvironmentsConfig(
+                Store(scope), new StubEnvironmentsDefaults(defaults ?? new EnvironmentsConfig())),
             scope.GetInstance<IStateStoreRepository<Site>>());
 
         return await resolver.ResolveSite(EnvironmentName.New(environment));
+    }
+
+    /// <summary>Stands in for the host-wired defaults; the split runtime's is an empty catalog.</summary>
+    private sealed class StubEnvironmentsDefaults(EnvironmentsConfig config)
+        : IEnvironmentsConfigDefaultsProvider
+    {
+        public LanguageExt.EitherAsync<LanguageExt.Common.Error, EnvironmentsConfig>
+            GetDefaultEnvironmentsConfig() =>
+            LanguageExt.Prelude.RightAsync<LanguageExt.Common.Error, EnvironmentsConfig>(config);
     }
 
     private async Task AuthorEnvironments(string payload)
