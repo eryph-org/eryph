@@ -1,4 +1,4 @@
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.DistributedLock;
 using Eryph.Messages.Components;
@@ -23,9 +23,9 @@ public class SqliteSiteResolverTests(ITestOutputHelper outputHelper, SqliteFixtu
     : SiteResolverTests(outputHelper, databaseFixture);
 
 /// <summary>
-/// Verifies that an environment resolves to the site which realizes it, from the authored
-/// environment catalog. This is only consulted when a resource is created; the site of an existing
-/// resource is pinned on the resource itself.
+/// Verifies that an environment resolves to the site which realizes it, from the realized catalog —
+/// never from the authored configuration. This is only consulted when a resource is created; the site
+/// of an existing resource is pinned on the resource itself.
 /// </summary>
 public abstract class SiteResolverTests(ITestOutputHelper outputHelper, IDatabaseFixture databaseFixture)
     : StateDbTestBase(databaseFixture, outputHelper)
@@ -52,8 +52,10 @@ public abstract class SiteResolverTests(ITestOutputHelper outputHelper, IDatabas
     [Fact]
     public async Task Configured_environment_resolves_to_its_site()
     {
-        await AuthorEnvironments(
+        await RealizeEnvironments(
             """
+            sites:
+            - name: berlin
             environments:
             - name: staging
               site: berlin
@@ -67,8 +69,10 @@ public abstract class SiteResolverTests(ITestOutputHelper outputHelper, IDatabas
     [Fact]
     public async Task Unknown_environment_is_an_error()
     {
-        await AuthorEnvironments(
+        await RealizeEnvironments(
             """
+            sites:
+            - name: berlin
             environments:
             - name: staging
               site: berlin
@@ -82,113 +86,31 @@ public abstract class SiteResolverTests(ITestOutputHelper outputHelper, IDatabas
     }
 
     [Fact]
-    public async Task Environment_configured_for_a_missing_site_is_an_error()
-    {
-        await AuthorEnvironments(
-            """
-            environments:
-            - name: staging
-              site: munich
-            """);
-
-        var result = await Resolve("staging");
-
-        result.IsLeft.Should().BeTrue();
-        result.MapLeft(e => e.Message.Should().Contain("site 'munich'"));
-    }
-
-    [Fact]
-    public async Task Environment_is_unknown_when_nothing_was_authored()
+    public async Task Environment_is_unknown_when_the_catalog_is_empty()
     {
         var result = await Resolve("staging");
 
         result.IsLeft.Should().BeTrue();
     }
 
-    [Fact]
-    public async Task Environment_declared_only_by_the_host_defaults_resolves()
-    {
-        // eryph-zero declares its environments in agentsettings.yml and authors nothing. The agents
-        // are handed that catalog, so the controller must resolve from it too — otherwise every
-        // deployment into an environment which worked before the catalog existed is refused.
-        var result = await Resolve(
-            "staging",
-            defaults: new EnvironmentsConfig
-            {
-                Environments =
-                [
-                    new EnvironmentConfig
-                    {
-                        Name = "staging", Site = EryphConstants.DefaultSiteName,
-                    },
-                ],
-            });
-
-        result.IsRight.Should().BeTrue();
-        result.IfRight(siteId => siteId.Should().Be(EryphConstants.DefaultSiteId));
-    }
-
-    [Fact]
-    public async Task Authored_configuration_wins_over_the_host_defaults()
-    {
-        await AuthorEnvironments(
-            """
-            sites:
-            - name: munich
-            environments:
-            - name: staging
-              site: munich
-            """);
-
-        var result = await Resolve(
-            "staging",
-            defaults: new EnvironmentsConfig
-            {
-                Environments =
-                [
-                    new EnvironmentConfig
-                    {
-                        Name = "staging", Site = EryphConstants.DefaultSiteName,
-                    },
-                ],
-            });
-
-        // The site does not exist (nothing realized it in this test), which proves the authored
-        // value was read rather than the default one.
-        result.IsLeft.Should().BeTrue();
-        result.MapLeft(e => e.Message.Should().Contain("site 'munich'"));
-    }
-
-    private async Task<LanguageExt.Either<LanguageExt.Common.Error, Guid>> Resolve(
-        string environment, EnvironmentsConfig? defaults = null)
+    private async Task<LanguageExt.Either<LanguageExt.Common.Error, Guid>> Resolve(string environment)
     {
         await using var scope = CreateScope();
         var resolver = new SiteResolver(
-            new CurrentEnvironmentsConfig(
-                Store(scope), new StubEnvironmentsDefaults(defaults ?? new EnvironmentsConfig())),
-            scope.GetInstance<IStateStoreRepository<Site>>());
+            scope.GetInstance<IStateStoreRepository<Eryph.StateDb.Model.Environment>>());
 
         return await resolver.ResolveSite(EnvironmentName.New(environment));
     }
 
-    /// <summary>Stands in for the host-wired defaults; the split runtime's is an empty catalog.</summary>
-    private sealed class StubEnvironmentsDefaults(EnvironmentsConfig config)
-        : IEnvironmentsConfigDefaultsProvider
-    {
-        public LanguageExt.EitherAsync<LanguageExt.Common.Error, EnvironmentsConfig>
-            GetDefaultEnvironmentsConfig() =>
-            LanguageExt.Prelude.RightAsync<LanguageExt.Common.Error, EnvironmentsConfig>(config);
-    }
-
-    private async Task AuthorEnvironments(string payload)
+    /// <summary>
+    /// Realizes the catalog, which is what the resolver reads. The authored YAML is only its source.
+    /// </summary>
+    private async Task RealizeEnvironments(string payload)
     {
         await using var scope = CreateScope();
-        await Store(scope).AddVersionAsync(
-            ConfigDomain.Environments, ConfigScope.Default, payload, "test", default);
-        await scope.GetInstance<IStateStore>().SaveChangesAsync();
+        var stateStore = scope.GetInstance<IStateStore>();
+        await new EnvironmentsConfigRealizer(stateStore).RealizeEnvironments(
+            EnvironmentsConfigYamlSerializer.Deserialize(payload), default);
+        await stateStore.SaveChangesAsync();
     }
-
-    private static AuthoredConfigStore Store(Scope dbScope) =>
-        new(dbScope.GetInstance<IStateStoreRepository<AuthoredConfig>>(),
-            new Mock<IDistributedLockScopeHolder>().Object);
 }

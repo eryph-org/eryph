@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -29,7 +29,6 @@ internal interface IEnvironmentsConfigChangeValidator
 /// This mirrors the in-use refusals in <c>NetworkConfigValidator.ValidateChanges</c>.
 /// </remarks>
 internal sealed class EnvironmentsConfigChangeValidator(
-    ICurrentEnvironmentsConfig currentEnvironmentsConfig,
     IStateStore stateStore)
     : IEnvironmentsConfigChangeValidator
 {
@@ -73,32 +72,30 @@ internal sealed class EnvironmentsConfigChangeValidator(
                 + "site its resources are in, or remove them first.");
         }
 
-        // The catalog in force, which before the first authoring is the host-wired default. In
-        // eryph-zero that is derived from agentsettings.yml, so an authored payload dropping an
-        // environment declared there is a removal like any other and must be refused while it is in
-        // use — comparing against the authored value alone would see no previous catalog and let it
-        // through.
-        var currentConfig = await currentEnvironmentsConfig.GetAsync(cancellationToken);
-
-        foreach (var site in currentConfig.Sites ?? [])
+        // What is realized, not what was previously authored. The realized catalog is the one in
+        // force: before the first authoring it holds the host-wired defaults (eryph-zero derives
+        // them from agentsettings.yml), so dropping an environment which only they declare is a
+        // removal like any other. Comparing against the previous authored payload would see no
+        // catalog at all and let it through.
+        var realizedSites = await stateStore.For<Site>().ListAsync(cancellationToken);
+        foreach (var site in realizedSites)
         {
-            if (site?.Name is null)
+            if (string.Equals(site.Name, EryphConstants.DefaultSiteName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if ((newConfig.Sites ?? []).Any(
                     s => string.Equals(s?.Name, site.Name, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            if (await SiteHasResources(site.Name, cancellationToken))
+            if (await SiteHasResources(site.Id, cancellationToken))
                 errors.Add(
                     $"The site '{site.Name}' cannot be removed because it still has resources.");
         }
 
-        foreach (var environment in currentConfig.Environments ?? [])
+        var realizedEnvironments = await stateStore.For<Eryph.StateDb.Model.Environment>()
+            .ListAsync(cancellationToken);
+        foreach (var environment in realizedEnvironments)
         {
-            if (environment?.Name is null)
-                continue;
-
             if ((newConfig.Environments ?? []).Any(
                     e => string.Equals(e?.Name, environment.Name, StringComparison.OrdinalIgnoreCase)))
                 continue;
@@ -166,20 +163,13 @@ internal sealed class EnvironmentsConfigChangeValidator(
         || await stateStore.For<VirtualNetwork>().AnyAsync(
             new ResourceSpecs<VirtualNetwork>.GetByEnvironmentUnscoped(environment), cancellationToken);
 
-    private async Task<bool> SiteHasResources(string siteName, CancellationToken cancellationToken)
-    {
-        var site = await stateStore.For<Site>().GetBySpecAsync(
-            new SiteSpecs.GetByName(siteName), cancellationToken);
-        if (site is null)
-            return false;
-
-        return await stateStore.For<Catlet>().AnyAsync(
-                   new SiteBoundSpecs<Catlet>.GetBySiteUnscoped(site.Id), cancellationToken)
-               || await stateStore.For<VirtualDisk>().AnyAsync(
-                   new SiteBoundSpecs<VirtualDisk>.GetBySiteUnscoped(site.Id), cancellationToken)
-               || await stateStore.For<VirtualNetwork>().AnyAsync(
-                   new SiteBoundSpecs<VirtualNetwork>.GetBySiteUnscoped(site.Id), cancellationToken)
-               || await stateStore.For<CatletFarm>().AnyAsync(
-                   new SiteBoundSpecs<CatletFarm>.GetBySiteUnscoped(site.Id), cancellationToken);
-    }
+    private async Task<bool> SiteHasResources(Guid siteId, CancellationToken cancellationToken) =>
+        await stateStore.For<Catlet>().AnyAsync(
+            new SiteBoundSpecs<Catlet>.GetBySiteUnscoped(siteId), cancellationToken)
+        || await stateStore.For<VirtualDisk>().AnyAsync(
+            new SiteBoundSpecs<VirtualDisk>.GetBySiteUnscoped(siteId), cancellationToken)
+        || await stateStore.For<VirtualNetwork>().AnyAsync(
+            new SiteBoundSpecs<VirtualNetwork>.GetBySiteUnscoped(siteId), cancellationToken)
+        || await stateStore.For<CatletFarm>().AnyAsync(
+            new SiteBoundSpecs<CatletFarm>.GetBySiteUnscoped(siteId), cancellationToken);
 }

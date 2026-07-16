@@ -63,6 +63,8 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<Site> Sites { get; set; }
 
+    public DbSet<Model.Environment> Environments { get; set; }
+
     public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
 
     public DbSet<Tenant> Tenants { get; set; }
@@ -131,6 +133,17 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<Site>()
             .HasIndex(x => x.Name)
             .IsUnique();
+
+        // The realized environment catalog. An environment is global, so its name is the key.
+        // Restricted: a site which still realizes an environment cannot be removed out from under it.
+        modelBuilder.Entity<Model.Environment>()
+            .HasKey(x => x.Name);
+
+        modelBuilder.Entity<Model.Environment>()
+            .HasOne(x => x.Site)
+            .WithMany()
+            .HasForeignKey(x => x.SiteId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Configured per concrete type instead of on Resource: only the site bound
         // resources have a site. CatletSpecification is project level and deploys

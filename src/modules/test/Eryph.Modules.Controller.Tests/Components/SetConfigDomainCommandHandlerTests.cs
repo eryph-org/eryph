@@ -1,4 +1,4 @@
-using Dbosoft.Rebus.Operations;
+﻿using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Components;
@@ -28,7 +28,7 @@ public class SetConfigDomainCommandHandlerTests
     private readonly FakeStore _store = new();
     private readonly Mock<INetworkSyncService> _networkSync = new();
     private readonly FakeEnvironmentsConfigChangeValidator _environmentsValidator = new();
-    private readonly FakeSitesConfigRealizer _sitesRealizer = new();
+    private readonly FakeEnvironmentsConfigRealizer _sitesRealizer = new();
 
     public SetConfigDomainCommandHandlerTests() =>
         _networkSync.Setup(s => s.SyncNetworks(
@@ -209,13 +209,13 @@ public class SetConfigDomainCommandHandlerTests
         VerifyCompleted(Times.Never());
     }
 
-    private sealed class FakeSitesConfigRealizer : ISitesConfigRealizer
+    private sealed class FakeEnvironmentsConfigRealizer : IEnvironmentsConfigRealizer
     {
         public List<string> RealizedSites { get; } = [];
 
         public Exception? Failure { get; set; }
 
-        public Task RealizeSites(EnvironmentsConfig config, CancellationToken cancellationToken)
+        public Task RealizeEnvironments(EnvironmentsConfig config, CancellationToken cancellationToken)
         {
             if (Failure is not null)
                 throw Failure;

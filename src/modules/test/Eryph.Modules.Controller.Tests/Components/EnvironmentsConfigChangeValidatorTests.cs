@@ -34,6 +34,8 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
 {
     private const string StagingInBerlin =
         """
+        sites:
+        - name: berlin
         environments:
         - name: staging
           site: berlin
@@ -41,6 +43,8 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
 
     private const string StagingInMunich =
         """
+        sites:
+        - name: munich
         environments:
         - name: staging
           site: munich
@@ -73,11 +77,13 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
 
         var errors = await Validate(StagingInMunich);
 
-        errors.Should().ContainSingle()
-            .Which.Should().Contain("cannot be configured for the site 'munich'")
+        // Dropping 'berlin' from the payload is refused too, so assert on the re-bind reason rather
+        // than on it being the only one.
+        errors.Should().Contain(e =>
+            e.Contains("cannot be configured for the site 'munich'")
             // The operator has to be told where the resources actually are to act on this.
-            .And.Contain("the site 'berlin'")
-            .And.Contain("remove them first");
+            && e.Contains("the site 'berlin'")
+            && e.Contains("remove them first"));
     }
 
     [Fact]
@@ -88,7 +94,7 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
 
         var errors = await Validate("environments: []");
 
-        errors.Should().ContainSingle().Which.Should().Contain("cannot be removed");
+        errors.Should().Contain(e => e.Contains("The environment 'staging' cannot be removed"));
     }
 
     [Fact]
@@ -116,23 +122,18 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
     [Fact]
     public async Task An_environment_declared_only_by_the_host_defaults_cannot_be_removed_while_in_use()
     {
-        // eryph-zero's catalog comes from agentsettings.yml with nothing authored. The first
-        // authoring which drops such an environment is a removal like any other: comparing against
-        // the authored value alone would see no previous catalog and let it through.
+        // eryph-zero's catalog comes from agentsettings.yml with nothing authored — the seeder
+        // realizes it all the same. Dropping such an environment is a removal like any other:
+        // comparing against a previous authored payload would see no catalog and let it through.
+        await Author(
+            """
+            environments:
+            - name: staging
+              site: default
+            """);
         await AddCatlet("staging", siteId: EryphConstants.DefaultSiteId);
 
-        var errors = await Validate(
-            "environments: []",
-            defaults: new EnvironmentsConfig
-            {
-                Environments =
-                [
-                    new EnvironmentConfig
-                    {
-                        Name = "staging", Site = EryphConstants.DefaultSiteName,
-                    },
-                ],
-            });
+        var errors = await Validate("environments: []");
 
         errors.Should().ContainSingle().Which.Should().Contain("cannot be removed");
     }
@@ -155,8 +156,7 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
 
         var errors = await Validate(StagingInMunich);
 
-        errors.Should().ContainSingle()
-            .Which.Should().Contain("cannot be configured for the site 'munich'");
+        errors.Should().Contain(e => e.Contains("cannot be configured for the site 'munich'"));
     }
 
     [Fact]
@@ -207,33 +207,25 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
         errors.Should().BeEmpty();
     }
 
-    private async Task<IReadOnlyList<string>> Validate(
-        string payload, EnvironmentsConfig? defaults = null)
+    private async Task<IReadOnlyList<string>> Validate(string payload)
     {
         await using var scope = CreateScope();
-        var validator = new EnvironmentsConfigChangeValidator(
-            new CurrentEnvironmentsConfig(
-                Store(scope), new StubEnvironmentsDefaults(defaults ?? new EnvironmentsConfig())),
-            scope.GetInstance<IStateStore>());
+        var validator = new EnvironmentsConfigChangeValidator(scope.GetInstance<IStateStore>());
 
         return await validator.ValidateChanges(payload, default);
     }
 
-    /// <summary>Stands in for the host-wired defaults; the split runtime's is an empty catalog.</summary>
-    private sealed class StubEnvironmentsDefaults(EnvironmentsConfig config)
-        : IEnvironmentsConfigDefaultsProvider
-    {
-        public LanguageExt.EitherAsync<LanguageExt.Common.Error, EnvironmentsConfig>
-            GetDefaultEnvironmentsConfig() =>
-            LanguageExt.Prelude.RightAsync<LanguageExt.Common.Error, EnvironmentsConfig>(config);
-    }
-
+    /// <summary>
+    /// Realizes the catalog: the validator compares against what is realized, not against the
+    /// previous authored payload.
+    /// </summary>
     private async Task Author(string payload)
     {
         await using var scope = CreateScope();
-        await Store(scope).AddVersionAsync(
-            ConfigDomain.Environments, ConfigScope.Default, payload, "test", default);
-        await scope.GetInstance<IStateStore>().SaveChangesAsync();
+        var stateStore = scope.GetInstance<IStateStore>();
+        await new EnvironmentsConfigRealizer(stateStore).RealizeEnvironments(
+            EnvironmentsConfigYamlSerializer.Deserialize(payload), default);
+        await stateStore.SaveChangesAsync();
     }
 
     private async Task AddCatlet(string environment, Guid? siteId = null)

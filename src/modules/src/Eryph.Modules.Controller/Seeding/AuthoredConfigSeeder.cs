@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.IO.Abstractions;
 using System.Text;
 using System.Text.Json;
@@ -31,34 +32,21 @@ namespace Eryph.Modules.Controller.Seeding;
 internal class AuthoredConfigSeeder(
     ChangeTrackingConfig config,
     IFileSystem fileSystem,
-    ISitesConfigRealizer sitesConfigRealizer,
+    IEnvironmentsConfigRealizer environmentsConfigRealizer,
+    IEnvironmentsConfigDefaultsProvider defaultsProvider,
     IStateStore stateStore,
     ILogger logger)
     : IConfigSeeder<ControllerModule>
 {
     public async Task Execute(CancellationToken stoppingToken)
     {
-        var path = Path.Combine(config.AuthoredConfigsPath, "authored.json");
-        if (!fileSystem.File.Exists(path))
-            return;
-
         // The database is only seeded when it is empty, so anything already authored means this is
-        // not a restore and the mirror must not overwrite it.
+        // not a restore: the catalog is already realized and the mirror must not overwrite it.
         var existing = await stateStore.For<AuthoredConfig>().ListAsync(stoppingToken);
         if (existing.Count > 0)
             return;
 
-        AuthoredConfigsConfigModel? mirror;
-        try
-        {
-            fileSystem.File.Copy(path, $"{path}.bak", true);
-            var content = await fileSystem.File.ReadAllTextAsync(path, Encoding.UTF8, stoppingToken);
-            mirror = JsonSerializer.Deserialize<AuthoredConfigsConfigModel>(content);
-        }
-        catch (Exception ex)
-        {
-            throw new SeederException($"Failed to seed database from file '{path}'", ex);
-        }
+        var mirror = await ReadMirror(stoppingToken);
 
         foreach (var authored in mirror?.AuthoredConfigs ?? [])
         {
@@ -91,40 +79,74 @@ internal class AuthoredConfigSeeder(
                 domain, authored.Version);
         }
 
-        // Nothing is saved until the sites are realized as well: the restored rows and the sites they
-        // declare go in together, in the single SaveChanges at the end of RealizeSites. Committing the
-        // rows first would be one-way — this seeder only runs while nothing is authored, so a failure
-        // in RealizeSites would leave a restored catalog whose sites nothing ever creates, and the
-        // early return above would skip the retry on every later start.
-        await RealizeSites(mirror, stoppingToken);
+        // Nothing is saved until the catalog is realized as well: the restored rows and the records
+        // they declare go in together, in the single SaveChanges below. Committing the rows first
+        // would be one-way — this seeder only runs while nothing is authored, so a failure would
+        // leave a restored catalog which nothing ever realizes, and the early return above would
+        // skip the retry on every later start.
+        await RealizeCatalog(mirror, stoppingToken);
+
+        await stateStore.SaveChangesAsync(stoppingToken);
     }
 
-    private async Task RealizeSites(AuthoredConfigsConfigModel? mirror, CancellationToken stoppingToken)
+    private async Task<AuthoredConfigsConfigModel?> ReadMirror(CancellationToken stoppingToken)
     {
-        // The sites are records, so they were dropped with the database; they are declared by the
-        // environments configuration and have to exist before anything is pinned to them.
-        foreach (var authored in mirror?.AuthoredConfigs ?? [])
-        {
-            if (authored.Domain != nameof(ConfigDomain.Environments) || authored.Payload is null)
-                continue;
+        var path = Path.Combine(config.AuthoredConfigsPath, "authored.json");
+        if (!fileSystem.File.Exists(path))
+            return null;
 
-            EnvironmentsConfig environments;
+        try
+        {
+            fileSystem.File.Copy(path, $"{path}.bak", true);
+            var content = await fileSystem.File.ReadAllTextAsync(path, Encoding.UTF8, stoppingToken);
+            return JsonSerializer.Deserialize<AuthoredConfigsConfigModel>(content);
+        }
+        catch (Exception ex)
+        {
+            throw new SeederException($"Failed to seed database from file '{path}'", ex);
+        }
+    }
+
+    /// <summary>
+    /// Realizes the environment catalog: the sites, and the environments they realize.
+    /// </summary>
+    /// <remarks>
+    /// The catalog is records, so it was dropped with the database and has to exist before anything
+    /// is pinned to it — every network realized further down the seeding order resolves its site
+    /// from it. The authored value is restored from the mirror when there is one; otherwise this
+    /// deployment has never authored a catalog and the host-wired defaults are what is in force
+    /// (eryph-zero derives them from agentsettings.yml). Both are local sources: seeding runs long
+    /// before any configuration is distributed, so it must not depend on the exchange.
+    /// </remarks>
+    private async Task RealizeCatalog(
+        AuthoredConfigsConfigModel? mirror, CancellationToken stoppingToken)
+    {
+        var authored = (mirror?.AuthoredConfigs ?? [])
+            .FirstOrDefault(a => a.Domain == nameof(ConfigDomain.Environments) && a.Payload is not null);
+
+        EnvironmentsConfig environments;
+        if (authored is not null)
+        {
             try
             {
-                environments = EnvironmentsConfigYamlSerializer.Deserialize(authored.Payload);
+                environments = EnvironmentsConfigYamlSerializer.Deserialize(authored.Payload!);
             }
             catch (Exception ex)
             {
                 // A mirrored payload which cannot be read is a broken restore, not something to
-                // start up around: the sites it declares would be missing and every resource pinned
-                // to them unusable. Fail like the rest of the seeding does.
+                // start up around: the catalog it declares would be missing and every resource
+                // pinned to it unusable. Fail like the rest of the seeding does.
                 throw new SeederException(
-                    "Failed to seed the sites from the mirrored environment configuration", ex);
+                    "Failed to seed the environment catalog from the mirrored configuration", ex);
             }
-
-            await sitesConfigRealizer.RealizeSites(environments, stoppingToken);
+        }
+        else
+        {
+            environments = await defaultsProvider.GetDefaultEnvironmentsConfig()
+                .Match(c => c, error => throw new SeederException(
+                    $"Failed to read the default environment configuration: {error.Message}"));
         }
 
-        await stateStore.SaveChangesAsync(stoppingToken);
+        await environmentsConfigRealizer.RealizeEnvironments(environments, stoppingToken);
     }
 }

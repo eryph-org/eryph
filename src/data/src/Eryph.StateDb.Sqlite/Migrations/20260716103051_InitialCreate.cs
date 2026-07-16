@@ -193,6 +193,24 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Environments",
+                columns: table => new
+                {
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    SiteId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Environments", x => x.Name);
+                    table.ForeignKey(
+                        name: "FK_Environments_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Projects",
                 columns: table => new
                 {
@@ -895,6 +913,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Environments_SiteId",
+                table: "Environments",
+                column: "SiteId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
                 table: "Genes",
                 columns: new[] { "UniqueGeneIndex", "LastSeenAgent" },
@@ -1071,6 +1094,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "ConfigRecords");
+
+            migrationBuilder.DropTable(
+                name: "Environments");
 
             migrationBuilder.DropTable(
                 name: "Genes");

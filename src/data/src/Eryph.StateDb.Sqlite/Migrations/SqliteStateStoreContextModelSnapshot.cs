@@ -347,6 +347,21 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.ToTable("ConfigRecords");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.Environment", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Name");
+
+                    b.HasIndex("SiteId");
+
+                    b.ToTable("Environments");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1292,6 +1307,17 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasForeignKey("SpecificationVersionVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Environment", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Site");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>

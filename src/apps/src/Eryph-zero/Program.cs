@@ -307,6 +307,10 @@ internal static class Program
                     container.Register<INetworkProviderManager, NetworkProviderManager>();
                     container.Register<IControllerSettingsManager, ControllerSettingsManager>();
                     container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
+                    // Seeding realizes the environment catalog, and networks resolve their site from
+                    // it. Nothing is authored yet on a fresh database, so the catalog is the one
+                    // derived from agentsettings.yml — the same host-wired source the main host uses.
+                    container.Register<IEnvironmentsConfigDefaultsProvider, AgentSettingsEnvironmentsConfigDefaultsProvider>();
 
                     container.AddStateDbDataServices();
 

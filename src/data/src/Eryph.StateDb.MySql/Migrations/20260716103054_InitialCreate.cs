@@ -238,6 +238,26 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "Environments",
+                columns: table => new
+                {
+                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SiteId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Environments", x => x.Name);
+                    table.ForeignKey(
+                        name: "FK_Environments_Sites_SiteId",
+                        column: x => x.SiteId,
+                        principalTable: "Sites",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Projects",
                 columns: table => new
                 {
@@ -1048,6 +1068,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Environments_SiteId",
+                table: "Environments",
+                column: "SiteId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
                 table: "Genes",
                 columns: new[] { "UniqueGeneIndex", "LastSeenAgent" },
@@ -1224,6 +1249,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
             migrationBuilder.DropTable(
                 name: "ConfigRecords");
+
+            migrationBuilder.DropTable(
+                name: "Environments");
 
             migrationBuilder.DropTable(
                 name: "Genes");

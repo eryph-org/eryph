@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20260715194857_InitialCreate")]
+    [Migration("20260716103054_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -353,6 +353,21 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsUnique();
 
                     b.ToTable("ConfigRecords");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Environment", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Name");
+
+                    b.HasIndex("SiteId");
+
+                    b.ToTable("Environments");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
@@ -1300,6 +1315,17 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasForeignKey("SpecificationVersionVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Environment", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Site");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>

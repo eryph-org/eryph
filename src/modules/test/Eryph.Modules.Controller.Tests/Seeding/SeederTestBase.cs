@@ -64,7 +64,9 @@ public abstract class SeederTestBase : StateDbTestBase
         container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
         container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
         container.Register<ISiteResolver, FakeSiteResolver>(Lifestyle.Scoped);
-        container.Register<ISitesConfigRealizer, SitesConfigRealizer>(Lifestyle.Scoped);
+        container.Register<IEnvironmentsConfigRealizer, EnvironmentsConfigRealizer>(Lifestyle.Scoped);
+        // Host-wired: nothing until a catalog is authored, like the split runtime.
+        container.Register<Eryph.Core.IEnvironmentsConfigDefaultsProvider, EmptyEnvironmentsDefaults>();
         container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
         container.Register<IDefaultNetworkConfigRealizer, DefaultNetworkConfigRealizer>(Lifestyle.Scoped);
         container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
@@ -125,5 +127,14 @@ public abstract class SeederTestBase : StateDbTestBase
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.VirtualMachinesConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.CatletSpecificationsConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.CatletSpecificationVersionsConfigPath);
+    }
+
+    /// <summary>The split runtime's defaults: nothing until a catalog is authored.</summary>
+    private sealed class EmptyEnvironmentsDefaults : Eryph.Core.IEnvironmentsConfigDefaultsProvider
+    {
+        public LanguageExt.EitherAsync<LanguageExt.Common.Error, Eryph.Core.EnvironmentsConfig>
+            GetDefaultEnvironmentsConfig() =>
+            LanguageExt.Prelude.RightAsync<LanguageExt.Common.Error, Eryph.Core.EnvironmentsConfig>(
+                new Eryph.Core.EnvironmentsConfig());
     }
 }

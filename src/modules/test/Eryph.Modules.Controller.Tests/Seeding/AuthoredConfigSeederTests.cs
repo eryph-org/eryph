@@ -156,11 +156,21 @@ public abstract class AuthoredConfigSeederTests(
         var seeder = new AuthoredConfigSeeder(
             ChangeTrackingConfig,
             MockFileSystem,
-            new SitesConfigRealizer(stateStore),
+            new EnvironmentsConfigRealizer(stateStore),
+            new StubEnvironmentsDefaults(),
             stateStore,
             NullLogger.Instance);
 
         await seeder.Execute(default);
+    }
+
+    /// <summary>The split runtime's defaults: nothing until a catalog is authored.</summary>
+    private sealed class StubEnvironmentsDefaults : Eryph.Core.IEnvironmentsConfigDefaultsProvider
+    {
+        public LanguageExt.EitherAsync<LanguageExt.Common.Error, Eryph.Core.EnvironmentsConfig>
+            GetDefaultEnvironmentsConfig() =>
+            LanguageExt.Prelude.RightAsync<LanguageExt.Common.Error, Eryph.Core.EnvironmentsConfig>(
+                new Eryph.Core.EnvironmentsConfig());
     }
 
     private async Task WithScope(Func<IStateStore, Task> func)

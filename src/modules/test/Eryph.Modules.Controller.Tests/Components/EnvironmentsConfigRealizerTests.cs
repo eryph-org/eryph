@@ -1,4 +1,4 @@
-using Eryph.Core;
+﻿using Eryph.Core;
 using Eryph.Modules.Controller.Components;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -9,20 +9,20 @@ namespace Eryph.Modules.Controller.Tests.Components;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlSitesConfigRealizerTests(
+public class MySqlEnvironmentsConfigRealizerTests(
     ITestOutputHelper outputHelper, MySqlFixture databaseFixture)
-    : SitesConfigRealizerTests(outputHelper, databaseFixture);
+    : EnvironmentsConfigRealizerTests(outputHelper, databaseFixture);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteSitesConfigRealizerTests(
+public class SqliteEnvironmentsConfigRealizerTests(
     ITestOutputHelper outputHelper, SqliteFixture databaseFixture)
-    : SitesConfigRealizerTests(outputHelper, databaseFixture);
+    : EnvironmentsConfigRealizerTests(outputHelper, databaseFixture);
 
 /// <summary>
 /// The sites an operator declares are materialized as records, so an environment can only reference
 /// a site that exists and resources can be pinned to it.
 /// </summary>
-public abstract class SitesConfigRealizerTests(
+public abstract class EnvironmentsConfigRealizerTests(
     ITestOutputHelper outputHelper, IDatabaseFixture databaseFixture)
     : StateDbTestBase(databaseFixture, outputHelper)
 {
@@ -106,9 +106,9 @@ public abstract class SitesConfigRealizerTests(
     {
         await using var scope = CreateScope();
         var stateStore = scope.GetInstance<IStateStore>();
-        var realizer = new SitesConfigRealizer(stateStore);
+        var realizer = new EnvironmentsConfigRealizer(stateStore);
 
-        await realizer.RealizeSites(
+        await realizer.RealizeEnvironments(
             new EnvironmentsConfig
             {
                 Sites = siteNames.Select(n => new SiteConfig { Name = n }).ToArray(),

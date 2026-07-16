@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -24,7 +24,7 @@ internal sealed class SetConfigDomainCommandHandler(
     IAuthoredConfigStore store,
     INetworkSyncService networkSyncService,
     IEnvironmentsConfigChangeValidator environmentsConfigChangeValidator,
-    ISitesConfigRealizer sitesConfigRealizer,
+    IEnvironmentsConfigRealizer environmentsConfigRealizer,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<SetConfigDomainCommand>>
 {
@@ -96,7 +96,7 @@ internal sealed class SetConfigDomainCommandHandler(
         // and this line; the retry re-validates, now sees that resource, and reports it properly.
         if (command.Domain == ConfigDomain.Environments)
         {
-            await sitesConfigRealizer.RealizeSites(
+            await environmentsConfigRealizer.RealizeEnvironments(
                 EnvironmentsConfigYamlSerializer.Deserialize(canonical), CancellationToken.None);
         }
 
