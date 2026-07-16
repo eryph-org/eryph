@@ -192,12 +192,34 @@ public class SetConfigDomainCommandHandlerTests
         VerifyCompleted(Times.Never());        // but the operation is reported failed
     }
 
+    [Fact]
+    public async Task Site_realization_failure_is_not_swallowed_into_a_failed_task()
+    {
+        // Returning normally is what commits the unit of work, so reporting this as a failed task
+        // would store the version while its sites were not realized. Nothing realizes them later —
+        // unlike the network providers, there is no sync which picks them up — so the exception has
+        // to escape and roll the version back with it.
+        _sitesRealizer.Failure = new InvalidOperationException(
+            "The site 'berlin' cannot be removed because it still has resources.");
+
+        var act = () => CreateHandler().Handle(
+            Op(ConfigDomain.Environments, "environments: []"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        VerifyCompleted(Times.Never());
+    }
+
     private sealed class FakeSitesConfigRealizer : ISitesConfigRealizer
     {
         public List<string> RealizedSites { get; } = [];
 
+        public Exception? Failure { get; set; }
+
         public Task RealizeSites(EnvironmentsConfig config, CancellationToken cancellationToken)
         {
+            if (Failure is not null)
+                throw Failure;
+
             RealizedSites.AddRange((config.Sites ?? []).Select(s => s.Name));
             return Task.CompletedTask;
         }

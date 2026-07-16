@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
@@ -87,22 +86,18 @@ internal sealed class SetConfigDomainCommandHandler(
 
         // Realize the authored sites in the same unit of work as the version which declares them, so
         // an environment can never reference a site that was accepted but never created.
+        //
+        // A failure here must NOT be caught and reported as a failed task: this handler returning
+        // normally is what commits the unit of work, so the version would be stored while its sites
+        // were not. Unlike the network providers below there is no later sync which realizes sites,
+        // so that version would stay unrealized and every deployment into its environments would
+        // fail to resolve a site. Letting it escape rolls the version back with it. The only way to
+        // get here is a deployment pinning a resource to a removed site between the validation above
+        // and this line; the retry re-validates, now sees that resource, and reports it properly.
         if (command.Domain == ConfigDomain.Environments)
         {
-            try
-            {
-                await sitesConfigRealizer.RealizeSites(
-                    EnvironmentsConfigYamlSerializer.Deserialize(canonical), CancellationToken.None);
-            }
-            catch (InvalidOperationException ex)
-            {
-                // The validation above already refuses removing a site which has resources, but a
-                // deployment can pin one to it in between. Report that as a failed operation rather
-                // than letting it escape the handler, which would retry and dead-letter instead of
-                // telling the operator what happened.
-                await messaging.FailTask(message, ex.Message);
-                return;
-            }
+            await sitesConfigRealizer.RealizeSites(
+                EnvironmentsConfigYamlSerializer.Deserialize(canonical), CancellationToken.None);
         }
 
         // NetworkProviders drives the controller's OWN network realization, so re-realize now against the
