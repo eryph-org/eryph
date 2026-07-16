@@ -1,4 +1,4 @@
-using Eryph.Configuration.Model;
+﻿using Eryph.Configuration.Model;
 using Eryph.Core;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Configuration;
@@ -96,6 +96,27 @@ public abstract class AuthoredConfigSeederTests(
     }
 
     [Fact]
+    public async Task Nothing_is_restored_when_the_sites_cannot_be_realized()
+    {
+        // The mirrored environments payload cannot be read, so the sites it declares cannot be
+        // created. Restoring the rows anyway would be one way: this seeder only runs while nothing is
+        // authored, so every later start skips it and the catalog keeps naming sites which nothing
+        // ever creates.
+        await WriteMirror(payload: "environments: [ unterminated");
+
+        var act = () => ExecuteSeeder();
+
+        await act.Should().ThrowAsync<SeederException>();
+
+        await WithScope(async stateStore =>
+        {
+            var authored = await stateStore.For<AuthoredConfig>().ListAsync();
+
+            authored.Should().BeEmpty();
+        });
+    }
+
+    [Fact]
     public async Task Nothing_is_restored_when_there_is_no_mirror()
     {
         await ExecuteSeeder();
@@ -110,7 +131,7 @@ public abstract class AuthoredConfigSeederTests(
 
     // Serialized exactly as the change handler writes it, so the test pins the real round trip
     // rather than a hand-written shape which could drift from it.
-    private async Task WriteMirror() =>
+    private async Task WriteMirror(string? payload = null) =>
         await MockFileSystem.File.WriteAllTextAsync(
             Path.Combine(ChangeTrackingConfig.AuthoredConfigsPath, "authored.json"),
             System.Text.Json.JsonSerializer.Serialize(new AuthoredConfigsConfigModel
@@ -122,7 +143,7 @@ public abstract class AuthoredConfigSeederTests(
                         Domain = nameof(ConfigDomain.Environments),
                         Scope = ConfigScope.Default,
                         Version = 3,
-                        Payload = Payload,
+                        Payload = payload ?? Payload,
                         CreatedBy = "alice",
                     },
                 ],

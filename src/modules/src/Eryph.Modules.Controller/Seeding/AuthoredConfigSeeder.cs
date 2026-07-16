@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Abstractions;
 using System.Text;
@@ -91,8 +91,11 @@ internal class AuthoredConfigSeeder(
                 domain, authored.Version);
         }
 
-        await stateStore.SaveChangesAsync(stoppingToken);
-
+        // Nothing is saved until the sites are realized as well: the restored rows and the sites they
+        // declare go in together, in the single SaveChanges at the end of RealizeSites. Committing the
+        // rows first would be one-way — this seeder only runs while nothing is authored, so a failure
+        // in RealizeSites would leave a restored catalog whose sites nothing ever creates, and the
+        // early return above would skip the retry on every later start.
         await RealizeSites(mirror, stoppingToken);
     }
 
