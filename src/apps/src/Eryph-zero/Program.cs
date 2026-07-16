@@ -525,6 +525,7 @@ internal static class Program
                     ["changeTracking:trackChanges"] = bool.TrueString,
                     ["changeTracking:seedDatabase"] = bool.TrueString,
                     ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
+                    ["changeTracking:authoredConfigsPath"] = ZeroConfig.GetAuthoredConfigsPath(),
                     ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
                     ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
                     ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),

@@ -3,6 +3,7 @@ using System.IO.Abstractions.TestingHelpers;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.Controller.ChangeTracking;
+using Eryph.Modules.Controller.Components;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Seeding;
@@ -30,6 +31,7 @@ public abstract class SeederTestBase : StateDbTestBase
         ProjectNetworksConfigPath = @"Z:\projects\networks",
         ProjectNetworkPortsConfigPath = @"Z:\projects\ports",
         NetworksConfigPath = @"Z:\networks",
+        AuthoredConfigsPath = @"Z:\authored",
         VirtualMachinesConfigPath = @"Z:\vms\md",
         CatletSpecificationsConfigPath = @"Z:\catlets\specs",
         CatletSpecificationVersionsConfigPath = @"Z:\catlets\specversions",
@@ -62,6 +64,7 @@ public abstract class SeederTestBase : StateDbTestBase
         container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
         container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
         container.Register<ISiteResolver, FakeSiteResolver>(Lifestyle.Scoped);
+        container.Register<ISitesConfigRealizer, SitesConfigRealizer>(Lifestyle.Scoped);
         container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
         container.Register<IDefaultNetworkConfigRealizer, DefaultNetworkConfigRealizer>(Lifestyle.Scoped);
         container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
@@ -115,6 +118,7 @@ public abstract class SeederTestBase : StateDbTestBase
         await base.InitializeAsync();
 
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.NetworksConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.AuthoredConfigsPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectsConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectNetworksConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectNetworkPortsConfigPath);

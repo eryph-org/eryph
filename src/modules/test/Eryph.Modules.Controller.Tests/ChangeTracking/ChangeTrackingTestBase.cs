@@ -26,6 +26,7 @@ public abstract class ChangeTrackingTestBase(
         ProjectNetworksConfigPath = @"Z:\projects\networks",
         ProjectNetworkPortsConfigPath = @"Z:\projects\ports",
         NetworksConfigPath = @"Z:\networks",
+        AuthoredConfigsPath = @"Z:\authored",
         VirtualMachinesConfigPath = @"Z:\vms\md",
         CatletSpecificationsConfigPath = @"Z:\catlets\specs",
         CatletSpecificationVersionsConfigPath = @"Z:\catlets\specversions",
@@ -97,6 +98,7 @@ public abstract class ChangeTrackingTestBase(
         await base.InitializeAsync();
 
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.NetworksConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.AuthoredConfigsPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectsConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectNetworksConfigPath);
         MockFileSystem.Directory.CreateDirectory(ChangeTrackingConfig.ProjectNetworkPortsConfigPath);

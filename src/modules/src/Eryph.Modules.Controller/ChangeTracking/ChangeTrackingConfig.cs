@@ -8,6 +8,12 @@ public class ChangeTrackingConfig
 
     public string NetworksConfigPath { get; set; } = "";
 
+    /// <summary>
+    /// Where the operator-authored configuration is mirrored. It lives only in the state database,
+    /// which is re-created on a schema change, so without the mirror it is lost on every update.
+    /// </summary>
+    public string AuthoredConfigsPath { get; set; } = "";
+
     public string ProjectsConfigPath { get; set; } = "";
 
     public string ProjectNetworksConfigPath { get; set; } = "";

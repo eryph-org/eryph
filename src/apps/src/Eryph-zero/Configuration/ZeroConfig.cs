@@ -124,6 +124,16 @@ public static class ZeroConfig
         return projectNetworkPortsConfigPath;
     }
 
+    /// <summary>
+    /// Where the operator-authored configuration is mirrored. It lives only in the state database,
+    /// which is re-created on a schema change, so it is restored from here.
+    /// </summary>
+    public static string GetAuthoredConfigsPath()
+    {
+        var privateConfigPath = GetPrivateConfigPath();
+        return Path.Combine(privateConfigPath, "authored");
+    }
+
     public static string GetLocksConfigPath()
     {
         var privateConfigPath = GetPrivateConfigPath();
@@ -153,6 +163,7 @@ public static class ZeroConfig
         Config.EnsurePath(GetProjectsConfigPath());
         Config.EnsurePath(GetProjectNetworksConfigPath());
         Config.EnsurePath(GetProjectNetworkPortsConfigPath());
+        Config.EnsurePath(GetAuthoredConfigsPath());
         Config.EnsurePath(GetLocksConfigPath());
     }
 
