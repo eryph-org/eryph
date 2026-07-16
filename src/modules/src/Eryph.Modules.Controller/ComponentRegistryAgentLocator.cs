@@ -19,8 +19,10 @@ internal sealed class ComponentRegistryAgentLocator(IComponentRegistry component
             .Filter(agent => agent.SiteId == siteId)
             .Map(agent => agent.AgentName)
             .HeadOrNone()
+            // Name the site: this lookup is site scoped, so "no agent" is only actionable once the
+            // operator knows which site was searched — the data store name alone does not say.
             .ToEither(() => Error.New(
-                $"No host agent is registered in the site of the data store '{dataStore}'; "
+                $"No host agent is registered in the site {siteId} of the data store '{dataStore}'; "
                 + "cannot resolve a responsible agent."));
 
     public string FindAgentForGenePool() =>

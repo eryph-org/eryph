@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.Modules.Controller;
@@ -29,7 +29,9 @@ internal sealed class ControllerPlacementCalculator(IComponentRegistry component
             .Filter(agent => agent.SiteId == siteId)
             .Map(agent => agent.AgentName)
             .HeadOrNone()
+            // Name the site: placement is site scoped, so "no agent" is only actionable once the
+            // operator knows which site was searched.
             .ToEither(() => Error.New(
-                "No host agent is registered in the site of the catlet's environment; "
+                $"No host agent is registered in the site {siteId} of the catlet's environment; "
                 + "cannot place the catlet."));
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.Modules.Controller;
@@ -43,6 +43,10 @@ internal sealed class SingleHostPlacementCalculator(
 
         return agentsInSite.HeadOrNone()
             .Map(agent => agent.AgentName)
-            .ToEither(() => Error.New("No host agent is registered; cannot place the catlet."));
+            // The agents were filtered by site, so an empty set does not mean none is registered —
+            // it means none is in this one, which is what the operator has to act on.
+            .ToEither(() => Error.New(
+                $"No host agent is registered in the site {siteId} of the catlet's environment; "
+                + "cannot place the catlet."));
     }
 }
