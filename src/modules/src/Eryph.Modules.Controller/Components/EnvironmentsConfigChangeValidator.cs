@@ -52,11 +52,14 @@ internal sealed class EnvironmentsConfigChangeValidator(
             if (environment?.Name is null)
                 continue;
 
+            // The site may be declared by this very payload and not exist yet — it is realized only
+            // once the payload is accepted. Nothing is pinned to it then, so every resource of the
+            // environment is somewhere else and would be stranded just the same.
             var declaredSite = await stateStore.For<Site>().GetBySpecAsync(
                 new SiteSpecs.GetByName(environment.Site), cancellationToken);
 
             var strandedSites = await FindSitesOfResources(
-                environment.Name, exceptSiteId: declaredSite?.Id, cancellationToken);
+                environment.Name, declaredSite?.Id, cancellationToken);
             if (strandedSites.Count == 0)
                 continue;
 
@@ -106,10 +109,12 @@ internal sealed class EnvironmentsConfigChangeValidator(
 
     /// <summary>
     /// The sites of the resources in an environment, other than the one given. Empty when every
-    /// resource in it is already where the configuration says the environment is.
+    /// resource in it is already where the configuration says the environment is. A null
+    /// <paramref name="declaredSiteId"/> means the site does not exist yet, so no resource can be in
+    /// it and every one of them counts.
     /// </summary>
     private async Task<IReadOnlyList<Guid>> FindSitesOfResources(
-        string environment, Guid? exceptSiteId, CancellationToken cancellationToken)
+        string environment, Guid? declaredSiteId, CancellationToken cancellationToken)
     {
         var catlets = await stateStore.For<Catlet>().ListAsync(
             new ResourceSpecs<Catlet>.GetByEnvironmentUnscoped(environment), cancellationToken);
@@ -121,7 +126,7 @@ internal sealed class EnvironmentsConfigChangeValidator(
         return catlets.Select(c => c.SiteId)
             .Concat(disks.Select(d => d.SiteId))
             .Concat(networks.Select(n => n.SiteId))
-            .Where(id => id != exceptSiteId)
+            .Where(id => !declaredSiteId.HasValue || id != declaredSiteId.Value)
             .Distinct()
             .ToList();
     }

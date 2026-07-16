@@ -11,7 +11,10 @@ namespace Eryph.StateDb.Model;
 /// re-derived from <see cref="Resource.Environment"/>: the environment to site
 /// binding can be re-authored, but the location of an existing resource cannot
 /// change because of it.
-/// <see cref="CatletSpecification"/> is deliberately not site bound. A
+/// <see cref="CatletFarm"/> is the exception: a host is not placed but assigned,
+/// so its site follows its registration and is reconciled on every inventory
+/// round. Everything the host reports is pinned from it and does not move with it.
+/// <see cref="CatletSpecification"/> is deliberately not site bound at all. A
 /// specification is project level and deploys into many environments, hence into
 /// many sites.
 /// </remarks>

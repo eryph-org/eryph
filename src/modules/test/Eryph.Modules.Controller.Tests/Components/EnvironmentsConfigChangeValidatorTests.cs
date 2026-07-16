@@ -143,6 +143,44 @@ public abstract class EnvironmentsConfigChangeValidatorTests(
         errors.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task Declaring_the_site_in_the_same_payload_does_not_rescue_stranded_resources()
+    {
+        // The site is realized only once the payload is accepted, so it does not exist yet while
+        // this runs. That is not a reason to allow the change: a site which does not exist has
+        // nothing in it, so the resources of the environment are all somewhere else.
+        await AddCatlet("staging", siteId: EryphConstants.DefaultSiteId);
+
+        var errors = await Validate(
+            """
+            sites:
+            - name: munich
+            environments:
+            - name: staging
+              site: munich
+            """);
+
+        errors.Should().ContainSingle()
+            .Which.Should().Contain("cannot be configured for the site 'munich'");
+    }
+
+    [Fact]
+    public async Task An_environment_without_resources_can_be_configured_for_a_new_site()
+    {
+        // The counterpart: nothing is in 'staging', so binding it to a site which this payload
+        // declares is exactly how a new site is put to use.
+        var errors = await Validate(
+            """
+            sites:
+            - name: munich
+            environments:
+            - name: staging
+              site: munich
+            """);
+
+        errors.Should().BeEmpty();
+    }
+
     private async Task<IReadOnlyList<string>> Validate(string payload)
     {
         await using var scope = CreateScope();

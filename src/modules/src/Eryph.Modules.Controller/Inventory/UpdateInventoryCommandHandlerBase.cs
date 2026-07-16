@@ -33,6 +33,13 @@ internal class UpdateInventoryCommandHandlerBase
     private readonly IStateStore _stateStore;
     private readonly ICatletDataService _vmDataService;
 
+    /// <summary>
+    /// The catlet names taken during this message, which the database cannot be asked about until the
+    /// unit of work commits.
+    /// </summary>
+    private readonly System.Collections.Generic.HashSet<(Guid ProjectId, string Environment, string Name)>
+        _namesTaken = [];
+
     protected UpdateInventoryCommandHandlerBase(
         IInventoryLockManager lockManager,
         ICatletMetadataService metadataService,
@@ -65,6 +72,10 @@ internal class UpdateInventoryCommandHandlerBase
         foreach (var vhdId in CollectDiskIdentifiers(diskInfos)) await _lockManager.AcquireVhdLock(vhdId);
 
         foreach (var vmId in vmInfos.Select(x => x.VmId).OrderBy(g => g)) await _lockManager.AcquireVmLock(vmId);
+
+        // Scoped to this batch: it stands in for what the database cannot be asked about until the
+        // unit of work commits, and that unit of work is exactly this message.
+        _namesTaken.Clear();
 
         foreach (var vmInfo in vmInfos) await UpdateVm(timestamp, vmInfo, host);
     }
@@ -119,7 +130,7 @@ internal class UpdateInventoryCommandHandlerBase
         // the catlet it was copied from. The insert would only fail when the unit of work commits,
         // taking the whole host's inventory round with it and repeating on every retry — one
         // unmanaged VM would freeze the inventory of every catlet on that host. Skip it instead.
-        if (await NameIsTaken(
+        if (!await TryTakeName(
                 project.Id, vmInfo.Environment, NormalizeName(vmInfo.Name), excludedCatletId: null))
         {
             _logger.LogWarning(
@@ -235,7 +246,7 @@ internal class UpdateInventoryCommandHandlerBase
         // inventory round when the unit of work commits. Keep the stored name in that case: the
         // catlet stays inventoried under the name it can actually have.
         if (!string.Equals(convertedVmInfo.Name, existingCatlet.Name, StringComparison.OrdinalIgnoreCase)
-            && await NameIsTaken(
+            && !await TryTakeName(
                 existingCatlet.ProjectId, existingCatlet.Environment, convertedVmInfo.Name,
                 excludedCatletId: existingCatlet.Id))
         {
@@ -306,21 +317,30 @@ internal class UpdateInventoryCommandHandlerBase
     private static string? NormalizeName(string? name) => name?.ToLowerInvariant();
 
     /// <summary>
-    /// Whether a catlet of that name already exists in the project and environment, which is what a
-    /// catlet is identified by. Checked before the write rather than caught afterwards: the unit of
-    /// work commits once for the whole host, so a violation could not be attributed back to the VM
-    /// which caused it and would fail the inventory of every catlet on that host.
+    /// Claims a catlet name within a project and environment, which is what a catlet is identified
+    /// by, and reports whether the caller may write it. Every caller which is told the name is free
+    /// goes on to write it, so claiming and checking are the same step. Checked before the write
+    /// rather than caught afterwards: the unit of work commits once for the whole host, so a
+    /// violation could not be attributed back to the VM which caused it and would fail the inventory
+    /// of every catlet on that host.
     /// </summary>
-    private async Task<bool> NameIsTaken(
+    private async Task<bool> TryTakeName(
         Guid projectId, string environment, string? name, Guid? excludedCatletId)
     {
         if (name is null)
-            return false;
+            return true;
 
         var catlet = await _stateStore.For<Catlet>().GetBySpecAsync(
             new CatletSpecs.GetByName(name, projectId, environment));
 
-        return catlet is not null && catlet.Id != excludedCatletId;
+        if (catlet is not null)
+            return catlet.Id == excludedCatletId;
+
+        // The query only sees what is committed, and the unit of work covers the whole host: two
+        // VMs first seen in the same round can carry the same name, and neither is in the database
+        // yet. Without this they would both be written and the commit — not either VM — would fail,
+        // which is the whole failure this check exists to prevent.
+        return _namesTaken.Add((projectId, environment.ToLowerInvariant(), name));
     }
 
     /// <summary>
@@ -490,11 +510,11 @@ internal class UpdateInventoryCommandHandlerBase
         return features;
     }
 
-    /// <param name="siteId">
-    /// The site of the host reporting the disk. A disk is where the host that holds it is, so this is
-    /// an observation, not a lookup: it is only used when the disk is first recorded and never
-    /// re-derived for one that already exists.
-    /// </param>
+    /// <remarks>
+    /// The site is the one of the host reporting the disk. A disk is where the host that holds it is,
+    /// so this is an observation, not a lookup: it is only used when the disk is first recorded and
+    /// never re-derived for one that already exists.
+    /// </remarks>
     protected async Task<Option<VirtualDisk>> AddOrUpdateDisk(
         string agentName,
         Guid siteId,

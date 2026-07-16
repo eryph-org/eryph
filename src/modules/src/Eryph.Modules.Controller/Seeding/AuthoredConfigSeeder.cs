@@ -105,8 +105,21 @@ internal class AuthoredConfigSeeder(
             if (authored.Domain != nameof(ConfigDomain.Environments) || authored.Payload is null)
                 continue;
 
-            await sitesConfigRealizer.RealizeSites(
-                EnvironmentsConfigYamlSerializer.Deserialize(authored.Payload), stoppingToken);
+            EnvironmentsConfig environments;
+            try
+            {
+                environments = EnvironmentsConfigYamlSerializer.Deserialize(authored.Payload);
+            }
+            catch (Exception ex)
+            {
+                // A mirrored payload which cannot be read is a broken restore, not something to
+                // start up around: the sites it declares would be missing and every resource pinned
+                // to them unusable. Fail like the rest of the seeding does.
+                throw new SeederException(
+                    "Failed to seed the sites from the mirrored environment configuration", ex);
+            }
+
+            await sitesConfigRealizer.RealizeSites(environments, stoppingToken);
         }
 
         await stateStore.SaveChangesAsync(stoppingToken);

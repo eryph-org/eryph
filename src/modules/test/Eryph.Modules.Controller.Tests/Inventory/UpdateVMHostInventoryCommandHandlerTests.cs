@@ -6,6 +6,7 @@ using Eryph.Modules.Controller.Inventory;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
 using LanguageExt;
 using static LanguageExt.Prelude;
@@ -266,6 +267,30 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
         });
     }
 
+    /// <summary>Several VMs reported by one host in a single inventory round.</summary>
+    private async Task HandleMany(params (Guid VmId, Guid MetadataId, string Name)[] vms)
+    {
+        await using var scope = CreateScope();
+        var handler = CreateHandler(scope);
+
+        await handler.Handle(new UpdateVMHostInventoryCommand
+        {
+            HostInventory = new VMHostMachineData { Name = HostName },
+            VMInventory = vms.Select(vm => new VirtualMachineData
+            {
+                VmId = vm.VmId,
+                MetadataId = vm.MetadataId,
+                Name = vm.Name,
+                DataStore = EryphConstants.DefaultDataStoreName,
+                Environment = "staging",
+                ProjectName = EryphConstants.DefaultProjectName,
+            }).ToList(),
+            Timestamp = DateTimeOffset.UtcNow,
+        });
+
+        await scope.GetInstance<IStateStore>().SaveChangesAsync();
+    }
+
     private async Task Handle(
         string? environment,
         string vmName = "test-catlet",
@@ -319,6 +344,47 @@ public abstract class UpdateVMHostInventoryCommandHandlerTests(
     {
         await using var scope = CreateScope();
         await func(scope.GetInstance<IStateStore>());
+    }
+
+    [Fact]
+    public async Task Two_first_seen_vms_with_the_same_name_do_not_both_get_written()
+    {
+        // Neither is in the database, so querying for a collision finds nothing for either — and
+        // the unit of work covers the whole host, so both would be written and the commit, not
+        // either VM, would fail. That is the same round-killing failure as a copy colliding with an
+        // existing catlet, reached from a different direction.
+        var first = (VmId: Guid.NewGuid(), MetadataId: Guid.NewGuid());
+        var second = (VmId: Guid.NewGuid(), MetadataId: Guid.NewGuid());
+        await WithScope(async stateStore =>
+        {
+            foreach (var vm in new[] { first, second })
+            {
+                await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+                {
+                    Id = vm.MetadataId,
+                    CatletId = Guid.NewGuid(),
+                    // The metadata names the VM reporting it, so each is a catlet eryph knows but
+                    // has not recorded yet rather than a copy of another VM.
+                    VmId = vm.VmId,
+                    Metadata = new CatletMetadataContent(),
+                });
+            }
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await HandleMany(
+            (first.VmId, first.MetadataId, "twin"),
+            (second.VmId, second.MetadataId, "twin"));
+
+        await WithScope(async stateStore =>
+        {
+            var catlets = await stateStore.For<Catlet>().ListAsync(
+                new ResourceSpecs<Catlet>.GetByEnvironmentUnscoped("staging"));
+
+            // The pre-existing catlet plus exactly one of the twins.
+            catlets.Should().HaveCount(2);
+        });
     }
 
     [Fact]

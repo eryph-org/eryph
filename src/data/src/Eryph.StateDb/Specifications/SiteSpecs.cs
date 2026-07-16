@@ -7,9 +7,11 @@ public static class SiteSpecs
 {
     public sealed class GetByName : Specification<Site>, ISingleResultSpecification
     {
-        public GetByName(string name)
+        public GetByName(string? name)
         {
-            Query.Where(x => x.Name == name.ToLowerInvariant());
+            // A site is always named, so no name matches nothing rather than throwing on a caller
+            // which did not check first.
+            Query.Where(x => name != null && x.Name == name.ToLowerInvariant());
         }
     }
 }

@@ -21,6 +21,12 @@ public static class AppConfigPaths
 
     public static string GetNetworksConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "networks"));
 
+    /// <summary>
+    /// Where the operator-authored configuration is mirrored. It lives only in the state database,
+    /// which is re-created on a schema change, so it is restored from here.
+    /// </summary>
+    public static string GetAuthoredConfigsPath() => Ensure(Path.Combine(GetConfigRoot(), "authored"));
+
     public static string GetVmHostAgentConfigPath() => Ensure(Path.Combine(GetConfigRoot(), "agentsettings"));
 
     public static string GetGenePoolSettingsPath() => Ensure(Path.Combine(GetConfigRoot(), "genepool"));

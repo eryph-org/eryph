@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
@@ -88,8 +89,20 @@ internal sealed class SetConfigDomainCommandHandler(
         // an environment can never reference a site that was accepted but never created.
         if (command.Domain == ConfigDomain.Environments)
         {
-            await sitesConfigRealizer.RealizeSites(
-                EnvironmentsConfigYamlSerializer.Deserialize(canonical), CancellationToken.None);
+            try
+            {
+                await sitesConfigRealizer.RealizeSites(
+                    EnvironmentsConfigYamlSerializer.Deserialize(canonical), CancellationToken.None);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // The validation above already refuses removing a site which has resources, but a
+                // deployment can pin one to it in between. Report that as a failed operation rather
+                // than letting it escape the handler, which would retry and dead-letter instead of
+                // telling the operator what happened.
+                await messaging.FailTask(message, ex.Message);
+                return;
+            }
         }
 
         // NetworkProviders drives the controller's OWN network realization, so re-realize now against the
