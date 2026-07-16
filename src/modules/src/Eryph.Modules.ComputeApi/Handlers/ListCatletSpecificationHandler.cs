@@ -38,14 +38,22 @@ internal class ListCatletSpecificationHandler(
             cancellationToken);
         var authContext = userRightsProvider.GetAuthContext();
 
-        var mappedResults = await results.Map(async result =>
+        // The deployments of every listed specification in one query, then grouped in memory:
+        // querying per specification would be a round-trip each, one after the other.
+        var specificationIds = results.Select(r => r.Id).ToList();
+        var catlets = specificationIds.Count > 0
+            ? await catletRepository.ListAsync(
+                new CatletSpecs.ListBySpecificationIds(specificationIds), cancellationToken)
+            : [];
+        var deploymentsBySpecification = catlets
+            .Where(c => c.SpecificationId.HasValue)
+            .ToLookup(c => c.SpecificationId!.Value);
+
+        var mappedResults = results.Select(result =>
         {
             var mappedResult = mapper.Map<CatletSpecification>(result, o => o.SetAuthContext(authContext));
-            var catlets = await catletRepository.ListAsync(
-                new CatletSpecs.ListBySpecificationId(result.Id),
-                cancellationToken);
 
-            mappedResult.Deployments = catlets
+            mappedResult.Deployments = deploymentsBySpecification[result.Id]
                 .Select(c => new CatletSpecificationDeployment
                 {
                     Environment = c.Environment,
@@ -55,8 +63,8 @@ internal class ListCatletSpecificationHandler(
                 .ToList();
 
             return mappedResult;
-        }).SequenceSerial();
+        }).ToList();
 
-        return new JsonResult(new ListResponse<CatletSpecification> { Value = mappedResults.ToList() });
+        return new JsonResult(new ListResponse<CatletSpecification> { Value = mappedResults });
     }
 }

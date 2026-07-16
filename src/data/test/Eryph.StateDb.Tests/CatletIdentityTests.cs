@@ -1,4 +1,4 @@
-using Eryph.Core;
+﻿using Eryph.Core;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
@@ -85,6 +85,43 @@ public abstract class CatletIdentityTests(
         var act = () => Add(name: "web-again", environment: "dev", specificationId: SpecificationId);
 
         await act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task Deployments_of_several_specifications_are_listed_in_one_query()
+    {
+        // Listing specifications resolves every deployment with this one query instead of one per
+        // specification. It filters a nullable key, which the provider has to translate — a thing
+        // that only fails when it actually runs against a database.
+        var otherSpecificationId = new Guid("c8d9e0f1-2222-4333-8444-555566667777");
+        await Add(name: "web-dev", environment: "dev", specificationId: SpecificationId);
+        await Add(name: "web-test", environment: "test", specificationId: SpecificationId);
+        await Add(name: "api-dev", environment: "dev", specificationId: otherSpecificationId);
+        // Not deployed from a specification: must not be picked up by the key filter.
+        await Add(name: "loose", environment: "dev");
+
+        await WithScope(async stateStore =>
+        {
+            var catlets = await stateStore.For<Catlet>().ListAsync(
+                new CatletSpecs.ListBySpecificationIds([SpecificationId, otherSpecificationId]));
+
+            catlets.Select(c => c.Name).Should()
+                .BeEquivalentTo(["web-dev", "web-test", "api-dev"]);
+        });
+    }
+
+    [Fact]
+    public async Task Listing_deployments_of_no_specifications_returns_nothing()
+    {
+        await Add(name: "web-dev", environment: "dev", specificationId: SpecificationId);
+
+        await WithScope(async stateStore =>
+        {
+            var catlets = await stateStore.For<Catlet>().ListAsync(
+                new CatletSpecs.ListBySpecificationIds([]));
+
+            catlets.Should().BeEmpty();
+        });
     }
 
     [Fact]

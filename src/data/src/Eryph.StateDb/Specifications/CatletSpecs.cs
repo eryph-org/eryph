@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
 
@@ -89,6 +91,19 @@ public class CatletSpecs
         public ListBySpecificationId(Guid specificationId)
         {
             Query.Where(x => x.SpecificationId == specificationId);
+        }
+    }
+
+    /// <summary>
+    /// The deployments of several specifications at once, so listing them does not query per
+    /// specification.
+    /// </summary>
+    public sealed class ListBySpecificationIds : Specification<Catlet>
+    {
+        public ListBySpecificationIds(IReadOnlyList<Guid> specificationIds)
+        {
+            Query.Where(x => x.SpecificationId.HasValue
+                             && specificationIds.Contains(x.SpecificationId.Value));
         }
     }
 
