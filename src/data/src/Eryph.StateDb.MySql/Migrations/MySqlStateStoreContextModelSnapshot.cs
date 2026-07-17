@@ -110,8 +110,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SpecificationId")
-                        .IsUnique();
+                    b.HasIndex("SpecificationId");
 
                     b.ToTable("Metadata");
                 });
@@ -299,6 +298,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<DateTimeOffset>("RegisteredAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -348,6 +350,21 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsUnique();
 
                     b.ToTable("ConfigRecords");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Environment", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Name");
+
+                    b.HasIndex("SiteId");
+
+                    b.ToTable("Environments");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
@@ -772,11 +789,11 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<string>("Environment")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("char(36)");
@@ -791,6 +808,24 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.ToTable((string)null);
 
                     b.UseTpcMappingStrategy();
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Site", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Sites");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Subnet", b =>
@@ -966,6 +1001,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("SecureBootTemplate")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("SpecificationId")
                         .HasColumnType("char(36)");
 
@@ -989,7 +1027,12 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasIndex("HostId");
 
-                    b.HasIndex("SpecificationId")
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("SpecificationId", "Environment")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "Environment", "Name")
                         .IsUnique();
 
                     b.ToTable("Catlets");
@@ -1001,6 +1044,11 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<DateTimeOffset>("LastInventory")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("char(36)");
+
+                    b.HasIndex("SiteId");
 
                     b.ToTable("CatletFarms");
                 });
@@ -1063,6 +1111,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("Path")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("char(36)");
+
                     b.Property<long?>("SizeBytes")
                         .HasColumnType("bigint");
 
@@ -1080,6 +1131,8 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasIndex("ParentId");
 
+                    b.HasIndex("SiteId");
+
                     b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("VirtualDisks");
@@ -1095,6 +1148,11 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("NetworkProvider")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("char(36)");
+
+                    b.HasIndex("SiteId");
 
                     b.ToTable("VirtualNetworks");
                 });
@@ -1254,6 +1312,17 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasForeignKey("SpecificationVersionVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Environment", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Site");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
@@ -1440,7 +1509,26 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasForeignKey("HostId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Eryph.StateDb.Model.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Host");
+
+                    b.Navigation("Site");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletFarm", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Site");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
@@ -1450,7 +1538,26 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Eryph.StateDb.Model.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Parent");
+
+                    b.Navigation("Site");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Site");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkSubnet", b =>

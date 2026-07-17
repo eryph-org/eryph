@@ -197,12 +197,6 @@ public static class StorageConfigValidation
         || (distributed.Datastores ?? [])
             .Any(d => string.Equals(d.Name, dataStoreName, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Whether the controller's placement vocabulary permits the environment name.</summary>
-    public static bool IsEnvironmentAllowed(StorageConfig distributed, string environmentName) =>
-        string.Equals(environmentName, EryphConstants.DefaultEnvironmentName, StringComparison.OrdinalIgnoreCase)
-        || (distributed.Environments ?? [])
-            .Any(e => string.Equals(e.Name, environmentName, StringComparison.OrdinalIgnoreCase));
-
     /// <summary>
     /// Local datastore names that are not part of the distributed vocabulary and will
     /// therefore never be used for placement (the always-valid default is excluded).
@@ -216,16 +210,4 @@ public static class StorageConfigValidation
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToList();
 
-    /// <summary>
-    /// Local environment names that are not part of the distributed vocabulary and will
-    /// therefore never be used for placement (the always-valid default is excluded).
-    /// </summary>
-    public static IReadOnlyList<string> GetUnusedLocalEnvironments(
-        StorageConfig distributed, VmHostAgentConfiguration local) =>
-        (local.Environments ?? [])
-        .Select(e => e.Name)
-        .Where(n => !string.IsNullOrWhiteSpace(n))
-        .Where(n => !IsEnvironmentAllowed(distributed, n))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
 }

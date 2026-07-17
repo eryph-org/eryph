@@ -12,13 +12,20 @@ public static class SeedingContainerExtensions
         this SimpleInjectorAddOptions options,
         ChangeTrackingConfig config)
     {
-        // The order of the seeders is important. The default tenant must
-        // be seeded before we try to recreate the state DB from the config files.
+        // The order of the seeders is important. The default tenant and the default
+        // site must be seeded before we try to recreate the state DB from the config
+        // files: every site bound resource has a foreign key to a site.
         // The order of the seeders is important as some later seeders
         // might depend on the data seeded by the earlier ones.
         options.Container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultTenantSeeder>(Lifestyle.Scoped);
+        options.Container.Collection.Append<IConfigSeeder<ControllerModule>, SiteSeeder>(Lifestyle.Scoped);
         if (config.SeedDatabase)
         {
+            // Before every seeder which recreates resources: realizing a project's networks resolves
+            // the site of their environment from the authored environment catalog, and the sites it
+            // declares must exist before anything is pinned to them.
+            options.Container.Collection.Append<IConfigSeeder<ControllerModule>, AuthoredConfigSeeder>(
+                Lifestyle.Scoped);
             options.Container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkProvidersSeeder>(
                 Lifestyle.Scoped);
             options.Container.Collection.Append<IConfigSeeder<ControllerModule>, FloatingNetworkPortSeeder>(

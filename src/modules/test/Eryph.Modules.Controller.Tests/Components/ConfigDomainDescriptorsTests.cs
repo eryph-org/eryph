@@ -14,8 +14,80 @@ public class ConfigDomainDescriptorsTests
     [Theory]
     [InlineData(ConfigDomain.StorageConfig)]
     [InlineData(ConfigDomain.NetworkProviders)]
+    [InlineData(ConfigDomain.Environments)]
     public void Operator_authorable_domains(ConfigDomain domain) =>
         ConfigDomainDescriptors.IsAuthorable(domain).Should().BeTrue();
+
+    [Fact]
+    public void Environments_an_omitted_site_is_filled_with_the_default_site()
+    {
+        ConfigDomainDescriptors.TryCanonicalize(
+                ConfigDomain.Environments,
+                """
+                environments:
+                - name: staging
+                """,
+                out var canonical)
+            .Should().BeTrue();
+
+        canonical.Should().Contain("site: default");
+    }
+
+    [Fact]
+    public void Environments_names_are_lower_cased()
+    {
+        ConfigDomainDescriptors.TryCanonicalize(
+                ConfigDomain.Environments,
+                """
+                sites:
+                - name: Berlin
+                environments:
+                - name: Staging
+                  site: Berlin
+                """,
+                out var canonical)
+            .Should().BeTrue();
+
+        canonical.Should().Contain("name: staging").And.Contain("site: berlin");
+    }
+
+    [Fact]
+    public void Environments_a_site_which_is_not_declared_is_rejected()
+    {
+        ConfigDomainDescriptors.TryCanonicalize(
+                ConfigDomain.Environments,
+                """
+                environments:
+                - name: staging
+                  site: berlin
+                """,
+                out _, out var error)
+            .Should().BeFalse();
+
+        error.Should().Contain("'berlin', which is not declared");
+    }
+
+    [Fact]
+    public void Environments_the_reserved_default_environment_is_rejected()
+    {
+        ConfigDomainDescriptors.TryCanonicalize(
+                ConfigDomain.Environments,
+                """
+                environments:
+                - name: default
+                  site: berlin
+                """,
+                out _, out var error)
+            .Should().BeFalse();
+
+        error.Should().Contain("reserved");
+    }
+
+    [Fact]
+    public void Environments_are_global_and_cannot_be_scoped()
+    {
+        ConfigDomainDescriptors.SupportsScopedAuthoring(ConfigDomain.Environments).Should().BeFalse();
+    }
 
     [Theory]
     [InlineData(ConfigDomain.Endpoints)]

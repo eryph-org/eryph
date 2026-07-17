@@ -67,6 +67,6 @@ public sealed class RegistryBackedComponentRegistry(Container container) : IComp
         // the single-host provider used. (Distinct per-host chassis naming/priority for multi-host gateway
         // election is a separate concern — every agent registers its chassis as "local" today.)
         return Some(new HostAgentComponent(
-            agentName, EryphConstants.Networking.LocalChassisName, 1));
+            agentName, registration.SiteId, EryphConstants.Networking.LocalChassisName, 1));
     }
 }

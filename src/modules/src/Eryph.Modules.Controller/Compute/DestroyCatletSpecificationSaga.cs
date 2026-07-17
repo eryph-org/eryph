@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -34,6 +35,22 @@ internal class DestroyCatletSpecificationSaga(
 
         return FailOrRun(message, async (DestroyResourcesResponse response) =>
         {
+            // One event per deployment. Count the tasks which reported, not the catlets found in
+            // their responses: a catlet destroyed concurrently is already gone by the time its task
+            // runs, so that task legitimately reports no catlet and the specification would wait for
+            // a report which can never come. Deduplicated against redelivery of the same task.
+            if (Data.Data.TasksCompleted.Contains(message.TaskId))
+                return;
+
+            Data.Data.TasksCompleted.Add(message.TaskId);
+            Data.Data.DestroyedResources.AddRange(response.DestroyedResources);
+            Data.Data.DetachedResources.AddRange(response.DetachedResources ?? []);
+
+            // Only delete the specification once every deployment is gone: it must not disappear
+            // while a catlet still references it.
+            if (Data.Data.TasksCompleted.Count < Data.Data.CatletIds.Length)
+                return;
+
             Data.Data.State = DestroyCatletSpecificationSagaState.CatletDestroyed;
 
             await DeleteSpecificationAsync(Data.Data.SpecificationId);
@@ -42,10 +59,10 @@ internal class DestroyCatletSpecificationSaga(
             {
                 DestroyedResources =
                 [
-                    ..response.DestroyedResources,
+                    ..Data.Data.DestroyedResources,
                     new Resource(ResourceType.CatletSpecification, Data.Data.SpecificationId),
                 ],
-                DetachedResources = response.DetachedResources,
+                DetachedResources = [..Data.Data.DetachedResources],
             });
         });
     }
@@ -55,9 +72,10 @@ internal class DestroyCatletSpecificationSaga(
         Data.Data.State = DestroyCatletSpecificationSagaState.Initiated;
         Data.Data.SpecificationId = message.SpecificationId;
 
-        var catlet = await catletRepository.GetBySpecAsync(
-            new CatletSpecs.GetBySpecificationId(Data.Data.SpecificationId));
-        if (catlet is null)
+        // Every deployment, not just one: the specification may be deployed in several environments.
+        var catlets = await catletRepository.ListAsync(
+            new CatletSpecs.ListBySpecificationId(Data.Data.SpecificationId));
+        if (catlets.Count == 0)
         {
             await DeleteSpecificationAsync(Data.Data.SpecificationId);
             await Complete(new DestroyResourcesResponse
@@ -72,13 +90,23 @@ internal class DestroyCatletSpecificationSaga(
         }
 
         if (!message.DestroyCatlet)
-            await Fail(
-                $"The catlet specification {Data.Data.SpecificationId} is deployed as catlet {catlet.Id} and cannot be deleted.");
-
-        await StartNewTask(new DestroyCatletCommand
         {
-            CatletId = catlet.Id,
-        });
+            await Fail(
+                $"The catlet specification {Data.Data.SpecificationId} is deployed as "
+                + $"{(catlets.Count == 1 ? $"catlet {catlets[0].Id}" : $"{catlets.Count} catlets")} "
+                + "and cannot be deleted.");
+            return;
+        }
+
+        Data.Data.CatletIds = catlets.Select(c => c.Id).ToArray();
+
+        foreach (var catletId in Data.Data.CatletIds)
+        {
+            await StartNewTask(new DestroyCatletCommand
+            {
+                CatletId = catletId,
+            });
+        }
     }
 
     protected override void CorrelateMessages(

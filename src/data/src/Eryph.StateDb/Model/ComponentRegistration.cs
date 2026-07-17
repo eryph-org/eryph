@@ -158,6 +158,12 @@ public class ComponentRegistration
     /// Operator-owned metadata (set via the management API), not reported by the component.</summary>
     public string? Environment { get; set; }
 
+    /// <summary>The site the component is located in. Assigned the default site on first registration
+    /// and operator-owned afterwards (re-registration must not overwrite it). Not nullable: a component
+    /// always runs somewhere. Distinct from <see cref="Environment"/>, which is a single-valued
+    /// config-targeting label and may legitimately be unassigned, whereas a site hosts many environments.</summary>
+    public Guid SiteId { get; set; }
+
     internal string TagsJson
     {
         get => JsonSerializer.Serialize(Tags);

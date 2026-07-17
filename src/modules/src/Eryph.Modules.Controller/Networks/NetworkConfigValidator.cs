@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Networks;
+using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -12,7 +14,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Networks;
 
-public class NetworkConfigValidator(IStateStore stateStore, ILogger log) : INetworkConfigValidator
+public class NetworkConfigValidator(
+    IStateStore stateStore,
+    ISiteResolver siteResolver,
+    ILogger log)
+    : INetworkConfigValidator
 {
     public ProjectNetworksConfig NormalizeConfig(ProjectNetworksConfig config)
     {
@@ -64,6 +70,12 @@ public class NetworkConfigValidator(IStateStore stateStore, ILogger log) : INetw
             .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(projectId));
 
         var networkConfigs = config.Networks ?? [];
+
+        // A project has one router, which is realized by one site, so its networks cannot be spread
+        // across sites. Deployments where a project spans sites need a router per site, which eryph
+        // on-premises does not support — so refuse the configuration rather than realize half of it.
+        await foreach (var error in ValidateSingleSite(networkConfigs))
+            yield return error;
         // network validation (deleted)
         foreach (var network in savedNetworks)
         {
@@ -400,6 +412,40 @@ public class NetworkConfigValidator(IStateStore stateStore, ILogger log) : INetw
                 }
             }
         }
+    }
+
+    private async IAsyncEnumerable<string> ValidateSingleSite(NetworkConfig[] networkConfigs)
+    {
+        var environments = networkConfigs
+            .Select(x => x.Environment ?? EryphConstants.DefaultEnvironmentName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var sites = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var environment in environments)
+        {
+            var site = await siteResolver.ResolveSite(EnvironmentName.New(environment));
+            if (site.IsLeft)
+            {
+                yield return $"environment '{environment}': {site.LeftToSeq().Head.Message}";
+                continue;
+            }
+
+            sites[environment] = site.RightToSeq().Head;
+        }
+
+        if (sites.Values.Distinct().Count() <= 1)
+            yield break;
+
+        var environmentList = string.Join("', '", sites.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase));
+        log.LogDebug(
+            "The networks of the project are spread across several sites (environments '{Environments}').",
+            environmentList);
+
+        yield return
+            $"The environments '{environmentList}' are realized by different sites. The networks of a "
+            + "project are connected by one router, which exists in a single site, so they must all be "
+            + "in the same one.";
     }
 
     private static string GetEnvironmentName(string? environment, string network)

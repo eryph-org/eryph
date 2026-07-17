@@ -18,6 +18,12 @@ public class Catlet
 
     public required Project Project { get; set; }
 
+    /// <summary>
+    /// The environment the catlet is deployed in. Together with the project and the name it
+    /// identifies the catlet: the same name can exist in different environments of one project.
+    /// </summary>
+    public required string Environment { get; set; }
+
     public required CatletStatus Status { get; set; }
 
     /// <summary>

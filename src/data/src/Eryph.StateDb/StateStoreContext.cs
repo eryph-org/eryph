@@ -61,6 +61,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<Project> Projects { get; set; }
 
+    public DbSet<Site> Sites { get; set; }
+
+    public DbSet<Model.Environment> Environments { get; set; }
+
     public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
 
     public DbSet<Tenant> Tenants { get; set; }
@@ -123,6 +127,39 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<ProjectRoleAssignment>()
             .HasAlternateKey(x => new { x.ProjectId, x.IdentityId, x.RoleId });
 
+        modelBuilder.Entity<Site>()
+            .HasKey(x => x.Id);
+
+        modelBuilder.Entity<Site>()
+            .HasIndex(x => x.Name)
+            .IsUnique();
+
+        // The realized environment catalog. An environment is global, so its name is the key.
+        // Restricted: a site which still realizes an environment cannot be removed out from under it.
+        modelBuilder.Entity<Model.Environment>()
+            .HasKey(x => x.Name);
+
+        modelBuilder.Entity<Model.Environment>()
+            .HasOne(x => x.Site)
+            .WithMany()
+            .HasForeignKey(x => x.SiteId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Configured per concrete type instead of on Resource: only the site bound
+        // resources have a site. CatletSpecification is project level and deploys
+        // into many sites, so it must not carry one.
+        foreach (var entityType in new[]
+                 {
+                     typeof(Catlet), typeof(CatletFarm), typeof(VirtualDisk), typeof(VirtualNetwork),
+                 })
+        {
+            modelBuilder.Entity(entityType)
+                .HasOne(nameof(ISiteBound.Site))
+                .WithMany()
+                .HasForeignKey(nameof(ISiteBound.SiteId))
+                .OnDelete(DeleteBehavior.Restrict);
+        }
+
         modelBuilder.Entity<Resource>()
             .UseTpcMappingStrategy()
             .HasKey(x => x.Id);
@@ -169,8 +206,18 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Property(x => x.ProvisioningStatus)
             .HasConversion<string>();
 
+        // A catlet is identified by its name within a project AND environment: the same name can
+        // exist in different environments of one project. Declared here on the concrete type, not on
+        // Resource: under the table-per-concrete-type strategy an index on the base is created once
+        // per table, which would not give uniqueness across the resource types.
         modelBuilder.Entity<Catlet>()
-            .HasIndex(c => c.SpecificationId)
+            .HasIndex(c => new { c.ProjectId, c.Environment, c.Name })
+            .IsUnique();
+
+        // A specification is project level and deploys into many environments, but at most once into
+        // each of them.
+        modelBuilder.Entity<Catlet>()
+            .HasIndex(c => new { c.SpecificationId, c.Environment })
             .IsUnique();
 
         modelBuilder.Entity<VirtualNetwork>()
@@ -311,9 +358,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<CatletMetadata>()
             .Property(m => m.MetadataJson);
 
+        // Not unique: a specification deploys into many environments, so it has a metadata record per
+        // deployment. It cannot become unique per (specification, environment) the way the catlet
+        // index is, because metadata is not a resource and has no environment — adding one would be a
+        // second place the environment could rot. The catlet index already enforces the invariant.
         modelBuilder.Entity<CatletMetadata>()
-            .HasIndex(c => c.SpecificationId)
-            .IsUnique();
+            .HasIndex(c => c.SpecificationId);
 
         modelBuilder.Entity<CatletMetadata>()
             .Navigation(m => m.Genes)

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
@@ -74,6 +75,25 @@ internal class DeployCatletSaga(
                     SpecificationVersionId = Data.Data.SpecificationVersionId,
                 });
 
+            var catletName = inventory.Name ?? throw new InvalidOperationException(
+                $"The inventory for catlet {Data.Data.CatletId} is missing the name.");
+
+            // The endpoint checked this before the operation started, but the VM is created first, so
+            // a concurrent deployment of the same name can have taken it since. Check again next to
+            // the insert: the insert itself only fails when the unit of work commits, which would
+            // strand the operation instead of failing it, and the VM has to be reported either way.
+            var nameTaken = await catletRepository.GetBySpecAsync(
+                new CatletSpecs.GetByName(
+                    catletName, Data.Data.ProjectId, Data.Data.Config!.Environment!));
+            if (nameTaken is not null)
+            {
+                await Fail(
+                    $"A catlet with the name '{catletName}' already exists in the environment "
+                    + $"'{Data.Data.Config!.Environment}'. The virtual machine {inventory.VmId} was "
+                    + "created and has to be removed.");
+                return;
+            }
+
             await catletDataService.Add(new Catlet
             {
                 ProjectId = Data.Data.ProjectId,
@@ -81,9 +101,9 @@ internal class DeployCatletSaga(
                 MetadataId = Data.Data.MetadataId,
                 AgentName = Data.Data.AgentName,
                 VmId = inventory.VmId,
-                Name = inventory.Name ?? throw new InvalidOperationException(
-                    $"The inventory for catlet {Data.Data.CatletId} is missing the name."),
+                Name = catletName,
                 Environment = Data.Data.Config!.Environment!,
+                SiteId = Data.Data.SiteId,
                 DataStore = Data.Data.Config!.Store!,
                 StorageIdentifier = Data.Data.Config!.Location!,
                 // Ensure that any inventory updates are applied as the
@@ -97,6 +117,7 @@ internal class DeployCatletSaga(
             await StartNewTask(new UpdateCatletNetworksCommand
             {
                 CatletId = Data.Data.CatletId,
+                SiteId = Data.Data.SiteId,
                 CatletMetadataId = Data.Data.MetadataId,
                 Config = CatletSystemDataFeeding.FeedSystemVariables(
                     Data.Data.Config ?? throw new InvalidOperationException(
@@ -238,6 +259,7 @@ internal class DeployCatletSaga(
     {
         Data.Data.State = DeployCatletSagaState.Initiated;
         Data.Data.ProjectId = message.ProjectId;
+        Data.Data.SiteId = message.SiteId;
         Data.Data.AgentName = message.AgentName;
         Data.Data.Architecture = message.Architecture;
         Data.Data.ContentType = message.ContentType;
@@ -262,12 +284,16 @@ internal class DeployCatletSaga(
 
             if (Data.Data.SpecificationId.HasValue)
             {
+                // Only this environment's deployment: the same specification may be deployed in
+                // others, which is not a conflict.
                 var deployedCatlet = await catletRepository.GetBySpecAsync(
-                    new CatletSpecs.GetBySpecificationId(Data.Data.SpecificationId.Value));
+                    new CatletSpecs.GetBySpecificationIdAndEnvironment(
+                        Data.Data.SpecificationId.Value, Data.Data.Config!.Environment!));
                 if (deployedCatlet is not null)
                 {
                     await Fail(
-                        $"The specification {Data.Data.SpecificationId} is already deployed as catlet {deployedCatlet.Id}.");
+                        $"The specification {Data.Data.SpecificationId} is already deployed as catlet "
+                        + $"{deployedCatlet.Id} in the environment '{Data.Data.Config!.Environment}'.");
                     return;
                 }
             }
@@ -307,6 +333,7 @@ internal class DeployCatletSaga(
         await StartNewTask(new UpdateCatletNetworksCommand
         {
             CatletId = Data.Data.CatletId,
+            SiteId = Data.Data.SiteId,
             CatletMetadataId = Data.Data.MetadataId,
             Config = CatletSystemDataFeeding.FeedSystemVariables(
                 feedConfig, Data.Data.CatletId, Data.Data.VmId),

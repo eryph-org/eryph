@@ -15,6 +15,8 @@ public sealed class SingleHostComponentRegistry : IComponentRegistry
     public Seq<HostAgentComponent> GetHostAgents() =>
         Seq1(new HostAgentComponent(
             Environment.MachineName,
+            // The single host is in the default site, like the hardcoded machine name above.
+            EryphConstants.DefaultSiteId,
             EryphConstants.Networking.LocalChassisName,
             1));
 }

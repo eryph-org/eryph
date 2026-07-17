@@ -220,6 +220,7 @@ public class VmHostAgentModule : WebModule
             // and dev), so nothing is advertised then.
             BuildAdvertisedEndpoints(),
             typeof(StorageConfigRealizer),
+            typeof(EnvironmentsConfigRealizer),
             typeof(NetworkProvidersConfigRealizer),
             typeof(EndpointsConfigRealizer));
 
@@ -278,6 +279,10 @@ public class VmHostAgentModule : WebModule
         // Holds the controller-distributed placement vocabulary applied by
         // StorageConfigRealizer and enforced by the provisioning handlers.
         container.RegisterSingleton<IStorageConfigProvider, StorageConfigProvider>();
+
+        // Holds the controller-distributed environment vocabulary applied by
+        // EnvironmentsConfigRealizer and enforced by the provisioning handlers.
+        container.RegisterSingleton<IEnvironmentsConfigProvider, EnvironmentsConfigProvider>();
 
         // Holds the controller-distributed deployment endpoints applied by
         // EndpointsConfigRealizer (the identity issuer etc.). Registered as the

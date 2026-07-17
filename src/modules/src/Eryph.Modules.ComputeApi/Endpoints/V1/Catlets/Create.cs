@@ -76,15 +76,20 @@ public class Create(
         var catletName = string.IsNullOrWhiteSpace(config.Name)
             ? EryphConstants.DefaultCatletName
             : config.Name;
+        var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
+            EnvironmentName.New,
+            () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName));
         var existingCatlet = await repository.GetBySpecAsync(
-            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value),
+            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value, environmentName.Value),
             cancellationToken);
 
         if (existingCatlet != null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 detail:
-                $"A catlet with the name '{catletName}' already exists in the project '{projectName.Value}'. Catlet names must be unique within a project.");
+                $"A catlet with the name '{catletName}' already exists in the environment "
+                + $"'{environmentName}' of the project '{projectName.Value}'. Catlet names must be "
+                + "unique within a project and environment.");
 
         return await base.HandleAsync(request, cancellationToken);
     }

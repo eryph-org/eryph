@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -23,6 +23,8 @@ internal sealed class SetConfigDomainCommandHandler(
     IBus bus,
     IAuthoredConfigStore store,
     INetworkSyncService networkSyncService,
+    IEnvironmentsConfigChangeValidator environmentsConfigChangeValidator,
+    IEnvironmentsConfigRealizer environmentsConfigRealizer,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<SetConfigDomainCommand>>
 {
@@ -65,8 +67,38 @@ internal sealed class SetConfigDomainCommandHandler(
             return;
         }
 
+        // The payload is well-formed, but changing an environment's site is only valid while nothing
+        // is in it: the site of an existing resource is pinned and must not change under it. The same
+        // holds for removing a site.
+        if (command.Domain == ConfigDomain.Environments)
+        {
+            var changeErrors = await environmentsConfigChangeValidator.ValidateChanges(
+                canonical, CancellationToken.None);
+            if (changeErrors.Count > 0)
+            {
+                await messaging.FailTask(message, string.Join(" ", changeErrors));
+                return;
+            }
+        }
+
         await store.AddVersionAsync(
             command.Domain, scope, canonical, command.Author, CancellationToken.None);
+
+        // Realize the authored sites in the same unit of work as the version which declares them, so
+        // an environment can never reference a site that was accepted but never created.
+        //
+        // A failure here must NOT be caught and reported as a failed task: this handler returning
+        // normally is what commits the unit of work, so the version would be stored while its sites
+        // were not. Unlike the network providers below there is no later sync which realizes sites,
+        // so that version would stay unrealized and every deployment into its environments would
+        // fail to resolve a site. Letting it escape rolls the version back with it. The only way to
+        // get here is a deployment pinning a resource to a removed site between the validation above
+        // and this line; the retry re-validates, now sees that resource, and reports it properly.
+        if (command.Domain == ConfigDomain.Environments)
+        {
+            await environmentsConfigRealizer.RealizeEnvironments(
+                EnvironmentsConfigYamlSerializer.Deserialize(canonical), CancellationToken.None);
+        }
 
         // NetworkProviders drives the controller's OWN network realization, so re-realize now against the
         // just-authored value (SyncNetworks reads it through the authored-aware provider manager). That

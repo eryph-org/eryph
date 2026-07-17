@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Messages.Components;
 using Eryph.ModuleCore.Components;
 using Eryph.ModuleCore.Configuration;
@@ -39,6 +40,9 @@ internal sealed class ComponentRegistryService(
                 LastHeartbeat = DateTimeOffset.UtcNow,
                 AdvertisedEndpoints = new Dictionary<string, string>(
                     command.AdvertisedEndpoints ?? new Dictionary<string, string>()),
+                // Only on create: the site is operator-owned like Environment and Tags, so a
+                // re-registration must not reset a component the operator moved to another site.
+                SiteId = EryphConstants.DefaultSiteId,
             };
             registration.SetAppliedVersions(command.KnownConfigVersions);
             await repository.AddAsync(registration, cancellationToken);
@@ -157,6 +161,7 @@ internal sealed class ComponentRegistryService(
     public async Task<bool> SetMetadataAsync(
         Guid componentId,
         string? environment,
+        Guid? siteId,
         IReadOnlyDictionary<string, string?>? tags,
         CancellationToken cancellationToken)
     {
@@ -173,6 +178,11 @@ internal sealed class ComponentRegistryService(
         registration.Environment = string.IsNullOrWhiteSpace(environment)
             ? null
             : environment.Trim().ToLowerInvariant();
+
+        // Unlike the environment, the site is not replaced wholesale: it cannot be cleared, so an
+        // omitted value means "leave it where it is" rather than "it is nowhere".
+        if (siteId.HasValue)
+            registration.SiteId = siteId.Value;
 
         var normalizedTags = new Dictionary<string, string>();
         foreach (var tag in tags ?? new Dictionary<string, string?>())

@@ -99,6 +99,7 @@ public class ProjectNetworkPlanBuilderTests(
     {
         options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
         options.Container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
+        options.Container.Register<ISiteResolver, FakeSiteResolver>(Lifestyle.Scoped);
         options.Container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
 
         options.Container.Register<ProjectNetworkPlanBuilder>(Lifestyle.Scoped);

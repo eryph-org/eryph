@@ -1,4 +1,5 @@
-﻿using Eryph.Modules.Controller.DataServices;
+﻿using Eryph.Modules.Controller.Components;
+using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Networks;
 using SimpleInjector;
 
@@ -20,5 +21,12 @@ public static class ContainerExtensions
         container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
         container.Register<IDefaultNetworkConfigRealizer, DefaultNetworkConfigRealizer>(Lifestyle.Scoped);
         container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
+
+        // Realizing a network resolves the site of its environment, and seeding realizes the catalog
+        // that answers with. Both read the state database only — never the authored configuration —
+        // so they belong to every container which gets the services above, including eryph-zero's
+        // minimal warmup host. They are internal, so a host cannot register them itself.
+        container.Register<ISiteResolver, SiteResolver>(Lifestyle.Scoped);
+        container.Register<IEnvironmentsConfigRealizer, EnvironmentsConfigRealizer>(Lifestyle.Scoped);
     }
 }

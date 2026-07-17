@@ -23,6 +23,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
         await SeedDefaultTenantAndProject();
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = DiskId,
             Name = "test-disk",
             ProjectId = EryphConstants.DefaultProjectId,
@@ -55,6 +56,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
             await stateStore.For<Catlet>().AddAsync(
                 new Catlet
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     Name = "test-catlet",
                     ProjectId = EryphConstants.DefaultProjectId,
                     Environment = EryphConstants.DefaultEnvironmentName,
@@ -91,6 +93,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
             await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     Id = Guid.NewGuid(),
                     Name = "child-disk",
                     ProjectId = EryphConstants.DefaultProjectId,
@@ -122,6 +125,7 @@ public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
             await stateStore.For<VirtualDisk>().AddAsync(
                 new VirtualDisk
                 {
+                    SiteId = EryphConstants.DefaultSiteId,
                     Id = genePoolDiskId,
                     Name = "sda",
                     ProjectId = EryphConstants.DefaultProjectId,

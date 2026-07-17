@@ -67,6 +67,7 @@ internal class Program
                                 { "changeTracking:trackChanges", bool.TrueString },
                                 { "changeTracking:seedDatabase", bool.TrueString },
                                 { "changeTracking:networksConfigPath", AppConfigPaths.GetNetworksConfigPath() },
+                                { "changeTracking:authoredConfigsPath", AppConfigPaths.GetAuthoredConfigsPath() },
                                 { "changeTracking:projectsConfigPath", AppConfigPaths.GetProjectsConfigPath() },
                                 {
                                     "changeTracking:projectNetworksConfigPath",

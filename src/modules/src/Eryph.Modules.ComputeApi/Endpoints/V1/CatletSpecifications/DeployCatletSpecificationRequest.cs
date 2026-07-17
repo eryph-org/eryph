@@ -15,6 +15,12 @@ public class DeployCatletSpecificationRequestBody
 {
     public string? Architecture { get; set; }
 
+    /// <summary>
+    /// The environment to deploy into; the default environment when omitted. A specification is
+    /// project level and can be deployed into several environments, at most once into each.
+    /// </summary>
+    public string? Environment { get; set; }
+
     public bool? Redeploy { get; set; }
 
     public required IReadOnlyDictionary<string, string> Variables { get; set; }

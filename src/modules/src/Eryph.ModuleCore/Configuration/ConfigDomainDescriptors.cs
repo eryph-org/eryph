@@ -32,7 +32,53 @@ public static class ConfigDomainDescriptors
             [ConfigDomain.StorageConfig] = CanonicalizeStorageConfig,
 
             [ConfigDomain.NetworkProviders] = CanonicalizeNetworkProviders,
+
+            [ConfigDomain.Environments] = CanonicalizeEnvironments,
         };
+
+    // As with the storage config, names are lower-cased to their canonical form (environment and
+    // site resolution is case-insensitive) so an authored 'Prod' cannot diverge from a catlet's
+    // 'prod'. An omitted site is filled with the default site here, at the authoring boundary, so
+    // the stored payload always names one and no consumer has to guess.
+    private static string CanonicalizeEnvironments(string payload)
+    {
+        var config = EnvironmentsConfigYamlSerializer.Deserialize(payload);
+        NormalizeEnvironmentNames(config);
+
+        var errors = EnvironmentsConfigValidation.Validate(config);
+        if (errors.Count > 0)
+            throw InvalidConfigExceptionFactory.Create(new Exception(
+                "The environment configuration is invalid: " + string.Join("; ", errors)));
+
+        return EnvironmentsConfigYamlSerializer.Serialize(config);
+    }
+
+    private static void NormalizeEnvironmentNames(EnvironmentsConfig config)
+    {
+        config.Sites ??= [];
+        config.Environments ??= [];
+
+        foreach (var site in config.Sites)
+        {
+            if (site?.Name is not null)
+                site.Name = site.Name.Trim().ToLowerInvariant();
+        }
+
+        foreach (var environment in config.Environments)
+        {
+            if (environment is null)
+                continue;
+
+            // A null list item or `name: ~` leaves Name null; leave it for Validate to reject with a
+            // proper "must not be empty" message rather than NRE-ing here on Trim().
+            if (environment.Name is not null)
+                environment.Name = environment.Name.Trim().ToLowerInvariant();
+
+            environment.Site = string.IsNullOrWhiteSpace(environment.Site)
+                ? EryphConstants.DefaultSiteName
+                : environment.Site.Trim().ToLowerInvariant();
+        }
+    }
 
     // The serializer only checks shape; the agent enforces the real rules on the merged result (name
     // grammar, fully-qualified paths, no duplicates). Run those here so an invalid payload is rejected
@@ -106,7 +152,9 @@ public static class ConfigDomainDescriptors
     /// Whether an authorable domain can be authored at a non-default scope (env/tag/host). StorageConfig
     /// is per-host/environment (paths differ per machine), so it is scoped; NetworkProviders is the
     /// single global network topology the controller realizes once, so only the default scope is
-    /// meaningful — its source and the controller consumers read the default-scope value only.
+    /// meaningful — its source and the controller consumers read the default-scope value only. The same
+    /// holds for Environments: an environment is defined once for the whole deployment, and scoping it
+    /// would let a component disagree about which environments exist or where they live.
     /// </summary>
     public static bool SupportsScopedAuthoring(ConfigDomain domain) => domain == ConfigDomain.StorageConfig;
 

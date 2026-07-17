@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 
@@ -14,6 +15,13 @@ public class DeployCatletSpecificationSagaData
     public Architecture? Architecture { get; set; }
 
     public Guid ProjectId { get; set; }
+
+    /// <summary>The environment this deployment targets. It belongs to the deployment, not to the
+    /// specification, which can be deployed into several environments.</summary>
+    public EnvironmentName? Environment { get; set; }
+
+    /// <summary>The site realizing the deployment's environment, resolved when the catlet was placed.</summary>
+    public Guid SiteId { get; set; }
 
     public Guid SpecificationId { get; set; }
 

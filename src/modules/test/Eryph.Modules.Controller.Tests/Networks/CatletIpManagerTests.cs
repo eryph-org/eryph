@@ -254,6 +254,7 @@ public sealed class CatletIpManagerTests(
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.Parse(DefaultNetworkId),
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = EryphConstants.DefaultNetworkName,

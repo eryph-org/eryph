@@ -24,6 +24,7 @@ internal class CreateCatletSaga(
     IStorageIdentifierGenerator storageIdentifierGenerator,
     IStateStore stateStore,
     IPlacementCalculator placementCalculator,
+    ISiteResolver siteResolver,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<BuildCatletSpecificationCommand>>,
@@ -83,6 +84,7 @@ internal class CreateCatletSaga(
             await StartNewTask(new DeployCatletCommand
             {
                 ProjectId = Data.Data.ProjectId,
+                SiteId = Data.Data.SiteId,
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
                 Config = Data.Data.BuiltConfig,
@@ -101,7 +103,23 @@ internal class CreateCatletSaga(
 
         var config = message.Config ?? throw new InvalidOperationException("Config from CreateCatletCommand must not be null.");
 
-        var placement = placementCalculator.CalculateVMPlacement(config, Data.Data.Architecture);
+        // Resolve the site once, here: it is both the site placement must stay within and the site the
+        // catlet is pinned to. Re-resolving it later would be a live lookup for a resource that already
+        // exists, which must never decide its site.
+        var environment = Optional(config.Environment).Filter(notEmpty).Match(
+            EnvironmentName.New,
+            () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName));
+        var site = await siteResolver.ResolveSite(environment);
+        if (site.IsLeft)
+        {
+            await Fail(site.LeftToSeq().Head.Message);
+            return;
+        }
+
+        Data.Data.SiteId = site.RightToSeq().Head;
+
+        var placement = placementCalculator.CalculateVMPlacement(
+            config, Data.Data.SiteId, Data.Data.Architecture);
         if (placement.IsLeft)
         {
             await Fail(placement.LeftToSeq().Head.Message);

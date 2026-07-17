@@ -37,6 +37,7 @@ public abstract class VirtualDiskSpecsTests(
 
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = GeneDiskId,
             Name = "sda",
             DiskIdentifier = GeneDiskIdentifier,

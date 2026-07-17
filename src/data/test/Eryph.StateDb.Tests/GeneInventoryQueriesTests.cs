@@ -144,6 +144,7 @@ public abstract class GeneInventoryQueriesTests(
 
         await stateStore.For<Catlet>().AddAsync(new Catlet
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = new Guid(CatletAnyId),
             Name = "test-catlet-any",
             MetadataId = new Guid(CatletMetadataAnyId),
@@ -170,6 +171,7 @@ public abstract class GeneInventoryQueriesTests(
 
         await stateStore.For<Catlet>().AddAsync(new Catlet
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = new Guid(CatletHyperVId),
             Name = "test-catlet-hyperv",
             MetadataId = new Guid(CatletMetadataHyperVId),
@@ -181,6 +183,7 @@ public abstract class GeneInventoryQueriesTests(
 
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = new Guid(GeneDiskAnyId),
             Name = "sda",
             LastSeenAgent = AgentName,
@@ -194,6 +197,7 @@ public abstract class GeneInventoryQueriesTests(
 
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = new Guid(DiskAnyId),
             Name = "sda",
             LastSeenAgent = AgentName,
@@ -205,6 +209,7 @@ public abstract class GeneInventoryQueriesTests(
 
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = new Guid(GeneDiskHyperVId),
             Name = "sda",
             LastSeenAgent = AgentName,
@@ -218,6 +223,7 @@ public abstract class GeneInventoryQueriesTests(
 
         await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = new Guid(DiskHyperVId),
             Name = "sda",
             LastSeenAgent = AgentName,

@@ -46,6 +46,7 @@ public abstract class CatletTestBase : InMemoryStateDbTestBase
 
         await stateStore.For<Catlet>().AddAsync(new Catlet
         {
+            SiteId = EryphConstants.DefaultSiteId,
             Id = CatletId,
             ProjectId = EryphConstants.DefaultProjectId,
             MetadataId = metadata.Id,

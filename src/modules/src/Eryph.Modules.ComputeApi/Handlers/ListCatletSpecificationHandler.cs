@@ -13,6 +13,7 @@ using Eryph.StateDb.Specifications;
 using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
 using CatletSpecification = Eryph.Modules.ComputeApi.Model.V1.CatletSpecification;
+using CatletSpecificationDeployment = Eryph.Modules.ComputeApi.Model.V1.CatletSpecificationDeployment;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
@@ -37,18 +38,33 @@ internal class ListCatletSpecificationHandler(
             cancellationToken);
         var authContext = userRightsProvider.GetAuthContext();
 
-        var mappedResults = await results.Map(async result =>
+        // The deployments of every listed specification in one query, then grouped in memory:
+        // querying per specification would be a round-trip each, one after the other.
+        var specificationIds = results.Select(r => r.Id).ToList();
+        var catlets = specificationIds.Count > 0
+            ? await catletRepository.ListAsync(
+                new CatletSpecs.ListBySpecificationIds(specificationIds), cancellationToken)
+            : [];
+        var deploymentsBySpecification = catlets
+            .Where(c => c.SpecificationId.HasValue)
+            .ToLookup(c => c.SpecificationId!.Value);
+
+        var mappedResults = results.Select(result =>
         {
             var mappedResult = mapper.Map<CatletSpecification>(result, o => o.SetAuthContext(authContext));
-            var catlet = await catletRepository.GetBySpecAsync(
-                new CatletSpecs.GetBySpecificationId(result.Id),
-                cancellationToken);
 
-            mappedResult.CatletId = mapper.Map<string?>(catlet?.Id);
+            mappedResult.Deployments = deploymentsBySpecification[result.Id]
+                .Select(c => new CatletSpecificationDeployment
+                {
+                    Environment = c.Environment,
+                    CatletId = mapper.Map<string>(c.Id),
+                })
+                .OrderBy(d => d.Environment, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             return mappedResult;
-        }).SequenceSerial();
+        }).ToList();
 
-        return new JsonResult(new ListResponse<CatletSpecification> { Value = mappedResults.ToList() });
+        return new JsonResult(new ListResponse<CatletSpecification> { Value = mappedResults });
     }
 }

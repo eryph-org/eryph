@@ -1,4 +1,5 @@
-﻿using Eryph.Modules.Controller.ChangeTracking.Catlets;
+﻿using Eryph.Modules.Controller.ChangeTracking.AuthoredConfigs;
+using Eryph.Modules.Controller.ChangeTracking.Catlets;
 using Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 using Eryph.Modules.Controller.ChangeTracking.Projects;
 using Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
@@ -22,6 +23,7 @@ public static class ChangeTrackingContainerExtensions
         options.AddHostedService<ChangeTrackingBackgroundService<CatletMetadataChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<CatletSpecificationChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<CatletSpecificationVersionChange>>();
+        options.AddHostedService<ChangeTrackingBackgroundService<AuthoredConfigChange>>();
     }
 
     private static void RegisterChangeTracking(this Container container)

@@ -10,6 +10,13 @@ public class DeployCatletCommand : IHasCorrelationId, ICommandWithName
 {
     public Guid ProjectId { get; set; }
 
+    /// <summary>
+    /// The site realizing the catlet's environment, resolved by the calling saga when it placed the
+    /// catlet. It is pinned on the catlet as-is: the site of a resource must never be re-derived from
+    /// its environment, or re-authoring the environment configuration would relocate it.
+    /// </summary>
+    public Guid SiteId { get; set; }
+
     public string? AgentName { get; set; }
 
     public Architecture? Architecture { get; set; }

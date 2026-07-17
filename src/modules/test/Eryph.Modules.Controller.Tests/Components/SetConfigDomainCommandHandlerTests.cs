@@ -1,4 +1,4 @@
-using Dbosoft.Rebus.Operations;
+﻿using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Components;
@@ -27,6 +27,8 @@ public class SetConfigDomainCommandHandlerTests
     private readonly Mock<IBus> _bus = new() { DefaultValue = DefaultValue.Mock };
     private readonly FakeStore _store = new();
     private readonly Mock<INetworkSyncService> _networkSync = new();
+    private readonly FakeEnvironmentsConfigChangeValidator _environmentsValidator = new();
+    private readonly FakeEnvironmentsConfigRealizer _sitesRealizer = new();
 
     public SetConfigDomainCommandHandlerTests() =>
         _networkSync.Setup(s => s.SyncNetworks(
@@ -34,7 +36,8 @@ public class SetConfigDomainCommandHandlerTests
             .Returns(RightAsync<Error, Unit>(unit));
 
     private SetConfigDomainCommandHandler CreateHandler() =>
-        new(_bus.Object, _store, _networkSync.Object, _messaging.Object);
+        new(_bus.Object, _store, _networkSync.Object, _environmentsValidator, _sitesRealizer,
+            _messaging.Object);
 
     private static OperationTask<SetConfigDomainCommand> Op(ConfigDomain domain, string? payload) =>
         new(new SetConfigDomainCommand { Domain = domain, Payload = payload, Author = "alice" },
@@ -73,6 +76,42 @@ public class SetConfigDomainCommandHandlerTests
         _store.Added.Should().BeEmpty();
         VerifyDistributed(Times.Never());
         VerifyCompleted(Times.Never());
+    }
+
+    [Fact]
+    public async Task Environments_change_which_would_strand_resources_is_not_stored_or_distributed()
+    {
+        _environmentsValidator.Errors.Add("the environment 'staging' still has resources");
+
+        await CreateHandler().Handle(Op(ConfigDomain.Environments,
+            """
+            sites:
+            - name: munich
+            environments:
+            - name: staging
+              site: munich
+            """));
+
+        _store.Added.Should().BeEmpty();
+        VerifyDistributed(Times.Never());
+        VerifyCompleted(Times.Never());
+    }
+
+    [Fact]
+    public async Task Valid_environments_set_stores_a_version_distributes_and_completes()
+    {
+        await CreateHandler().Handle(Op(ConfigDomain.Environments,
+            """
+            sites:
+            - name: munich
+            environments:
+            - name: staging
+              site: munich
+            """));
+
+        _store.Added.Should().ContainSingle();
+        _store.Added[0].domain.Should().Be(ConfigDomain.Environments);
+        VerifyCompleted(Times.Once());
     }
 
     [Theory]
@@ -151,6 +190,48 @@ public class SetConfigDomainCommandHandlerTests
 
         _store.Added.Should().ContainSingle(); // stored — will realize on the next sync
         VerifyCompleted(Times.Never());        // but the operation is reported failed
+    }
+
+    [Fact]
+    public async Task Site_realization_failure_is_not_swallowed_into_a_failed_task()
+    {
+        // Returning normally is what commits the unit of work, so reporting this as a failed task
+        // would store the version while its sites were not realized. Nothing realizes them later —
+        // unlike the network providers, there is no sync which picks them up — so the exception has
+        // to escape and roll the version back with it.
+        _sitesRealizer.Failure = new InvalidOperationException(
+            "The site 'berlin' cannot be removed because it still has resources.");
+
+        var act = () => CreateHandler().Handle(
+            Op(ConfigDomain.Environments, "environments: []"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        VerifyCompleted(Times.Never());
+    }
+
+    private sealed class FakeEnvironmentsConfigRealizer : IEnvironmentsConfigRealizer
+    {
+        public List<string> RealizedSites { get; } = [];
+
+        public Exception? Failure { get; set; }
+
+        public Task RealizeEnvironments(EnvironmentsConfig config, CancellationToken cancellationToken)
+        {
+            if (Failure is not null)
+                throw Failure;
+
+            RealizedSites.AddRange((config.Sites ?? []).Select(s => s.Name));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeEnvironmentsConfigChangeValidator : IEnvironmentsConfigChangeValidator
+    {
+        public List<string> Errors { get; } = [];
+
+        public Task<IReadOnlyList<string>> ValidateChanges(
+            string canonicalPayload, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>(Errors);
     }
 
     private sealed class FakeStore : IAuthoredConfigStore

@@ -19,11 +19,23 @@ public enum ConfigDomain
 {
     /// <summary>
     /// Controller-owned placement settings the agents need to participate in
-    /// placement — the datastore and environment name catalog (the cluster
-    /// vocabulary). Paths stay agent-local; capability matching and placement
-    /// decisions are runtime, not distributed config.
+    /// placement — the datastore name catalog (the cluster vocabulary) and the
+    /// storage each environment maps to. Paths stay agent-local; capability
+    /// matching and placement decisions are runtime, not distributed config.
+    /// The environments themselves are defined by <see cref="Environments"/>.
     /// </summary>
     StorageConfig,
+
+    /// <summary>
+    /// Controller-owned environment catalog: the environment names (the cluster
+    /// vocabulary) and the site which realizes each of them. Distributed to the
+    /// agents so they can reject placement on an environment the controller does
+    /// not know, and read by the controller to resolve the site a new resource is
+    /// pinned to. Which storage an environment maps to is separate
+    /// (<see cref="StorageConfig"/>), because paths are agent-local while the
+    /// definition is global.
+    /// </summary>
+    Environments,
 
     /// <summary>
     /// Controller-owned network-provider configuration (the provider/bridge/subnet/

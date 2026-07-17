@@ -503,7 +503,8 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await SeedData(stateStore);
 
 
-        var configValidator = new NetworkConfigValidator(stateStore, NullLogger.Instance);
+        var configValidator = new NetworkConfigValidator(
+            stateStore, new FakeSiteResolver(), NullLogger.Instance);
         var res = await configValidator.ValidateChanges(_projectId, projectConfig, _providers).ToListAsync();
         foreach (var message in res) _output.WriteLine(message);
 
@@ -512,7 +513,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
 
     private string[] RunConfigValidator(ProjectNetworksConfig projectConfig)
     {
-        var configValidator = new NetworkConfigValidator(null!, NullLogger.Instance);
+        var configValidator = new NetworkConfigValidator(null!, null!, NullLogger.Instance);
         var normalized = configValidator.NormalizeConfig(projectConfig);
         var res = configValidator.ValidateConfig(normalized, _providers).ToArray();
         foreach (var message in res) _output.WriteLine(message);
@@ -523,6 +524,12 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
     private async Task SeedData(IStateStore stateStore)
     {
         var networkRepo = stateStore.For<VirtualNetwork>();
+
+        await stateStore.For<Site>().AddAsync(new Site
+        {
+            Id = EryphConstants.DefaultSiteId,
+            Name = EryphConstants.DefaultSiteName,
+        });
 
         var project = new Project
         {
@@ -542,6 +549,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await networkRepo.AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.NewGuid(),
                 Name = "unused_network",
                 ProjectId = _projectId,
@@ -554,6 +562,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await networkRepo.AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.NewGuid(),
                 Name = "used_network",
                 ProjectId = _projectId,
@@ -585,6 +594,7 @@ public sealed class NetworkConfigValidatorTests : IDisposable, IAsyncDisposable
         await networkRepo.AddAsync(
             new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = Guid.NewGuid(),
                 Name = "pool_network",
                 ProjectId = _projectId,

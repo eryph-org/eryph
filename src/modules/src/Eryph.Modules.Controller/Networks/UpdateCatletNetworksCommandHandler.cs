@@ -59,6 +59,38 @@ public class UpdateCatletNetworksCommandHandler(
             .SequenceSerial()
         select settings;
 
+    /// <summary>
+    /// The network in the default environment, when the catlet's own environment does not declare
+    /// one — but only when both are realized by the same site.
+    /// </summary>
+    /// <remarks>
+    /// This is the point where a catlet in an environment at another site would silently attach to a
+    /// network that is not reachable from where it runs. The project's network configuration cannot
+    /// catch it: the catlet's environment never appears there, which is precisely why we are falling
+    /// back.
+    /// The catlet's own pinned site is compared, not the site its environment currently resolves to:
+    /// where the catlet lives was decided when it was placed, and re-deriving it from the
+    /// environment would answer with where a new catlet would go instead.
+    /// </remarks>
+    private EitherAsync<Error, VirtualNetwork> FallBackToDefaultEnvironmentNetwork(
+        Guid projectId,
+        Guid catletSiteId,
+        EryphNetworkName networkName,
+        EnvironmentName environmentName) =>
+        from defaultNetwork in stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
+                new VirtualNetworkSpecs.GetByName(
+                    projectId, networkName.Value, EryphConstants.DefaultEnvironmentName))
+            .Bind(o => o.ToEitherAsync(Error.New(
+                $"Network '{networkName}' not found in environment '{environmentName}' and default environment.")))
+        from _ in guard(
+                catletSiteId == defaultNetwork.SiteId,
+                Error.New(
+                    $"The environment '{environmentName}' is realized by a different site than the "
+                    + $"network '{networkName}' of the default environment, so the catlet cannot use "
+                    + $"it. Declare a network '{networkName}' for the environment '{environmentName}'."))
+            .ToEitherAsync()
+        select defaultNetwork;
+
     private EitherAsync<Error, MachineNetworkSettings> UpdateNetwork(
         Guid catletMetadataId,
         UpdateCatletNetworksCommand command,
@@ -79,12 +111,8 @@ public class UpdateCatletNetworksCommandHandler(
         // we fall back to the network in the default environment.
         from validNetwork in network.IsNone &&
                              environmentName != EnvironmentName.New(EryphConstants.DefaultEnvironmentName)
-            ? stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
-                    new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value,
-                        EryphConstants.DefaultEnvironmentName))
-                .Bind(o => o.ToEitherAsync(
-                    Error.New(
-                        $"Network '{networkName}' not found in environment '{environmentName}' and default environment.")))
+            ? FallBackToDefaultEnvironmentNetwork(
+                command.ProjectId, command.SiteId, networkName, environmentName)
             : network.ToEitherAsync(Error.New($"Network '{networkName}' not found in environment '{environmentName}'."))
         from networkProviders in providerManager.GetCurrentConfiguration()
         from networkProvider in networkProviders.NetworkProviders

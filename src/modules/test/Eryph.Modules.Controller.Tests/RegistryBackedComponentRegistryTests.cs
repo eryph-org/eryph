@@ -59,6 +59,18 @@ public class RegistryBackedComponentRegistryTests
         agent.ChassisPriority.Should().Be(1);
     }
 
+    [Fact]
+    public void ToHostAgent_MapsTheSiteTheHostIsLocatedIn()
+    {
+        var siteId = Guid.NewGuid();
+        var registration = Registration(ComponentType.VMHostAgent, "eryph.vmhostagent.WASD12");
+        registration.SiteId = siteId;
+
+        var result = RegistryBackedComponentRegistry.ToHostAgent(registration);
+
+        result.IfNoneUnsafe(() => null!).SiteId.Should().Be(siteId);
+    }
+
     [Theory]
     [InlineData("eryph.genepool.WASD12")] // a different component's queue shape
     [InlineData("eryph.vmhostagent")] // no suffix
@@ -86,7 +98,7 @@ public class RegistryBackedComponentRegistryTests
     private sealed class StubRegistry(IReadOnlyList<ComponentRegistration> active) : IComponentRegistryService
     {
         public Task<bool> SetMetadataAsync(
-            Guid componentId, string? environment, IReadOnlyDictionary<string, string?>? tags,
+            Guid componentId, string? environment, Guid? siteId, IReadOnlyDictionary<string, string?>? tags,
             CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<ComponentRegistration> UpsertAsync(RegisterComponentCommand command,

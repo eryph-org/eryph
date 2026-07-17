@@ -60,8 +60,9 @@ public class Delete(
         if (request.Body.DeleteCatlet.GetValueOrDefault())
             return await base.HandleAsync(request, cancellationToken);
 
+        // Any environment: the specification cannot be deleted while it is deployed anywhere.
         var catletExists = await catletRepository.AnyAsync(
-            new CatletSpecs.GetBySpecificationId(catletSpecification.Id),
+            new CatletSpecs.ListBySpecificationId(catletSpecification.Id),
             cancellationToken);
         if (catletExists)
             return Problem(

@@ -62,6 +62,7 @@ public abstract class StateDbDeleteTests(
 
             await stateStore.For<VirtualNetwork>().AddAsync(new VirtualNetwork
             {
+                SiteId = EryphConstants.DefaultSiteId,
                 Id = VirtualNetworkId,
                 Name = "virtual-test-network",
                 Environment = "test-environment",

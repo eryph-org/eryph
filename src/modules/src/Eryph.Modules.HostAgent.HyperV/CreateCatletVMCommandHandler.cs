@@ -25,7 +25,8 @@ internal class CreateCatletVMCommandHandler(
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
-    IStorageConfigProvider storageConfigProvider)
+    IStorageConfigProvider storageConfigProvider,
+    IEnvironmentsConfigProvider environmentsConfigProvider)
     :
         CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>(engine, messaging, log)
 {
@@ -46,13 +47,12 @@ internal class CreateCatletVMCommandHandler(
             Timestamp = timestamp,
         };
 
-    // The controller owns the datastore/environment vocabulary; reject placement on a
+    // The controller owns the datastore and environment vocabulary; reject placement on a
     // name it does not distribute (the agent's local path mapping is checked afterwards
     // by VMStorageSettings.FromCatletConfig). The default datastore/environment is always
     // allowed.
     private EitherAsync<Error, Unit> ValidatePlacement(CatletConfig config)
     {
-        var storageConfig = storageConfigProvider.Current;
         var dataStore = string.IsNullOrWhiteSpace(config.Store)
             ? EryphConstants.DefaultDataStoreName
             : config.Store;
@@ -60,13 +60,13 @@ internal class CreateCatletVMCommandHandler(
             ? EryphConstants.DefaultEnvironmentName
             : config.Environment;
 
-        if (!StorageConfigValidation.IsDataStoreAllowed(storageConfig, dataStore))
+        if (!StorageConfigValidation.IsDataStoreAllowed(storageConfigProvider.Current, dataStore))
             return LeftAsync<Error, Unit>(Error.New(
                 $"The data store '{dataStore}' is not part of the controller storage configuration."));
 
-        if (!StorageConfigValidation.IsEnvironmentAllowed(storageConfig, environment))
+        if (!EnvironmentsConfigValidation.IsEnvironmentAllowed(environmentsConfigProvider.Current, environment))
             return LeftAsync<Error, Unit>(Error.New(
-                $"The environment '{environment}' is not part of the controller storage configuration."));
+                $"The environment '{environment}' is not part of the controller environment configuration."));
 
         return RightAsync<Error, Unit>(unit);
     }

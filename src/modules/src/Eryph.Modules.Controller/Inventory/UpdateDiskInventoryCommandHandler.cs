@@ -21,6 +21,7 @@ internal class UpdateDiskInventoryCommandHandler(
     ICatletDataService vmDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
+    ISiteResolver siteResolver,
     ILogger logger)
     : UpdateInventoryCommandHandlerBase(
             lockManager,
@@ -29,6 +30,7 @@ internal class UpdateDiskInventoryCommandHandler(
             vmDataService,
             stateStore,
             messageContext,
+            siteResolver,
             logger),
         IHandleMessages<UpdateDiskInventoryCommand>
 {
