@@ -34,6 +34,7 @@ public class OvsDriverProviderTests
     private readonly Mock<FileIO> _fileMock = new();
     private readonly Mock<IHostNetworkCommands<RT>> _hostNetworkCommandsMock = new();
     private readonly Mock<IPowershellEngine> _powershellEngineMock = new();
+    private readonly Mock<ProcessManagerIO> _processManagerIOMock = new();
     private readonly Mock<ProcessRunnerIO> _processRunnerIOMock = new();
     private readonly Mock<RegistryIO> _registryIOMock = new();
     private readonly RT _runtime;
@@ -48,6 +49,7 @@ public class OvsDriverProviderTests
             _hostNetworkCommandsMock.Object,
             new NullLoggerFactory(),
             _powershellEngineMock.Object,
+            _processManagerIOMock.Object,
             _processRunnerIOMock.Object,
             _registryIOMock.Object));
     }
@@ -302,10 +304,8 @@ public class OvsDriverProviderTests
         result.Should().BeSuccess();
         _processRunnerIOMock.Verify(m => m.RunProcess(
             AppCtlPath, $"--timeout=5 -t \"{ctlFile}\" exit", "", true), Times.Once);
-        _processRunnerIOMock.Verify(m => m.RunProcess(
-            "taskkill.exe", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
-        _processRunnerIOMock.Verify(m => m.RunProcess(
-            "tasklist.exe", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        // The daemon removed its pidfile on exit, so no process is force-terminated.
+        _processManagerIOMock.Verify(m => m.StopProcess(It.IsAny<int>(), It.IsAny<TimeSpan>()), Times.Never);
     }
 
     [Fact]
@@ -320,19 +320,13 @@ public class OvsDriverProviderTests
         _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
             .ReturnsAsync("1234");
 
-        _processRunnerIOMock.Setup(m => m.RunProcess(
-                "tasklist.exe", "/FI \"PID eq 1234\" /FO CSV /NH", "", true))
-            .ReturnsAsync(new ProcessRunnerResult(
-                0, "\"ovsdb-server.exe\",\"1234\",\"Services\",\"0\",\"12,345 K\""));
-        _processRunnerIOMock.Setup(m => m.RunProcess(
-                "taskkill.exe", "/PID 1234 /F /T", "", true))
-            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+        _processManagerIOMock.Setup(m => m.GetProcessName(1234)).Returns(Some("ovsdb-server"));
+        _processManagerIOMock.Setup(m => m.StopProcess(1234, It.IsAny<TimeSpan>())).Returns(true);
 
         var result = await stopRunningOvsDaemons(OvnRunDir, OvnDataDir).Run(_runtime);
 
         result.Should().BeSuccess();
-        _processRunnerIOMock.Verify(m => m.RunProcess(
-            "taskkill.exe", "/PID 1234 /F /T", "", true), Times.Once);
+        _processManagerIOMock.Verify(m => m.StopProcess(1234, It.IsAny<TimeSpan>()), Times.Once);
         // No control socket, so no graceful exit is attempted.
         _processRunnerIOMock.Verify(m => m.RunProcess(
             AppCtlPath, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -347,19 +341,13 @@ public class OvsDriverProviderTests
         _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
             .ReturnsAsync("1234");
 
-        _processRunnerIOMock.Setup(m => m.RunProcess(
-                "tasklist.exe", "/FI \"PID eq 1234\" /FO CSV /NH", "", true))
-            .ReturnsAsync(new ProcessRunnerResult(
-                0, "\"ovsdb-server.exe\",\"1234\",\"Services\",\"0\",\"12,345 K\""));
-        _processRunnerIOMock.Setup(m => m.RunProcess(
-                "taskkill.exe", "/PID 1234 /F /T", "", true))
-            .ReturnsAsync(new ProcessRunnerResult(0, ""));
+        _processManagerIOMock.Setup(m => m.GetProcessName(1234)).Returns(Some("ovs-vswitchd"));
+        _processManagerIOMock.Setup(m => m.StopProcess(1234, It.IsAny<TimeSpan>())).Returns(true);
 
         var result = await forceStopRemainingDaemons(OvnDataDir).Run(_runtime);
 
         result.Should().BeSuccess();
-        _processRunnerIOMock.Verify(m => m.RunProcess(
-            "taskkill.exe", "/PID 1234 /F /T", "", true), Times.Once);
+        _processManagerIOMock.Verify(m => m.StopProcess(1234, It.IsAny<TimeSpan>()), Times.Once);
     }
 
     [Fact]
@@ -372,16 +360,47 @@ public class OvsDriverProviderTests
             .ReturnsAsync("1234");
 
         // The daemon has exited and Windows reused its PID for an unrelated process.
-        _processRunnerIOMock.Setup(m => m.RunProcess(
-                "tasklist.exe", "/FI \"PID eq 1234\" /FO CSV /NH", "", true))
-            .ReturnsAsync(new ProcessRunnerResult(
-                0, "\"explorer.exe\",\"1234\",\"Console\",\"1\",\"50,000 K\""));
+        _processManagerIOMock.Setup(m => m.GetProcessName(1234)).Returns(Some("explorer"));
 
         var result = await forceStopRemainingDaemons(OvnDataDir).Run(_runtime);
 
         result.Should().BeSuccess();
-        _processRunnerIOMock.Verify(m => m.RunProcess(
-            "taskkill.exe", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        _processManagerIOMock.Verify(m => m.StopProcess(It.IsAny<int>(), It.IsAny<TimeSpan>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ForceStopRemainingDaemons_PidNoLongerRunning_DoesNotTerminate()
+    {
+        // The daemon exited and removed no pidfile; the PID belongs to no running process.
+        var pidFile = Path.Combine(OpenvswitchRunDir, "ovs-db.pid");
+        _directoryMock.Setup(m => m.Exists(OpenvswitchRunDir)).Returns(true);
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.pid")).Returns(Seq1(pidFile));
+        _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("1234");
+
+        _processManagerIOMock.Setup(m => m.GetProcessName(1234)).Returns(Option<string>.None);
+
+        var result = await forceStopRemainingDaemons(OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processManagerIOMock.Verify(m => m.StopProcess(It.IsAny<int>(), It.IsAny<TimeSpan>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ForceStopRemainingDaemons_PidFileGarbled_DoesNotTerminate()
+    {
+        // A pidfile that does not contain a valid process id must not be acted on.
+        var pidFile = Path.Combine(OpenvswitchRunDir, "ovs-db.pid");
+        _directoryMock.Setup(m => m.Exists(OpenvswitchRunDir)).Returns(true);
+        _directoryMock.Setup(m => m.EnumerateFiles(OpenvswitchRunDir, "*.pid")).Returns(Seq1(pidFile));
+        _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("not-a-pid");
+
+        var result = await forceStopRemainingDaemons(OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processManagerIOMock.Verify(m => m.GetProcessName(It.IsAny<int>()), Times.Never);
+        _processManagerIOMock.Verify(m => m.StopProcess(It.IsAny<int>(), It.IsAny<TimeSpan>()), Times.Never);
     }
 
     private void ArrangeIsTestSigningEnabled(bool isEnabled)
@@ -474,6 +493,7 @@ public class OvsDriverProviderTests
         HasFile<RT>,
         HasHostNetworkCommands<RT>,
         HasLogger<RT>,
+        HasProcessManager<RT>,
         HasProcessRunner<RT>,
         HasPowershell<RT>,
         HasRegistry<RT>
@@ -488,6 +508,7 @@ public class OvsDriverProviderTests
             Env.HostNetworkCommands,
             Env.LoggerFactory,
             Env.PowershellEngine,
+            Env.ProcessManager,
             Env.ProcessRunner,
             Env.Registry));
 
@@ -513,6 +534,8 @@ public class OvsDriverProviderTests
 
         public Eff<RT, IPowershellEngine> Powershell => Eff<RT, IPowershellEngine>(rt => rt.Env.PowershellEngine);
 
+        public Eff<RT, ProcessManagerIO> ProcessManagerEff => Eff<RT, ProcessManagerIO>(rt => rt.Env.ProcessManager);
+
         public Eff<RT, ProcessRunnerIO> ProcessRunnerEff => Eff<RT, ProcessRunnerIO>(rt => rt.Env.ProcessRunner);
 
         public Eff<RT, RegistryIO> RegistryEff => Eff<RT, RegistryIO>(rt => rt.Env.Registry);
@@ -526,6 +549,7 @@ public class OvsDriverProviderTests
         IHostNetworkCommands<RT> hostNetworkCommands,
         ILoggerFactory loggerFactory,
         IPowershellEngine powershellEngine,
+        ProcessManagerIO processManager,
         ProcessRunnerIO processRunner,
         RegistryIO registry)
     {
@@ -542,6 +566,8 @@ public class OvsDriverProviderTests
         public ILoggerFactory LoggerFactory { get; } = loggerFactory;
 
         public IPowershellEngine PowershellEngine { get; } = powershellEngine;
+
+        public ProcessManagerIO ProcessManager { get; } = processManager;
 
         public ProcessRunnerIO ProcessRunner { get; } = processRunner;
 

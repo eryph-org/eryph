@@ -20,6 +20,7 @@ internal readonly struct DriverCommandsRuntime(DriverCommandsRuntimeEnv env) :
     HasFile<DriverCommandsRuntime>,
     HasHostNetworkCommands<DriverCommandsRuntime>,
     HasLogger<DriverCommandsRuntime>,
+    HasProcessManager<DriverCommandsRuntime>,
     HasProcessRunner<DriverCommandsRuntime>,
     HasPowershell<DriverCommandsRuntime>,
     HasRegistry<DriverCommandsRuntime>,
@@ -47,6 +48,8 @@ internal readonly struct DriverCommandsRuntime(DriverCommandsRuntimeEnv env) :
     public Encoding Encoding => Encoding.UTF8;
 
     public Eff<DriverCommandsRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
+
+    public Eff<DriverCommandsRuntime, ProcessManagerIO> ProcessManagerEff => SuccessEff(LiveProcessManagerIO.Default);
 
     public Eff<DriverCommandsRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
 
