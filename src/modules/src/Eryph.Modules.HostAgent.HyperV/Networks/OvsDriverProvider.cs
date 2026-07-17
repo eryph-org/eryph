@@ -230,8 +230,11 @@ public class OvsDriverProvider<RT> where RT : struct,
                         "Not terminating pid {Pid} from a leftover OVS/OVN pidfile: it now belongs to the unrelated process '{ProcessName}'. The pidfile is stale and the PID was reused.",
                         pid, name)
                     .ToAff(),
+            // No running process could be resolved for the pid. It has most likely
+            // already stopped (leaving a stale pidfile), but the lookup can also fail
+            // because the process cannot be inspected, so do not claim it stopped.
             None: () => logInformation(
-                    "OVS/OVN daemon (pid {Pid}) has already stopped; its pidfile is stale.", pid)
+                    "Not terminating pid {Pid} from a leftover OVS/OVN pidfile: no matching running process could be found.", pid)
                 .ToAff())
         select unit;
 
