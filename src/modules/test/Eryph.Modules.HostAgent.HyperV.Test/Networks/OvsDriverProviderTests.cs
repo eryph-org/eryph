@@ -25,6 +25,7 @@ public class OvsDriverProviderTests
     private const string OvnDataDir = @"Z:\ovndatadir";
 
     private static readonly string OpenvswitchRunDir = Path.Combine(OvnDataDir, "var", "run", "openvswitch");
+    private static readonly string OvnRunSubDir = Path.Combine(OvnDataDir, "var", "run", "ovn");
     private static readonly string AppCtlPath = Path.Combine(OvnRunDir, "usr", "bin", "ovs-appctl.exe");
 
     private static readonly Guid SwitchId = Guid.NewGuid();
@@ -348,6 +349,26 @@ public class OvsDriverProviderTests
 
         result.Should().BeSuccess();
         _processManagerIOMock.Verify(m => m.StopProcess(1234, It.IsAny<TimeSpan>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ForceStopRemainingDaemons_DaemonInOvnRunDir_TerminatesProcess()
+    {
+        // ovn-controller keeps its pidfile under '...\var\run\ovn', so that directory
+        // must be scanned as well as the openvswitch one.
+        var pidFile = Path.Combine(OvnRunSubDir, "ovn-controller.pid");
+        _directoryMock.Setup(m => m.Exists(OvnRunSubDir)).Returns(true);
+        _directoryMock.Setup(m => m.EnumerateFiles(OvnRunSubDir, "*.pid")).Returns(Seq1(pidFile));
+        _fileMock.Setup(m => m.ReadAllText(pidFile, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("4321");
+
+        _processManagerIOMock.Setup(m => m.GetProcessName(4321)).Returns(Some("ovn-controller"));
+        _processManagerIOMock.Setup(m => m.StopProcess(4321, It.IsAny<TimeSpan>())).Returns(true);
+
+        var result = await forceStopRemainingDaemons(OvnDataDir).Run(_runtime);
+
+        result.Should().BeSuccess();
+        _processManagerIOMock.Verify(m => m.StopProcess(4321, It.IsAny<TimeSpan>()), Times.Once);
     }
 
     [Fact]
