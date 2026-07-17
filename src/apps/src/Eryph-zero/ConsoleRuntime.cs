@@ -28,6 +28,7 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     HasLogger<ConsoleRuntime>,
     HasDirectory<ConsoleRuntime>,
     HasFile<ConsoleRuntime>,
+    HasProcessManager<ConsoleRuntime>,
     HasProcessRunner<ConsoleRuntime>,
     HasRegistry<ConsoleRuntime>,
     HasDism<ConsoleRuntime>
@@ -75,6 +76,8 @@ public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     public Eff<ConsoleRuntime, DirectoryIO> DirectoryEff => SuccessEff(LanguageExt.Sys.Live.DirectoryIO.Default);
 
     public Eff<ConsoleRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
+
+    public Eff<ConsoleRuntime, ProcessManagerIO> ProcessManagerEff => SuccessEff(LiveProcessManagerIO.Default);
 
     public Eff<ConsoleRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
 
