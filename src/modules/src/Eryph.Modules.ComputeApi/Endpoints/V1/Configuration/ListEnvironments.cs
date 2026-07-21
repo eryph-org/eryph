@@ -19,13 +19,13 @@ public class ListEnvironments(IEnvironmentsConfigProvider environmentsConfigProv
     : EndpointBaseAsync.WithoutRequest.WithActionResult<ListResponse<Environment>>
 {
     [Authorize(Policy = "compute:basic")]
-    [HttpGet("environments")]
+    [HttpGet("config/environments")]
     [SwaggerOperation(
             Summary = "List all environments",
             Description = "List the environments of the deployment together with the site which realizes "
                           + "each, as an option list for configuration input.",
-            OperationId = "Environments_List",
-            Tags = ["Configuration"])]
+            OperationId = "Config_ListEnvironments",
+            Tags = ["Config"])]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<Environment>), "application/json")]
     public override Task<ActionResult<ListResponse<Environment>>> HandleAsync(
         CancellationToken cancellationToken = default)

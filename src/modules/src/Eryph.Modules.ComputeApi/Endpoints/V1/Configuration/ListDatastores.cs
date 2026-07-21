@@ -19,13 +19,13 @@ public class ListDatastores(IStorageConfigProvider storageConfigProvider)
     : EndpointBaseAsync.WithoutRequest.WithActionResult<ListResponse<Datastore>>
 {
     [Authorize(Policy = "compute:basic")]
-    [HttpGet("datastores")]
+    [HttpGet("config/datastores")]
     [SwaggerOperation(
             Summary = "List all datastores",
             Description = "List the datastore names of the deployment's storage vocabulary as an option "
                           + "list for configuration input. Paths are agent-local and not included.",
-            OperationId = "Datastores_List",
-            Tags = ["Configuration"])]
+            OperationId = "Config_ListDatastores",
+            Tags = ["Config"])]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<Datastore>), "application/json")]
     public override Task<ActionResult<ListResponse<Datastore>>> HandleAsync(
         CancellationToken cancellationToken = default)

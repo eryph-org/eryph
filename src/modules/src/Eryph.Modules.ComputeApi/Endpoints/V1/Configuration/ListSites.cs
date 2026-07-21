@@ -19,12 +19,12 @@ public class ListSites(IEnvironmentsConfigProvider environmentsConfigProvider)
     : EndpointBaseAsync.WithoutRequest.WithActionResult<ListResponse<Site>>
 {
     [Authorize(Policy = "compute:basic")]
-    [HttpGet("sites")]
+    [HttpGet("config/sites")]
     [SwaggerOperation(
             Summary = "List all sites",
             Description = "List the sites of the deployment as an option list for configuration input.",
-            OperationId = "Sites_List",
-            Tags = ["Configuration"])]
+            OperationId = "Config_ListSites",
+            Tags = ["Config"])]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<Site>), "application/json")]
     public override Task<ActionResult<ListResponse<Site>>> HandleAsync(
         CancellationToken cancellationToken = default)
