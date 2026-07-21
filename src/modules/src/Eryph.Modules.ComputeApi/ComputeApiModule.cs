@@ -103,14 +103,10 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
 
     public static void ConfigureScopes(AuthorizationOptions options, string authority)
     {
-        // Create policies for each scope using hierarchy-aware scope resolution
+        // Create policies for each scope using hierarchy-aware scope resolution. This includes
+        // compute:basic (the config option-list endpoints), which the scope hierarchy grants to every
+        // other compute scope, so any authenticated compute client satisfies it.
         foreach (var scope in ScopeDefinitions.ComputeApiScopes) CreateScopePolicy(options, authority, scope);
-
-        // A neutral, authenticated-only policy for read-only reference data (configuration option lists)
-        // that any compute-API client may read. It intentionally carries no scope requirement — there is
-        // nothing to protect here, and gating it on a specific read scope would exclude narrowly-scoped
-        // clients that legitimately need the option values to author their input.
-        options.AddPolicy("compute:basic", policy => policy.RequireAuthenticatedUserOrSwaggerEndpoint());
     }
 
     private static void CreateScopePolicy(AuthorizationOptions options, string authority, string requiredScope)

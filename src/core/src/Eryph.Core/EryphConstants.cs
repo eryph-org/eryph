@@ -101,6 +101,8 @@ public static class EryphConstants
     {
         public static readonly IReadOnlyList<Scope> AllScopes =
         [
+            new(Scopes.ComputeBasic, [Audiences.ComputeApi],
+                "Grants read access to basic compute reference data such as configuration option lists"),
             new(Scopes.ComputeRead, [Audiences.ComputeApi], "Grants read access to the compute API"),
             new(Scopes.ComputeWrite, [Audiences.ComputeApi], "Grants write access to the compute API"),
             new(Scopes.CatletsRead, [Audiences.ComputeApi], "Grants read access for catlets"),
@@ -134,6 +136,7 @@ public static class EryphConstants
 
         public static class Scopes
         {
+            public static readonly string ComputeBasic = "compute:basic";
             public static readonly string ComputeRead = "compute:read";
             public static readonly string ComputeWrite = "compute:write";
             public static readonly string CatletsRead = "compute:catlets:read";

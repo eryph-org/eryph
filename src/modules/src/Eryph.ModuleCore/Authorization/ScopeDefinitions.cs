@@ -14,6 +14,7 @@ public static class ScopeDefinitions
     /// </summary>
     public static readonly string[] ComputeApiScopes =
     [
+        EryphConstants.Authorization.Scopes.ComputeBasic,
         EryphConstants.Authorization.Scopes.CatletsRead,
         EryphConstants.Authorization.Scopes.CatletsWrite,
         EryphConstants.Authorization.Scopes.CatletsControl,
