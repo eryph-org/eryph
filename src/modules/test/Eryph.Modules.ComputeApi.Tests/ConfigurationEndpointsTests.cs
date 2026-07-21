@@ -132,4 +132,66 @@ public class ConfigurationEndpointsTests
             ds => ds.Name.Should().Be("fast"),
             ds => ds.Name.Should().Be("archive"));
     }
+
+    // A YAML payload with an omitted or explicit-null section (e.g. `sites: ~`) deserializes the array
+    // to null, which the model comments call out. These tests set the arrays to null explicitly so the
+    // `?? []` guards in the endpoints are actually exercised (new EnvironmentsConfig()/StorageConfig()
+    // default them to empty, not null, so the other tests do not cover this path).
+
+    [Fact]
+    public async Task ListSites_NullSitesArray_ReturnsOnlyDefault()
+    {
+        var endpoint = new ListSites(new FakeEnvironmentsConfigProvider(new EnvironmentsConfig { Sites = null }));
+
+        var result = await endpoint.HandleAsync();
+
+        result.Value!.Value.Should().ContainSingle()
+            .Which.Name.Should().Be(EryphConstants.DefaultSiteName);
+    }
+
+    [Fact]
+    public async Task ListEnvironments_NullEnvironmentsArray_ReturnsOnlyDefault()
+    {
+        var endpoint = new ListEnvironments(
+            new FakeEnvironmentsConfigProvider(new EnvironmentsConfig { Environments = null }));
+
+        var result = await endpoint.HandleAsync();
+
+        result.Value!.Value.Should().ContainSingle()
+            .Which.Name.Should().Be(EryphConstants.DefaultEnvironmentName);
+    }
+
+    [Fact]
+    public async Task ListDatastores_NullArrays_ReturnsOnlyDefault()
+    {
+        var endpoint = new ListDatastores(
+            new FakeStorageConfigProvider(new StorageConfig { Datastores = null, Environments = null }));
+
+        var result = await endpoint.HandleAsync();
+
+        result.Value!.Value.Should().ContainSingle()
+            .Which.Name.Should().Be(EryphConstants.DefaultDataStoreName);
+    }
+
+    [Fact]
+    public async Task ListSites_SkipsWhitespaceNames_AndDeduplicatesCaseInsensitively()
+    {
+        var config = new EnvironmentsConfig
+        {
+            // '   ' must be skipped; 'Berlin' then 'berlin' must collapse to the first-seen 'Berlin'.
+            Sites =
+            [
+                new SiteConfig { Name = "   " },
+                new SiteConfig { Name = "Berlin" },
+                new SiteConfig { Name = "berlin" },
+            ],
+        };
+        var endpoint = new ListSites(new FakeEnvironmentsConfigProvider(config));
+
+        var result = await endpoint.HandleAsync();
+
+        result.Value!.Value.Should().SatisfyRespectively(
+            site => site.Name.Should().Be(EryphConstants.DefaultSiteName),
+            site => site.Name.Should().Be("Berlin"));
+    }
 }
