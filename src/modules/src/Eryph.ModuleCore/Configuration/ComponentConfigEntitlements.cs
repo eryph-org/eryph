@@ -30,6 +30,12 @@ public static class ComponentConfigEntitlements
             [ComponentType.GenePoolAgent] =
                 [ConfigDomain.StorageConfig],
 
+            // The compute API is a read-only consumer: it caches the datastore and environment/site
+            // vocabulary so it can serve them to clients as configuration option lists. It realizes
+            // nothing against system state.
+            [ComponentType.ComputeApi] =
+                [ConfigDomain.StorageConfig, ConfigDomain.Environments],
+
             // The network component hosts the OVN databases; it receives the northbound cluster
             // topology (gateway chassis groups) and realizes it locally, so the controller never
             // writes the northbound cluster tables as a remote client.

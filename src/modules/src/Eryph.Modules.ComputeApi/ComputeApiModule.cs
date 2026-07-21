@@ -9,6 +9,7 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.ComputeApi.Configuration;
 using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.Rebus;
@@ -50,7 +51,15 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
             new Dictionary<string, string>
             {
                 ["compute"] = endpointResolver.GetEndpoint("compute").ToString(),
-            });
+            },
+            // Consume the datastore and environment/site vocabulary so the configuration-option
+            // endpoints can serve it. The realizers cache the distributed value in the providers
+            // registered below.
+            typeof(StorageConfigRealizer),
+            typeof(EnvironmentsConfigRealizer));
+
+        options.Container.RegisterSingleton<IStorageConfigProvider, StorageConfigProvider>();
+        options.Container.RegisterSingleton<IEnvironmentsConfigProvider, EnvironmentsConfigProvider>();
     }
 
     public override void ConfigureServices(
@@ -96,6 +105,12 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
     {
         // Create policies for each scope using hierarchy-aware scope resolution
         foreach (var scope in ScopeDefinitions.ComputeApiScopes) CreateScopePolicy(options, authority, scope);
+
+        // A neutral, authenticated-only policy for read-only reference data (configuration option lists)
+        // that any compute-API client may read. It intentionally carries no scope requirement — there is
+        // nothing to protect here, and gating it on a specific read scope would exclude narrowly-scoped
+        // clients that legitimately need the option values to author their input.
+        options.AddPolicy("compute:basic", policy => policy.RequireAuthenticatedUserOrSwaggerEndpoint());
     }
 
     private static void CreateScopePolicy(AuthorizationOptions options, string authority, string requiredScope)
