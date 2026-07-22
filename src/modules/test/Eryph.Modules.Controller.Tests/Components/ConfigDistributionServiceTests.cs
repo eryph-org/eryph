@@ -150,8 +150,10 @@ public class ConfigDistributionServiceTests
         var records = new Mock<IStateStoreRepository<ConfigRecord>>();
         var service = CreateService(new ControllerSettings(), records);
 
+        // Management is the component type without any config entitlements — it authors
+        // configuration rather than receiving it.
         var bundles = await service.BuildSnapshotAsync(
-            Reg(ComponentType.ComputeApi), new List<AppliedConfigVersion>(), CancellationToken.None);
+            Reg(ComponentType.Management), new List<AppliedConfigVersion>(), CancellationToken.None);
 
         bundles.Should().BeEmpty();
     }
@@ -516,7 +518,7 @@ public class ConfigDistributionServiceTests
         var service = CreateService(records);
 
         var bundles = await service.GetOutdatedBundlesAsync(
-            Reg(ComponentType.ComputeApi), CancellationToken.None);
+            Reg(ComponentType.Management), CancellationToken.None);
 
         bundles.Should().BeEmpty();
         records.Verify(r => r.GetBySpecAsync(It.IsAny<ConfigRecordSpecs.GetByDomainAndScope>(), It.IsAny<CancellationToken>()),
