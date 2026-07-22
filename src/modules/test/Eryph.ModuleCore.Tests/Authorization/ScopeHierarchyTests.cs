@@ -27,13 +27,25 @@ public class ScopeHierarchyTests
     }
 
     [Fact]
-    public void GetImpliedScopes_WithBasicScope_ReturnsOnlyItself()
+    public void GetImpliedScopes_WithReadLeafScope_ReturnsItselfAndComputeBasic()
     {
         // Act
         var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.CatletsRead);
 
-        // Assert
-        result.Should().BeEquivalentTo(EryphConstants.Authorization.Scopes.CatletsRead);
+        // Assert — every compute scope grants the universal-minimum compute:basic.
+        result.Should().BeEquivalentTo(
+            EryphConstants.Authorization.Scopes.CatletsRead,
+            EryphConstants.Authorization.Scopes.ComputeBasic);
+    }
+
+    [Fact]
+    public void GetImpliedScopes_WithComputeBasic_ReturnsOnlyItself()
+    {
+        // Act
+        var result = ScopeHierarchy.GetImpliedScopes(EryphConstants.Authorization.Scopes.ComputeBasic);
+
+        // Assert — compute:basic is the minimum; it implies nothing further.
+        result.Should().BeEquivalentTo(EryphConstants.Authorization.Scopes.ComputeBasic);
     }
 
     [Fact]
@@ -47,7 +59,8 @@ public class ScopeHierarchyTests
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
-            EryphConstants.Authorization.Scopes.CatletsRemoteAccess);
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
+            EryphConstants.Authorization.Scopes.ComputeBasic);
     }
 
     [Fact]
@@ -60,7 +73,8 @@ public class ScopeHierarchyTests
         result.Should().BeEquivalentTo(
             EryphConstants.Authorization.Scopes.CatletsControl,
             EryphConstants.Authorization.Scopes.CatletsRead,
-            EryphConstants.Authorization.Scopes.CatletsRemoteAccess);
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
+            EryphConstants.Authorization.Scopes.ComputeBasic);
     }
 
     [Fact]
@@ -73,6 +87,7 @@ public class ScopeHierarchyTests
         result.Should().BeEquivalentTo(
             EryphConstants.Authorization.Scopes.ComputeWrite,
             EryphConstants.Authorization.Scopes.ComputeRead,
+            EryphConstants.Authorization.Scopes.ComputeBasic,
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
@@ -131,7 +146,8 @@ public class ScopeHierarchyTests
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
             EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
-            EryphConstants.Authorization.Scopes.GenesRead
+            EryphConstants.Authorization.Scopes.GenesRead,
+            EryphConstants.Authorization.Scopes.ComputeBasic
         );
     }
 
@@ -207,5 +223,26 @@ public class ScopeHierarchyTests
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsControl,
             EryphConstants.Authorization.Scopes.ComputeWrite);
+    }
+
+    [Fact]
+    public void GetGrantingScopes_WithComputeBasic_ReturnsEveryComputeScope()
+    {
+        // Act
+        var result = ScopeHierarchy.GetGrantingScopes(EryphConstants.Authorization.Scopes.ComputeBasic);
+
+        // Assert — compute:basic is the universal minimum, so every compute scope grants it.
+        result.Should().BeEquivalentTo(
+            EryphConstants.Authorization.Scopes.ComputeBasic,
+            EryphConstants.Authorization.Scopes.ComputeRead,
+            EryphConstants.Authorization.Scopes.ComputeWrite,
+            EryphConstants.Authorization.Scopes.CatletsRead,
+            EryphConstants.Authorization.Scopes.CatletsWrite,
+            EryphConstants.Authorization.Scopes.CatletsControl,
+            EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
+            EryphConstants.Authorization.Scopes.GenesRead,
+            EryphConstants.Authorization.Scopes.GenesWrite,
+            EryphConstants.Authorization.Scopes.ProjectsRead,
+            EryphConstants.Authorization.Scopes.ProjectsWrite);
     }
 }

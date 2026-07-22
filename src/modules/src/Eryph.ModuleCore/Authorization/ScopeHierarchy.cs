@@ -18,10 +18,16 @@ public static class ScopeHierarchy
     /// </summary>
     private static readonly Dictionary<string, HashSet<string>> ScopeHierarchyList = new()
     {
-        // Compute API hierarchies
+        // Compute API hierarchies.
+        // compute:basic is the universal-minimum compute scope: it guards only read-only reference data
+        // (the configuration option lists). Every other compute scope grants it, so any client with any
+        // compute access can read those lists, while a token with no compute scope at all cannot. Because
+        // the hierarchy is flattened (see the warning above), it is listed explicitly on every entry —
+        // including the read leaves, which therefore need their own entry.
         [EryphConstants.Authorization.Scopes.ComputeWrite] =
         [
             EryphConstants.Authorization.Scopes.ComputeRead,
+            EryphConstants.Authorization.Scopes.ComputeBasic,
             EryphConstants.Authorization.Scopes.CatletsWrite,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
@@ -33,28 +39,49 @@ public static class ScopeHierarchy
         ],
         [EryphConstants.Authorization.Scopes.ComputeRead] =
         [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.GenesRead,
             EryphConstants.Authorization.Scopes.ProjectsRead,
         ],
         [EryphConstants.Authorization.Scopes.CatletsWrite] =
         [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsControl,
             EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
         ],
         [EryphConstants.Authorization.Scopes.CatletsControl] =
         [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
             EryphConstants.Authorization.Scopes.CatletsRead,
             EryphConstants.Authorization.Scopes.CatletsRemoteAccess,
         ],
+        [EryphConstants.Authorization.Scopes.CatletsRead] =
+        [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
+        ],
+        [EryphConstants.Authorization.Scopes.CatletsRemoteAccess] =
+        [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
+        ],
         [EryphConstants.Authorization.Scopes.GenesWrite] =
         [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
             EryphConstants.Authorization.Scopes.GenesRead,
+        ],
+        [EryphConstants.Authorization.Scopes.GenesRead] =
+        [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
         ],
         [EryphConstants.Authorization.Scopes.ProjectsWrite] =
         [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
             EryphConstants.Authorization.Scopes.ProjectsRead,
+        ],
+        [EryphConstants.Authorization.Scopes.ProjectsRead] =
+        [
+            EryphConstants.Authorization.Scopes.ComputeBasic,
         ],
 
         // Identity API hierarchies
