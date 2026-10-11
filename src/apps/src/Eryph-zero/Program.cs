@@ -706,8 +706,10 @@ internal static class Program
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from pStart in LogProgress("Starting service...")
                         from uStarted in serviceManager.EnsureServiceStarted(cancelSource3.Token)
-                        from pReady in LogProgress("Waiting for eryph-zero to complete its startup...")
-                        from uReady in EnsureStartupCompleted(zeroExe)
+                        from uReady in serviceExists
+                            ? RightAsync<Error, Unit>(Unit.Default)
+                            : LogProgress("Waiting for eryph-zero to complete its startup...")
+                                .Bind(_ => EnsureStartupCompleted(zeroExe))
                         select Unit.Default;
 
                     _ = await installOrUpdate.IfLeft(l => l.Throw());
@@ -863,22 +865,27 @@ internal static class Program
         // the OVS database is not ready yet. Without the eryph switch, the service cannot complete its
         // startup (and e.g. never creates the system client). Hence, we run a network sync, which
         // creates the missing host network configuration, when the startup does not complete in time.
+        // This only runs for fresh installations, where no existing host network can be disturbed.
         // The sync only runs after the timeout to not interfere with the service's own attempt.
-        EitherAsync<Error, Unit> EnsureStartupCompleted(string eryphBinPath) => TryAsync(async () =>
+        static EitherAsync<Error, Unit> EnsureStartupCompleted(string eryphBinPath) => TryAsync(async () =>
         {
-            if (await WaitForIdentityEndpoint(TimeSpan.FromMinutes(2)))
+            var firstAttempt = await WaitForIdentityEndpoint(TimeSpan.FromMinutes(2));
+            if (firstAttempt.Started)
                 return Unit.Default;
 
             Log.Information("eryph-zero did not complete its startup. Synchronizing the host network...");
             await RunNetworkSync(eryphBinPath);
 
-            if (await WaitForIdentityEndpoint(TimeSpan.FromMinutes(3)))
+            var secondAttempt = await WaitForIdentityEndpoint(TimeSpan.FromMinutes(3));
+            if (secondAttempt.Started)
                 return Unit.Default;
 
-            throw Error.New("eryph-zero did not complete its startup. Please check the eryph-zero log for details.");
+            var lastError = secondAttempt.LastError is { } e ? $" Last error: {e.Message}" : "";
+            throw Error.New(
+                $"eryph-zero did not complete its startup.{lastError} Please check the eryph-zero log for details.");
         }).ToEither();
 
-        async Task RunNetworkSync(string eryphBinPath)
+        static async Task RunNetworkSync(string eryphBinPath)
         {
             using var process = new Process
             {
@@ -888,12 +895,18 @@ internal static class Program
                     Arguments = "networks sync --non-interactive",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
-                    RedirectStandardError = false,
+                    RedirectStandardError = true,
                     CreateNoWindow = true,
                     WorkingDirectory = Environment.SystemDirectory,
                 },
             };
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data is not null)
+                    Console.Error.WriteLine(e.Data);
+            };
             process.Start();
+            process.BeginErrorReadLine();
 
             try
             {
@@ -908,10 +921,22 @@ internal static class Program
 
                 await process.WaitForExitAsync(exitCts.Token);
             }
-            catch (OperationCanceledException)
+            catch (Exception ex)
             {
+                // Kill the process tree as the sync might start additional processes (e.g. OVS
+                // commands). Kill() is asynchronous, hence we wait for the exit afterwards.
+                Log.Warning(ex, "The network sync did not complete.");
                 process.Kill(true);
-                Log.Warning("The network sync did not complete within the allotted time.");
+                using var killCts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                try
+                {
+                    await process.WaitForExitAsync(killCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    Log.Warning("The network sync could not be aborted.");
+                }
+
                 return;
             }
 
@@ -924,11 +949,13 @@ internal static class Program
 
         // The identity endpoint only responds after eryph-zero has started its modules. Its URL is
         // published in the .lock file of the running instance (the port is assigned on each start).
-        static async Task<bool> WaitForIdentityEndpoint(TimeSpan timeout)
+        static async Task<(bool Started, Exception? LastError)> WaitForIdentityEndpoint(TimeSpan timeout)
         {
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var deadline = DateTime.UtcNow + timeout;
-            while (DateTime.UtcNow < deadline)
+            using var handler = new HttpClientHandler { UseProxy = false, AllowAutoRedirect = false };
+            using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+            var stopwatch = Stopwatch.StartNew();
+            Exception? lastError = null;
+            while (stopwatch.Elapsed < timeout)
             {
                 try
                 {
@@ -936,24 +963,26 @@ internal static class Program
                     if (identityEndpoint is not null)
                     {
                         using var response = await httpClient.GetAsync(
-                            $"{identityEndpoint.TrimEnd('/')}/.well-known/openid-configuration");
+                            new Uri(identityEndpoint, ".well-known/openid-configuration"));
                         if (response.IsSuccessStatusCode)
-                            return true;
+                            return (true, null);
                     }
                 }
-                catch (Exception ex) when (ex is IOException or HttpRequestException or TaskCanceledException
-                                               or JsonException or UnauthorizedAccessException)
+                catch (Exception ex)
                 {
                     // Not started yet (or the lock file is being rewritten) -> retry
+                    Log.Debug(ex, "eryph-zero has not completed its startup yet.");
+                    lastError = ex;
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
 
-            return false;
+            return (false, lastError);
         }
 
-        static string? ReadIdentityEndpointFromLock()
+        // Only accepts the lock file of a running eryph-zero process and an HTTPS identity endpoint.
+        static Uri? ReadIdentityEndpointFromLock()
         {
             var lockPath = Path.Combine(ZeroConfig.GetConfigPath(), ".lock");
             if (!File.Exists(lockPath))
@@ -961,10 +990,37 @@ internal static class Program
 
             using var stream = File.Open(lockPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var document = JsonDocument.Parse(stream);
-            return document.RootElement.TryGetProperty("endpoints", out var endpoints)
-                   && endpoints.TryGetProperty("identity", out var identity)
-                ? identity.GetString()
-                : null;
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("processId", out var processIdElement)
+                || processIdElement.ValueKind != JsonValueKind.Number
+                || !processIdElement.TryGetInt32(out var processId)
+                || !IsEryphZeroProcess(processId)
+                || !root.TryGetProperty("endpoints", out var endpoints)
+                || endpoints.ValueKind != JsonValueKind.Object
+                || !endpoints.TryGetProperty("identity", out var identity)
+                || identity.ValueKind != JsonValueKind.String
+                || !Uri.TryCreate(identity.GetString(), UriKind.Absolute, out var identityUri)
+                || identityUri.Scheme != Uri.UriSchemeHttps)
+                return null;
+
+            // Ensure a trailing slash, so the discovery path is appended to the identity path.
+            return identityUri.AbsolutePath.EndsWith('/')
+                ? identityUri
+                : new Uri($"{identityUri.AbsoluteUri}/");
+        }
+
+        static bool IsEryphZeroProcess(int processId)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                return string.Equals(process.ProcessName, "eryph-zero", StringComparison.OrdinalIgnoreCase);
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
     }
 
