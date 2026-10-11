@@ -125,8 +125,8 @@ jobs:
       azureSubscription: 'WebApps (releases)'
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build\bin'
       inlineScript: |
-        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvm -tr http://timestamp.acs.microsoft.com/ -kvc "codesigning-2025" -v eryph-zero.exe
-        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvm -tr http://timestamp.acs.microsoft.com/ -kvc "codesigning-2025" -v eryph-uninstaller.exe
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvm -tr http://timestamp.acs.microsoft.com/ -kvc "codesigning" -v eryph-zero.exe
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvm -tr http://timestamp.acs.microsoft.com/ -kvc "codesigning" -v eryph-uninstaller.exe
 
   - task: CopyFiles@2
     displayName: copy OVN package to zero build
