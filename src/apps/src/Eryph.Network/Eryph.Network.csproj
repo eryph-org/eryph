@@ -10,7 +10,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
     <!-- Windows OVN runtime (WindowsSystemEnvironment). The cross-platform Dbosoft.OVN.Core
          environment is Linux-only at runtime and throws on Windows by design. -->
-    <PackageReference Include="Dbosoft.OVN.Windows" Version="2.1.0" />
+    <PackageReference Include="Dbosoft.OVN.Windows" Version="2.1.1" />
     <!-- Run as a Windows service (like eryph-zero); no-op when run interactively. -->
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
   </ItemGroup>
