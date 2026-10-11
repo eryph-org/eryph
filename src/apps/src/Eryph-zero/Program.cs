@@ -710,7 +710,21 @@ internal static class Program
                             ? RightAsync<Error, Unit>(Unit.Default)
                             : LogProgress("Waiting for eryph-zero to complete its startup...")
                                 .Bind(_ => EnsureStartupCompleted(zeroExe))
+                                .BindLeft(error => RemoveServiceAfterFailedStartup(error))
                         select Unit.Default;
+
+                    // When the startup of a fresh installation fails, the service is removed again.
+                    // Otherwise, a retry would be treated as an update and skip the startup check.
+                    EitherAsync<Error, Unit> RemoveServiceAfterFailedStartup(Error error)
+                    {
+                        var stopCancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                        var removeCancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                        return LogProgress("Removing service...")
+                            .Bind(_ => serviceManager.EnsureServiceStopped(stopCancelSource.Token))
+                            .Bind(_ => serviceManager.RemoveService(removeCancelSource.Token))
+                            .MapLeft(removeError => Error.Many(error, removeError))
+                            .Bind(_ => LeftAsync<Error, Unit>(error));
+                    }
 
                     _ = await installOrUpdate.IfLeft(l => l.Throw());
 
