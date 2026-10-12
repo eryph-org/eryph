@@ -146,7 +146,7 @@ internal class DeployCatletSpecificationSaga(
             storageIdentifierGenerator.Generate());
 
         var updatedVariables = CatletConfigVariableApplier
-            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables ?? new Dictionary<string, string>())
+            .ApplyVariables(builtConfig.Variables.ToSeq(), message.Variables ?? new Dictionary<string, string?>())
             .ToEither()
             .MapLeft(errors => Error.New("Some variables are invalid.", Error.Many(errors)));
         if (updatedVariables.IsLeft)

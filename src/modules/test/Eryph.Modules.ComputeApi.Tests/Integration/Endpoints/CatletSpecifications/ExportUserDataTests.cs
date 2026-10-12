@@ -37,7 +37,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
         var response = await PostAsync(
             SpecificationId,
             SpecificationVersionId,
-            CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" }));
+            CreateBody(new Dictionary<string, string?> { ["password"] = "s3cret" }));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.CacheControl?.NoStore.Should().BeTrue();
@@ -62,7 +62,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
         var response = await PostAsync(
             SpecificationId,
             SpecificationVersionId,
-            CreateBody(new Dictionary<string, string>
+            CreateBody(new Dictionary<string, string?>
             {
                 ["userName"] = "bob",
                 ["password"] = "s3cret",
@@ -75,9 +75,27 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task UserData_uses_the_default_value_when_variable_has_no_value()
+    {
+        var response = await PostAsync(
+            SpecificationId,
+            SpecificationVersionId,
+            CreateBody(new Dictionary<string, string?>
+            {
+                ["userName"] = null,
+                ["password"] = "s3cret",
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<CatletSpecificationUserData>(
+            ApiJsonSerializerOptions.Options);
+        result?.UserData.Should().Contain(ToBase64("user=alice"));
+    }
+
+    [Fact]
     public async Task UserData_is_not_exported_when_required_variable_is_missing()
     {
-        var response = await PostAsync(SpecificationId, SpecificationVersionId, CreateBody(new Dictionary<string, string>()));
+        var response = await PostAsync(SpecificationId, SpecificationVersionId, CreateBody(new Dictionary<string, string?>()));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -88,7 +106,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
         var response = await PostAsync(
             SpecificationId,
             SpecificationVersionId,
-            CreateBody(new Dictionary<string, string>
+            CreateBody(new Dictionary<string, string?>
             {
                 ["password"] = "s3cret",
                 ["port"] = "not a number",
@@ -103,7 +121,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
         var response = await PostAsync(
             SpecificationId,
             SpecificationVersionId,
-            CreateBody(new Dictionary<string, string>
+            CreateBody(new Dictionary<string, string?>
             {
                 ["password"] = "s3cret",
                 ["unknown"] = "value",
@@ -123,7 +141,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:write", false)
             .PostAsJsonAsync(
                 $"v1/catlet_specifications/{SpecificationId}/versions/{SpecificationVersionId}/user_data",
-                CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" }),
+                CreateBody(new Dictionary<string, string?> { ["password"] = "s3cret" }),
                 ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -132,7 +150,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
     [Fact]
     public async Task UserData_is_not_exported_when_architecture_is_not_supported()
     {
-        var body = CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" });
+        var body = CreateBody(new Dictionary<string, string?> { ["password"] = "s3cret" });
         body.Architecture = "hyperv/arm64";
 
         var response = await PostAsync(SpecificationId, SpecificationVersionId, body);
@@ -145,7 +163,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
     [InlineData(false, true)]
     public async Task UserData_is_not_exported_when_ids_are_missing(bool withCatletId, bool withVmId)
     {
-        var body = CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" });
+        var body = CreateBody(new Dictionary<string, string?> { ["password"] = "s3cret" });
         body.CatletId = withCatletId ? body.CatletId : null;
         body.VmId = withVmId ? body.VmId : null;
 
@@ -157,7 +175,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
     [Fact]
     public async Task UserData_is_not_exported_when_there_is_no_fodder()
     {
-        var response = await PostAsync(EmptySpecificationId, EmptySpecificationVersionId, CreateBody(new Dictionary<string, string>()));
+        var response = await PostAsync(EmptySpecificationId, EmptySpecificationVersionId, CreateBody(new Dictionary<string, string?>()));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -168,7 +186,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
         var response = await PostAsync(
             SpecificationId,
             EmptySpecificationVersionId,
-            CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" }));
+            CreateBody(new Dictionary<string, string?> { ["password"] = "s3cret" }));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -185,7 +203,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, scope, false)
             .PostAsJsonAsync(
                 $"v1/catlet_specifications/{SpecificationId}/versions/{SpecificationVersionId}/user_data",
-                CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" }),
+                CreateBody(new Dictionary<string, string?> { ["password"] = "s3cret" }),
                 ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(expectedStatusCode);
@@ -200,7 +218,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:write", false)
             .PostAsJsonAsync(
                 $"v1/catlet_specifications/{SpecificationId}/versions/{SpecificationVersionId}/user_data",
-                CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" }),
+                CreateBody(new Dictionary<string, string?> { ["password"] = "s3cret" }),
                 ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -218,7 +236,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
                 ApiJsonSerializerOptions.Options);
 
     private static ExportCatletSpecificationUserDataRequestBody CreateBody(
-        IReadOnlyDictionary<string, string> variables) =>
+        IReadOnlyDictionary<string, string?> variables) =>
         new()
         {
             Variables = variables,

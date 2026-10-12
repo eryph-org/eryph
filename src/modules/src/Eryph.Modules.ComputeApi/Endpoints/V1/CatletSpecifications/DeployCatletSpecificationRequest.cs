@@ -23,5 +23,5 @@ public class DeployCatletSpecificationRequestBody
 
     public bool? Redeploy { get; set; }
 
-    public required IReadOnlyDictionary<string, string> Variables { get; set; }
+    public required IReadOnlyDictionary<string, string?> Variables { get; set; }
 }

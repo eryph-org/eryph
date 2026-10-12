@@ -130,7 +130,7 @@ public class ExportUserData(
         let builtConfig = CatletConfigJsonSerializer.Deserialize(variant.BuiltConfig)
         from variables in CatletConfigVariableApplier.ApplyVariables(
                 builtConfig.Variables.ToSeq(),
-                body.Variables ?? new Dictionary<string, string>())
+                body.Variables ?? new Dictionary<string, string?>())
             .MapFail(e => new ValidationIssue(
                 nameof(ExportCatletSpecificationUserDataRequestBody.Variables),
                 $"The variables are invalid: {e.Message}"))

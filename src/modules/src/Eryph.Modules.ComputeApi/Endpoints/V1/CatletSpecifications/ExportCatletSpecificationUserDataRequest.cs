@@ -16,7 +16,7 @@ public class ExportCatletSpecificationUserDataRequestBody
 {
     public string? Architecture { get; set; }
 
-    public IReadOnlyDictionary<string, string>? Variables { get; set; }
+    public IReadOnlyDictionary<string, string?>? Variables { get; set; }
 
     /// <summary>
     /// The value of the system variable <c>catletId</c>. The export is not bound to

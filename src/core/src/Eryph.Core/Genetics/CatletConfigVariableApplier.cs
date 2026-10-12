@@ -12,11 +12,11 @@ public static class CatletConfigVariableApplier
 {
     public static Validation<Error, Seq<VariableConfig>> ApplyVariables(
         Seq<VariableConfig> configs,
-        IReadOnlyDictionary<string, string> values) =>
+        IReadOnlyDictionary<string, string?> values) =>
         from _1 in Validations.ValidateDistinct(values.Keys, VariableName.NewValidation, "variable name")
         from valuesByName in values.ToSeq()
             .Map(kvp => from n in VariableName.NewValidation(kvp.Key)
-                select (n, kvp.Value))
+                select (n, Optional(kvp.Value)))
             .Sequence()
             .Map(r => r.ToHashMap())
         from names in configs
@@ -32,9 +32,10 @@ public static class CatletConfigVariableApplier
 
     private static Validation<Error, VariableConfig> ApplyVariable(
         VariableConfig config,
-        HashMap<VariableName, string> valuesByName) =>
+        HashMap<VariableName, Option<string>> valuesByName) =>
         from name in VariableName.NewValidation(config.Name)
-        from value in valuesByName.Find(name).Match(
+        // A variable without a value is treated as not provided, i.e. its default applies.
+        from value in valuesByName.Find(name).Flatten().Match(
             v => VariableConfigValidations.ValidateVariableValue(v, config.Type),
             () => Success<Error, string>(config.Value ?? ""))
         select config.CloneWith(c => { c.Value = value; });

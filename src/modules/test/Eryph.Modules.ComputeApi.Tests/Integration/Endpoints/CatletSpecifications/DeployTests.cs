@@ -24,7 +24,7 @@ public class DeployTests(ITestOutputHelper outputHelper)
                 $"v1/catlet_specifications/{SpecificationId}/versions/{EmptySpecificationVersionId}/deploy",
                 new DeployCatletSpecificationRequestBody
                 {
-                    Variables = new Dictionary<string, string>(),
+                    Variables = new Dictionary<string, string?>(),
                 },
                 ApiJsonSerializerOptions.Options);
 
@@ -40,7 +40,27 @@ public class DeployTests(ITestOutputHelper outputHelper)
                 $"v1/catlet_specifications/{EmptySpecificationId}/versions/{EmptySpecificationVersionId}/deploy",
                 new DeployCatletSpecificationRequestBody
                 {
-                    Variables = new Dictionary<string, string>(),
+                    Variables = new Dictionary<string, string?>(),
+                },
+                ApiJsonSerializerOptions.Options);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    [Fact]
+    public async Task Specification_is_deployed_when_variable_has_no_value()
+    {
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
+            .PostAsJsonAsync(
+                $"v1/catlet_specifications/{SpecificationId}/versions/{SpecificationVersionId}/deploy",
+                new DeployCatletSpecificationRequestBody
+                {
+                    Variables = new Dictionary<string, string?>
+                    {
+                        ["userName"] = null,
+                        ["password"] = "s3cret",
+                    },
                 },
                 ApiJsonSerializerOptions.Options);
 

@@ -25,7 +25,7 @@ public class DeployCatletSpecificationCommand : ICommandWithName, IHasCorrelatio
 
     public bool Redeploy { get; set; }
 
-    public IReadOnlyDictionary<string, string>? Variables { get; set; }
+    public IReadOnlyDictionary<string, string?>? Variables { get; set; }
 
     public string GetCommandName() => $"Deploy catlet specification {Name}";
 
