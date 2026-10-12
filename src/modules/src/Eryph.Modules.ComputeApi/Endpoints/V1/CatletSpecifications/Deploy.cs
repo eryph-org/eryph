@@ -65,8 +65,8 @@ public class Deploy(
         if (specification is null)
             return NotFound();
 
-        var specificationVersion = await specificationVersionRepository.GetByIdAsync(
-            specificationVersionId,
+        var specificationVersion = await specificationVersionRepository.GetBySpecAsync(
+            new CatletSpecificationVersionSpecs.GetByIdReadOnly(specificationId, specificationVersionId),
             cancellationToken);
         if (specificationVersion is null)
             return NotFound();
