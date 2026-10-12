@@ -40,6 +40,7 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
             CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" }));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.CacheControl?.NoStore.Should().BeTrue();
         var result = await response.Content.ReadFromJsonAsync<CatletSpecificationUserData>(
             ApiJsonSerializerOptions.Options);
         var userData = result?.UserData;
@@ -94,6 +95,38 @@ public class ExportUserDataTests(ITestOutputHelper outputHelper)
             }));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UserData_is_not_exported_when_variable_is_unknown()
+    {
+        var response = await PostAsync(
+            SpecificationId,
+            SpecificationVersionId,
+            CreateBody(new Dictionary<string, string>
+            {
+                ["password"] = "s3cret",
+                ["unknown"] = "value",
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UserData_is_not_exported_when_specification_is_in_other_project()
+    {
+        // The caller has write access to the "other" project but the specification
+        // lives in the default project.
+        await ArrangeOtherUserAccess(BuiltinRole.Contributor, OtherProjectId);
+
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:write", false)
+            .PostAsJsonAsync(
+                $"v1/catlet_specifications/{SpecificationId}/versions/{SpecificationVersionId}/user_data",
+                CreateBody(new Dictionary<string, string> { ["password"] = "s3cret" }),
+                ApiJsonSerializerOptions.Options);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

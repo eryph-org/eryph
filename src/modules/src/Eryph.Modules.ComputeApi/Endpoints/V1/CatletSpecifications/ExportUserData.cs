@@ -98,6 +98,9 @@ public class ExportUserData(
                 detail: "The variables could not be substituted in the fodder: "
                         + string.Join(" ", userData.FailToSeq().Map(i => $"{i.Member}: {i.Message}")));
 
+        // The user-data contains secrets in plain text.
+        Response.Headers.CacheControl = "no-store";
+
         return new JsonResult(new Model.V1.CatletSpecificationUserData
         {
             UserData = await CatletFodderUserData.Serialize(userData.SuccessToSeq().Head),
@@ -122,7 +125,7 @@ public class ExportUserData(
             .ToValidation(new ValidationIssue(
                 nameof(ExportCatletSpecificationUserDataRequestBody.Architecture),
                 "The specification version does not support the requested architecture."))
-        // The variant already exist in the database. An invalid config at this point
+        // The variant already exists in the database. An invalid config at this point
         // indicates a bug on our side.
         let builtConfig = CatletConfigJsonSerializer.Deserialize(variant.BuiltConfig)
         from variables in CatletConfigVariableApplier.ApplyVariables(
