@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -84,31 +84,8 @@ public class ConvergeCloudInitDisk(ConvergeContext context) : ConvergeTaskBase(c
                 .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.CatletId.ToString()))
                 .Build();
 
-            if (config != null)
-                foreach (var cloudInitConfig in config)
-                {
-                    if (withoutSensitive && cloudInitConfig.Secret.GetValueOrDefault())
-                        continue;
-
-                    var contentType = cloudInitConfig.Type switch
-                    {
-                        "include-url" => UserDataContentType.IncludeUrl,
-                        "include-once-url" => UserDataContentType.IncludeUrlOnce,
-                        "cloud-config-archive" => UserDataContentType.CloudConfigArchive,
-                        "upstart-job" => UserDataContentType.UpstartJob,
-                        "cloud-config" => UserDataContentType.CloudConfig,
-                        "part-handler" => UserDataContentType.PartHandler,
-                        "shellscript" => UserDataContentType.ShellScript,
-                        "cloud-boothook" => UserDataContentType.BootHook,
-                        _ => UserDataContentType.CloudConfig,
-                    };
-
-                    var userData = new UserData(contentType,
-                        (cloudInitConfig.Content ?? "").TrimEnd('\0'),
-                        cloudInitConfig.Filename!,
-                        Encoding.UTF8);
-                    configDrive.AddUserData(userData);
-                }
+            foreach (var userData in CatletFodderUserData.CreateUserData(config, withoutSensitive))
+                configDrive.AddUserData(userData);
 
             configDrive.SetNetworkData(networkData);
 
