@@ -84,7 +84,7 @@ public class ConvergeCloudInitDisk(ConvergeContext context) : ConvergeTaskBase(c
                 .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.CatletId.ToString()))
                 .Build();
 
-            foreach (var userData in CatletFodderUserData.CreateUserData(config, withoutSensitive))
+            foreach (var userData in CatletFodderUserData.CreateConfigDriveUserData(config, withoutSensitive))
                 configDrive.AddUserData(userData);
 
             configDrive.SetNetworkData(networkData);
