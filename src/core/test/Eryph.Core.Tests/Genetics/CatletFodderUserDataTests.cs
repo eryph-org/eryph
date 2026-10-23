@@ -3,6 +3,7 @@ using Dbosoft.CloudInit.ConfigDrive;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core.Genetics;
+using LanguageExt;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Tests.Genetics;
@@ -71,6 +72,55 @@ public class CatletFodderUserDataTests
 
         result.Should().HaveCount(expectedCount);
     }
+
+    [Fact]
+    public void CreateConfigDriveUserData_Fodder_IsMappedUnchanged()
+    {
+        var result = CatletFodderUserData.CreateConfigDriveUserData(
+            [new FodderConfig { Name = "test", Type = "shellscript", Content = "#!/bin/sh" }],
+            withoutSecrets: false);
+
+        result.Should().SatisfyRespectively(
+            userData =>
+            {
+                userData.ContentType.Should().Be(UserDataContentType.ShellScript);
+                userData.Content.Should().Be("#!/bin/sh");
+            });
+    }
+
+    [Fact]
+    public void CreateConfigDriveUserData_NullFodder_ReturnsEmptyCloudConfig()
+    {
+        // cloud-init treats user-data as a required part of the NoCloud datasource,
+        // so the config drive must always carry a user-data part.
+        AssertEmptyCloudConfig(CatletFodderUserData.CreateConfigDriveUserData(
+            null,
+            withoutSecrets: false));
+    }
+
+    [Fact]
+    public void CreateConfigDriveUserData_EmptyFodder_ReturnsEmptyCloudConfig()
+    {
+        AssertEmptyCloudConfig(CatletFodderUserData.CreateConfigDriveUserData(
+            [],
+            withoutSecrets: false));
+    }
+
+    [Fact]
+    public void CreateConfigDriveUserData_OnlySecretFodderHidden_ReturnsEmptyCloudConfig()
+    {
+        AssertEmptyCloudConfig(CatletFodderUserData.CreateConfigDriveUserData(
+            [new FodderConfig { Name = "secret", Content = "secret", Secret = true }],
+            withoutSecrets: true));
+    }
+
+    private static void AssertEmptyCloudConfig(Seq<UserData> userData) =>
+        userData.Should().SatisfyRespectively(
+            data =>
+            {
+                data.ContentType.Should().Be(UserDataContentType.CloudConfig);
+                data.Content.Should().Be("#cloud-config");
+            });
 
     [Fact]
     public void CreateUserData_Config_VariablesAreSubstituted()

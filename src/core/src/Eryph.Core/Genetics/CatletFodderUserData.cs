@@ -7,6 +7,7 @@ using Dbosoft.CloudInit.ConfigDrive;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Core.Genetics;
 
@@ -29,6 +30,25 @@ public static class CatletFodderUserData
             {
                 FileName = f.Filename,
             });
+
+    /// <summary>
+    /// Renders the fodder for the config drive. Recent cloud-init versions treat
+    /// user-data as a required part of the NoCloud datasource. When it is missing,
+    /// cloud-init aborts and does not even apply the network configuration. A catlet
+    /// can legitimately have no (visible) user-data though, e.g. it has no fodder or
+    /// its only fodder is secret and the secrets have already been hidden. In that
+    /// case a minimal empty cloud-config is returned so the config drive always
+    /// carries a user-data part.
+    /// </summary>
+    public static Seq<UserData> CreateConfigDriveUserData(
+        IEnumerable<FodderConfig>? fodder,
+        bool withoutSecrets) =>
+        CreateUserData(fodder, withoutSecrets) switch
+        {
+            { IsEmpty: true } => Seq1(new UserData(
+                UserDataContentType.CloudConfig, "#cloud-config", Encoding.UTF8)),
+            var userData => userData,
+        };
 
     /// <summary>
     /// Creates the user-data for a catlet config whose variables have already been
