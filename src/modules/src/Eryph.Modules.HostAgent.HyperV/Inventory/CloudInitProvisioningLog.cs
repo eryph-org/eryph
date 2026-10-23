@@ -11,8 +11,9 @@ namespace Eryph.Modules.HostAgent.Inventory;
 /// <summary>
 /// Decodes the guest's cloud-init provisioning telemetry from its Hyper-V KVP
 /// pool. The guest writes events under keys of the form
-/// <c>CLOUD_INIT|&lt;incarnation&gt;|&lt;type&gt;|&lt;name&gt;|&lt;uuid&gt;</c>
-/// (matching cloud-init's <c>HyperVKvpReportingHandler</c>), splitting oversized
+/// <c>CLOUD_INIT|&lt;incarnation&gt;|&lt;type&gt;|&lt;name&gt;|&lt;vm_id&gt;|&lt;uuid&gt;</c>
+/// (matching cloud-init's <c>HyperVKvpReportingHandler</c>; older cloud-init
+/// versions and egs omit the <c>vm_id</c> segment), splitting oversized
 /// values across <c>…|&lt;index&gt;</c> subkeys. This decoder reassembles those
 /// chunks (grouping by uuid, ordering by <c>msg_i</c>), keeps only the current
 /// boot (the highest incarnation), and produces both the reassembled events and a
@@ -85,17 +86,22 @@ internal static class CloudInitProvisioningLog
 
     private static RawEntry? ParseEntry(string key, string value)
     {
-        // CLOUD_INIT|<incarnation>|<type>|<name>|<uuid>[|<index>]
-        // Names never contain '|', so a simple split is unambiguous.
+        // Current cloud-init: CLOUD_INIT|<incarnation>|<type>|<name>|<vm_id>|<uuid>[|<index>]
+        // Older cloud-init:  CLOUD_INIT|<incarnation>|<type>|<name>|<uuid>[|<index>]
+        // Names never contain '|', so a simple split is unambiguous. Six segments
+        // are either a current unsplit key or an older split key; the last
+        // segment tells them apart (a uuid vs. a chunk index).
         var segments = key.Split('|');
-        if (segments.Length is < 5 or > 6)
+        if (segments.Length is < 5 or > 7)
             return null;
         if (!string.Equals(segments[0], KeyPrefix, StringComparison.Ordinal))
             return null;
         if (!long.TryParse(segments[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var incarnation))
             return null;
 
-        var uuid = segments[4];
+        var hasVmId = segments.Length == 7
+                      || segments.Length == 6 && Guid.TryParse(segments[5], out _);
+        var uuid = hasVmId ? segments[5] : segments[4];
 
         JsonElement root;
         try

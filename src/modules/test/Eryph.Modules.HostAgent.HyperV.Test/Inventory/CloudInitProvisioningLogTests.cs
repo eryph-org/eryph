@@ -128,6 +128,55 @@ public class CloudInitProvisioningLogTests
         result.RenderedText.Should().BeEmpty();
     }
 
+    [Fact]
+    public void Decode_CloudInit26KeysWithVmId_KeepsEventsSeparate()
+    {
+        // Captured from an Ubuntu 24.04 guest (cloud-init 26.1). The key carries
+        // the VM id (SMBIOS uuid) before the event uuid; every event shares it.
+        const string vmId = "fc4c5ccb-f6b5-4539-afa8-f1d4123491c9";
+        var kvp = new Dictionary<string, string>
+        {
+            [$"CLOUD_INIT|1792004908|start|init-local/check-cache|{vmId}|31de84f8-465d-4e89-ba9e-89d69ea15e16"] =
+                """{"name":"init-local/check-cache","type":"start","ts":"2026-10-14T19:08:29.675059+00:00","msg":"attempting to read from cache [check]"}""",
+            [$"CLOUD_INIT|1792004908|finish|init-local/check-cache|{vmId}|fef511f0-5f7b-4ba2-a3f3-64f8b59e9cfa"] =
+                """{"name":"init-local/check-cache","type":"finish","ts":"2026-10-14T19:08:29.675292+00:00","result":"SUCCESS","duration":0.0002322999999999631,"msg":"no cache found"}""",
+            [$"CLOUD_INIT|1792004908|finish|init-local/search-NoCloud|{vmId}|d1a2feef-30da-47f8-8f8d-892b92c18952"] =
+                """{"name":"init-local/search-NoCloud","type":"finish","ts":"2026-10-14T19:08:29.751296+00:00","result":"SUCCESS","duration":0.06702149999999985,"msg":"found local data from DataSourceNoCloud"}""",
+            [$"CLOUD_INIT|1792004908|finish|modules-final|{vmId}|34b53da5-10ba-480f-81cc-5848c5ecd5ce"] =
+                """{"name":"modules-final","type":"finish","ts":"2026-10-14T19:08:34.684982+00:00","result":"SUCCESS","duration":0.08474350000000008,"msg":"running modules for final"}""",
+        };
+
+        var result = CloudInitProvisioningLog.Decode(kvp);
+
+        result.Events.Select(e => e.Message).Should().Equal(
+            "attempting to read from cache [check]",
+            "no cache found",
+            "found local data from DataSourceNoCloud",
+            "running modules for final");
+        result.RenderedText.Split('\n', StringSplitOptions.RemoveEmptyEntries).Should().HaveCount(4);
+    }
+
+    [Fact]
+    public void Decode_CloudInit26SplitMessage_ReassemblesByEventUuid()
+    {
+        const string vmId = "fc4c5ccb-f6b5-4539-afa8-f1d4123491c9";
+        var baseKey = $"CLOUD_INIT|{Incarnation}|finish|modules-config/runcmd|{vmId}|bbbbbbbb-0000-0000-0000-000000000002";
+        var kvp = new Dictionary<string, string>
+        {
+            [baseKey + "|1"] =
+                ValueChunk("modules-config/runcmd", "finish", "2026-07-13T10:11:20+00:00", "FAIL", 1, "world!"),
+            [baseKey + "|0"] =
+                ValueChunk("modules-config/runcmd", "finish", "2026-07-13T10:11:20+00:00", "FAIL", 0, "Hello, "),
+            [$"CLOUD_INIT|{Incarnation}|start|modules-config/runcmd|{vmId}|bbbbbbbb-0000-0000-0000-000000000003"] =
+                Value("modules-config/runcmd", "start", "2026-07-13T10:11:19+00:00"),
+        };
+
+        var result = CloudInitProvisioningLog.Decode(kvp);
+
+        result.Events.Should().HaveCount(2);
+        result.Events[1].Message.Should().Be("Hello, world!");
+    }
+
     private static string Key(string type, string name, string uuid) =>
         $"CLOUD_INIT|{Incarnation}|{type}|{name}|{uuid}";
 
